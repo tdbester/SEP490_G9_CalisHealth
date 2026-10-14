@@ -1,0 +1,317 @@
+{
+  "info": {
+    "name": "CalisHealth - Auth API (Pro)",
+    "description": "Test dang ky -> verify -> dang nhap voi email gia, KHONG can mailbox that.\n\n## Cau truc bien (2 nhom tach biet)\n| Nhom | Bien | Dung cho |\n|---|---|---|\n| User tam | `newUserEmail` (tu sinh), `newUserPassword` | vong register -> verify -> login |\n| Tai khoan co dinh | `seedEmail` = test1@example.com, `seedPassword` | login thang, khong can verify |\n| Di cap | `token` + `tokenEmail` | JWT va chu cua no - luon set cung luc |\n\n## Tai khoan co dinh\n`test1@example.com` / `Test@123` - da verify, login duoc ngay (request 10).\n\n## Vi sao tach `tokenEmail`?\n`token` va `tokenEmail` duoc ghi trong cung mot script login, nen `/me` luon so sanh dung.\nNeu dung chung `testEmail` cho ca user tam lan tai khoan co dinh, chay xen ke se khien `/me` bao do du API tra ve dung.\n\n## Chuan bi\n1. MySQL dang chay + database `calishealth` (ddl-auto: update tu tao bang).\n2. Chay Spring Boot (port 8080).\n\n## Chay test\n1. Bam **Run collection** (chay tu tren xuong duoi) - email se tu sinh moi moi lan chay nen khong bao gio dinh \"Email da duoc dang ky\".\n2. Request **2. Verify email** se bao loi vi `verifyToken` con rong - DAY LA BINH THUONG.\n3. Sang tab **Console** cua Spring Boot, tim khoi `===== EMAIL TO ... =====`, copy UUID sau chu `token=`.\n4. Dan vao collection variable `verifyToken` (bien mau dam o goc phai).\n5. Chay lai tu request **2** tro di - lan nay pass het.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Chi sinh email moi dung luc goi Register, de cac request sau (login, forgot...) dung chung email nay.",
+          "// Chay lai collection -> sinh email khac -> khong dinh \"Email da duoc dang ky\".",
+          "// newUserEmail tach rieng seedEmail: request 10 (login tai khoan co dinh) se khong ghi de len email cua user tam.",
+          "if (pm.info.requestName === '1. Register') {",
+          "  const email = 'test.' + Date.now() + '@example.com';",
+          "  pm.collectionVariables.set('newUserEmail', email);",
+          "  console.log('[setup] newUserEmail =', email);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+
+    { "key": "newUserEmail", "value": "", "_note": "tu sinh o request 1 - chi dung cho vong register/verify/login" },
+    { "key": "newUserPassword", "value": "Test@123", "_note": "mat khau cua user tam, KHONG dung voi seedPassword" },
+
+    { "key": "seedEmail", "value": "test1@example.com", "_note": "tai khoan co dinh da verify - login thang" },
+    { "key": "seedPassword", "value": "Test@123" },
+
+    { "key": "verifyToken", "value": "", "_note": "dan tay tu console log Spring Boot" },
+    { "key": "resetToken", "value": "", "_note": "dan tay tu console log Spring Boot" },
+
+    { "key": "token", "value": "", "_note": "JWT - luon di cap voi tokenEmail" },
+    { "key": "tokenEmail", "value": "", "_note": "email cua chu token; /me so sanh voi bien nay, KHONG so voi newUserEmail/seedEmail" }
+  ],
+  "item": [
+    {
+      "name": "1. Register",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Nguyen Van A\",\n  \"email\": \"{{newUserEmail}}\",\n  \"password\": \"{{newUserPassword}}\",\n  \"confirmPassword\": \"{{newUserPassword}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/register",
+        "description": "Tao user voi enabled=false va 1 token VERIFY_EMAIL han 24h. Token nam trong console log Spring Boot.\n\nDung `newUserEmail` - email tu sinh moi lan chay, khong dung voi tai khoan co dinh `seedEmail`.\n\nTu backend v2 DTO yeu cau `confirmPassword` - tham so cung gia tri `password` de tranh loi 400."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('co message bao kiem tra email', () =>",
+              "  pm.expect(pm.response.text()).to.include('kiểm tra email'));",
+              "pm.test('email da tu sinh', () => pm.expect(pm.collectionVariables.get('newUserEmail')).to.be.ok);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Verify email",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/verify?token={{verifyToken}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "verify"],
+          "query": [{ "key": "token", "value": "{{verifyToken}}" }]
+        },
+        "description": "BUOC THU CONG: lay UUID sau `token=` trong console log Spring Boot, dan vao bien `verifyToken`.\n\nSau khi chay: user.enabled = true va token bi xoa khoi DB. Chay lan 2 se bao \"Link khong hop le hoac da duoc su dung\" - DO LA DUNG THIET KE (chong dung lai link)."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.text();",
+              "pm.test('verify thanh cong', () => {",
+              "  pm.expect(pm.response.code).to.eql(200);",
+              "  pm.expect(body).to.include('Xác thực email thành công');",
+              "});",
+              "pm.test('khong phai loi token', () => {",
+              "  if (pm.response.code !== 200) console.log('[DEBUG] verify loi:', pm.response.code, body);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Login",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{newUserEmail}}\",\n  \"password\": \"{{newUserPassword}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/login",
+        "description": "Chua verify ma login se tra 403 \"Tai khoan chua xac thuc email\". Verify roi moi login duoc.\n\nScript tu luu `token` + `tokenEmail` cung luc - nho vay `/me` luon so sanh dung chu token."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('tra ve JWT', () => pm.expect(j.token).to.be.a('string').and.not.empty);",
+              "if (j.token) {",
+              "  pm.collectionVariables.set('token', j.token);",
+              "  // Ghi kem email cua user tam, KHONG dung seedEmail.",
+              "  pm.collectionVariables.set('tokenEmail', pm.collectionVariables.get('newUserEmail'));",
+              "  console.log('[setup] token + tokenEmail da luu');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Me (JWT)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/auth/me",
+        "description": "Endpoint can JWT. Bo Authorization se tra 401."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('email khop CHU TOKEN (tokenEmail)', () =>",
+              "  pm.expect(pm.response.json().email).to.eql(pm.collectionVariables.get('tokenEmail')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Forgot password",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{newUserEmail}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/forgot-password",
+        "description": "Luon tra 200 voi message \"Neu email ton tai...\" du email co that hay khong (chong do email). Token RESET_PASSWORD han 30 phut nam trong console log."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('message khong tiet lo email co ton tai', () =>",
+              "  pm.expect(pm.response.text()).to.include('Nếu email tồn tại'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Reset password",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"{{resetToken}}\",\n  \"newPassword\": \"Reset@123\",\n  \"confirmNewPassword\": \"Reset@123\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/reset-password",
+        "description": "BUOC THU CONG: lay UUID sau `token=` trong console log (email [CLH] Dat lai mat khau), dan vao bien `resetToken`.\n\nScript tu cap nhat `newUserPassword` = `Reset@123` khi thanh cong, nen request 7 chay tiep duoc luon - khong can sua tay.\n\nTu backend v2 DTO yeu cau `confirmNewPassword` - tham so cung gia tri `newPassword` de tranh loi 400."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('reset thanh cong', () => {",
+              "  pm.expect(pm.response.code).to.eql(200);",
+              "  pm.expect(pm.response.text()).to.include('Đặt lại mật khẩu');",
+              "});",
+              "if (pm.response.code === 200) {",
+              "  // Tu dong bo bien - tranh tinh trang request 7 dung mat khau cu va bao \"Mat khau cu khong dung\"",
+              "  pm.collectionVariables.set('newUserPassword', 'Reset@123');",
+              "  console.log('[setup] newUserPassword -> Reset@123');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Change password (JWT)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"oldPassword\": \"{{newUserPassword}}\",\n  \"newPassword\": \"Change@123\",\n  \"confirmNewPassword\": \"Change@123\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/change-password",
+        "description": "Can JWT. `oldPassword` lay tu `newUserPassword` - luon khop mat khau hien tai, ke ca khi da chay request 6 (bien da tu duoc cap nhat).\n\nLuu y: doi xong `newUserPassword` thanh `Change@123`, chay lai collection se tu sinh user moi nen khong anh huong.\n\nTu backend v2 DTO yeu cau `confirmNewPassword` - tham so cung gia tri `newPassword` de tranh loi 400."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) console.log('[DEBUG]', pm.response.text());"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Negative: login sai mat khau",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{tokenEmail}}\",\n  \"password\": \"SaiMatKhau@123\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/login",
+        "description": "Ky vong 401 voi message chung chung, khong lo email co ton tai.\n\nDung `tokenEmail` de luon bat loi email that, dung nhieu lan goi lai cung mot tai khoan."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
+              "pm.test('khong phan biet sai email hay sai mat khau', () =>",
+              "  pm.expect(pm.response.text()).to.include('Email hoặc mật khẩu không đúng'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Negative: /me khong JWT",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/auth/me",
+        "description": "Ky vong 401 do SecurityConfig chi permitAll cho /api/auth/** tru /me va /change-password."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Login tai khoan co dinh (seed)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{seedEmail}}\",\n  \"password\": \"{{seedPassword}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/login",
+        "description": "Tai khoan co dinh `test1@example.com` - da verify san nen login thang, khong can vong register/verify.\n\nChay request nay de test `/me` va doi mat khau ma khong can dang ky lai.\n\nDung `seedEmail`/`seedPassword` rieng, KHONG ghi de `newUserEmail` - nen chay xen ke voi vong register van khong vo."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "if (j.token) {",
+              "  pm.collectionVariables.set('token', j.token);",
+              "  // token va tokenEmail cap nhat CUNG LUC - /me se luon khop",
+              "  pm.collectionVariables.set('tokenEmail', j.email);",
+              "}",
+              "pm.test('dung tai khoan seed', () =>",
+              "  pm.expect(j.email).to.eql(pm.collectionVariables.get('seedEmail')));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
