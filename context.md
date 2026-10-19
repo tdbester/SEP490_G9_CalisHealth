@@ -14,12 +14,12 @@ SEP490_G9_CalisHealth/
 │   │   ├── theme.js                     # MUI theme (deep red brand)
 │   │   ├── components/
 │   │   │   └── layout/
-│   │   │       ├── AdminLayout.jsx      # Sidebar + Topbar + main
-│   │   │       ├── Sidebar.jsx
-│   │   │       └── Topbar.jsx
+│   │   │       ├── AdminLayout.jsx      # White canvas + red sidebar + white topbar
+│   │   │       ├── Sidebar.jsx          # DEEP RED bg, white text, active=white pill
+│   │   │       └── Topbar.jsx           # Search bar + bell + admin avatar
 │   │   ├── pages/
-│   │   │   ├── Dashboard.jsx            # Main overview page
-│   │   │   └── PlaceholderPage.jsx      # For Library, Tracking (WIP)
+│   │   │   ├── Dashboard.jsx            # Default: health/progress table view
+│   │   │   └── PlaceholderPage.jsx      # For Library (WIP)
 │   │   └── styles/global.css
 │   ├── index.html
 │   ├── package.json
@@ -44,21 +44,25 @@ SEP490_G9_CalisHealth/
 
 ## Design System / Theme
 
-The frontend uses an **admin panel** aesthetic (clean, light surfaces, deep red brand). Reference mockup: `assets/.../image-eb0ee597-*.png` (main dashboard).
+The frontend uses an **admin panel** aesthetic — direct port of the Content Manager mockup at `assets/.../image-eb0ee597-*.png`.
 
 ### Color tokens
 | Role | Token | Value | Use |
 |------|-------|-------|-----|
-| Primary | `primary.main` | `#B91C1C` (deep red) | Brand, active sidebar item, primary CTAs |
-| Primary soft | `--color-primary-soft` | `#FEE2E2` (red-100) | Active item background |
-| Secondary | `secondary.main` | `#0F766E` (teal) | Accent (calisthenic/health vibe), stat icons |
-| Background (canvas) | `background.default` | `#F5F5F7` | Main page background |
-| Surface | `background.paper` | `#FFFFFF` | Sidebar, header, cards |
-| Border | `divider` | `#E5E7EB` | Hairline borders, card outlines |
-| Text primary | `text.primary` | `#1F2937` (slate-900) | Headings, body |
-| Text secondary | `text.secondary` | `#6B7280` (gray-500) | Captions, labels |
-| Success | `success.main` | `#10B981` | Positive deltas, completion |
-| Error | `error.main` | `#DC2626` | Destructive / warnings |
+| Sidebar background | `primary.main` | `#B91C1C` (deep red) | Full sidebar — white text on red |
+| Sidebar hover | (theme override) | `#7F1D1D` | Item hover state |
+| Active item bg | (theme override) | `#FFFFFF` | Pill behind active menu item |
+| Active item text/icon | (theme override) | `#B91C1C` | Red text on white pill |
+| Primary CTA | `primary.main` | `#B91C1C` | Buttons, badges, progress bar |
+| Status: Đang tập | (inline) | `#DBEAFE` / `#1E40AF` | Light blue chip |
+| Status: Hoàn thành | (inline) | `#D1FAE5` / `#065F46` | Light green chip |
+| Status: Chờ duyệt | (inline) | `#FEF3C7` / `#92400E` | Light amber chip |
+| Status: Tạm dừng | (inline) | `#FEE2E2` / `#991B1B` | Light red chip |
+| Canvas | `background.default` | `#FFFFFF` | Main page background (white, not gray) |
+| Surface | `background.paper` | `#FFFFFF` | Cards, topbar |
+| Border | `divider` | `#E5E7EB` | Hairline borders, table dividers |
+| Text primary | `text.primary` | `#1F2937` | Headings, body |
+| Text secondary | `text.secondary` | `#6B7280` | Captions, labels, table head |
 
 ### Typography
 - Font family: **Inter** → Roboto → Helvetica → Arial (sans-serif)
@@ -68,21 +72,24 @@ The frontend uses an **admin panel** aesthetic (clean, light surfaces, deep red 
 - Letter-spacing: tight on H1/H2 (`-0.02em` / `-0.01em`)
 
 ### Layout system
-- Sidebar width: **256px** (CSS var `--sidebar-width`), fixed left
-- Topbar height: **64px** (CSS var `--header-height`), fixed top, offset by sidebar
-- Main content: `ml: 256px, pt: 88px (header+24px), px: 32px`
-- Border radius: **10px** (cards, buttons), **8px** (buttons specifically)
-- Paper: white, 1px border, **no shadow** by default
-- AppBar: white, bottom hairline border, no shadow
+- Sidebar width: **256px** (CSS var `--sidebar-width`), fixed left, **deep red background**
+- Topbar height: **64px** (CSS var `--header-height`), fixed top, **white background**, offset by sidebar
+- Main canvas: `ml: 256px, pt: 92px (header+28px), px: 32px`, **white background**
+- Border radius: **8px** (cards, buttons, active sidebar pill)
+- Paper: white, very subtle shadow (no border)
+- AppBar: white, hairline bottom border + tiny shadow
 
 ### Sidebar navigation
-Active state: red-100 background + deep-red text/icon. Inactive: gray icon + slate text. Rounded 8px.
+- Background: **deep red**, text: **white**
+- Inactive item: transparent, white icon + white text
+- Hover: darker red (`#7F1D1D`)
+- Active item: **white pill** with red text + red icon + small shadow (pops out of the red sidebar)
 
 ### Component overrides
-- `MuiButton.containedPrimary`: no shadow, subtle red shadow on hover
-- `MuiListItemButton.selected`: red-100 bg, red text/icon
-- `MuiPaper`: 1px border, 0 elevation
-- `MuiAppBar`: white bg, bottom border, 0 elevation
+- `MuiButton.outlined`: gray border, hover turns red border + red-50 bg
+- `MuiListItemButton`: default = white text, selected = white pill with red text
+- `MuiAppBar`: white, hairline border + tiny shadow
+- `MuiPaper`: no border, no shadow
 
 ## Navigation / Routes
 
@@ -107,12 +114,11 @@ The reference mockup shows additional sections (Khảo sát, Quy tắc thăng ti
 ## Status
 
 - [x] Monorepo layout (client/ + server/)
-- [x] Admin layout: Sidebar + Topbar + AdminLayout
-- [x] Theme system (deep red brand, light surfaces)
-- [x] Dashboard with stat cards + recent activity + goal progress
-- [x] Placeholder pages for /library and /tracking
-- [ ] Connect Dashboard stats to real API
+- [x] Admin layout: red Sidebar + white Topbar + white canvas
+- [x] Theme system (deep red sidebar, white active pill, white canvas)
+- [x] Default page: data table (search, level filter, status chips, progress bar, pagination)
+- [x] Placeholder page for /library
+- [ ] Connect table to real API
 - [ ] Library page (CRUD bài tập, video)
-- [ ] Tracking health & progress page (charts, user data)
 - [ ] Auth flow (login → admin panel)
 - [ ] Additional sidebar items (Khảo sát, Quy tắc thăng tiến, Tiêu chí lên cấp)
