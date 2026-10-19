@@ -1,4 +1,4 @@
-import { useLocation, matchPath } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import {
   AppBar,
   Toolbar,
@@ -44,7 +44,7 @@ export default function Topbar() {
         {/* Page title */}
         <Typography
           variant="h6"
-          sx={{ fontWeight: 600, color: "text.primary", flexShrink: 0 }}
+          sx={{ fontWeight: 700, color: "text.primary", flexShrink: 0, fontSize: "1.05rem" }}
         >
           {title}
         </Typography>

@@ -35,7 +35,7 @@ export default function Sidebar() {
       sx={{
         width: "var(--sidebar-width)",
         minHeight: "100vh",
-        backgroundColor: "primary.main", // DEEP RED background per mockup
+        backgroundColor: "primary.main", // DEEP PURPLE background per mockup
         color: "#FFFFFF",
         position: "fixed",
         top: 0,
@@ -89,7 +89,6 @@ export default function Sidebar() {
                       height: 20,
                       fontSize: "0.7rem",
                       fontWeight: 700,
-                      // White badge on default items, red badge on active
                       backgroundColor: isActive
                         ? "primary.main"
                         : "rgba(255,255,255,0.2)",

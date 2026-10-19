@@ -46,22 +46,24 @@ SEP490_G9_CalisHealth/
 
 The frontend uses an **admin panel** aesthetic — direct port of the Content Manager mockup at `assets/.../image-eb0ee597-*.png`.
 
+### Brand color: **DEEP PURPLE** (`#5B21B6`)
+
 ### Color tokens
 | Role | Token | Value | Use |
 |------|-------|-------|-----|
-| Sidebar background | `primary.main` | `#B91C1C` (deep red) | Full sidebar — white text on red |
-| Sidebar hover | (theme override) | `#7F1D1D` | Item hover state |
-| Active item bg | (theme override) | `#FFFFFF` | Pill behind active menu item |
-| Active item text/icon | (theme override) | `#B91C1C` | Red text on white pill |
-| Primary CTA | `primary.main` | `#B91C1C` | Buttons, badges, progress bar |
+| Sidebar background | `primary.main` | `#5B21B6` (deep purple/violet) | Full sidebar — white text on purple |
+| Sidebar hover | (theme override) | `#4C1D95` (purple-900) | Item hover state |
+| Active item bg | (theme override) | `#EDE9FE` (violet-100) | Light purple pill behind active menu |
+| Active item text/icon | (theme override) | `#5B21B6` (violet-800) | Purple text on light purple pill |
+| Primary CTA | `primary.main` | `#5B21B6` | Buttons, progress bar, badges |
 | Status: Đang tập | (inline) | `#DBEAFE` / `#1E40AF` | Light blue chip |
 | Status: Hoàn thành | (inline) | `#D1FAE5` / `#065F46` | Light green chip |
 | Status: Chờ duyệt | (inline) | `#FEF3C7` / `#92400E` | Light amber chip |
 | Status: Tạm dừng | (inline) | `#FEE2E2` / `#991B1B` | Light red chip |
-| Canvas | `background.default` | `#FFFFFF` | Main page background (white, not gray) |
+| Canvas | `background.default` | `#F9FAFB` (gray-50) | Main page background |
 | Surface | `background.paper` | `#FFFFFF` | Cards, topbar |
 | Border | `divider` | `#E5E7EB` | Hairline borders, table dividers |
-| Text primary | `text.primary` | `#1F2937` | Headings, body |
+| Text primary | `text.primary` | `#111827` | Headings, body |
 | Text secondary | `text.secondary` | `#6B7280` | Captions, labels, table head |
 
 ### Typography
@@ -72,18 +74,18 @@ The frontend uses an **admin panel** aesthetic — direct port of the Content Ma
 - Letter-spacing: tight on H1/H2 (`-0.02em` / `-0.01em`)
 
 ### Layout system
-- Sidebar width: **256px** (CSS var `--sidebar-width`), fixed left, **deep red background**
+- Sidebar width: **256px** (CSS var `--sidebar-width`), fixed left, **deep purple background**
 - Topbar height: **64px** (CSS var `--header-height`), fixed top, **white background**, offset by sidebar
-- Main canvas: `ml: 256px, pt: 92px (header+28px), px: 32px`, **white background**
+- Main canvas: `ml: 256px, pt: 92px (header+28px), px: 32px`, background **#F9FAFB**
 - Border radius: **8px** (cards, buttons, active sidebar pill)
 - Paper: white, very subtle shadow (no border)
-- AppBar: white, hairline bottom border + tiny shadow
+- AppBar: white, hairline bottom border
 
 ### Sidebar navigation
-- Background: **deep red**, text: **white**
+- Background: **deep purple**, text: **white**
 - Inactive item: transparent, white icon + white text
-- Hover: darker red (`#7F1D1D`)
-- Active item: **white pill** with red text + red icon + small shadow (pops out of the red sidebar)
+- Hover: darker purple (`#4C1D95`)
+- Active item: **light-purple pill** with deep purple text + icon (per mockup)
 
 ### Component overrides
 - `MuiButton.outlined`: gray border, hover turns red border + red-50 bg
