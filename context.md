@@ -4,16 +4,32 @@
 
 **CalisHealth** is a web application that provides users with calisthenic (bodyweight) training resources. The platform is designed to help users learn, plan, and perform calisthenic workouts and programs.
 
+## Repo Layout (Monorepo)
+
+```
+SEP490_G9_CalisHealth/
+├── client/                  # React + Vite + Material UI frontend
+│   ├── src/                 # pages, components, styles
+│   ├── index.html
+│   ├── package.json
+│   └── vite.config.js
+├── server/                  # Java Spring Boot backend
+│   ├── src/main/java/com/calishealth/
+│   ├── src/main/resources/  # application.yml, application.properties
+│   ├── src/test/...
+│   ├── pom.xml
+│   └── mvnw, mvnw.cmd, .mvn/
+├── postman/                 # Postman collection (Auth API tests)
+├── context.md               # This file (project context)
+├── README.md
+└── .gitignore               # Root ignore (covers both client + server)
+```
+
 ## Tech Stack
 
-- **Framework**: ReactJS (Standard) + Vite
-- **Language**: JavaScript / JSX
-- **UI Library**: Material UI (MUI v5+)
-- **Styling**: CSS (custom) + MUI's `sx` prop / styled API
-- **Routing**: React Router (planned)
-- **Date utility**: dayjs (MUI peer dep)
-- **Build Tool**: Vite
-- **Package Manager**: npm
+- **Frontend (client/)**: React 18 + Vite + Material UI v6 + React Router + custom CSS
+- **Backend (server/)**: Java Spring Boot (Maven) — see `server/pom.xml` for modules
+- **Package Manager**: npm (client), Maven (server)
 
 ## Brand / Theme
 
@@ -26,10 +42,10 @@
 
 ## Conventions
 
-- Component folder per feature under `src/components/<Feature>/`
-- Pages live in `src/pages/`
-- Shared layout (Navbar, Footer) in `src/components/layout/`
-- Reusable styles in `src/styles/`
+- Component folder per feature under `client/src/components/<Feature>/`
+- Pages live in `client/src/pages/`
+- Shared layout (Navbar, Footer) in `client/src/components/layout/`
+- Reusable styles in `client/src/styles/`
 - All project context, decisions, and notes are stored in this `context.md` file.
 
 ## Status
@@ -38,6 +54,7 @@
 - [x] MaterialUI integrated
 - [x] Theme + responsive Navbar/Footer
 - [x] Routing with placeholder Home / Workouts / Programs / About / Contact pages
+- [x] Monorepo layout (client/ + server/)
 - [ ] API integration (TBD)
-- [ ] Authentication (TBD)
+- [ ] Authentication UI (TBD)
 - [ ] Workout tracking features (TBD)
