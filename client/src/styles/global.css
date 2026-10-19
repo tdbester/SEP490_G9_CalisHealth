@@ -8,8 +8,8 @@
   --color-primary-dark: #4c1d95;
   --color-primary-soft: #ede9fe;
   --color-accent: #0f766e;
-  --sidebar-width: 256px;
-  --header-height: 64px;
+  --sidebar-width: 130px;
+  --header-height: 49px;
 }
 
 * {
