@@ -1,17 +1,36 @@
+import { useLocation, matchPath } from "react-router-dom";
 import {
   AppBar,
   Toolbar,
   Box,
-  InputBase,
   IconButton,
   Avatar,
   Typography,
+  InputBase,
   alpha,
 } from "@mui/material";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import NotificationsNoneRoundedIcon from "@mui/icons-material/NotificationsNoneRounded";
 
+const ROUTE_TITLES = [
+  { path: "/", title: "Dashboard" },
+  { path: "/library", title: "Thư viện" },
+  { path: "/tracking", title: "Theo dõi sức khỏe & tiến trình" },
+];
+
+function getPageTitle(pathname) {
+  for (const r of ROUTE_TITLES) {
+    if (r.path === "/" ? pathname === "/" : pathname.startsWith(r.path)) {
+      return r.title;
+    }
+  }
+  return "CalisHealth";
+}
+
 export default function Topbar() {
+  const { pathname } = useLocation();
+  const title = getPageTitle(pathname);
+
   return (
     <AppBar
       position="fixed"
@@ -22,12 +41,12 @@ export default function Topbar() {
       }}
     >
       <Toolbar sx={{ gap: 2 }}>
-        {/* Page title slot - set via window state for now */}
+        {/* Page title */}
         <Typography
           variant="h6"
           sx={{ fontWeight: 600, color: "text.primary", flexShrink: 0 }}
         >
-          Tổng quan
+          {title}
         </Typography>
 
         {/* Search */}
@@ -42,14 +61,13 @@ export default function Topbar() {
             borderRadius: 2,
             px: 1.5,
             py: 0.5,
-            width: 360,
-            maxWidth: "100%",
+            width: 320,
           }}
         >
-          <SearchRoundedIcon sx={{ color: "text.secondary", mr: 1 }} />
+          <SearchRoundedIcon sx={{ color: "text.secondary", mr: 1, fontSize: 20 }} />
           <InputBase
             placeholder="Tìm kiếm..."
-            sx={{ flex: 1, fontSize: "0.9rem" }}
+            sx={{ flex: 1, fontSize: "0.875rem" }}
           />
         </Box>
 

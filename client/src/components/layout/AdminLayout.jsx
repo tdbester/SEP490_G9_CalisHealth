@@ -11,10 +11,11 @@ export default function AdminLayout({ children }) {
         component="main"
         sx={{
           ml: "var(--sidebar-width)",
-          pt: "calc(var(--header-height) + 24px)",
+          pt: "calc(var(--header-height) + 28px)",
           px: 4,
           pb: 4,
           minHeight: "100vh",
+          backgroundColor: "background.default", // white canvas
         }}
       >
         {children}

@@ -18,7 +18,7 @@ const NAV_ITEMS = [
   { label: "Dashboard", path: "/", icon: <DashboardRoundedIcon />, badge: null },
   { label: "Library", path: "/library", icon: <LocalLibraryRoundedIcon />, badge: null },
   {
-    label: "Tracking health & progress",
+    label: "Theo dõi sức khỏe & tiến trình",
     path: "/tracking",
     icon: <MonitorHeartRoundedIcon />,
     badge: 8,
@@ -35,9 +35,8 @@ export default function Sidebar() {
       sx={{
         width: "var(--sidebar-width)",
         minHeight: "100vh",
-        backgroundColor: "background.paper",
-        borderRight: "1px solid",
-        borderColor: "divider",
+        backgroundColor: "primary.main", // DEEP RED background per mockup
+        color: "#FFFFFF",
         position: "fixed",
         top: 0,
         left: 0,
@@ -50,16 +49,16 @@ export default function Sidebar() {
       <Box sx={{ px: 3, py: 3 }}>
         <Typography
           variant="h5"
-          sx={{ fontWeight: 800, color: "primary.main", lineHeight: 1.1 }}
+          sx={{ fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1 }}
         >
           CalisHealth
         </Typography>
-        <Typography variant="caption" sx={{ color: "text.secondary" }}>
+        <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.85)" }}>
           Quản lý nội dung hệ thống
         </Typography>
       </Box>
 
-      <Divider />
+      <Divider sx={{ borderColor: "rgba(255,255,255,0.15)" }} />
 
       {/* Nav */}
       <List sx={{ flex: 1, py: 2 }}>
@@ -74,9 +73,7 @@ export default function Sidebar() {
                 selected={isActive}
                 onClick={() => navigate(item.path)}
               >
-                <ListItemIcon sx={{ minWidth: 36, color: "text.secondary" }}>
-                  {item.icon}
-                </ListItemIcon>
+                <ListItemIcon>{item.icon}</ListItemIcon>
                 <ListItemText
                   primary={item.label}
                   primaryTypographyProps={{
@@ -88,8 +85,16 @@ export default function Sidebar() {
                   <Chip
                     label={item.badge}
                     size="small"
-                    color="primary"
-                    sx={{ height: 20, fontSize: "0.7rem", fontWeight: 700 }}
+                    sx={{
+                      height: 20,
+                      fontSize: "0.7rem",
+                      fontWeight: 700,
+                      // White badge on default items, red badge on active
+                      backgroundColor: isActive
+                        ? "primary.main"
+                        : "rgba(255,255,255,0.2)",
+                      color: "#FFFFFF",
+                    }}
                   />
                 )}
               </ListItemButton>
@@ -99,8 +104,8 @@ export default function Sidebar() {
       </List>
 
       {/* Footer hint */}
-      <Box sx={{ p: 2, borderTop: "1px solid", borderColor: "divider" }}>
-        <Typography variant="caption" color="text.secondary">
+      <Box sx={{ p: 2.5, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
+        <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)" }}>
           v0.1.0 · CalisHealth
         </Typography>
       </Box>
