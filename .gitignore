@@ -1,22 +1,53 @@
-# Dependencies
-node_modules/
-
-# Build output
+# ===== Build output =====
+target/
+build/
+out/
+*.class
+*.jar
+*.war
 dist/
 
-# Logs
-logs
+# ===== Dependencies =====
+node_modules/
+
+# ===== Logs =====
 *.log
+logs/
+spring.log
 npm-debug.log*
 
-# Editor
-.vscode/
+# ===== IDE - IntelliJ =====
 .idea/
-.DS_Store
+*.iml
+*.iws
+*.ipr
 
-# Env
+# ===== IDE - VS Code =====
+.vscode/
+.classpath
+.project
+.settings/
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Env / secrets =====
 .env
 .env.local
+application-local.yml
+application-local.properties
 
-# OS
-Thumbs.db
+# ===== Test / coverage =====
+jacoco/
+
+# ===== File cá nhân / debug =====
+verify-token.txt
+query.sql
+HELP.md
+
+# ===== Maven wrapper (bật lại nếu team dùng) =====
+# .mvn/
+# mvnw
+# mvnw.cmd
