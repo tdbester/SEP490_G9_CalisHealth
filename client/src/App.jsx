@@ -1,30 +1,49 @@
-import { Routes, Route } from 'react-router-dom'
-import Navbar from './components/layout/Navbar.jsx'
-import Footer from './components/layout/Footer.jsx'
-import Home from './pages/Home.jsx'
-import Workouts from './pages/Workouts.jsx'
-import Programs from './pages/Programs.jsx'
-import About from './pages/About.jsx'
-import Contact from './pages/Contact.jsx'
-import NotFound from './pages/NotFound.jsx'
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { CssBaseline, ThemeProvider } from "@mui/material";
+import theme from "./theme";
+import AdminLayout from "./components/layout/AdminLayout";
+import Dashboard from "./pages/Dashboard";
+import PlaceholderPage from "./pages/PlaceholderPage";
 
-function App() {
+export default function App() {
   return (
-    <div className="app-shell">
-      <Navbar />
-      <main className="app-main">
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/workouts" element={<Workouts />} />
-          <Route path="/programs" element={<Programs />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="*" element={<NotFound />} />
+          <Route
+            path="/"
+            element={
+              <AdminLayout>
+                <Dashboard />
+              </AdminLayout>
+            }
+          />
+          <Route
+            path="/library"
+            element={
+              <AdminLayout>
+                <PlaceholderPage
+                  title="Thư viện"
+                  description="Quản lý bài tập, video và tài liệu tập luyện"
+                />
+              </AdminLayout>
+            }
+          />
+          <Route
+            path="/tracking"
+            element={
+              <AdminLayout>
+                <PlaceholderPage
+                  title="Theo dõi sức khỏe & tiến trình"
+                  description="Theo dõi chỉ số sức khỏe và tiến trình luyện tập của người dùng"
+                />
+              </AdminLayout>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </main>
-      <Footer />
-    </div>
-  )
+      </BrowserRouter>
+    </ThemeProvider>
+  );
 }
-
-export default App
