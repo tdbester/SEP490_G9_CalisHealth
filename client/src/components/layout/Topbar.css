@@ -1,12 +1,33 @@
 /* Topbar.css - Match Figma JSON exactly */
 :root {
-  --topbar-height: 49px;
+  /* ── Topbar ── */
+  --topbar-height: 56px;
   --topbar-bg: #1A1230;
-  --topbar-border: #2D2550; /* rgb(0.176, 0.145, 0.314) */
-  --button-bg: #1A1230; /* rgb(0.102, 0.071, 0.188) */
-  --button-border: #3B2A6B; /* rgb(0.231, 0.165, 0.420) */
+  --topbar-border: #2D2550;
+  /* ── Sidebar ── */
+  --sidebar-width: 130px;
+  --sidebar-bg: #1A1230;
+  --sidebar-border: #2D2550;
+  --nav-text: #A89BD0;
+  --nav-text-active: #FFFFFF;
+  /* ── Shared ── */
+  --button-bg: #1A1230;
+  --button-border: #3B2A6B;
   --text-white: #FFFFFF;
   --gradient-icon: linear-gradient(135deg, #B44CFF 0%, #FF7799 100%);
+}
+
+/* ── Responsive topbar height ───────────────────────────────── */
+@media (max-width: 768px) {
+  :root { --topbar-height: 44px; }
+}
+
+@media (min-width: 769px) and (max-width: 1280px) {
+  :root { --topbar-height: 49px; }
+}
+
+@media (min-width: 1281px) {
+  :root { --topbar-height: 56px; }
 }
 
 .topbar {
@@ -76,8 +97,8 @@
 }
 
 .topbar-login-btn {
-  width: 46px;
-  height: 23px;
+  width: 60px;
+  height: 30px;
   border-radius: 12px;
   background-color: var(--button-bg);
   border: 1px solid var(--button-border);

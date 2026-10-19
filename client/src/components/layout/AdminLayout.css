@@ -1,8 +1,4 @@
-/* AdminLayout.css - Layout without MUI */
-:root {
-  --sidebar-width: 130px;
-  --topbar-height: 49px;
-}
+/* AdminLayout.css — chỉ layout, variables nằm ở Topbar.css */
 
 * {
   box-sizing: border-box;
@@ -10,7 +6,7 @@
 
 .admin-layout {
   min-height: 100vh;
-  background-color: #F9FAFB;
+  background-color: #1A1230;
 }
 
 .admin-content {
@@ -20,5 +16,5 @@
   padding-right: 24px;
   padding-bottom: 32px;
   min-height: 100vh;
-  background-color: #F9FAFB;
+  background-color: #1A1230;
 }

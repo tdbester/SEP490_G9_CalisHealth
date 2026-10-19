@@ -1,19 +1,11 @@
-/* Sidebar.css - Match Figma JSON exactly */
-:root {
-  --sidebar-width: 130px;
-  --sidebar-height: 49px; /* offset for topbar */
-  --sidebar-bg: #1A1230;
-  --sidebar-border: #2D2550; /* rgb(0.176, 0.145, 0.314) */
-  --nav-text: #A89BD0; /* rgb(0.659, 0.608, 0.816) */
-  --nav-text-active: #FFFFFF;
-}
+/* Sidebar.css — chỉ sidebar styles, --sidebar-width và --topbar-height ở Topbar.css */
 
 .sidebar {
   position: fixed;
-  top: var(--sidebar-height);
+  top: var(--topbar-height);
   left: 0;
   width: var(--sidebar-width);
-  min-height: calc(100vh - var(--sidebar-height));
+  min-height: calc(100vh - var(--topbar-height));
   background-color: var(--sidebar-bg);
   border-right: 1px solid var(--sidebar-border);
   z-index: 1200;
