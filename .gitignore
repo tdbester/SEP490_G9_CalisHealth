@@ -5,11 +5,16 @@ out/
 *.class
 *.jar
 *.war
+dist/
+
+# ===== Dependencies =====
+node_modules/
 
 # ===== Logs =====
 *.log
 logs/
 spring.log
+npm-debug.log*
 
 # ===== IDE - IntelliJ =====
 .idea/
@@ -30,6 +35,7 @@ desktop.ini
 
 # ===== Env / secrets =====
 .env
+.env.local
 application-local.yml
 application-local.properties
 

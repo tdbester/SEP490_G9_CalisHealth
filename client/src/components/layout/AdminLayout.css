@@ -1,0 +1,24 @@
+/* AdminLayout.css - Layout without MUI */
+:root {
+  --sidebar-width: 130px;
+  --topbar-height: 49px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.admin-layout {
+  min-height: 100vh;
+  background-color: #F9FAFB;
+}
+
+.admin-content {
+  margin-left: var(--sidebar-width);
+  padding-top: calc(var(--topbar-height) + 24px);
+  padding-left: 24px;
+  padding-right: 24px;
+  padding-bottom: 32px;
+  min-height: 100vh;
+  background-color: #F9FAFB;
+}
