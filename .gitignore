@@ -45,19 +45,3 @@ HELP.md
 # .mvn/
 # mvnw
 # mvnw.cmd
-
-# ===== Frontend - Node / Vite / React =====
-node_modules/
-dist/
-dist-ssr/
-.vite/
-*.local
-
-# Frontend env (giữ .env.example)
-.env.local
-.env.development.local
-.env.production.local
-
-# Coverage / test
-coverage/
-*.tsbuildinfo
