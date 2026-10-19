@@ -1,0 +1,297 @@
+/* Login.css - Match Figma: 800x900 frame, radial dark purple gradient */
+
+.login {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(
+      ellipse 60% 60% at 39% 56%,
+      #24134D 0%,
+      #100923 58%,
+      #090518 100%
+    );
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 800px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 24px;
+}
+
+.login-logo {
+  display: flex;
+  align-items: center;
+  margin-bottom: 100px;
+}
+
+.login-logo-icon {
+  object-fit: contain;
+  display: block;
+}
+
+.login-logo-text {
+  font-size: 36px;
+  font-weight: 700;
+  color: #F7F2FC;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  margin-left: 5px;
+}
+
+.logo-gradient-text {
+  font-size: 36px;
+  font-weight: 700;
+  background: linear-gradient(to right, #9d4edd, #ff007f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Brand logo */
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 100px;
+}
+
+.login-brand-logo {
+  width: 45px;
+  height: 45px;
+  object-fit: contain;
+  display: block;
+}
+
+.login-brand-text {
+  font-size: 36px;
+  font-weight: 700;
+  color: #F7F2FC;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+/* Title */
+.login-title {
+  font-size: 50px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin: 0 0 80px 0;
+  text-align: center;
+  line-height: 1.1;
+}
+
+/* Form */
+.login-form {
+  width: 100%;
+  max-width: 628px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.login-label {
+  font-size: 18px;
+  font-weight: 500;
+  color: #F7F2FC;
+  line-height: 1;
+}
+
+/* Input wrapper */
+.login-input-wrap {
+  position: relative;
+  width: 100%;
+  height: 86px;
+  background-color: #170F28;
+  border: 2px solid #2B1B48;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.login-input-wrap:focus-within {
+  border-color: #8B62ED;
+}
+
+.login-input-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  margin-right: 26px;
+  color: #A99BD0;
+}
+
+.login-input {
+  flex: 1;
+  height: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 22px;
+  font-family: inherit;
+  color: #F7F2FC;
+  font-weight: 400;
+}
+
+.login-input::placeholder {
+  color: #785F8F;
+  font-weight: 400;
+}
+
+.login-toggle-pw {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #F2EDF8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.login-toggle-pw svg {
+  width: 33px;
+  height: 26px;
+}
+
+/* Login button */
+.login-submit {
+  width: 100%;
+  height: 91px;
+  margin-top: 8px;
+  border: none;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    #CF45E1 0%,
+    #8B62ED 52%,
+    #477EF0 100%
+  );
+  color: #FFFFFF;
+  font-size: 22px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  letter-spacing: 0.5px;
+  transition: opacity 0.2s, transform 0.1s;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-submit:hover {
+  opacity: 0.92;
+}
+
+.login-submit:active {
+  transform: scale(0.99);
+}
+
+/* Decorative pill behind the arrow icon (matches Figma gradient circle) */
+.login-submit::after {
+  content: "";
+  position: absolute;
+  right: 50%;
+  top: 50%;
+  transform: translate(calc(50% + 14px), -50%);
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #B08BF8 0%, #9A79EE 100%);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+
+
+.login-submit-text {
+  position: relative;
+  z-index: 1;
+}
+
+/* Footer links */
+.login-links {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 628px;
+  margin-top: 37px;
+  font-size: 17px;
+  font-weight: 400;
+}
+
+.login-link {
+  color: #B6A5D5;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1.8px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  transition: color 0.15s;
+}
+
+.login-link:hover {
+  color: #FFFFFF;
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+  .login {
+    padding: 16px;
+  }
+  .login-title {
+    font-size: 36px;
+    margin-bottom: 50px;
+  }
+  .login-brand {
+    margin-bottom: 60px;
+  }
+  .login-input-wrap {
+    height: 70px;
+    padding: 0 20px;
+  }
+  .login-input {
+    font-size: 18px;
+  }
+  .login-submit {
+    height: 70px;
+    font-size: 18px;
+  }
+  .login-submit::after {
+    display: none;
+  }
+  .login-submit-icon {
+    margin-left: 0;
+  }
+  .login-links {
+    flex-direction: column;
+    gap: 12px;
+  }
+}

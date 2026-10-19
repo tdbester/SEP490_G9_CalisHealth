@@ -1,0 +1,102 @@
+/* Topbar.css - Match Figma JSON exactly */
+:root {
+  --topbar-height: 49px;
+  --topbar-bg: #1A1230;
+  --topbar-border: #2D2550; /* rgb(0.176, 0.145, 0.314) */
+  --button-bg: #1A1230; /* rgb(0.102, 0.071, 0.188) */
+  --button-border: #3B2A6B; /* rgb(0.231, 0.165, 0.420) */
+  --text-white: #FFFFFF;
+  --gradient-icon: linear-gradient(135deg, #B44CFF 0%, #FF7799 100%);
+}
+
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--topbar-height);
+  /* Topbar needs explicit dark bg when parent is light */
+  background-color: #1A1230 !important;
+  border-bottom: 1px solid var(--topbar-border);
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+.topbar-logo {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.topbar-logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background-color: var(--button-bg);
+  border: 1px solid var(--button-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.topbar-logo-icon svg {
+  font-size: 20px;
+  /* Gradient text via background-clip */
+  background: var(--gradient-icon);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.topbar-logo-text {
+  font-size: 16.8px;
+  font-weight: 800;
+  color: var(--text-white);
+  letter-spacing: -0.01em;
+  line-height: 21px;
+  white-space: nowrap;
+  margin-left: 10px;
+}
+
+.gradient-text {
+  font-size: 16.8px;
+  font-weight: 800;
+  background: linear-gradient(to right, #9d4edd, #ff007f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.topbar-spacer {
+  flex: 1;
+}
+
+.topbar-login-btn {
+  width: 46px;
+  height: 23px;
+  border-radius: 12px;
+  background-color: var(--button-bg);
+  border: 1px solid var(--button-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: all 0.15s ease;
+}
+
+.topbar-login-btn:hover {
+  background-color: #251A40;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.topbar-login-btn span {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-white);
+  line-height: 17px;
+}
