@@ -1,38 +1,39 @@
 // CalisHealth theme - based on Content Manager admin panel mockup
-// Sidebar: DEEP RED background with WHITE text
-// Active menu item: WHITE background, RED text
-// Main canvas: WHITE
-// Cards: white, subtle shadow
+// Sidebar: DEEP PURPLE background with WHITE text
+// Active menu item: LIGHT PURPLE background, DEEP PURPLE text
+// Main canvas: very light gray (#F9FAFB)
+// Cards: white
 
 import { createTheme } from "@mui/material/styles";
 
-const SIDEBAR_BG = "#B91C1C"; // deep red - sidebar background
-const SIDEBAR_BG_DARK = "#7F1D1D"; // darker red for hover
-const ACTIVE_BG = "#FFFFFF"; // white pill for active menu
-const ACTIVE_TEXT = "#B91C1C";
+// Deep purple - main brand color (sidebar bg, primary CTAs)
+const PRIMARY = "#5B21B6"; // deep purple/violet
+const PRIMARY_DARK = "#4C1D95"; // darker purple - hover
+const PRIMARY_SOFT = "#EDE9FE"; // purple-100 - active item bg
+const PRIMARY_SOFT_HOVER = "#DDD6FE"; // purple-200 - active hover
 
 const theme = createTheme({
   palette: {
     mode: "light",
     primary: {
-      main: "#B91C1C", // deep red - brand & sidebar
-      light: "#DC2626",
-      dark: "#7F1D1D",
+      main: PRIMARY,
+      light: "#7C3AED", // violet-600
+      dark: PRIMARY_DARK,
       contrastText: "#FFFFFF",
     },
     secondary: {
-      main: "#B91C1C", // keep secondary aligned with primary for consistency
-      light: "#DC2626",
-      dark: "#7F1D1D",
+      main: PRIMARY,
+      light: "#7C3AED",
+      dark: PRIMARY_DARK,
       contrastText: "#FFFFFF",
     },
     background: {
-      default: "#FFFFFF", // main canvas - white per mockup
+      default: "#F9FAFB", // very light gray canvas (per mockup)
       paper: "#FFFFFF",
     },
     text: {
-      primary: "#1F2937",   // slate-900
-      secondary: "#6B7280", // gray-500
+      primary: "#111827",   // gray-900 - headings
+      secondary: "#6B7280", // gray-500 - muted body
     },
     divider: "#E5E7EB",
     error: { main: "#DC2626" },
@@ -57,15 +58,20 @@ const theme = createTheme({
         root: { borderRadius: 8, textTransform: "none", fontWeight: 600 },
         outlined: {
           borderColor: "#E5E7EB",
-          color: "#1F2937",
-          "&:hover": { borderColor: "#B91C1C", backgroundColor: "#FEF2F2" },
+          color: "#111827",
+          "&:hover": {
+            borderColor: PRIMARY,
+            backgroundColor: "#F5F3FF", // purple-50
+          },
         },
       },
     },
     MuiPaper: {
       defaultProps: { elevation: 0 },
       styleOverrides: {
-        root: { backgroundImage: "none" },
+        root: {
+          backgroundImage: "none",
+        },
       },
     },
     MuiAppBar: {
@@ -74,11 +80,10 @@ const theme = createTheme({
         root: {
           backgroundColor: "#FFFFFF",
           borderBottom: "1px solid #E5E7EB",
-          boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
         },
       },
     },
-    // Sidebar ListItemButton: white pill when active, transparent when not
+    // Sidebar nav: white text on deep purple; active = light purple pill with deep purple text
     MuiListItemButton: {
       styleOverrides: {
         root: {
@@ -87,17 +92,16 @@ const theme = createTheme({
           marginBlock: 2,
           paddingBlock: 10,
           paddingInline: 14,
-          color: "#FFFFFF", // white text on red sidebar
+          color: "#FFFFFF", // white text on purple sidebar
           "& .MuiListItemIcon-root": { color: "#FFFFFF", minWidth: 36 },
           "&:hover": {
-            backgroundColor: SIDEBAR_BG_DARK,
+            backgroundColor: PRIMARY_DARK,
           },
           "&.Mui-selected": {
-            backgroundColor: ACTIVE_BG,
-            color: ACTIVE_TEXT,
-            boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
-            "& .MuiListItemIcon-root": { color: ACTIVE_TEXT },
-            "&:hover": { backgroundColor: ACTIVE_BG },
+            backgroundColor: PRIMARY_SOFT,
+            color: PRIMARY,
+            "& .MuiListItemIcon-root": { color: PRIMARY },
+            "&:hover": { backgroundColor: PRIMARY_SOFT_HOVER },
           },
         },
       },

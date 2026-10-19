@@ -15,7 +15,7 @@ export default function AdminLayout({ children }) {
           px: 4,
           pb: 4,
           minHeight: "100vh",
-          backgroundColor: "background.default", // white canvas
+          backgroundColor: "background.default",
         }}
       >
         {children}
