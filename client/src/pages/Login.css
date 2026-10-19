@@ -194,11 +194,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
   letter-spacing: 0.5px;
   transition: opacity 0.2s, transform 0.1s;
-  position: relative;
-  overflow: hidden;
 }
 
 .login-submit:hover {
@@ -207,28 +204,6 @@
 
 .login-submit:active {
   transform: scale(0.99);
-}
-
-/* Decorative pill behind the arrow icon (matches Figma gradient circle) */
-.login-submit::after {
-  content: "";
-  position: absolute;
-  right: 50%;
-  top: 50%;
-  transform: translate(calc(50% + 14px), -50%);
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #B08BF8 0%, #9A79EE 100%);
-  opacity: 0.55;
-  pointer-events: none;
-}
-
-
-
-.login-submit-text {
-  position: relative;
-  z-index: 1;
 }
 
 /* Footer links */
@@ -283,12 +258,6 @@
   .login-submit {
     height: 70px;
     font-size: 18px;
-  }
-  .login-submit::after {
-    display: none;
-  }
-  .login-submit-icon {
-    margin-left: 0;
   }
   .login-links {
     flex-direction: column;
