@@ -36,7 +36,7 @@ public class AuthDtos {
     }
 
     public record ChangePasswordRequest(
-            @NotBlank(message = "Vui lòng nhập mật khẩu cũ") String oldPassword,
+            String oldPassword,
             @NotBlank(message = "Vui lòng nhập mật khẩu mới") @StrongPassword String newPassword,
             @NotBlank(message = "Vui lòng xác nhận mật khẩu mới") String confirmNewPassword) {
 

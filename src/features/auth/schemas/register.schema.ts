@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Khớp với backend RegisterRequest:
+ * Matches backend RegisterRequest:
  *   @NotBlank fullName
  *   @ValidEmail email
  *   @StrongPassword password
@@ -9,24 +9,24 @@ import { z } from 'zod';
  */
 const passwordSchema = z
   .string()
-  .min(8, 'Mật khẩu phải có ít nhất 8 ký tự')
-  .regex(/[A-Z]/, 'Mật khẩu phải có ít nhất 1 chữ hoa')
-  .regex(/[a-z]/, 'Mật khẩu phải có ít nhất 1 chữ thường')
-  .regex(/[0-9]/, 'Mật khẩu phải có ít nhất 1 chữ số')
-  .regex(/[^A-Za-z0-9]/, 'Mật khẩu phải có ít nhất 1 ký tự đặc biệt');
+  .min(8, 'Password must be at least 8 characters')
+  .regex(/[A-Z]/, 'Password must contain at least 1 uppercase letter')
+  .regex(/[a-z]/, 'Password must contain at least 1 lowercase letter')
+  .regex(/[0-9]/, 'Password must contain at least 1 number')
+  .regex(/[^A-Za-z0-9]/, 'Password must contain at least 1 special character');
 
 export const registerSchema = z
   .object({
-    fullName: z.string().min(1, 'Vui lòng nhập họ tên').max(100, 'Họ tên quá dài'),
+    fullName: z.string().min(1, 'Please enter your full name').max(100, 'Full name is too long'),
     email: z
       .string()
-      .min(1, 'Vui lòng nhập email')
-      .email('Email không đúng định dạng'),
+      .min(1, 'Please enter your email')
+      .email('Invalid email address'),
     password: passwordSchema,
-    confirmPassword: z.string().min(1, 'Vui lòng xác nhận mật khẩu'),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: 'Mật khẩu xác nhận không khớp',
+    message: 'Passwords do not match',
     path: ['confirmPassword'],
   });
 

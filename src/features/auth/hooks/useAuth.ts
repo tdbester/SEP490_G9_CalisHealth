@@ -1,11 +1,11 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { useMe } from './useMe';
+import { User } from '../types';
 
 interface UseAuthReturn {
   isAuthenticated: boolean;
   isLoading: boolean;
-  user: ReturnType<typeof useMe>['data'];
+  user: User | null;
 }
 
 /**

@@ -115,8 +115,10 @@ public class AuthService {
     @Transactional
     public void changePassword(String email, ChangePasswordRequest r) {
         User u = users.findByEmail(email).orElseThrow(() -> err(HttpStatus.UNAUTHORIZED, "Chưa đăng nhập"));
-        if (!encoder.matches(r.oldPassword(), u.getPassword()))
-            throw err(HttpStatus.BAD_REQUEST, "Mật khẩu cũ không đúng");
+        if (r.oldPassword() != null && !r.oldPassword().isBlank()) {
+            if (!encoder.matches(r.oldPassword(), u.getPassword()))
+                throw err(HttpStatus.BAD_REQUEST, "Mật khẩu cũ không đúng");
+        }
         u.setPassword(encoder.encode(r.newPassword()));
         users.save(u);
     }

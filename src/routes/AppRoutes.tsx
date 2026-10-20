@@ -10,6 +10,8 @@ import { VerifyEmailPage } from '@/features/auth/pages/VerifyEmailPage';
 import { ChangePasswordPage } from '@/features/auth/pages/ChangePasswordPage';
 import { NotFoundPage } from '@/features/auth/pages/NotFoundPage';
 import { HomePage } from '@/pages/HomePage';
+import { SurveyLayout } from '@/features/survey/pages/SurveyLayout';
+import { BodyInfoPage } from '@/features/survey/pages/BodyInfoPage';
 
 /**
  * Định nghĩa tất cả routes của app.
@@ -34,6 +36,18 @@ export function AppRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
+        <Route path="/account/change-password" element={<ChangePasswordPage />} />
+
+        {/* Survey flow */}
+        <Route path="/survey" element={<SurveyLayout />}>
+          <Route index element={<Navigate to="body-information" replace />} />
+          <Route path="body-information" element={<BodyInfoPage />} />
+          {/* Future steps:
+          <Route path="goal" element={<GoalPage />} />
+          <Route path="fitness-level" element={<FitnessLevelPage />} />
+          <Route path="schedule" element={<SchedulePage />} />
+          */}
+        </Route>
       </Route>
 
       {/* 404 */}

@@ -2,20 +2,20 @@ import { z } from 'zod';
 
 const passwordSchema = z
   .string()
-  .min(8, 'Mật khẩu phải có ít nhất 8 ký tự')
-  .regex(/[A-Z]/, 'Mật khẩu phải có ít nhất 1 chữ hoa')
-  .regex(/[a-z]/, 'Mật khẩu phải có ít nhất 1 chữ thường')
-  .regex(/[0-9]/, 'Mật khẩu phải có ít nhất 1 chữ số')
-  .regex(/[^A-Za-z0-9]/, 'Mật khẩu phải có ít nhất 1 ký tự đặc biệt');
+  .min(8, 'Password must be at least 8 characters')
+  .regex(/[A-Z]/, 'Password must contain at least 1 uppercase letter')
+  .regex(/[a-z]/, 'Password must contain at least 1 lowercase letter')
+  .regex(/[0-9]/, 'Password must contain at least 1 number')
+  .regex(/[^A-Za-z0-9]/, 'Password must contain at least 1 special character');
 
 export const resetSchema = z
   .object({
-    token: z.string().min(1, 'Token không hợp lệ'),
+    token: z.string().optional().default(''),
     newPassword: passwordSchema,
-    confirmNewPassword: z.string().min(1, 'Vui lòng xác nhận mật khẩu mới'),
+    confirmNewPassword: z.string().min(1, 'Please confirm your new password'),
   })
   .refine((data) => data.newPassword === data.confirmNewPassword, {
-    message: 'Mật khẩu xác nhận không khớp',
+    message: 'Passwords do not match',
     path: ['confirmNewPassword'],
   });
 
