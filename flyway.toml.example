@@ -1,8 +1,0 @@
-[environments.default]
-url = "jdbc:mysql://localhost:3306/calishealth?useSSL=false&allowPublicKeyRetrieval=true"
-user = "root"
-password = "THAY_MAT_KHAU_CUA_BAN_VAO_DAY"
-
-[flyway]
-environment = "default"
-locations = ["filesystem:sql"]

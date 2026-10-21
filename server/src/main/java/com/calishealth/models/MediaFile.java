@@ -14,35 +14,45 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 public class MediaFile {
+    public enum FileType { VIDEO, IMAGE, DOCUMENT }
+    public enum Purpose { WORKOUT_VIDEO, EXERCISE_VIDEO, AVATAR, ATTACHMENT }
+    public enum Status { PENDING_SCAN, ACTIVE, REJECTED, ORPHANED, DELETED }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "file_url", nullable = false, length = 1000)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "uploader_id", nullable = false)
+    private User uploader;
+
+    @Column(name = "file_url", nullable = false, unique = true)
     private String fileUrl;
 
-    @Column(name = "file_type", length = 50)
-    private String fileType;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "file_type", nullable = false)
+    private FileType fileType;
 
-    @Column(length = 50)
+    @Column(length = 10)
     private String format;
 
-    @Column(name = "size_mb", precision = 10, scale = 2)
-    private BigDecimal sizeMb;
+    @Column(name = "size_mb", nullable = false, precision = 8, scale = 2)
+    private BigDecimal sizeMb = BigDecimal.ZERO;
 
     @Column(name = "duration_seconds")
     private Integer durationSeconds;
 
-    @Column(length = 100)
-    private String purpose;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Purpose purpose;
 
-    @Column(length = 50)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Status status = Status.PENDING_SCAN;
 
-    @Column(name = "uploaded_at")
-    private LocalDateTime uploadedAt;
+    @Column(name = "uploaded_at", nullable = false)
+    private LocalDateTime uploadedAt = LocalDateTime.now();
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "uploaded_by")
-    private User uploadedBy;
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 }

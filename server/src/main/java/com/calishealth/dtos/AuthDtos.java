@@ -4,10 +4,12 @@ import com.calishealth.validation.StrongPassword;
 import com.calishealth.validation.ValidEmail;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 public class AuthDtos {
     public record RegisterRequest(
-            @NotBlank(message = "Vui lòng nhập họ tên") String fullName,
+            @NotBlank(message = "Vui lòng nhập họ tên")
+            @Size(min = 2, max = 50, message = "Họ tên phải từ 2 đến 50 ký tự") String fullName,
             @ValidEmail String email,
             @NotBlank(message = "Vui lòng nhập mật khẩu") @StrongPassword String password,
             @NotBlank(message = "Vui lòng xác nhận mật khẩu") String confirmPassword) {

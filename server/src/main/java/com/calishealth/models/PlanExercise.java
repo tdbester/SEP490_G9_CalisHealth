@@ -18,13 +18,13 @@ public class PlanExercise {
     @Column(nullable = false)
     private Integer sequence;
 
-    @Column(nullable = false)
+    @Column(columnDefinition = "tinyint unsigned")
     private Integer sets;
 
-    @Column(nullable = false)
+    @Column(columnDefinition = "smallint unsigned")
     private Integer reps;
 
-    @Column(name = "rest_seconds", nullable = false)
+    @Column(name = "rest_seconds", columnDefinition = "smallint unsigned")
     private Integer restSeconds;
 
     @Column(name = "training_plan_id", nullable = false)

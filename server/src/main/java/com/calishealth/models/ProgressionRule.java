@@ -4,8 +4,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -14,24 +12,30 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 public class ProgressionRule {
+    public enum Relationship { PROGRESSION, REGRESSION }
+    public enum Status { ACTIVE, INACTIVE }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "rule_name", nullable = false, length = 150)
+    @Column(name = "rule_name", length = 100)
     private String ruleName;
 
-    @Column(length = 100)
-    private String relationship;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Relationship relationship = Relationship.PROGRESSION;
 
     @Column(name = "required_reps")
     private Integer requiredReps;
 
-    @Column(name = "min_accuracy", precision = 6, scale = 3)
-    private BigDecimal minAccuracy;
+    // percent, 0-100
+    @Column(name = "min_accuracy", columnDefinition = "tinyint unsigned")
+    private Integer minAccuracy;
 
-    @Column(length = 40)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Status status = Status.ACTIVE;
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;

@@ -14,23 +14,28 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 public class ContentScan {
+    public enum ScanType { PROFANITY_TEXT, MEDIAPIPE_POSE }
+    public enum Status { PENDING, PASSED, FLAGGED, FAILED }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "scan_type", length = 60)
-    private String scanType;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "scan_type", nullable = false)
+    private ScanType scanType;
 
-    @Column(length = 40)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Status status = Status.PENDING;
 
-    @Column(precision = 7, scale = 3)
+    @Column(precision = 5, scale = 2)
     private BigDecimal score;
 
     @Column(name = "flagged_terms", columnDefinition = "TEXT")
     private String flaggedTerms;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "json")
     private String details;
 
     @Column(name = "scanned_at", nullable = false)

@@ -17,7 +17,7 @@ public class SessionExerciseResult {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "sets_completed", nullable = false)
+    @Column(name = "sets_completed", nullable = false, columnDefinition = "tinyint unsigned")
     private Integer setsCompleted;
 
     @Column(name = "valid_reps", nullable = false)
@@ -26,7 +26,7 @@ public class SessionExerciseResult {
     @Column(name = "invalid_reps", nullable = false)
     private Integer invalidReps;
 
-    @Column(precision = 6, scale = 3)
+    @Column(precision = 5, scale = 2)
     private BigDecimal accuracy;
 
     @Column(name = "active_seconds", nullable = false)

@@ -15,21 +15,29 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 public class Exercise {
+    public enum ExerciseType { EXERCISE, SKILL }
+    public enum Category { STRENGTH, CARDIO }
+    public enum Source { SYSTEM, MEMBER }
+    public enum Status { DRAFT, PENDING_REVIEW, ACTIVE, REJECTED, INACTIVE }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 150)
+    @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false, length = 40)
-    private String type;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ExerciseType type = ExerciseType.EXERCISE;
 
-    @Column(length = 80)
-    private String category;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Category category = Category.STRENGTH;
 
-    @Column(name = "difficulty_level", length = 40)
-    private String difficultyLevel;
+    // 1 = Beginner, 2 = Intermediate, 3 = Advanced
+    @Column(name = "difficulty_level", columnDefinition = "tinyint unsigned")
+    private Integer difficultyLevel;
 
     @Column(columnDefinition = "TEXT")
     private String instructions;
@@ -43,23 +51,26 @@ public class Exercise {
     @Column(name = "anatomy_theory", columnDefinition = "TEXT")
     private String anatomyTheory;
 
-    @Column(name = "video_url", length = 1000)
+    @Column(name = "video_url")
     private String videoUrl;
 
-    @Column(name = "default_sets")
+    @Column(name = "default_sets", columnDefinition = "tinyint unsigned")
     private Integer defaultSets;
 
-    @Column(name = "default_reps")
+    @Column(name = "default_reps", columnDefinition = "smallint unsigned")
     private Integer defaultReps;
 
-    @Column(name = "default_rest")
+    // seconds
+    @Column(name = "default_rest", columnDefinition = "smallint unsigned")
     private Integer defaultRest;
 
-    @Column(length = 60)
-    private String source;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Source source = Source.SYSTEM;
 
-    @Column(length = 40)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Status status = Status.DRAFT;
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
@@ -68,8 +79,8 @@ public class Exercise {
     @JoinColumn(name = "demo_media_id")
     private MediaFile demoMedia;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
 
     @OneToMany(mappedBy = "exercise", cascade = CascadeType.ALL, orphanRemoval = true)

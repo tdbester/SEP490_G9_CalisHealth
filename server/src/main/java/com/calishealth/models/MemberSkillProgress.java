@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -14,18 +13,21 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 public class MemberSkillProgress {
+    public enum Status { LOCKED, UNLOCKED, MASTERED }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 40)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Status status = Status.LOCKED;
 
-    @Column(name = "best_reps")
-    private Integer bestReps;
+    @Column(name = "best_reps", nullable = false)
+    private Integer bestReps = 0;
 
-    @Column(name = "best_accuracy", precision = 6, scale = 3)
-    private BigDecimal bestAccuracy;
+    @Column(name = "best_accuracy", nullable = false, precision = 5, scale = 2)
+    private BigDecimal bestAccuracy = BigDecimal.ZERO;
 
     @Column(name = "unlocked_at")
     private LocalDateTime unlockedAt;

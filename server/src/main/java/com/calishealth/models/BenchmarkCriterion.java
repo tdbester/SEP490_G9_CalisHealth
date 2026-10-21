@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
 import java.math.BigDecimal;
 
 @Entity
@@ -17,10 +16,10 @@ public class BenchmarkCriterion {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "min_value", nullable = false, precision = 10, scale = 2)
-    private BigDecimal minValue;
+    @Column(name = "min_value")
+    private Integer minValue;
 
-    @Column(name = "criterion_weight", nullable = false, precision = 8, scale = 3)
+    @Column(name = "criterion_weight", precision = 4, scale = 2)
     private BigDecimal criterionWeight;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

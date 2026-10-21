@@ -18,10 +18,10 @@ public class FormErrorLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "rep_number", nullable = false)
+    @Column(name = "rep_number")
     private Integer repNumber;
 
-    @Column(name = "joint_angle", precision = 7, scale = 3)
+    @Column(name = "joint_angle", precision = 5, scale = 2)
     private BigDecimal jointAngle;
 
     @Column(name = "occurred_at", nullable = false)

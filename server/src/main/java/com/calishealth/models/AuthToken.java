@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Table(name = "auth_tokens")
 @Getter @Setter @NoArgsConstructor
 public class AuthToken {
-    public enum TokenType { VERIFY_EMAIL, RESET_PASSWORD }
+    public enum TokenType { VERIFY_EMAIL, RESET_PASSWORD, REFRESH }
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -20,7 +20,9 @@ public class AuthToken {
     private User user;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private TokenType type;
 
+    @Column(nullable = false)
     private LocalDateTime expiresAt;
 }

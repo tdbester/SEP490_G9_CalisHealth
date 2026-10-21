@@ -23,6 +23,9 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class ExerciseService {
+    // Index + 1 is the ERD exercises.difficulty_level (1 = Beginner ... 3 = Advanced).
+    private static final List<String> EXERCISE_LEVELS = List.of("Beginner", "Intermediate", "Advanced");
+
     private final ExerciseRepository exercises;
     private final ErdExerciseRepository systemExercises;
     private final MuscleGroupRepository muscleGroups;
@@ -53,13 +56,18 @@ public class ExerciseService {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exercise data is required");
         }
-        if (request.name() == null || request.name().isBlank() || request.name().length() > 120) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exercise title is required and must be at most 120 characters");
+        if (request.name() == null || request.name().isBlank() || request.name().length() > 100) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exercise title is required and must be at most 100 characters");
         }
         if (request.muscleGroup() == null || request.muscleGroup().isBlank() || request.muscleGroup().length() > 120) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select one or more muscle groups");
         }
-        if (request.level() == null || !List.of("Beginner", "Intermediate", "Advanced").contains(request.level())) {
+        for (String muscleName : request.muscleGroup().split("\\s*·\\s*")) {
+            if (muscleName.isBlank() || muscleName.trim().length() > 50) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Each muscle group name must be 1-50 characters");
+            }
+        }
+        if (request.level() == null || !EXERCISE_LEVELS.contains(request.level())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a valid exercise level");
         }
         if (request.category() != null && request.category().length() > 80) {
@@ -78,14 +86,14 @@ public class ExerciseService {
 
         Exercise systemExercise = new Exercise();
         systemExercise.setName(request.name().trim());
-        systemExercise.setType(type.name());
-        systemExercise.setCategory(request.category());
-        systemExercise.setDifficultyLevel(request.level().trim());
+        systemExercise.setType(type == ExerciseEntry.EntryType.SKILL ? Exercise.ExerciseType.SKILL : Exercise.ExerciseType.EXERCISE);
+        systemExercise.setCategory(toErdCategory(request.category()));
+        systemExercise.setDifficultyLevel(EXERCISE_LEVELS.indexOf(request.level().trim()) + 1);
         systemExercise.setInstructions(request.description());
         systemExercise.setExecutionSteps(request.guide());
         systemExercise.setVideoUrl(demoVideoUrl);
-        systemExercise.setSource("SYSTEM");
-        systemExercise.setStatus("ACTIVE");
+        systemExercise.setSource(Exercise.Source.SYSTEM);
+        systemExercise.setStatus(Exercise.Status.ACTIVE);
         systemExercise.setCreatedBy(users.findByEmail(createdByEmail)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "The signed-in user no longer exists")));
         systemExercise = systemExercises.save(systemExercise);
@@ -119,6 +127,13 @@ public class ExerciseService {
         entry.setCode((type == ExerciseEntry.EntryType.HEALTH ? "HE" : "SK")
                 + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT));
         return toResponse(exercises.save(entry));
+    }
+
+    // ERD exercises.category only has STRENGTH / CARDIO; the free-text category is kept on exercise_entries.
+    private static Exercise.Category toErdCategory(String category) {
+        return category != null && category.trim().equalsIgnoreCase("cardio")
+                ? Exercise.Category.CARDIO
+                : Exercise.Category.STRENGTH;
     }
 
     @Transactional

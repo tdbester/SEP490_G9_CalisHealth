@@ -11,12 +11,15 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class ExerciseVariation {
+    public enum VariationType { PROGRESSION, REGRESSION, ALTERNATIVE }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 60)
-    private String type;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private VariationType type;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "exercise_id", nullable = false)

@@ -14,23 +14,25 @@ import java.time.LocalDate;
 @Setter
 @NoArgsConstructor
 public class MemberProfile {
+    public enum Gender { MALE, FEMALE, OTHER }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 20)
-    private String gender;
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
 
-    @Column(name = "date_of_birth")
+    // ERD: member must be at least 13 years old (checked in the application layer)
+    @Column(name = "date_of_birth", nullable = false)
     private LocalDate dateOfBirth;
 
-    @Column(precision = 6, scale = 2)
+    @Column(precision = 5, scale = 2)
     private BigDecimal weight;
 
-    @Column(precision = 6, scale = 2)
+    @Column(precision = 5, scale = 2)
     private BigDecimal height;
 
-    @Column(columnDefinition = "TEXT")
     private String goals;
 
     @Column(name = "streak_count", nullable = false, columnDefinition = "int not null default 0")
@@ -39,11 +41,8 @@ public class MemberProfile {
     @Column(name = "longest_streak", nullable = false, columnDefinition = "int not null default 0")
     private int longestStreak;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(length = 200)
     private String bio;
-
-    @Column(name = "avatar_url", length = 1000)
-    private String avatarUrl;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
