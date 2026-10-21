@@ -31,3 +31,12 @@ app:
   jwt:
     secret: clh-demo-secret-key-please-change-this-32-chars-min
     expiration-ms: 86400000
+
+# OpenAPI / Swagger UI
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  api-docs:
+    path: /v3/api-docs

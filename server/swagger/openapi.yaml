@@ -1,0 +1,444 @@
+openapi: 3.1.0
+info:
+  title: CalisHealth Auth API
+  description: |
+    REST API xác thực & quản lý tài khoản cho dự án SEP490_G9_CalisHealth.
+
+    Bao gồm: đăng ký, xác thực email, đăng nhập (JWT), quên/đặt lại mật khẩu, đổi mật khẩu, lấy thông tin user hiện tại.
+  version: 1.0.0
+  contact:
+    name: CalisHealth Team
+    email: support@calishealth.local
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+tags:
+  - name: Auth
+    description: Xác thực & quản lý tài khoản
+
+# ============================================================================
+# SECURITY: áp dụng JWT Bearer cho toàn bộ API (endpoint public không yêu cầu
+# vẫn chấp nhận được — SecurityConfig xử lý). Endpoint cần auth đánh dấu
+# security: bearerAuth riêng.
+# ============================================================================
+security:
+  - bearerAuth: []
+
+paths:
+  # ------------------------------------------------------------------
+  # 1. ĐĂNG KÝ (public)
+  # ------------------------------------------------------------------
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Đăng ký tài khoản mới
+      description: |
+        Tạo user mới và gửi email xác thực (token hết hạn sau 24 giờ).
+
+        **Validation:**
+        - `email`: phải hợp lệ, chưa tồn tại trong hệ thống
+        - `password`: tối thiểu 8 ký tự, có chữ hoa, chữ thường, số, ký tự đặc biệt
+        - `confirmPassword`: phải khớp với `password`
+        - `fullName`: không được để trống
+      security: []  # endpoint public, không cần JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+            examples:
+              valid:
+                value:
+                  fullName: "Nguyễn Văn A"
+                  email: "a.nv@example.com"
+                  password: "P@ssword1"
+                  confirmPassword: "P@ssword1"
+      responses:
+        '200':
+          description: Đăng ký thành công, email xác thực đã được gửi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageResponse' }
+              example:
+                message: "Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản."
+        '400':
+          description: |
+            Dữ liệu không hợp lệ. Có thể do: email đã tồn tại, validation
+            fail (mật khẩu yếu, thiếu field, confirmPassword không khớp…).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationErrorResponse' }
+              examples:
+                duplicate:
+                  summary: Email đã đăng ký
+                  value: { message: "Email đã được đăng ký" }
+                invalid:
+                  summary: Validation fail
+                  value:
+                    message: "Vui lòng nhập họ tên; Mật khẩu xác nhận không khớp"
+                    errors:
+                      fullName: "Vui lòng nhập họ tên"
+                      confirmPassword: "Mật khẩu xác nhận không khớp"
+
+  # ------------------------------------------------------------------
+  # 2. XÁC THỰC EMAIL (public)
+  # ------------------------------------------------------------------
+  /api/auth/verify:
+    get:
+      tags: [Auth]
+      summary: Xác thực email bằng token
+      description: |
+        User nhấn link trong email xác thực (frontend gọi endpoint này để
+        kích hoạt tài khoản, set `enabled = true`).
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          description: Token UUID nhận từ link email
+          schema:
+            type: string
+            example: "a1b2c3d4-e5f6-7890-abcd-ef0123456789"
+      responses:
+        '200':
+          description: Xác thực thành công
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageResponse' }
+              example: { message: "Xác thực email thành công! Bạn có thể đăng nhập." }
+        '400':
+          description: Token không hợp lệ, đã được sử dụng, hoặc đã hết hạn
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageResponse' }
+              examples:
+                invalid:
+                  value: { message: "Link không hợp lệ hoặc đã được sử dụng" }
+                expired:
+                  value: { message: "Link đã hết hạn" }
+
+  # ------------------------------------------------------------------
+  # 3. ĐĂNG NHẬP (public — trả JWT)
+  # ------------------------------------------------------------------
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Đăng nhập → trả JWT
+      description: |
+        Xác thực email + password, trả về JWT dùng cho header `Authorization: Bearer <token>`
+        ở các endpoint yêu cầu đăng nhập (`/change-password`, `/me`).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+            example:
+              email: "a.nv@example.com"
+              password: "P@ssword1"
+      responses:
+        '200':
+          description: Đăng nhập thành công
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+              example:
+                token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                email: "a.nv@example.com"
+                fullName: "Nguyễn Văn A"
+        '401':
+          description: Email hoặc mật khẩu không đúng
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageResponse' }
+              example: { message: "Email hoặc mật khẩu không đúng" }
+        '403':
+          description: Tài khoản chưa xác thực email
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageResponse' }
+              example: { message: "Tài khoản chưa xác thực email. Vui lòng kiểm tra hộp thư" }
+
+  # ------------------------------------------------------------------
+  # 4. QUÊN MẬT KHẨU (public)
+  # ------------------------------------------------------------------
+  /api/auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Yêu cầu đặt lại mật khẩu
+      description: |
+        Luôn trả về cùng 1 thông báo, **bất kể email có tồn tại hay không**
+        (tránh lộ thông tin user). Nếu email tồn tại, link reset (hết hạn sau
+        30 phút) sẽ được gửi.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ForgotRequest' }
+            example: { email: "a.nv@example.com" }
+      responses:
+        '200':
+          description: Yêu cầu đã được xử lý
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageResponse' }
+              example: { message: "Nếu email tồn tại, chúng tôi đã gửi link đặt lại mật khẩu." }
+
+  # ------------------------------------------------------------------
+  # 5. ĐẶT LẠI MẬT KHẨU (public — dùng token từ email)
+  # ------------------------------------------------------------------
+  /api/auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Đặt lại mật khẩu bằng token
+      description: |
+        User nhấn link reset → frontend gửi `token` (từ URL) + mật khẩu mới.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResetRequest' }
+            examples:
+              valid:
+                value:
+                  token: "a1b2c3d4-e5f6-7890-abcd-ef0123456789"
+                  newPassword: "NewP@ss1"
+                  confirmNewPassword: "NewP@ss1"
+      responses:
+        '200':
+          description: Đặt lại mật khẩu thành công
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageResponse' }
+              example: { message: "Đặt lại mật khẩu thành công! Hãy đăng nhập lại." }
+        '400':
+          description: |
+            Token không hợp lệ / hết hạn / mật khẩu yếu / xác nhận không khớp.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageResponse' }
+              examples:
+                invalid: { value: { message: "Link không hợp lệ hoặc đã được sử dụng" } }
+                expired: { value: { message: "Link đã hết hạn" } }
+
+  # ------------------------------------------------------------------
+  # 6. ĐỔI MẬT KHẨU (yêu cầu JWT)
+  # ------------------------------------------------------------------
+  /api/auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Đổi mật khẩu (đã đăng nhập)
+      description: |
+        Yêu cầu JWT trong header `Authorization: Bearer <token>`.
+        Cần mật khẩu cũ để xác minh danh tính.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
+            example:
+              oldPassword: "P@ssword1"
+              newPassword: "NewP@ss2"
+              confirmNewPassword: "NewP@ss2"
+      responses:
+        '200':
+          description: Đổi mật khẩu thành công
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageResponse' }
+              example: { message: "Đổi mật khẩu thành công!" }
+        '400':
+          description: Mật khẩu cũ không đúng / validation fail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageResponse' }
+              examples:
+                wrong_old: { value: { message: "Mật khẩu cũ không đúng" } }
+        '401':
+          description: Thiếu hoặc JWT không hợp lệ
+
+  # ------------------------------------------------------------------
+  # 7. THÔNG TIN USER HIỆN TẠI (yêu cầu JWT)
+  # ------------------------------------------------------------------
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Lấy thông tin user từ JWT
+      description: |
+        Trả về email + fullName của user đang đăng nhập (lấy từ JWT).
+      responses:
+        '200':
+          description: Thông tin user hiện tại
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeResponse' }
+              example:
+                email: "a.nv@example.com"
+                fullName: "Nguyễn Văn A"
+        '401':
+          description: Thiếu hoặc JWT không hợp lệ
+
+# ============================================================================
+# COMPONENTS
+# ============================================================================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        JWT trả về từ `/api/auth/login`. Truyền trong header
+        `Authorization: Bearer <token>`.
+
+  schemas:
+    # ---- Request DTOs ----
+    RegisterRequest:
+      type: object
+      required: [fullName, email, password, confirmPassword]
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+          description: Họ và tên
+          example: "Nguyễn Văn A"
+        email:
+          type: string
+          format: email
+          description: Email đăng nhập (validate theo custom annotation `@ValidEmail`)
+          example: "a.nv@example.com"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: |
+            Mật khẩu (`@StrongPassword`). Yêu cầu: tối thiểu 8 ký tự, có chữ hoa,
+            chữ thường, số, ký tự đặc biệt.
+          example: "P@ssword1"
+        confirmPassword:
+          type: string
+          format: password
+          description: Phải khớp với `password` (validate bằng `@AssertTrue`)
+          example: "P@ssword1"
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "a.nv@example.com"
+        password:
+          type: string
+          format: password
+          example: "P@ssword1"
+
+    ForgotRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "a.nv@example.com"
+
+    ResetRequest:
+      type: object
+      required: [token, newPassword, confirmNewPassword]
+      properties:
+        token:
+          type: string
+          description: Token UUID nhận từ link reset password trong email
+          example: "a1b2c3d4-e5f6-7890-abcd-ef0123456789"
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+          description: Mật khẩu mới (cùng rule `@StrongPassword`)
+          example: "NewP@ss1"
+        confirmNewPassword:
+          type: string
+          format: password
+          description: Phải khớp với `newPassword`
+          example: "NewP@ss1"
+
+    ChangePasswordRequest:
+      type: object
+      required: [oldPassword, newPassword, confirmNewPassword]
+      properties:
+        oldPassword:
+          type: string
+          format: password
+          example: "P@ssword1"
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+          description: Mật khẩu mới (cùng rule `@StrongPassword`)
+          example: "NewP@ss2"
+        confirmNewPassword:
+          type: string
+          format: password
+          example: "NewP@ss2"
+
+    # ---- Response DTOs ----
+    AuthResponse:
+      type: object
+      required: [token, email, fullName]
+      properties:
+        token:
+          type: string
+          description: >-
+            JWT dùng cho các request tiếp theo (header
+            `Authorization: Bearer <token>`)
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhLm52QGV4YW1wbGUuY29tIiwiaWF0IjoxNzA..."
+        email:
+          type: string
+          format: email
+          example: "a.nv@example.com"
+        fullName:
+          type: string
+          example: "Nguyễn Văn A"
+
+    MeResponse:
+      type: object
+      required: [email, fullName]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "a.nv@example.com"
+        fullName:
+          type: string
+          example: "Nguyễn Văn A"
+
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: Thông báo tiếng Việt mô tả kết quả
+          example: "Đăng ký thành công!"
+
+    ValidationErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: Thông báo tổng (concatenate các lỗi field)
+          example: "Vui lòng nhập họ tên; Mật khẩu xác nhận không khớp"
+        errors:
+          type: object
+          description: Map field → thông báo lỗi tương ứng
+          additionalProperties:
+            type: string
+          example:
+            fullName: "Vui lòng nhập họ tên"
+            confirmPassword: "Mật khẩu xác nhận không khớp"
