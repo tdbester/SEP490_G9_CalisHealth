@@ -38,6 +38,7 @@ desktop.ini
 .env.local
 application-local.yml
 application-local.properties
+flyway.toml
 
 # ===== Test / coverage =====
 jacoco/
