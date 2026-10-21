@@ -10,7 +10,10 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      # Flyway là nguồn sự thật duy nhất cho schema.
+      # KHÔNG dùng update/create: Hibernate sẽ tạo bảng trước khi Flyway chạy
+      # -> Flyway báo "Found non-empty schema but no schema history table".
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:
