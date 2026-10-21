@@ -1,6 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "./components/layout/AdminLayout";
 import Dashboard from "./pages/Dashboard";
+import Library from "./pages/Library";
+import ExerciseListPage from "./pages/ExerciseListPage";
+import MemberExerciseListPage from "./pages/MemberExerciseListPage";
+import LibraryDetailPlaceholder from "./pages/LibraryDetailPlaceholder";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -18,8 +22,59 @@ export default function App() {
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
+        {/* Member App Routes */}
         <Route
           path="/"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <Library />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/library"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <Library />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/library/exercises"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <ExerciseListPage />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/library/member-exercises"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <MemberExerciseListPage />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/library/workouts"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <LibraryDetailPlaceholder title="Workouts" type="workouts" />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/explore"
           element={
             <ProtectedRoute>
               <AdminLayout>
@@ -29,10 +84,12 @@ export default function App() {
           }
         />
         <Route
-          path="/library"
+          path="/report"
           element={
             <ProtectedRoute>
-              <AdminLayout />
+              <AdminLayout>
+                <Dashboard />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -40,7 +97,9 @@ export default function App() {
           path="/tracking"
           element={
             <ProtectedRoute>
-              <AdminLayout />
+              <AdminLayout>
+                <Dashboard />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />

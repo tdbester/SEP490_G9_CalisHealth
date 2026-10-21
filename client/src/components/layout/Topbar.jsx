@@ -17,13 +17,54 @@ function Logo() {
   );
 }
 
+function MemberAvatar({ name }) {
+  const initial = name ? name.trim().charAt(0).toUpperCase() : "M";
+  return (
+    <div
+      style={{
+        width: 32,
+        height: 32,
+        borderRadius: "50%",
+        background: "linear-gradient(135deg, #7C3AED 0%, #C026D3 100%)",
+        color: "#FFFFFF",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 14,
+        fontWeight: 700,
+        boxShadow: "0 2px 8px rgba(124, 58, 237, 0.4)",
+        cursor: "default",
+      }}
+      title={name}
+    >
+      {initial}
+    </div>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  );
+}
+
 export default function Topbar() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
 
   useEffect(() => {
     const cached = localStorage.getItem("user");
-    if (cached) setUser(JSON.parse(cached));
+    if (cached) {
+      try {
+        setUser(JSON.parse(cached));
+      } catch (e) {
+        console.error(e);
+      }
+    }
   }, []);
 
   const handleLogout = () => {
@@ -34,7 +75,7 @@ export default function Topbar() {
 
   return (
     <header className="topbar">
-      <div className="topbar-logo" onClick={() => navigate("/")}>
+      <div className="topbar-logo" onClick={() => navigate("/library")}>
         <div className="topbar-logo-icon">
           <Logo />
         </div>
@@ -45,10 +86,19 @@ export default function Topbar() {
       <div className="topbar-spacer" />
 
       {user ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <span style={{ color: "#F7F2FC", fontSize: 14 }}>{user.fullName}</span>
-          <div className="topbar-login-btn" onClick={handleLogout}>
-            <span>Logout</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <MemberAvatar name={user.fullName} />
+          <span style={{ color: "#F7F2FC", fontSize: 13.5, fontWeight: 500 }}>
+            {user.fullName}
+          </span>
+          <div
+            className="topbar-login-btn"
+            style={{ width: "auto", padding: "0 12px", gap: 6, display: "flex", alignItems: "center" }}
+            onClick={handleLogout}
+            title="Log out"
+          >
+            <LogoutIcon />
+            <span>Log out</span>
           </div>
         </div>
       ) : (
