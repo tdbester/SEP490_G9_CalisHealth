@@ -20,6 +20,10 @@ public class User {
     @Column(nullable = false)
     private String fullName;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32, columnDefinition = "varchar(32) not null default 'MEMBER'")
+    private UserRole role = UserRole.MEMBER;
+
     private boolean enabled = false; // true sau khi xác thực email
 
     private LocalDateTime createdAt = LocalDateTime.now();
