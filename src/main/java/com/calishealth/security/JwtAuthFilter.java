@@ -4,11 +4,16 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import com.calishealth.models.User;
+import com.calishealth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -16,7 +21,10 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthFilter.class);
+
     private final JwtService jwtService;
+    private final UserRepository users;
 
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
@@ -25,9 +33,25 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith("Bearer ")) {
             try {
                 String email = jwtService.extractEmail(header.substring(7));
-                SecurityContextHolder.getContext().setAuthentication(
-                        new UsernamePasswordAuthenticationToken(email, null, List.of()));
-            } catch (Exception ignored) { /* token sai/hết hạn -> coi như chưa đăng nhập */ }
+                users.findByEmail(email).ifPresentOrElse(user -> {
+                    if (!user.isEnabled()) {
+                        logger.warn("Rejected JWT for disabled account");
+                        return;
+                    }
+                    SecurityContextHolder.getContext().setAuthentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        email,
+                                        null,
+                                        List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
+                                ));
+                }, () -> logger.warn("Rejected JWT because its subject is not a registered account"));
+            } catch (io.jsonwebtoken.ExpiredJwtException exception) {
+                logger.warn("Rejected expired JWT");
+            } catch (io.jsonwebtoken.security.SignatureException exception) {
+                logger.warn("Rejected JWT with an invalid signature; check that the login and API servers use the same app.jwt.secret");
+            } catch (io.jsonwebtoken.JwtException | IllegalArgumentException exception) {
+                logger.warn("Rejected malformed JWT: {}", exception.getMessage());
+            }
         }
         chain.doFilter(req, res);
     }

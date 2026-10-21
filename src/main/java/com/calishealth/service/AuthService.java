@@ -88,7 +88,7 @@ public class AuthService {
             throw err(HttpStatus.UNAUTHORIZED, "Email hoặc mật khẩu không đúng");
         if (!u.isEnabled())
             throw err(HttpStatus.FORBIDDEN, "Tài khoản chưa xác thực email. Vui lòng kiểm tra hộp thư");
-        return new AuthResponse(jwt.generate(u.getEmail()), u.getEmail(), u.getFullName());
+        return new AuthResponse(jwt.generate(u.getEmail()), u.getEmail(), u.getFullName(), u.getRole().name());
     }
 
     // 4. Quên mật khẩu -> gửi link reset (luôn trả cùng 1 thông báo để không lộ email nào tồn tại)

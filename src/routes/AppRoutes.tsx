@@ -12,6 +12,22 @@ import { NotFoundPage } from '@/features/auth/pages/NotFoundPage';
 import { HomePage } from '@/pages/HomePage';
 import { SurveyLayout } from '@/features/survey/pages/SurveyLayout';
 import { BodyInfoPage } from '@/features/survey/pages/BodyInfoPage';
+import { ContentManagerLayout } from '@/features/content-manager/ContentManagerLayout';
+import { ContentManagerDashboard } from '@/features/content-manager/pages/ContentManagerDashboard';
+import { ContentManagementPage } from '@/features/content-manager/pages/ContentManagementPage';
+import { ExerciseListPage } from '@/features/content-manager/pages/ExerciseListPage';
+import { ExerciseFormPage } from '@/features/content-manager/pages/ExerciseFormPage';
+import { ExerciseDetailPage } from '@/features/content-manager/pages/ExerciseDetailPage';
+import { WorkoutListPage } from '@/features/content-manager/pages/WorkoutListPage';
+import { WorkoutDetailPage } from '@/features/content-manager/pages/WorkoutDetailPage';
+import { useAuthContext } from '@/contexts/AuthContext';
+
+function RoleHomePage() {
+  const { user } = useAuthContext();
+  return user?.role === 'CONTENT_MANAGER'
+    ? <Navigate to="/content/dashboard" replace />
+    : <HomePage />;
+}
 
 /**
  * Định nghĩa tất cả routes của app.
@@ -34,7 +50,7 @@ export function AppRoutes() {
 
       {/* Protected - phải đăng nhập */}
       <Route element={<ProtectedRoute />}>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<RoleHomePage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="/account/change-password" element={<ChangePasswordPage />} />
 
@@ -47,6 +63,22 @@ export function AppRoutes() {
           <Route path="fitness-level" element={<FitnessLevelPage />} />
           <Route path="schedule" element={<SchedulePage />} />
           */}
+        </Route>
+      </Route>
+
+      {/* Content manager area - role check is enforced by ProtectedRoute and the backend API. */}
+      <Route element={<ProtectedRoute allowedRole="CONTENT_MANAGER" />}>
+        <Route path="/content" element={<ContentManagerLayout />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<ContentManagerDashboard />} />
+          <Route path="library" element={<Navigate to="/content/exercises" replace />} />
+          <Route path="exercises" element={<ExerciseListPage />} />
+          <Route path="create" element={<ExerciseFormPage />} />
+          <Route path="exercises/new" element={<Navigate to="/content/create?type=exercise" replace />} />
+          <Route path="exercises/:code" element={<ExerciseDetailPage />} />
+          <Route path="workouts" element={<WorkoutListPage />} />
+          <Route path="workouts/:code" element={<WorkoutDetailPage />} />
+          <Route path=":section" element={<ContentManagementPage />} />
         </Route>
       </Route>
 

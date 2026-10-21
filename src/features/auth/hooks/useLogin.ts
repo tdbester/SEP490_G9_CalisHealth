@@ -17,7 +17,11 @@ export function useLogin() {
   return useMutation<AuthResponse, Error, LoginRequest>({
     mutationFn: authApi.login,
     onSuccess: (data) => {
-      loginSuccess(data.token, { email: data.email, fullName: data.fullName });
+      loginSuccess(data.token, { email: data.email, fullName: data.fullName, role: data.role });
+      if (data.role === 'CONTENT_MANAGER') {
+        navigate('/content/dashboard', { replace: true });
+        return;
+      }
       const from = (location.state as { from?: Location } | null)?.from?.pathname || '/';
       navigate(from, { replace: true });
     },

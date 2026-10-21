@@ -6,7 +6,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
  * - Đã login: redirect về / (hoặc returnUrl nếu có)
  */
 export function PublicRoute() {
-  const { isAuthenticated, isLoading } = useAuthContext();
+  const { user, isAuthenticated, isLoading } = useAuthContext();
   const location = useLocation();
   const from = (location.state as { from?: Location } | null)?.from?.pathname || '/';
 
@@ -19,6 +19,9 @@ export function PublicRoute() {
   }
 
   if (isAuthenticated) {
+    if (user?.role === 'CONTENT_MANAGER') {
+      return <Navigate to="/content/dashboard" replace />;
+    }
     return <Navigate to={from} replace />;
   }
 

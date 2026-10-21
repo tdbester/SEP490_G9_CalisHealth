@@ -1,12 +1,16 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 
+interface ProtectedRouteProps {
+  allowedRole?: string;
+}
+
 /**
  * Bọc các route yêu cầu đăng nhập.
  * - Chưa login: redirect về /login, kèm returnUrl để login xong quay lại.
  */
-export function ProtectedRoute() {
-  const { isAuthenticated, isLoading } = useAuthContext();
+export function ProtectedRoute({ allowedRole }: ProtectedRouteProps) {
+  const { user, isAuthenticated, isLoading } = useAuthContext();
   const location = useLocation();
 
   if (isLoading) {
@@ -19,6 +23,10 @@ export function ProtectedRoute() {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  if (allowedRole && user?.role !== allowedRole) {
+    return <Navigate to="/" replace />;
   }
 
   return <Outlet />;

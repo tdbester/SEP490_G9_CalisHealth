@@ -46,5 +46,5 @@ public class AuthDtos {
         }
     }
 
-    public record AuthResponse(String token, String email, String fullName) {}
+    public record AuthResponse(String token, String email, String fullName, String role) {}
 }
