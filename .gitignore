@@ -67,3 +67,6 @@ dist-ssr/
 # Coverage / test
 coverage/
 *.tsbuildinfo
+
+# Lockfile rac do chay npm nham thu muc goc
+/package-lock.json

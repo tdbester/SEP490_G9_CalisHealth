@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import api from "../api/client";
 import "./Login.css";
 
 function MailIcon() {
@@ -38,27 +39,18 @@ function EyeOffIcon() {
   );
 }
 
-function ArrowRightIcon() {
-  return (
-    <svg className="login-submit-icon" viewBox="0 0 23 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M1 9H21M21 9L13.5 1.5M21 9L13.5 16.5" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function Logo() {
   return (
     <svg width="25" height="37" viewBox="0 0 12 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M5.6316 0C6.7146 4.332 11.0466 6.498 11.0466 11.913C11.0466 13.3491 10.4761 14.7265 9.46058 15.742C8.44507 16.7575 7.06775 17.328 5.6316 17.328C4.19545 17.328 2.81812 16.7575 1.80262 15.742C0.787106 14.7265 0.216599 13.3491 0.216599 11.913C0.216599 9.747 1.2996 8.664 2.3826 7.581C2.3826 9.747 3.4656 10.83 4.5486 10.83C4.5486 6.498 3.4656 4.332 5.6316 0Z" fill="url(#paint0_linear_89_80)"/>
-<path d="M0.758101 12.996H3.4656L4.8735 10.2885L6.9312 15.7035L8.3391 12.996H10.5051" stroke-width="1.5162" stroke-linecap="round" stroke-linejoin="round" stroke="white"/>
-<defs>
-<linearGradient id="paint0_linear_89_80" x1="2.3826" y1="-2.22058e-07" x2="14.1558" y2="12.2638" gradientUnits="userSpaceOnUse">
-<stop stop-color="#B44CFF"/>
-<stop offset="1" stop-color="#FF77A8"/>
-</linearGradient>
-</defs>
-</svg>
-
+      <path d="M5.6316 0C6.7146 4.332 11.0466 6.498 11.0466 11.913C11.0466 13.3491 10.4761 14.7265 9.46058 15.742C8.44507 16.7575 7.06775 17.328 5.6316 17.328C4.19545 17.328 2.81812 16.7575 1.80262 15.742C0.787106 14.7265 0.216599 13.3491 0.216599 11.913C0.216599 9.747 1.2996 8.664 2.3826 7.581C2.3826 9.747 3.4656 10.83 4.5486 10.83C4.5486 6.498 3.4656 4.332 5.6316 0Z" fill="url(#paint0_linear_89_80)" />
+      <path d="M0.758101 12.996H3.4656L4.8735 10.2885L6.9312 15.7035L8.3391 12.996H10.5051" strokeWidth="1.5162" strokeLinecap="round" strokeLinejoin="round" stroke="white" />
+      <defs>
+        <linearGradient id="paint0_linear_89_80" x1="2.3826" y1="-2.22058e-07" x2="14.1558" y2="12.2638" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#B44CFF" />
+          <stop offset="1" stopColor="#FF77A8" />
+        </linearGradient>
+      </defs>
+    </svg>
   );
 }
 
@@ -67,11 +59,29 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // No real auth yet — just go to dashboard
-    navigate("/");
+    setError("");
+    setLoading(true);
+    try {
+      const res = await api.post("/auth/login", { email, password });
+      // res.data = { token, email, fullName }
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify({ email: res.data.email, fullName: res.data.fullName }));
+      navigate("/");
+    } catch (err) {
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.response?.data ||
+        "Đăng nhập thất bại. Vui lòng thử lại.";
+      setError(typeof msg === "string" ? msg : "Email hoặc mật khẩu không đúng.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -81,12 +91,15 @@ export default function Login() {
           <div className="login-logo-icon">
             <Logo />
           </div>
-          <span className="login-logo-text">Calis</span><span className="logo-gradient-text">Health</span>
+          <span className="login-logo-text">Calis</span>
+          <span className="logo-gradient-text">Health</span>
         </div>
 
-        <h1 className="login-title">Welcome Back</h1>
+        <h1 className="login-title">Login</h1>
 
         <form className="login-form" onSubmit={handleSubmit}>
+          {error && <div className="login-error">{error}</div>}
+
           <div className="login-field">
             <label className="login-label" htmlFor="login-email">Email</label>
             <div className="login-input-wrap">
@@ -99,6 +112,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
+                required
               />
             </div>
           </div>
@@ -115,6 +129,7 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
+                required
               />
               <button
                 type="button"
@@ -127,8 +142,10 @@ export default function Login() {
             </div>
           </div>
 
-          <button type="submit" className="login-submit">
-            <span className="login-submit-text">Lets start your journey</span>
+          <button type="submit" className="login-submit" disabled={loading}>
+            <span className="login-submit-text">
+              {loading ? "Signing in..." : "Login"}
+            </span>
           </button>
         </form>
 
