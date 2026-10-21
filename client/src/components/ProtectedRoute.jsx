@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/client";
 
 export default function ProtectedRoute({ children }) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState("loading"); // loading | authed | guest
 
   useEffect(() => {
@@ -24,7 +26,7 @@ export default function ProtectedRoute({ children }) {
   if (status === "loading") {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#100923", color: "#fff" }}>
-        Loading…
+        {t("common.loading")}
       </div>
     );
   }

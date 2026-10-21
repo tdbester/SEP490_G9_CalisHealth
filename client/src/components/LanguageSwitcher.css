@@ -1,0 +1,125 @@
+/* -------------------------------------------------
+   Language switcher (góc trên bên phải màn hình)
+   Dùng chung cho mọi trang: đăng nhập, đăng ký,
+   quên/đặt lại mật khẩu và các trang trong hệ thống.
+------------------------------------------------- */
+.lang-switcher {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 1000;
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+.lang-switcher-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 16px;
+  background-color: rgba(23, 15, 40, 0.9);
+  border: 2px solid #2B1B48;
+  border-radius: 24px;
+  color: #F7F2FC;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.lang-switcher-toggle:hover {
+  border-color: #8B62ED;
+  background-color: rgba(39, 24, 66, 0.95);
+}
+
+.lang-switcher-toggle:focus-visible {
+  outline: 2px solid #8B62ED;
+  outline-offset: 2px;
+}
+
+.lang-switcher-globe {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: #A99BD0;
+}
+
+.lang-switcher-code {
+  letter-spacing: 0.5px;
+}
+
+.lang-switcher-caret {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: #A99BD0;
+  transition: transform 0.2s;
+}
+
+.lang-switcher-caret.is-open {
+  transform: rotate(180deg);
+}
+
+.lang-switcher-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  padding: 6px;
+  background-color: rgba(23, 15, 40, 0.98);
+  border: 2px solid #2B1B48;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lang-switcher-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #F7F2FC;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.lang-switcher-option:hover {
+  background-color: rgba(139, 98, 237, 0.18);
+}
+
+.lang-switcher-option.is-active {
+  color: #C9A6F5;
+  font-weight: 600;
+}
+
+.lang-switcher-check {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: #8B62ED;
+}
+
+@media (max-width: 720px) {
+  .lang-switcher {
+    top: 16px;
+    right: 16px;
+  }
+  .lang-switcher-toggle {
+    height: 40px;
+    padding: 0 12px;
+    font-size: 14px;
+  }
+}

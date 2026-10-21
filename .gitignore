@@ -11,10 +11,11 @@ dist/
 node_modules/
 
 # ===== Logs =====
-*.log
-logs/
-spring.log
-npm-debug.log*
+  *.log
+  logs/
+  spring.log
+  npm-debug.log*
+  *.err
 
 # ===== IDE - IntelliJ =====
 .idea/

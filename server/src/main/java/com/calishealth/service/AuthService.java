@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -26,11 +27,12 @@ public class AuthService {
     private final PasswordEncoder encoder;
     private final JwtService jwt;
     private final EmailService mail;
+    private final MessageService msg;
 
     @Value("${app.frontend-url}") private String frontendUrl;
 
-    private ResponseStatusException err(HttpStatus s, String msg) {
-        return new ResponseStatusException(s, msg);
+    private ResponseStatusException err(HttpStatus s, String key) {
+        return new ResponseStatusException(s, msg.get(key));
     }
 
     private AuthToken createToken(User u, TokenType type, long minutes) {
@@ -46,9 +48,9 @@ public class AuthService {
 
     private AuthToken validToken(String token, TokenType type) {
         AuthToken t = tokens.findByTokenAndType(token, type)
-                .orElseThrow(() -> err(HttpStatus.BAD_REQUEST, "Link không hợp lệ hoặc đã được sử dụng"));
+                .orElseThrow(() -> err(HttpStatus.BAD_REQUEST, "auth.token.invalid"));
         if (t.getExpiresAt().isBefore(LocalDateTime.now()))
-            throw err(HttpStatus.BAD_REQUEST, "Link đã hết hạn");
+            throw err(HttpStatus.BAD_REQUEST, "auth.token.expired");
         return t;
     }
 
@@ -57,7 +59,7 @@ public class AuthService {
     public void register(RegisterRequest r) {
         String email = r.email().trim().toLowerCase();
         if (users.existsByEmail(email))
-            throw err(HttpStatus.BAD_REQUEST, "Email đã được đăng ký");
+            throw err(HttpStatus.BAD_REQUEST, "auth.register.email_exists");
         User u = new User();
         u.setEmail(email);
         u.setFullName(r.fullName().trim());
@@ -65,9 +67,11 @@ public class AuthService {
         users.save(u);
 
         AuthToken t = createToken(u, TokenType.VERIFY_EMAIL, 24 * 60);
-        mail.send(email, "[CLH] Xác thực tài khoản",
-                "Chào " + u.getFullName() + ",\n\nNhấn vào link sau để xác thực tài khoản (hiệu lực 24 giờ):\n"
-                        + frontendUrl + "/verify-email?token=" + t.getToken());
+        // Email luôn gửi tiếng Việt (Locale.VI), không phụ thuộc ngôn ngữ người dùng đang xem web.
+        String subject = msg.get(Locale.forLanguageTag("vi"), "mail.verify.subject");
+        String body = msg.get(Locale.forLanguageTag("vi"), "mail.verify.body", u.getFullName(),
+                frontendUrl + "/verify-email?token=" + t.getToken());
+        mail.send(email, subject, body);
     }
 
     // 2. Xác thực email
@@ -83,11 +87,11 @@ public class AuthService {
     // 3. Đăng nhập
     public AuthResponse login(LoginRequest r) {
         User u = users.findByEmail(r.email().trim().toLowerCase())
-                .orElseThrow(() -> err(HttpStatus.UNAUTHORIZED, "Email hoặc mật khẩu không đúng"));
+                .orElseThrow(() -> err(HttpStatus.UNAUTHORIZED, "auth.login.invalid_credentials"));
         if (!encoder.matches(r.password(), u.getPassword()))
-            throw err(HttpStatus.UNAUTHORIZED, "Email hoặc mật khẩu không đúng");
+            throw err(HttpStatus.UNAUTHORIZED, "auth.login.invalid_credentials");
         if (!u.isEnabled())
-            throw err(HttpStatus.FORBIDDEN, "Tài khoản chưa xác thực email. Vui lòng kiểm tra hộp thư");
+            throw err(HttpStatus.FORBIDDEN, "auth.login.email_not_verified");
         return new AuthResponse(jwt.generate(u.getEmail()), u.getEmail(), u.getFullName(), u.getRole().name());
     }
 
@@ -96,9 +100,10 @@ public class AuthService {
     public void forgotPassword(ForgotRequest r) {
         users.findByEmail(r.email().trim().toLowerCase()).ifPresent(u -> {
             AuthToken t = createToken(u, TokenType.RESET_PASSWORD, 30);
-            mail.send(u.getEmail(), "[CLH] Đặt lại mật khẩu",
-                    "Nhấn vào link sau để đặt lại mật khẩu (hiệu lực 30 phút):\n"
-                            + frontendUrl + "/reset-password?token=" + t.getToken());
+            String subject = msg.get(Locale.forLanguageTag("vi"), "mail.reset.subject");
+            String body = msg.get(Locale.forLanguageTag("vi"), "mail.reset.body",
+                    frontendUrl + "/reset-password?token=" + t.getToken());
+            mail.send(u.getEmail(), subject, body);
         });
     }
 
@@ -114,16 +119,16 @@ public class AuthService {
     // 5. Đổi mật khẩu (đã đăng nhập)
     @Transactional
     public void changePassword(String email, ChangePasswordRequest r) {
-        User u = users.findByEmail(email).orElseThrow(() -> err(HttpStatus.UNAUTHORIZED, "Chưa đăng nhập"));
+        User u = users.findByEmail(email).orElseThrow(() -> err(HttpStatus.UNAUTHORIZED, "auth.unauthorized"));
         if (r.oldPassword() != null && !r.oldPassword().isBlank()) {
             if (!encoder.matches(r.oldPassword(), u.getPassword()))
-                throw err(HttpStatus.BAD_REQUEST, "Mật khẩu cũ không đúng");
+                throw err(HttpStatus.BAD_REQUEST, "auth.change_password.old_invalid");
         }
         u.setPassword(encoder.encode(r.newPassword()));
         users.save(u);
     }
 
     public User me(String email) {
-        return users.findByEmail(email).orElseThrow(() -> err(HttpStatus.UNAUTHORIZED, "Chưa đăng nhập"));
+        return users.findByEmail(email).orElseThrow(() -> err(HttpStatus.UNAUTHORIZED, "auth.unauthorized"));
     }
 }

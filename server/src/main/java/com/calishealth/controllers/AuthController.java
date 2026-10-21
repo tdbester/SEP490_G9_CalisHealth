@@ -3,6 +3,7 @@ package com.calishealth.controllers;
 import com.calishealth.dtos.AuthDtos.*;
 import com.calishealth.models.User;
 import com.calishealth.service.AuthService;
+import com.calishealth.service.MessageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,21 +17,22 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService auth;
+    private final MessageService msg;
 
-    private ResponseEntity<Map<String, String>> msg(String m) {
-        return ResponseEntity.ok(Map.of("message", m));
+    private ResponseEntity<Map<String, String>> msg(String key) {
+        return ResponseEntity.ok(Map.of("message", msg.get(key)));
     }
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest r) {
         auth.register(r);
-        return msg("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
+        return msg("auth.register.success");
     }
 
     @GetMapping("/verify")
     public ResponseEntity<?> verify(@RequestParam String token) {
         auth.verifyEmail(token);
-        return msg("Xác thực email thành công! Bạn có thể đăng nhập.");
+        return msg("auth.verify.success");
     }
 
     @PostMapping("/login")
@@ -41,19 +43,19 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgot(@Valid @RequestBody ForgotRequest r) {
         auth.forgotPassword(r);
-        return msg("Nếu email tồn tại, chúng tôi đã gửi link đặt lại mật khẩu.");
+        return msg("auth.forgot.success");
     }
 
     @PostMapping("/reset-password")
     public ResponseEntity<?> reset(@Valid @RequestBody ResetRequest r) {
         auth.resetPassword(r);
-        return msg("Đặt lại mật khẩu thành công! Hãy đăng nhập lại.");
+        return msg("auth.reset.success");
     }
 
     @PostMapping("/change-password")
     public ResponseEntity<?> change(Authentication a, @Valid @RequestBody ChangePasswordRequest r) {
         auth.changePassword((String) a.getPrincipal(), r);
-        return msg("Đổi mật khẩu thành công!");
+        return msg("auth.change_password.success");
     }
 
     @GetMapping("/me")

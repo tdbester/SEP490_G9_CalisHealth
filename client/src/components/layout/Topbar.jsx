@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import "./Topbar.css";
 
 function Logo() {
@@ -19,6 +20,7 @@ function Logo() {
 
 export default function Topbar() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -48,12 +50,12 @@ export default function Topbar() {
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span style={{ color: "#F7F2FC", fontSize: 14 }}>{user.fullName}</span>
           <div className="topbar-login-btn" onClick={handleLogout}>
-            <span>Logout</span>
+            <span>{t("nav.logout")}</span>
           </div>
         </div>
       ) : (
         <div className="topbar-login-btn" onClick={() => navigate("/login")}>
-          <span>Login</span>
+          <span>{t("nav.login")}</span>
         </div>
       )}
     </header>

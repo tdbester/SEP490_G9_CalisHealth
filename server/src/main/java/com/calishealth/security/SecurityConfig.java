@@ -24,6 +24,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
+    private final AccessDeniedHandlerImpl accessDeniedHandler;
+    private final UnauthorizedEntryPoint unauthorizedEntryPoint;
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -45,7 +47,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/content/**").hasRole("CONTENT_MANAGER")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
-                .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                .exceptionHandling(e -> e
+                        // 401: chua dang nhap | 403: da dang nhap nhung thieu quyen
+                        // Tra JSON {message: ...} de frontend hien thi duoc (khong phai HTML),
+                        // va message da duoc dich theo header Accept-Language.
+                        .authenticationEntryPoint(unauthorizedEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

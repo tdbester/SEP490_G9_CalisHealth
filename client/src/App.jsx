@@ -7,10 +7,13 @@ import ForgotPassword from "./pages/ForgotPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import ResetPassword from "./pages/ResetPassword";
 import ProtectedRoute from "./components/ProtectedRoute";
+import LanguageSwitcher from "./components/LanguageSwitcher";
 
 export default function App() {
   return (
     <BrowserRouter>
+      {/* Nút đổi ngôn ngữ: cố định góc trên bên phải, hiện trên mọi trang */}
+      <LanguageSwitcher />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />

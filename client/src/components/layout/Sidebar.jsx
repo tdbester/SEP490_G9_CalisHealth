@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import "./Sidebar.css";
 
 // Inline SVG icons matching Figma vectors
@@ -35,15 +36,20 @@ function LibraryIcon() {
   );
 }
 
+/**
+ * `key` dùng để tra cụm t() trong i18n (nav.<key>).
+ * Nhờ vậy mọi mã ngôn ngữ đều dùng chung key, không hardcode chuỗi.
+ */
 const NAV_ITEMS = [
-  { label: "Dashboard", path: "/",        icon: DashboardIcon },
-  { label: "Tracking",  path: "/tracking", icon: TrackingIcon },
-  { label: "Library",   path: "/library",  icon: LibraryIcon },
+  { key: "dashboard", path: "/",        icon: DashboardIcon },
+  { key: "tracking",  path: "/tracking", icon: TrackingIcon },
+  { key: "library",   path: "/library",  icon: LibraryIcon },
 ];
 
 export default function Sidebar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { t } = useTranslation();
 
   return (
     <aside className="sidebar">
@@ -60,7 +66,7 @@ export default function Sidebar() {
               onClick={() => navigate(item.path)}
             >
               <Icon />
-              <span>{item.label}</span>
+              <span>{t(`nav.${item.key}`)}</span>
             </div>
           );
         })}
