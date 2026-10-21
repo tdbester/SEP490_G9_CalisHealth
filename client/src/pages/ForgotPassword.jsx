@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import "./Login.css";
 
 export default function ForgotPassword() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -30,33 +32,47 @@ export default function ForgotPassword() {
           <span className="login-logo-text">Calis</span>
           <span className="logo-gradient-text">Health</span>
         </div>
-        <h1 className="login-title">Forgot Password</h1>
+        <h1 className="login-title">{t("auth.forgotPassword.title")}</h1>
 
         {sent ? (
           <div className="login-form">
             <div className="login-success">
-              Nếu email tồn tại, chúng tôi đã gửi link đặt lại mật khẩu. Vui lòng kiểm tra hộp thư.
+              <strong>{t("auth.forgotPassword.successTitle")}</strong>
+              <br />
+              {t("auth.forgotPassword.successMessage")}
             </div>
             <button className="login-submit" onClick={() => navigate("/login")}>
-              <span className="login-submit-text">Back to Login</span>
+              <span className="login-submit-text">{t("auth.forgotPassword.backToLogin")}</span>
             </button>
           </div>
         ) : (
           <form className="login-form" onSubmit={handleSubmit}>
             <div className="login-field">
-              <label className="login-label">Email</label>
+              <label className="login-label">{t("auth.forgotPassword.email")}</label>
               <div className="login-input-wrap">
-                <input className="login-input" type="email" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <input
+                  className="login-input"
+                  type="email"
+                  placeholder={t("auth.forgotPassword.emailPlaceholder")}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  required
+                />
               </div>
             </div>
             <button type="submit" className="login-submit" disabled={loading}>
-              <span className="login-submit-text">{loading ? "Sending..." : "Send Reset Link"}</span>
+              <span className="login-submit-text">
+                {loading ? t("auth.forgotPassword.submitting") : t("auth.forgotPassword.submit")}
+              </span>
             </button>
           </form>
         )}
 
         <div className="login-links">
-          <button className="login-link" onClick={() => navigate("/login")}>Back to Login</button>
+          <button type="button" className="login-link" onClick={() => navigate("/login")}>
+            {t("auth.forgotPassword.backToLogin")}
+          </button>
         </div>
       </div>
     </div>

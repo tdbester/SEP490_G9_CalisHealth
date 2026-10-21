@@ -5,12 +5,15 @@ import jakarta.validation.Payload;
 
 import java.lang.annotation.*;
 
+/**
+ * Message là KEY i18n, được tra trong messages_*.properties theo Accept-Language.
+ */
 @Documented
 @Constraint(validatedBy = StrongPasswordValidator.class)
 @Target({ElementType.FIELD, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface StrongPassword {
-    String message() default "Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt";
+    String message() default "validation.password.strong";
 
     Class<?>[] groups() default {};
 

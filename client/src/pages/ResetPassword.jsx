@@ -1,12 +1,15 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/client";
 import "./Login.css";
 
 export default function ResetPassword() {
+  const { t } = useTranslation();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const token = params.get("token") || "";
+
   const [form, setForm] = useState({ newPassword: "", confirmNewPassword: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -18,7 +21,7 @@ export default function ResetPassword() {
     e.preventDefault();
     setError("");
     if (form.newPassword !== form.confirmNewPassword) {
-      setError("Mật khẩu xác nhận không khớp");
+      setError(t("auth.resetPassword.mismatchError"));
       return;
     }
     setLoading(true);
@@ -27,15 +30,50 @@ export default function ResetPassword() {
       setSuccess(true);
     } catch (err) {
       const data = err.response?.data;
-      const msg =
-        (data && typeof data === "object"
-          ? Object.values(data).flat().join(" • ")
-          : data) || "Đặt lại mật khẩu thất bại.";
-      setError(typeof msg === "string" ? msg : "Đặt lại mật khẩu thất bại.");
+      let msg = null;
+      if (data && typeof data === "object" && !Array.isArray(data)) {
+        msg = data.message || Object.values(data.errors || {}).flat().join(" • ");
+      } else if (typeof data === "string") {
+        msg = data;
+      }
+      if (!msg || msg.includes("[object Object]")) msg = t("auth.resetPassword.fallbackError");
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
+
+  // Không có token trong URL -> không cho gửi form, hiện hướng dẫn thay thế
+  if (!token) {
+    return (
+      <div className="login">
+        <div className="login-card">
+          <div className="login-logo">
+            <span className="login-logo-text">Calis</span>
+            <span className="logo-gradient-text">Health</span>
+          </div>
+          <h1 className="login-title">{t("auth.resetPassword.missingTokenTitle")}</h1>
+
+          <div className="login-form">
+            <div className="login-error">{t("auth.resetPassword.missingTokenMessage")}</div>
+            <button
+              className="login-submit"
+              onClick={() => navigate("/forgot-password")}
+              type="button"
+            >
+              <span className="login-submit-text">{t("auth.resetPassword.requestNewLink")}</span>
+            </button>
+          </div>
+
+          <div className="login-links">
+            <button type="button" className="login-link" onClick={() => navigate("/login")}>
+              {t("auth.resetPassword.backToLogin")}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="login">
@@ -44,13 +82,17 @@ export default function ResetPassword() {
           <span className="login-logo-text">Calis</span>
           <span className="logo-gradient-text">Health</span>
         </div>
-        <h1 className="login-title">Đặt lại mật khẩu</h1>
+        <h1 className="login-title">{t("auth.resetPassword.title")}</h1>
 
         {success ? (
           <div className="login-form">
-            <div className="login-success">Đặt lại mật khẩu thành công! Hãy đăng nhập lại.</div>
+            <div className="login-success">
+              <strong>{t("auth.resetPassword.successTitle")}</strong>
+              <br />
+              {t("auth.resetPassword.successMessage")}
+            </div>
             <button className="login-submit" onClick={() => navigate("/login")}>
-              <span className="login-submit-text">Đăng nhập</span>
+              <span className="login-submit-text">{t("auth.resetPassword.goToLogin")}</span>
             </button>
           </div>
         ) : (
@@ -58,41 +100,49 @@ export default function ResetPassword() {
             {error && <div className="login-error">{error}</div>}
 
             <div className="login-field">
-              <label className="login-label">Mật khẩu mới</label>
+              <label className="login-label">{t("auth.resetPassword.newPassword")}</label>
               <div className="login-input-wrap">
                 <input
                   className="login-input"
                   type="password"
-                  placeholder="Min 8 chars, upper, lower, digit, special"
+                  placeholder={t("auth.resetPassword.passwordHint")}
                   value={form.newPassword}
                   onChange={set("newPassword")}
+                  autoComplete="new-password"
                   required
                 />
               </div>
             </div>
 
             <div className="login-field">
-              <label className="login-label">Xác nhận mật khẩu mới</label>
+              <label className="login-label">
+                {t("auth.resetPassword.confirmNewPassword")}
+              </label>
               <div className="login-input-wrap">
                 <input
                   className="login-input"
                   type="password"
-                  placeholder="Re-enter new password"
+                  placeholder={t("auth.resetPassword.confirmNewPassword")}
                   value={form.confirmNewPassword}
                   onChange={set("confirmNewPassword")}
+                  autoComplete="new-password"
                   required
                 />
               </div>
             </div>
 
             <button type="submit" className="login-submit" disabled={loading}>
-              <span className="login-submit-text">{loading ? "Đang xử lý..." : "Đặt lại mật khẩu"}</span>
+              <span className="login-submit-text">
+                {loading ? t("auth.resetPassword.submitting") : t("auth.resetPassword.submit")}
+              </span>
             </button>
           </form>
         )}
 
         <div className="login-links">
-          <button className="login-link" onClick={() => navigate("/login")}>Về trang đăng nhập</button>
+          <button type="button" className="login-link" onClick={() => navigate("/login")}>
+            {t("auth.resetPassword.backToLogin")}
+          </button>
         </div>
       </div>
     </div>

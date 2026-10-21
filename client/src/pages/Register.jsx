@@ -1,11 +1,18 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import "./Login.css";
 
 export default function Register() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ fullName: "", email: "", password: "", confirmPassword: "" });
+  const [form, setForm] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -16,7 +23,7 @@ export default function Register() {
     e.preventDefault();
     setError("");
     if (form.password !== form.confirmPassword) {
-      setError("Mật khẩu xác nhận không khớp");
+      setError(t("auth.common.mismatchError"));
       return;
     }
     setLoading(true);
@@ -25,11 +32,14 @@ export default function Register() {
       setSuccess(true);
     } catch (err) {
       const data = err.response?.data;
-      const msg =
-        (data && typeof data === "object"
-          ? Object.values(data).flat().join(" • ")
-          : data) || "Đăng ký thất bại.";
-      setError(typeof msg === "string" ? msg : "Đăng ký thất bại.");
+      let msg = null;
+      if (data && typeof data === "object" && !Array.isArray(data)) {
+        msg = data.message || Object.values(data.errors || {}).flat().join(" • ");
+      } else if (typeof data === "string") {
+        msg = data;
+      }
+      if (!msg || msg.includes("[object Object]")) msg = t("auth.register.fallbackError");
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -42,15 +52,17 @@ export default function Register() {
           <span className="login-logo-text">Calis</span>
           <span className="logo-gradient-text">Health</span>
         </div>
-        <h1 className="login-title">Create Account</h1>
+        <h1 className="login-title">{t("auth.register.title")}</h1>
 
         {success ? (
           <div className="login-form">
             <div className="login-success">
-              Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.
+              <strong>{t("auth.register.successTitle")}</strong>
+              <br />
+              {t("auth.register.successMessage")}
             </div>
             <button className="login-submit" onClick={() => navigate("/login")}>
-              <span className="login-submit-text">Go to Login</span>
+              <span className="login-submit-text">{t("auth.register.goToLogin")}</span>
             </button>
           </div>
         ) : (
@@ -58,41 +70,76 @@ export default function Register() {
             {error && <div className="login-error">{error}</div>}
 
             <div className="login-field">
-              <label className="login-label">Full Name</label>
+              <label className="login-label">{t("auth.register.fullName")}</label>
               <div className="login-input-wrap">
-                <input className="login-input" placeholder="Full Name" value={form.fullName} onChange={set("fullName")} required />
+                <input
+                  className="login-input"
+                  placeholder={t("auth.register.fullName")}
+                  value={form.fullName}
+                  onChange={set("fullName")}
+                  autoComplete="name"
+                  required
+                />
               </div>
             </div>
 
             <div className="login-field">
-              <label className="login-label">Email</label>
+              <label className="login-label">{t("auth.register.email")}</label>
               <div className="login-input-wrap">
-                <input className="login-input" type="email" placeholder="Email" value={form.email} onChange={set("email")} required />
+                <input
+                  className="login-input"
+                  type="email"
+                  placeholder={t("auth.register.email")}
+                  value={form.email}
+                  onChange={set("email")}
+                  autoComplete="email"
+                  required
+                />
               </div>
             </div>
 
             <div className="login-field">
-              <label className="login-label">Password</label>
+              <label className="login-label">{t("auth.register.password")}</label>
               <div className="login-input-wrap">
-                <input className="login-input" type="password" placeholder="Min 8 chars, upper, lower, digit, special" value={form.password} onChange={set("password")} required />
+                <input
+                  className="login-input"
+                  type="password"
+                  placeholder={t("auth.register.passwordHint")}
+                  value={form.password}
+                  onChange={set("password")}
+                  autoComplete="new-password"
+                  required
+                />
               </div>
             </div>
 
             <div className="login-field">
-              <label className="login-label">Confirm Password</label>
+              <label className="login-label">{t("auth.register.confirmPassword")}</label>
               <div className="login-input-wrap">
-                <input className="login-input" type="password" placeholder="Re-enter password" value={form.confirmPassword} onChange={set("confirmPassword")} required />
+                <input
+                  className="login-input"
+                  type="password"
+                  placeholder={t("auth.register.confirmPassword")}
+                  value={form.confirmPassword}
+                  onChange={set("confirmPassword")}
+                  autoComplete="new-password"
+                  required
+                />
               </div>
             </div>
 
             <button type="submit" className="login-submit" disabled={loading}>
-              <span className="login-submit-text">{loading ? "Creating..." : "Sign Up"}</span>
+              <span className="login-submit-text">
+                {loading ? t("auth.register.submitting") : t("auth.register.submit")}
+              </span>
             </button>
           </form>
         )}
 
         <div className="login-links">
-          <button className="login-link" onClick={() => navigate("/login")}>Already have account? Login</button>
+          <button type="button" className="login-link" onClick={() => navigate("/login")}>
+            {t("auth.register.hasAccount")}
+          </button>
         </div>
       </div>
     </div>

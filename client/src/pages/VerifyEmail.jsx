@@ -1,31 +1,42 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/client";
 import "./Login.css";
 
 export default function VerifyEmail() {
+  const { t } = useTranslation();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const token = params.get("token");
+
   const [status, setStatus] = useState("verifying"); // verifying | success | error
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const token = params.get("token");
     if (!token) {
       setStatus("error");
-      setMessage("Thiếu token xác thực.");
+      setMessage(t("auth.verifyEmail.missingToken"));
       return;
     }
-    api.get(`/auth/verify?token=${encodeURIComponent(token)}`)
-      .then((res) => {
+    api
+      .get(`/auth/verify?token=${encodeURIComponent(token)}`)
+      .then(() => {
         setStatus("success");
-        setMessage(res.data?.message || "Xác thực email thành công!");
       })
       .catch((err) => {
         setStatus("error");
-        setMessage(err.response?.data?.message || err.response?.data?.detail || "Link không hợp lệ hoặc đã hết hạn.");
+        setMessage(err.response?.data?.message || t("auth.verifyEmail.defaultError"));
       });
-  }, [params]);
+    // Chỉ chạy lại khi token thực sự đổi, không phụ thuộc object params
+  }, [token, t]);
+
+  const title =
+    status === "verifying"
+      ? t("auth.verifyEmail.verifying")
+      : status === "success"
+      ? t("auth.verifyEmail.successTitle")
+      : t("auth.verifyEmail.errorTitle");
 
   return (
     <div className="login">
@@ -34,25 +45,35 @@ export default function VerifyEmail() {
           <span className="login-logo-text">Calis</span>
           <span className="logo-gradient-text">Health</span>
         </div>
-        <h1 className="login-title">
-          {status === "verifying" ? "Đang xác thực..." : status === "success" ? "Thành công!" : "Thất bại"}
-        </h1>
+        <h1 className="login-title">{title}</h1>
 
         <div className="login-form">
-          {status === "verifying" && <div className="login-success">Đang xác thực email của bạn, vui lòng chờ...</div>}
+          {status === "verifying" && (
+            <div className="login-success">{t("auth.verifyEmail.verifyingMessage")}</div>
+          )}
+
           {status === "success" && (
             <>
-              <div className="login-success">{message}</div>
-              <button className="login-submit" onClick={() => navigate("/login")}>
-                <span className="login-submit-text">Đăng nhập ngay</span>
+              <div className="login-success">{t("auth.verifyEmail.successTitle")}</div>
+              <button
+                className="login-submit"
+                onClick={() => navigate("/login")}
+                type="button"
+              >
+                <span className="login-submit-text">{t("auth.verifyEmail.loginNow")}</span>
               </button>
             </>
           )}
+
           {status === "error" && (
             <>
               <div className="login-error">{message}</div>
-              <button className="login-submit" onClick={() => navigate("/login")}>
-                <span className="login-submit-text">Về trang đăng nhập</span>
+              <button
+                className="login-submit"
+                onClick={() => navigate("/login")}
+                type="button"
+              >
+                <span className="login-submit-text">{t("auth.verifyEmail.backToLogin")}</span>
               </button>
             </>
           )}

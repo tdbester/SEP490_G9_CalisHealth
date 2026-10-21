@@ -8,17 +8,20 @@ import jakarta.validation.constraints.Pattern;
 
 import java.lang.annotation.*;
 
+/**
+ * Message là KEY i18n, được tra trong messages_*.properties theo Accept-Language.
+ */
 @Documented
-@NotBlank(message = "Vui lòng nhập email")
-@Email(message = "Email không đúng định dạng")
+@NotBlank(message = "validation.email.required")
+@Email(message = "validation.email.format")
 @Pattern(
         regexp = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
-        message = "Email không đúng định dạng")
+        message = "validation.email.format")
 @Target({ElementType.FIELD, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Constraint(validatedBy = {})
 public @interface ValidEmail {
-    String message() default "Email không đúng định dạng";
+    String message() default "validation.email.format";
 
     Class<?>[] groups() default {};
 
