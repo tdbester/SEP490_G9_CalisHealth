@@ -2,7 +2,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import "./Sidebar.css";
 
 // SVG Icons matching Figma design
-function ExploreIcon({ isActive }) {
+function DashboardIcon({ isActive }) {
   return (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="12" cy="12" r="9.5" stroke={isActive ? "#c4b5fd" : "#A89BD0"} strokeWidth="1.8" />
@@ -21,7 +21,7 @@ function LibraryIcon({ isActive }) {
   );
 }
 
-function ReportIcon({ isActive }) {
+function TrackingIcon({ isActive }) {
   const color = isActive ? "#c4b5fd" : "#A89BD0";
   return (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -31,9 +31,9 @@ function ReportIcon({ isActive }) {
 }
 
 const NAV_ITEMS = [
-  { label: "Explore", path: "/explore", icon: ExploreIcon },
+  { label: "Dashboard", path: "/dashboard", icon: DashboardIcon },
   { label: "Library", path: "/library", icon: LibraryIcon },
-  { label: "Report",  path: "/report",  icon: ReportIcon },
+  { label: "Health & Progress",  path: "/tracking",  icon: TrackingIcon },
 ];
 
 export default function Sidebar() {
