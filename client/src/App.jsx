@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import AdminLayout from "./components/layout/AdminLayout";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
@@ -9,8 +11,15 @@ import ResetPassword from "./pages/ResetPassword";
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        theme="dark"
+        toastStyle={{ backgroundColor: "#090616" }}
+      />
+      <BrowserRouter>
+        <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -40,7 +49,8 @@ export default function App() {
         <Route path="/settings" element={<Navigate to="/" replace />} />
 
         <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </>
   );
 }

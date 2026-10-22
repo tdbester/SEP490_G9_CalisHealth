@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { validatePersonalExercise } from './libraryFormValidation';
 
 /* Icons */
 function BarbellIcon({ className = 'h-5 w-5 text-[#9d7aff]' }) {
@@ -78,6 +80,8 @@ export default function UpdatePersonalExercisePage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [baseline, setBaseline] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [touchedFields, setTouchedFields] = useState({});
 
   useEffect(() => {
     try {
@@ -114,6 +118,34 @@ export default function UpdatePersonalExercisePage() {
   const isDirty = baseline !== '' && (
     currentState !== baseline || uploadedFile !== null
   );
+  const validationErrors = validatePersonalExercise({
+    title,
+    description,
+    level,
+    steps: guide,
+    videoFile: uploadedFile,
+  });
+  const showFieldError = (field) => hasSubmitted || touchedFields[field];
+  const markFieldTouched = (field) =>
+    setTouchedFields((current) => ({ ...current, [field]: true }));
+  const focusFirstInvalidField = (errors) => {
+    const firstInvalidId = errors.title
+      ? 'exercise-title'
+      : errors.description
+        ? 'exercise-description'
+        : errors.level
+          ? 'exercise-level'
+          : errors.steps
+            ? 'guide-step-list'
+            : guide.findIndex((_, index) => errors[`step-${index}`]) >= 0
+              ? `guide-step-${guide.findIndex((_, index) => errors[`step-${index}`])}`
+              : errors.video
+                ? 'exercise-video'
+                : null;
+    const firstInvalid = firstInvalidId && document.getElementById(firstInvalidId);
+    firstInvalid?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    firstInvalid?.focus();
+  };
 
   const handleAddStep = () => setGuide((g) => [...g, '']);
   const handleGuideChange = (idx, val) => setGuide((g) => g.map((s, i) => (i === idx ? val : s)));
@@ -127,12 +159,9 @@ export default function UpdatePersonalExercisePage() {
   };
 
   const handleFileSelect = (e) => {
+    markFieldTouched('video');
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 50 * 1024 * 1024) {
-        setErrorMessage('Video file size exceeds 50 MB limit.');
-        return;
-      }
       setErrorMessage('');
       setUploadedFile(file);
       setVideo({ name: file.name, size: `${(file.size / (1024 * 1024)).toFixed(1)} MB` });
@@ -149,12 +178,9 @@ export default function UpdatePersonalExercisePage() {
   const handleDrop = (event) => {
     event.preventDefault();
     setIsDragging(false);
+    markFieldTouched('video');
     const file = event.dataTransfer.files?.[0];
     if (file) {
-      if (file.size > 50 * 1024 * 1024) {
-        setErrorMessage('Video file size exceeds 50 MB limit.');
-        return;
-      }
       setErrorMessage('');
       setUploadedFile(file);
       setVideo({ name: file.name, size: `${(file.size / (1024 * 1024)).toFixed(1)} MB` });
@@ -165,8 +191,10 @@ export default function UpdatePersonalExercisePage() {
 
   const handleSave = () => {
     if (!isDirty || !exercise) return;
-    if (!title.trim()) {
-      setErrorMessage('Please enter an exercise title.');
+    setHasSubmitted(true);
+    if (Object.keys(validationErrors).length > 0) {
+      toast.warning("Please fill in all required fields correctly.");
+      focusFirstInvalidField(validationErrors);
       return;
     }
 
@@ -196,9 +224,11 @@ export default function UpdatePersonalExercisePage() {
         'my_personal_exercises',
         JSON.stringify([updatedExercise, ...raw.filter((item) => String(item.id) !== id)])
       );
+      toast.success("Saved changes successfully!");
       navigate('/library/personal?status=pending');
     } catch (error) {
       setSaving(false);
+      toast.error("Failed to save changes.");
       setErrorMessage(
         error instanceof Error ? `Could not save exercise: ${error.message}` : 'Could not save exercise.'
       );
@@ -238,12 +268,17 @@ export default function UpdatePersonalExercisePage() {
           </div>
           <input
             type="text"
+            id="exercise-title"
             value={title}
             maxLength={60}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              markFieldTouched('title');
+            }}
             placeholder="e.g. Diamond push-up"
-            className="w-full rounded-xl border border-[#493b79] bg-[#0d0922] px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-[#9d7aff] focus:outline-none transition-colors"
+            className={`w-full rounded-xl border ${showFieldError('title') && validationErrors.title ? 'border-rose-500 focus:border-rose-500' : 'border-[#493b79] focus:border-[#9d7aff]'} bg-[#0d0922] px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none transition-colors`}
           />
+          {showFieldError('title') && validationErrors.title && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.title}</p>}
         </div>
         <div>
           <div className="flex items-center justify-between mb-1.5">
@@ -251,16 +286,21 @@ export default function UpdatePersonalExercisePage() {
             <span className="text-xs text-slate-500 font-mono">{charCount(description, 300)}</span>
           </div>
           <textarea
+            id="exercise-description"
             value={description}
             maxLength={300}
             placeholder="What does this exercise train, and who is it for?"
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full rounded-xl border border-[#493b79] bg-[#0d0922] p-4 text-sm text-white placeholder-slate-500 h-28 resize-none focus:border-[#9d7aff] focus:outline-none transition-colors leading-relaxed"
+            onChange={(e) => {
+              setDescription(e.target.value);
+              markFieldTouched('description');
+            }}
+            className={`w-full rounded-xl border ${showFieldError('description') && validationErrors.description ? 'border-rose-500 focus:border-rose-500' : 'border-[#493b79] focus:border-[#9d7aff]'} bg-[#0d0922] p-4 text-sm text-white placeholder-slate-500 h-28 resize-none focus:outline-none transition-colors leading-relaxed`}
           />
+          {showFieldError('description') && validationErrors.description && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.description}</p>}
         </div>
         <div>
           <label className="block text-xs text-slate-400 mb-2">Level</label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div id="exercise-level" tabIndex={-1} className={`grid grid-cols-1 md:grid-cols-3 gap-4 rounded-xl ${showFieldError('level') && validationErrors.level ? 'ring-1 ring-rose-500' : ''}`}>
             {[
               { name: 'Beginner', description: 'New to this movement' },
               { name: 'Intermediate', description: 'Comfortable with the basics' },
@@ -271,11 +311,15 @@ export default function UpdatePersonalExercisePage() {
                 role="radio"
                 aria-checked={level === name}
                 tabIndex={0}
-                onClick={() => setLevel(name)}
+                onClick={() => {
+                  setLevel(name);
+                  markFieldTouched('level');
+                }}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
                     setLevel(name);
+                    markFieldTouched('level');
                   }
                 }}
                 className={`rounded-xl p-3.5 flex items-start justify-between cursor-pointer transition-all select-none text-left ${
@@ -296,22 +340,30 @@ export default function UpdatePersonalExercisePage() {
               </div>
             ))}
           </div>
+          {showFieldError('level') && validationErrors.level && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.level}</p>}
         </div>
       </section>
 
       <section className="rounded-2xl border border-[#33285f] bg-[#15102e] p-6 space-y-4 shadow-xl shadow-purple-950/20">
         <h2 className="text-sm font-semibold text-white">Guide</h2>
-        <div className="space-y-3">
+        <div id="guide-step-list" tabIndex={-1} className="space-y-3">
           {guide.map((step, idx) => (
             <div key={idx} className="flex items-center gap-3">
               <span className="text-xs text-slate-500 w-4 text-center select-none font-medium">{idx + 1}</span>
-            <input
-              type="text"
-              value={step}
-              onChange={(e) => handleGuideChange(idx, e.target.value)}
-              placeholder={idx === 0 ? 'e.g. Start in a plank with hands under shoulders' : 'Next step'}
-              className="flex-1 rounded-xl border border-[#493b79] bg-[#0d0922] px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-[#9d7aff] focus:outline-none transition-colors"
-            />
+            <div className="flex-1">
+              <input
+                type="text"
+                id={`guide-step-${idx}`}
+                value={step}
+                onChange={(e) => {
+                  handleGuideChange(idx, e.target.value);
+                  markFieldTouched(`step-${idx}`);
+                }}
+                placeholder={idx === 0 ? 'e.g. Start in a plank with hands under shoulders' : 'Next step'}
+                className={`w-full rounded-xl border ${showFieldError(`step-${idx}`) && validationErrors[`step-${idx}`] ? 'border-rose-500 focus:border-rose-500' : 'border-[#493b79] focus:border-[#9d7aff]'} bg-[#0d0922] px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none transition-colors`}
+              />
+              {showFieldError(`step-${idx}`) && validationErrors[`step-${idx}`] && <p className="text-rose-400 text-[11px] mt-1">{validationErrors[`step-${idx}`]}</p>}
+            </div>
               {guide.length > 1 && (
                 <button
                   type="button"
@@ -325,6 +377,7 @@ export default function UpdatePersonalExercisePage() {
             </div>
           ))}
         </div>
+        {showFieldError('steps') && validationErrors.steps && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.steps}</p>}
         <div>
           <button
             type="button"
@@ -342,12 +395,14 @@ export default function UpdatePersonalExercisePage() {
         <input
           ref={fileInputRef}
           type="file"
-          accept="video/mp4,video/quicktime,video/webm"
+          accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
           onChange={handleFileSelect}
           className="hidden"
         />
         {replaceVideo ? (
           <div
+            id="exercise-video"
+            tabIndex={-1}
             onClick={() => fileInputRef.current?.click()}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -406,6 +461,7 @@ export default function UpdatePersonalExercisePage() {
             + Add demo video
           </button>
         )}
+        {showFieldError('video') && validationErrors.video && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.video}</p>}
         <p className="text-[11px] text-slate-500">
           If you replace the video, it is scanned again with MediaPipe. Keeping the current video skips that scan.
         </p>

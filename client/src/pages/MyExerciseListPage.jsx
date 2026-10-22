@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 /* -------------------- ICONS -------------------- */
 function BarbellIcon({ className = "h-5 w-5 text-[#9d7aff]" }) {
@@ -274,6 +275,30 @@ export default function MyExerciseListPage() {
   const pageSize = 3;
 
   const handleTabSwitch = (tab) => { setActiveTab(tab); setSearchParams({ status: tab }); setSearchInput(""); setSelectedLevel("All levels"); setCurrentPage(1); };
+  const handleCancelPending = (id) => {
+    try {
+      setPendingList((items) => items.filter((item) => item.id !== id));
+      toast.success("Deleted successfully!");
+    } catch {
+      toast.error("Failed to delete item.");
+    }
+  };
+  const handleDeleteRejected = (id) => {
+    try {
+      setRejectedList((items) => items.filter((item) => item.id !== id));
+      toast.success("Deleted successfully!");
+    } catch {
+      toast.error("Failed to delete item.");
+    }
+  };
+  const handleDeleteAccepted = (id) => {
+    try {
+      setAcceptedList((items) => items.filter((item) => item.id !== id));
+      toast.success("Deleted successfully!");
+    } catch {
+      toast.error("Failed to delete item.");
+    }
+  };
 
   const activeItems = useMemo(() => {
     let list = activeTab === "pending" ? pendingList : activeTab === "rejected" ? rejectedList : acceptedList;
@@ -362,7 +387,7 @@ export default function MyExerciseListPage() {
           </div>
         ) : (
           visibleItems.map((it) => (
-            <ExerciseCard key={it.id} item={it} activeTab={activeTab} onCancelPending={(id) => setPendingList((p) => p.filter((x) => x.id !== id))} onDeleteRejected={(id) => setRejectedList((p) => p.filter((x) => x.id !== id))} onDeleteAccepted={(id) => setAcceptedList((p) => p.filter((x) => x.id !== id))} navigate={navigate} />
+            <ExerciseCard key={it.id} item={it} activeTab={activeTab} onCancelPending={handleCancelPending} onDeleteRejected={handleDeleteRejected} onDeleteAccepted={handleDeleteAccepted} navigate={navigate} />
           ))
         )}
       </div>

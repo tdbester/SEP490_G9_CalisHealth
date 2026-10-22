@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { getMemberExercises, createMemberExercise } from "../api/library";
 import "./MemberExerciseListPage.css";
 
@@ -185,7 +186,10 @@ export default function MemberExerciseListPage() {
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
-    if (!createForm.name.trim()) return;
+    if (!createForm.name.trim()) {
+      toast.warning("Please fill in all required fields correctly.");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -201,8 +205,10 @@ export default function MemberExerciseListPage() {
         description: "",
       });
       fetchList();
+      toast.success("Created successfully!");
     } catch (err) {
       console.error("Failed to create exercise:", err);
+      toast.error("Failed to create. Please try again.");
     } finally {
       setSubmitting(false);
     }
