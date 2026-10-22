@@ -1,0 +1,673 @@
+/* MemberExerciseListPage.css — Dedicated Member Provided Exercises Screen */
+
+.member-exercise-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  color: #ffffff;
+  padding-bottom: 56px;
+}
+
+/* Back Link */
+.back-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: #a89bd0;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 18px;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.back-link-btn:hover {
+  color: #ffffff;
+  transform: translateX(-3px);
+}
+
+.back-link-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Page Header with Action Button */
+.member-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.header-meta {
+  flex: 1;
+  min-width: 260px;
+}
+
+.member-page-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.01em;
+}
+
+.member-page-description {
+  font-size: 14px;
+  color: #a89bd0;
+  margin: 0;
+}
+
+/* Add Exercise Button */
+.create-exercise-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+}
+
+.create-exercise-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #6d28d9 0%, #7e22ce 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.45);
+}
+
+.create-exercise-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.create-exercise-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Filters Container */
+.filters-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #21183c;
+  border: 1px solid #35275e;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+/* Row 1: Search & Level */
+.filters-row-search {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.search-box-wrap {
+  flex: 1;
+  min-width: 260px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  width: 17px;
+  height: 17px;
+  color: #8f82ba;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  background: #17102b;
+  border: 1px solid #35275e;
+  border-radius: 10px;
+  padding: 10px 14px 10px 40px;
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.search-input::placeholder {
+  color: #796c9e;
+}
+
+.search-input:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+.level-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.level-select {
+  appearance: none;
+  background: #17102b;
+  border: 1px solid #35275e;
+  border-radius: 10px;
+  color: #ffffff;
+  padding: 10px 38px 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.level-select:focus {
+  border-color: #8b5cf6;
+}
+
+.select-arrow {
+  position: absolute;
+  right: 12px;
+  width: 14px;
+  height: 14px;
+  color: #8f82ba;
+  pointer-events: none;
+}
+
+/* Row 2: Multi-select Muscle Group Chips */
+.filters-row-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid #2d244c;
+}
+
+.muscle-chips-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.muscle-chip {
+  background: #17102b;
+  border: 1px solid #35275e;
+  border-radius: 20px;
+  padding: 6px 15px;
+  color: #a89bd0;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.muscle-chip:hover {
+  border-color: #7c3aed;
+  color: #ffffff;
+}
+
+.muscle-chip.active {
+  background: #7c3aed;
+  border-color: #8b5cf6;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35);
+}
+
+/* Exercise Rows List */
+.exercise-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.exercise-row-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #21183c;
+  border: 1px solid #35275e;
+  border-radius: 12px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.exercise-row-card:hover {
+  transform: translateY(-2px);
+  border-color: #8b5cf6;
+  box-shadow: 0 8px 20px rgba(139, 92, 246, 0.15);
+}
+
+.row-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  flex: 1;
+}
+
+.exercise-icon-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #ffffff;
+  background: linear-gradient(135deg, #7c3aed 0%, #c026d3 100%);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.exercise-icon-badge svg {
+  width: 20px;
+  height: 20px;
+}
+
+.exercise-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.exercise-row-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.member-badge-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(192, 132, 252, 0.16);
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  color: #c084fc;
+}
+
+.exercise-row-details {
+  font-size: 13.5px;
+  color: #a89bd0;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Fixed 110px Level Badges aligned in straight vertical column */
+.row-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.level-badge {
+  width: 110px;
+  min-width: 110px;
+  max-width: 110px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+  box-sizing: border-box;
+  padding: 0 8px;
+}
+
+.level-badge.beginner {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid #10b981;
+  color: #34d399;
+}
+
+.level-badge.intermediate {
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid #f59e0b;
+  color: #fbbf24;
+}
+
+.level-badge.advanced {
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid #ef4444;
+  color: #f87171;
+}
+
+.row-arrow-icon {
+  width: 20px;
+  height: 20px;
+  color: #796c9e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.row-arrow-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.exercise-row-card:hover .row-arrow-icon {
+  color: #ffffff;
+  transform: translateX(3px);
+}
+
+/* Pagination */
+.pagination-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 32px;
+}
+
+.page-btn {
+  min-width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: #21183c;
+  border: 1px solid #35275e;
+  color: #a89bd0;
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0 10px;
+}
+
+.page-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: #8b5cf6;
+  color: #ffffff;
+  background: #2a1f4b;
+}
+
+.page-btn.active {
+  background: #7c3aed;
+  border-color: #8b5cf6;
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.4);
+}
+
+.page-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  background: #21183c;
+  border: 1px dashed #35275e;
+  border-radius: 14px;
+}
+
+.empty-state-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px auto;
+  border-radius: 50%;
+  background: rgba(124, 58, 237, 0.15);
+  color: #a78bfa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.empty-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  color: #ffffff;
+}
+
+.empty-desc {
+  font-size: 14px;
+  color: #a89bd0;
+  max-width: 420px;
+  margin: 0 auto 20px auto;
+  line-height: 1.5;
+}
+
+.empty-clear-btn {
+  background: #35275e;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.empty-clear-btn:hover {
+  background: #46347c;
+}
+
+/* Skeletons */
+.skeleton-row {
+  height: 72px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #21183c 25%, #2a1f4b 50%, #21183c 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Modal Popup Preview & Form */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 6, 20, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: #21183c;
+  border: 1px solid #35275e;
+  border-radius: 16px;
+  padding: 28px;
+  max-width: 520px;
+  width: 100%;
+  position: relative;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  animation: modalPop 0.2s ease-out;
+}
+
+.modal-form {
+  max-width: 560px;
+}
+
+@keyframes modalPop {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: #a89bd0;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.modal-close-btn:hover {
+  color: #ffffff;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+}
+
+.modal-subtitle {
+  font-size: 13.5px;
+  color: #a89bd0;
+  margin: 0 0 20px 0;
+}
+
+/* Form inputs */
+.create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #c084fc;
+}
+
+.form-input {
+  background: #17102b;
+  border: 1px solid #35275e;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.form-input:focus {
+  border-color: #8b5cf6;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.btn-cancel {
+  background: transparent;
+  color: #a89bd0;
+  border: 1px solid #35275e;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+  background: #17102b;
+  color: #ffffff;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .member-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .create-exercise-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .filters-row-search {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .level-select-wrap,
+  .level-select {
+    width: 100%;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+}
