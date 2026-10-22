@@ -1,0 +1,2087 @@
+{
+  "info": {
+    "name": "CalisHealth - Survey API",
+    "description": "Kiem thu Dynamic Survey Engine (onboarding). Chay bang Collection Runner TU TREN XUONG voi environment \"CalisHealth - Local\". Huong dan day du: postman/README-Survey.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00. Setup - dang nhap",
+      "description": "Dang nhap 2 tai khoan (da verify email) va luu JWT vao environment. Tai khoan tao 1 lan theo huong dan trong postman/README-Survey.md.",
+      "item": [
+        {
+          "name": "Login user A (chu phien)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('co JWT', () => pm.expect(j.token).to.be.a('string').and.not.empty);",
+                  "pm.environment.set('token', j.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login user B (nguoi khac)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{otherUserEmail}}\",\n  \"password\": \"{{otherUserPassword}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('co JWT', () => pm.expect(j.token).to.be.a('string').and.not.empty);",
+                  "pm.environment.set('otherToken', j.token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01. Survey definition",
+      "item": [
+        {
+          "name": "GET definition (ACTIVE version)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/surveys/{{surveyCode}}",
+            "description": "Positive #1. Tra ve version ACTIVE: cac buoc, cau hoi, loai, rules, options, dieu kien."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('dung survey', () => pm.expect(j.surveyCode).to.eql(pm.environment.get('surveyCode')));",
+                  "pm.environment.set('surveyVersion', j.version);",
+                  "pm.test('4 buoc dung thu tu', () => pm.expect(j.steps.map(s => s.stepCode)).to.eql(['BODY_INFORMATION','GOALS_AND_MOTIVATION','CURRENT_TRAINING_ROUTINE','LEVEL_TEST']));",
+                  "const all = j.steps.flatMap(s => s.questions);",
+                  "const age = all.find(x => x.questionCode === 'AGE');",
+                  "pm.test('AGE la NUMBER co rules', () => { pm.expect(age.questionType).to.eql('NUMBER'); pm.expect(age.validationRules).to.include({min: 13, max: 100, integerOnly: true}); });",
+                  "const gender = all.find(x => x.questionCode === 'GENDER');",
+                  "pm.test('GENDER co options tu DB', () => pm.expect(gender.options.map(o => o.optionCode)).to.include.members(['MALE','FEMALE']));",
+                  "const healthGoal = all.find(x => x.questionCode === 'HEALTH_GOAL');",
+                  "pm.test('HEALTH_GOAL co dieu kien', () => pm.expect(healthGoal.conditionalRules).to.eql({operator: 'EQ', questionCode: 'GOAL_TYPE', value: 'HEALTH'}));",
+                  "pm.test('khong lo id noi bo', () => pm.expect(pm.response.text()).to.not.include('\"id\"'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET definition theo version",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/surveys/{{surveyCode}}?version={{surveyVersion}}",
+            "description": "Frontend dung khi tiep tuc 1 phien cu (phien gan voi version cu)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('dung version', () => pm.expect(pm.response.json().version).to.eql(Number(pm.environment.get('surveyVersion'))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - survey khong ton tai",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/surveys/NOT_A_SURVEY",
+            "description": "Negative #1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code = SURVEY_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('SURVEY_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - version khong ton tai",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/surveys/{{surveyCode}}?version=999",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code = SURVEY_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('SURVEY_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - khong co token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/surveys/{{surveyCode}}",
+            "description": "Negative #18"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02. E2E - lam khao sat",
+      "description": "Luong chinh: khoi tao -> luu 4 buoc -> sua -> tai lai. Request \"Start\" tu luu sessionId.",
+      "item": [
+        {
+          "name": "Start session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions",
+            "description": "Positive #2. 201 khi tao moi; 200 neu da co phien IN_PROGRESS (vd lan chay truoc bi dung giua chung).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"surveyCode\": \"{{surveyCode}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201 hoac 200', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const j = pm.response.json();",
+                  "pm.test('IN_PROGRESS', () => pm.expect(j.status).to.eql('IN_PROGRESS'));",
+                  "pm.test('co 4 buoc', () => pm.expect(j.steps).to.have.length(4));",
+                  "pm.environment.set('sessionId', j.sessionId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start lai -> tra ve cung phien",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions",
+            "description": "Khong tao phien trung lap khi da co phien IN_PROGRESS.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"surveyCode\": \"{{surveyCode}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('cung sessionId', () => pm.expect(pm.response.json().sessionId).to.eql(Number(pm.environment.get('sessionId'))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}",
+            "description": "Positive #3"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('dung chu', () => pm.expect(pm.response.json().sessionId).to.eql(Number(pm.environment.get('sessionId'))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 1 - BODY_INFORMATION (NUMBER + SINGLE_SELECT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "Positive #4, #6, #8: nhieu cau trong 1 request.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"surveyVersion\": {{surveyVersion}},\n  \"answers\": [\n    {\n      \"questionCode\": \"GENDER\",\n      \"value\": \"MALE\"\n    },\n    {\n      \"questionCode\": \"AGE\",\n      \"value\": 22\n    },\n    {\n      \"questionCode\": \"HEIGHT\",\n      \"value\": 172.5\n    },\n    {\n      \"questionCode\": \"WEIGHT\",\n      \"value\": 68\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const q = (code) => pm.response.json().steps.flatMap(s => s.questions).find(x => x.questionCode === code);",
+                  "pm.test('AGE = 22', () => pm.expect(q('AGE').value).to.eql(22));",
+                  "pm.test('HEIGHT = 172.5', () => pm.expect(q('HEIGHT').value).to.eql(172.5));",
+                  "pm.test('GENDER = MALE', () => pm.expect(q('GENDER').value).to.eql('MALE'));",
+                  "pm.test('buoc 1 xong', () => pm.expect(pm.response.json().steps[0].complete).to.be.true);",
+                  "pm.test('buoc tiep theo', () => pm.expect(pm.response.json().currentStepCode).to.eql('GOALS_AND_MOTIVATION'));",
+                  "pm.test('van IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 2 - GOALS (HEALTH + MULTIPLE_SELECT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/GOALS_AND_MOTIVATION/answers",
+            "description": "Positive #7, #11: HEALTH_GOAL chi hop le khi GOAL_TYPE = HEALTH (cung request).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"GOAL_TYPE\",\n      \"value\": \"HEALTH\"\n    },\n    {\n      \"questionCode\": \"HEALTH_GOAL\",\n      \"value\": \"LOSE_WEIGHT\"\n    },\n    {\n      \"questionCode\": \"MOTIVATIONS\",\n      \"value\": [\n        \"HEALTH\",\n        \"ENERGY\"\n      ]\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const q = (code) => pm.response.json().steps.flatMap(s => s.questions).find(x => x.questionCode === code);",
+                  "pm.test('HEALTH_GOAL ap dung', () => pm.expect(q('HEALTH_GOAL').applicable).to.be.true);",
+                  "pm.test('TRAINING_SKILLS khong ap dung', () => pm.expect(q('TRAINING_SKILLS').applicable).to.be.false);",
+                  "pm.test('MOTIVATIONS luu dang mang', () => pm.expect(q('MOTIVATIONS').value).to.eql(['HEALTH','ENERGY']));",
+                  "pm.test('van IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 2 - doi sang SKILLS va xoa HEALTH_GOAL (null)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/GOALS_AND_MOTIVATION/answers",
+            "description": "Positive #9, #11: cap nhat cau tra loi; value null = xoa cau phu thuoc da het ap dung.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"GOAL_TYPE\",\n      \"value\": \"SKILLS\"\n    },\n    {\n      \"questionCode\": \"HEALTH_GOAL\",\n      \"value\": null\n    },\n    {\n      \"questionCode\": \"TRAINING_SKILLS\",\n      \"value\": [\n        \"HANDSTAND\",\n        \"MUSCLE_UP\"\n      ]\n    },\n    {\n      \"questionCode\": \"MOTIVATIONS\",\n      \"value\": [\n        \"ENERGY\",\n        \"CONFIDENCE\"\n      ]\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const q = (code) => pm.response.json().steps.flatMap(s => s.questions).find(x => x.questionCode === code);",
+                  "pm.test('HEALTH_GOAL da xoa', () => pm.expect(q('HEALTH_GOAL').answered).to.be.false);",
+                  "pm.test('TRAINING_SKILLS chuan hoa theo thu tu option', () => pm.expect(q('TRAINING_SKILLS').value).to.eql(['MUSCLE_UP','HANDSTAND']));",
+                  "pm.test('buoc 2 xong', () => pm.expect(pm.response.json().steps[1].complete).to.be.true);",
+                  "pm.test('van IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 3 - CURRENT_TRAINING_ROUTINE",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/CURRENT_TRAINING_ROUTINE/answers",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"TRAINING_EXPERIENCE\",\n      \"value\": \"MONTHS_6_TO_12\"\n    },\n    {\n      \"questionCode\": \"TRAINING_DAYS_PER_WEEK\",\n      \"value\": 3\n    },\n    {\n      \"questionCode\": \"TRAINING_MINUTES_PER_SESSION\",\n      \"value\": \"MIN_30\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const q = (code) => pm.response.json().steps.flatMap(s => s.questions).find(x => x.questionCode === code);",
+                  "pm.test('DAYS = 3', () => pm.expect(q('TRAINING_DAYS_PER_WEEK').value).to.eql(3));",
+                  "pm.test('van IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 4 - LEVEL_TEST",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/LEVEL_TEST/answers",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"PUSH_UP_MAX_REPS\",\n      \"value\": 15\n    },\n    {\n      \"questionCode\": \"SQUAT_MAX_REPS\",\n      \"value\": 30\n    },\n    {\n      \"questionCode\": \"PLANK_MAX_SECONDS\",\n      \"value\": 60\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const q = (code) => pm.response.json().steps.flatMap(s => s.questions).find(x => x.questionCode === code);",
+                  "pm.test('het buoc con thieu', () => pm.expect(pm.response.json().currentStepCode).to.be.null);",
+                  "pm.test('van IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sua AGE (update, khong tao ban ghi trung)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "Positive #9. Chi gui 1 cau; cac cau khac trong buoc giu nguyen.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"AGE\",\n      \"value\": 23\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const q = (code) => pm.response.json().steps.flatMap(s => s.questions).find(x => x.questionCode === code);",
+                  "pm.test('AGE = 23', () => pm.expect(q('AGE').value).to.eql(23));",
+                  "pm.test('GENDER khong bi xoa', () => pm.expect(q('GENDER').value).to.eql('MALE'));",
+                  "pm.test('van IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET session - tai lai de tiep tuc",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}",
+            "description": "Positive #10: khoi phuc toan bo cau tra loi."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const q = (code) => pm.response.json().steps.flatMap(s => s.questions).find(x => x.questionCode === code);",
+                  "pm.test('du lieu da luu', () => { pm.expect(q('AGE').value).to.eql(23); pm.expect(q('WEIGHT').value).to.eql(68); pm.expect(q('TRAINING_MINUTES_PER_SESSION').value).to.eql('MIN_30'); });",
+                  "pm.test('moi buoc complete', () => pm.expect(pm.response.json().steps.every(s => s.complete)).to.be.true);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03. Negative - khi phien dang IN_PROGRESS",
+      "description": "Chay sau folder 02. Moi request sai deu khong luu gi (transaction).",
+      "item": [
+        {
+          "name": "NEG - survey khong ton tai khi start",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions",
+            "description": "Negative #2",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"surveyCode\": \"NOT_A_SURVEY\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code = SURVEY_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('SURVEY_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - start thieu surveyCode",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = INVALID_REQUEST', () => pm.expect(pm.response.json().code).to.eql('INVALID_REQUEST'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - session khong ton tai",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/999999999",
+            "description": "Negative #3"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code = SESSION_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('SESSION_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - sessionId khong phai so",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/abc",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = INVALID_REQUEST', () => pm.expect(pm.response.json().code).to.eql('INVALID_REQUEST'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - doc phien cua nguoi khac",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{otherToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}",
+            "description": "Negative #4. Tra 404 giong het phien khong ton tai de khong lo id hop le."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code = SESSION_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('SESSION_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - ghi vao phien cua nguoi khac",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{otherToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"AGE\",\n      \"value\": 99\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code = SESSION_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('SESSION_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - questionCode khong ton tai",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "Negative #5",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"SHOE_SIZE\",\n      \"value\": 42\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = SURVEY_VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('SURVEY_VALIDATION_FAILED'));",
+                  "pm.test('SHOE_SIZE -> QUESTION_NOT_FOUND', () => {",
+                  "  const errs = pm.response.json().errors || [];",
+                  "  pm.expect(errs.some(e => e.questionCode === 'SHOE_SIZE' && e.code === 'QUESTION_NOT_FOUND'), JSON.stringify(errs)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - stepCode khong ton tai",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/NOT_A_STEP/answers",
+            "description": "Negative #6",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"AGE\",\n      \"value\": 22\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code = STEP_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('STEP_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - cau hoi khong thuoc step",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "Negative #7",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"PUSH_UP_MAX_REPS\",\n      \"value\": 10\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = SURVEY_VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('SURVEY_VALIDATION_FAILED'));",
+                  "pm.test('PUSH_UP_MAX_REPS -> QUESTION_NOT_IN_STEP', () => {",
+                  "  const errs = pm.response.json().errors || [];",
+                  "  pm.expect(errs.some(e => e.questionCode === 'PUSH_UP_MAX_REPS' && e.code === 'QUESTION_NOT_IN_STEP'), JSON.stringify(errs)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - sai kieu du lieu (AGE la chuoi)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "Negative #8",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"AGE\",\n      \"value\": \"22\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = SURVEY_VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('SURVEY_VALIDATION_FAILED'));",
+                  "pm.test('AGE -> TYPE_MISMATCH', () => {",
+                  "  const errs = pm.response.json().errors || [];",
+                  "  pm.expect(errs.some(e => e.questionCode === 'AGE' && e.code === 'TYPE_MISMATCH'), JSON.stringify(errs)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - so vuot gioi han + so le",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "Negative #9",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"AGE\",\n      \"value\": 150\n    },\n    {\n      \"questionCode\": \"HEIGHT\",\n      \"value\": 172.55\n    },\n    {\n      \"questionCode\": \"WEIGHT\",\n      \"value\": 68.5\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = SURVEY_VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('SURVEY_VALIDATION_FAILED'));",
+                  "pm.test('AGE -> VALUE_OUT_OF_RANGE', () => {",
+                  "  const errs = pm.response.json().errors || [];",
+                  "  pm.expect(errs.some(e => e.questionCode === 'AGE' && e.code === 'VALUE_OUT_OF_RANGE'), JSON.stringify(errs)).to.be.true;",
+                  "});",
+                  "pm.test('HEIGHT -> TOO_MANY_DECIMALS', () => {",
+                  "  const errs = pm.response.json().errors || [];",
+                  "  pm.expect(errs.some(e => e.questionCode === 'HEIGHT' && e.code === 'TOO_MANY_DECIMALS'), JSON.stringify(errs)).to.be.true;",
+                  "});",
+                  "pm.test('WEIGHT hop le nhung khong duoc luu (all-or-nothing)', () => pm.expect(pm.response.json().errors.map(e => e.questionCode)).to.not.include('WEIGHT'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Kiem tra: request loi khong luu gi",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const q = (code) => pm.response.json().steps.flatMap(s => s.questions).find(x => x.questionCode === code);",
+                  "pm.test('WEIGHT van = 68 (khong phai 68.5)', () => pm.expect(q('WEIGHT').value).to.eql(68));",
+                  "pm.test('AGE van = 23', () => pm.expect(q('AGE').value).to.eql(23));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - lua chon khong hop le (SINGLE_SELECT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "Negative #10",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"GENDER\",\n      \"value\": \"ROBOT\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = SURVEY_VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('SURVEY_VALIDATION_FAILED'));",
+                  "pm.test('GENDER -> INVALID_OPTION', () => {",
+                  "  const errs = pm.response.json().errors || [];",
+                  "  pm.expect(errs.some(e => e.questionCode === 'GENDER' && e.code === 'INVALID_OPTION'), JSON.stringify(errs)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - lua chon khong hop le (MULTIPLE_SELECT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/GOALS_AND_MOTIVATION/answers",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"MOTIVATIONS\",\n      \"value\": [\n        \"ENERGY\",\n        \"MONEY\"\n      ]\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = SURVEY_VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('SURVEY_VALIDATION_FAILED'));",
+                  "pm.test('MOTIVATIONS -> INVALID_OPTION', () => {",
+                  "  const errs = pm.response.json().errors || [];",
+                  "  pm.expect(errs.some(e => e.questionCode === 'MOTIVATIONS' && e.code === 'INVALID_OPTION'), JSON.stringify(errs)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - lua chon trung nhau",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/GOALS_AND_MOTIVATION/answers",
+            "description": "Negative #11",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"MOTIVATIONS\",\n      \"value\": [\n        \"ENERGY\",\n        \"ENERGY\"\n      ]\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = SURVEY_VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('SURVEY_VALIDATION_FAILED'));",
+                  "pm.test('MOTIVATIONS -> DUPLICATE_OPTION', () => {",
+                  "  const errs = pm.response.json().errors || [];",
+                  "  pm.expect(errs.some(e => e.questionCode === 'MOTIVATIONS' && e.code === 'DUPLICATE_OPTION'), JSON.stringify(errs)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - MULTIPLE_SELECT rong",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/GOALS_AND_MOTIVATION/answers",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"MOTIVATIONS\",\n      \"value\": []\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = SURVEY_VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('SURVEY_VALIDATION_FAILED'));",
+                  "pm.test('MOTIVATIONS -> TOO_FEW_SELECTIONS', () => {",
+                  "  const errs = pm.response.json().errors || [];",
+                  "  pm.expect(errs.some(e => e.questionCode === 'MOTIVATIONS' && e.code === 'TOO_FEW_SELECTIONS'), JSON.stringify(errs)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - cau hoi khong thoa dieu kien",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/GOALS_AND_MOTIVATION/answers",
+            "description": "Negative #12. GOAL_TYPE dang la SKILLS nen HEALTH_GOAL khong duoc tra loi, du frontend co an hay khong.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"HEALTH_GOAL\",\n      \"value\": \"LOSE_WEIGHT\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = SURVEY_VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('SURVEY_VALIDATION_FAILED'));",
+                  "pm.test('HEALTH_GOAL -> QUESTION_NOT_APPLICABLE', () => {",
+                  "  const errs = pm.response.json().errors || [];",
+                  "  pm.expect(errs.some(e => e.questionCode === 'HEALTH_GOAL' && e.code === 'QUESTION_NOT_APPLICABLE'), JSON.stringify(errs)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - JSON hong",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "Negative #15",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"answers\": [ { \"questionCode\": \"AGE\", \"value\": 22 "
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = INVALID_REQUEST', () => pm.expect(pm.response.json().code).to.eql('INVALID_REQUEST'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - answers rong",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": []\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = INVALID_REQUEST', () => pm.expect(pm.response.json().code).to.eql('INVALID_REQUEST'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - thieu field value",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"AGE\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = SURVEY_VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('SURVEY_VALIDATION_FAILED'));",
+                  "pm.test('AGE -> VALUE_MISSING', () => {",
+                  "  const errs = pm.response.json().errors || [];",
+                  "  pm.expect(errs.some(e => e.questionCode === 'AGE' && e.code === 'VALUE_MISSING'), JSON.stringify(errs)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - trung cau hoi trong 1 request",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "Negative #16",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"AGE\",\n      \"value\": 22\n    },\n    {\n      \"questionCode\": \"AGE\",\n      \"value\": 30\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = SURVEY_VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('SURVEY_VALIDATION_FAILED'));",
+                  "pm.test('AGE -> DUPLICATE_QUESTION', () => {",
+                  "  const errs = pm.response.json().errors || [];",
+                  "  pm.expect(errs.some(e => e.questionCode === 'AGE' && e.code === 'DUPLICATE_QUESTION'), JSON.stringify(errs)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - client tu gui questionType/validationRules",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "Negative #17. Backend khong tin loai cau hoi/quy tac tu client. (Loai cau hoi chua co handler trong DB duoc kiem tra bang unit test QuestionTypeRegistryTest - xem README.)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"AGE\",\n      \"questionType\": \"TEXT\",\n      \"validationRules\": {\n        \"max\": 1000\n      },\n      \"value\": \"hai muoi\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = SURVEY_VALIDATION_FAILED', () => pm.expect(pm.response.json().code).to.eql('SURVEY_VALIDATION_FAILED'));",
+                  "pm.test('AGE -> UNKNOWN_FIELD', () => {",
+                  "  const errs = pm.response.json().errors || [];",
+                  "  pm.expect(errs.some(e => e.questionCode === 'AGE' && e.code === 'UNKNOWN_FIELD'), JSON.stringify(errs)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - lech version cau hinh",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"surveyVersion\": 999,\n  \"answers\": [ { \"questionCode\": \"AGE\", \"value\": 23 } ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code = SURVEY_VERSION_MISMATCH', () => pm.expect(pm.response.json().code).to.eql('SURVEY_VERSION_MISMATCH'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - khong co token",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "Negative #18",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"AGE\",\n      \"value\": 22\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Doi GOAL_TYPE ve HEALTH nhung KHONG xoa TRAINING_SKILLS",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/GOALS_AND_MOTIVATION/answers",
+            "description": "Chuan bi cho test duoi: cau phu thuoc cu khong bi xoa tu dong, chi bi danh dau applicable=false.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"GOAL_TYPE\",\n      \"value\": \"HEALTH\"\n    },\n    {\n      \"questionCode\": \"HEALTH_GOAL\",\n      \"value\": \"STAY_FIT\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const q = (code) => pm.response.json().steps.flatMap(s => s.questions).find(x => x.questionCode === code);",
+                  "pm.test('TRAINING_SKILLS van con nhung khong ap dung', () => { pm.expect(q('TRAINING_SKILLS').answered).to.be.true; pm.expect(q('TRAINING_SKILLS').applicable).to.be.false; });",
+                  "pm.test('buoc 2 chua complete', () => pm.expect(pm.response.json().steps[1].complete).to.be.false);",
+                  "pm.test('van IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - complete khi con cau tra loi het ap dung",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/complete",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = SURVEY_INCOMPLETE', () => pm.expect(pm.response.json().code).to.eql('SURVEY_INCOMPLETE'));",
+                  "pm.test('TRAINING_SKILLS -> ANSWER_NOT_APPLICABLE', () => {",
+                  "  const errs = pm.response.json().errors || [];",
+                  "  pm.expect(errs.some(e => e.questionCode === 'TRAINING_SKILLS' && e.code === 'ANSWER_NOT_APPLICABLE'), JSON.stringify(errs)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xoa TRAINING_SKILLS (value null)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/GOALS_AND_MOTIVATION/answers",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"TRAINING_SKILLS\",\n      \"value\": null\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const q = (code) => pm.response.json().steps.flatMap(s => s.questions).find(x => x.questionCode === code);",
+                  "pm.test('van IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xoa PLANK_MAX_SECONDS",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/LEVEL_TEST/answers",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"PLANK_MAX_SECONDS\",\n      \"value\": null\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const q = (code) => pm.response.json().steps.flatMap(s => s.questions).find(x => x.questionCode === code);",
+                  "pm.test('van IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - complete khi thieu cau bat buoc",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/complete",
+            "description": "Negative #13. Loi chi ro buoc + cau hoi."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code = SURVEY_INCOMPLETE', () => pm.expect(pm.response.json().code).to.eql('SURVEY_INCOMPLETE'));",
+                  "pm.test('PLANK_MAX_SECONDS -> MISSING_REQUIRED_ANSWER', () => {",
+                  "  const errs = pm.response.json().errors || [];",
+                  "  pm.expect(errs.some(e => e.questionCode === 'PLANK_MAX_SECONDS' && e.code === 'MISSING_REQUIRED_ANSWER'), JSON.stringify(errs)).to.be.true;",
+                  "});",
+                  "pm.test('co stepCode', () => pm.expect(pm.response.json().errors[0].stepCode).to.eql('LEVEL_TEST'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tra loi lai PLANK_MAX_SECONDS",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/LEVEL_TEST/answers",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"PLANK_MAX_SECONDS\",\n      \"value\": 75\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const q = (code) => pm.response.json().steps.flatMap(s => s.questions).find(x => x.questionCode === code);",
+                  "pm.test('van IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04. E2E - hoan thanh",
+      "item": [
+        {
+          "name": "Complete",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/complete",
+            "description": "Positive #12. Chi doi trang thai, KHONG tinh level/sinh giao an."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('COMPLETED', () => pm.expect(j.status).to.eql('COMPLETED'));",
+                  "pm.test('co completedAt', () => pm.expect(j.completedAt).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET session - trang thai cuoi",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('COMPLETED', () => pm.expect(pm.response.json().status).to.eql('COMPLETED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - sua sau khi hoan thanh",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "Negative #14",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"AGE\",\n      \"value\": 30\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code = SESSION_COMPLETED', () => pm.expect(pm.response.json().code).to.eql('SESSION_COMPLETED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - complete lan 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/complete",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code = SESSION_COMPLETED', () => pm.expect(pm.response.json().code).to.eql('SESSION_COMPLETED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - skip phien da hoan thanh",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{sessionId}}/skip",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code = SESSION_COMPLETED', () => pm.expect(pm.response.json().code).to.eql('SESSION_COMPLETED'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05. E2E - bo qua khao sat",
+      "description": "Phien moi -> luu buoc 1 -> skip -> cau tra loi van con -> khong sua duoc -> resume -> skip lai (de lan chay sau bat dau sach).",
+      "item": [
+        {
+          "name": "Start session moi",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"surveyCode\": \"{{surveyCode}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test('phien moi, khac phien da hoan thanh', () => pm.expect(j.sessionId).to.not.eql(Number(pm.environment.get('sessionId'))));",
+                  "pm.environment.set('skipSessionId', j.sessionId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Luu buoc 1",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{skipSessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"GENDER\",\n      \"value\": \"FEMALE\"\n    },\n    {\n      \"questionCode\": \"AGE\",\n      \"value\": 30\n    },\n    {\n      \"questionCode\": \"HEIGHT\",\n      \"value\": 160\n    },\n    {\n      \"questionCode\": \"WEIGHT\",\n      \"value\": 55.5\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const q = (code) => pm.response.json().steps.flatMap(s => s.questions).find(x => x.questionCode === code);",
+                  "pm.test('van IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Skip",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{skipSessionId}}/skip",
+            "description": "Positive #13"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('SKIPPED', () => pm.expect(j.status).to.eql('SKIPPED'));",
+                  "pm.test('co skippedAt', () => pm.expect(j.skippedAt).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET - cau tra loi cu van con",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{skipSessionId}}",
+            "description": "Positive #14"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const q = (code) => pm.response.json().steps.flatMap(s => s.questions).find(x => x.questionCode === code);",
+                  "pm.test('AGE = 30', () => pm.expect(q('AGE').value).to.eql(30));",
+                  "pm.test('WEIGHT = 55.5', () => pm.expect(q('WEIGHT').value).to.eql(55.5));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - sua phien da skip",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{skipSessionId}}/steps/BODY_INFORMATION/answers",
+            "description": "Negative #19",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionCode\": \"AGE\",\n      \"value\": 31\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code = SESSION_SKIPPED', () => pm.expect(pm.response.json().code).to.eql('SESSION_SKIPPED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - complete phien da skip",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{skipSessionId}}/complete",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code = SESSION_SKIPPED', () => pm.expect(pm.response.json().code).to.eql('SESSION_SKIPPED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - skip lan 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{skipSessionId}}/skip",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code = SESSION_SKIPPED', () => pm.expect(pm.response.json().code).to.eql('SESSION_SKIPPED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resume",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{skipSessionId}}/resume",
+            "description": "SKIPPED -> IN_PROGRESS, giu nguyen cau tra loi."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NEG - resume phien dang IN_PROGRESS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{skipSessionId}}/resume",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code = INVALID_SESSION_STATE', () => pm.expect(pm.response.json().code).to.eql('INVALID_SESSION_STATE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Skip lai (don dep)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions/{{skipSessionId}}/skip",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lich su phien cua toi",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/survey-sessions?surveyCode={{surveyCode}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json();",
+                  "pm.test('co phien COMPLETED va SKIPPED', () => { const ids = list.map(s => s.sessionId); pm.expect(ids).to.include(Number(pm.environment.get('sessionId'))); pm.expect(ids).to.include(Number(pm.environment.get('skipSessionId'))); });",
+                  "pm.test('moi nhat truoc', () => pm.expect(list[0].sessionId).to.eql(Number(pm.environment.get('skipSessionId'))));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
