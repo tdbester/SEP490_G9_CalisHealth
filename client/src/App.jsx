@@ -6,7 +6,6 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import ResetPassword from "./pages/ResetPassword";
-import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
   return (
@@ -21,29 +20,24 @@ export default function App() {
         <Route
           path="/"
           element={
-            <ProtectedRoute>
-              <AdminLayout>
-                <Dashboard />
-              </AdminLayout>
-            </ProtectedRoute>
+            <AdminLayout>
+              <Dashboard />
+            </AdminLayout>
           }
         />
         <Route
-          path="/library"
+          path="/dashboard"
           element={
-            <ProtectedRoute>
-              <AdminLayout />
-            </ProtectedRoute>
+            <AdminLayout>
+              <Dashboard />
+            </AdminLayout>
           }
         />
-        <Route
-          path="/tracking"
-          element={
-            <ProtectedRoute>
-              <AdminLayout />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/library" element={<Navigate to="/" replace />} />
+        <Route path="/tracking" element={<Navigate to="/" replace />} />
+        <Route path="/day-streak" element={<Navigate to="/" replace />} />
+        <Route path="/profile" element={<Navigate to="/" replace />} />
+        <Route path="/settings" element={<Navigate to="/" replace />} />
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

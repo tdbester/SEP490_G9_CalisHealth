@@ -37,8 +37,8 @@ function LibraryIcon() {
 
 const NAV_ITEMS = [
   { label: "Dashboard", path: "/",        icon: DashboardIcon },
-  { label: "Tracking",  path: "/tracking", icon: TrackingIcon },
   { label: "Library",   path: "/library",  icon: LibraryIcon },
+  { label: "Health & Progress", path: "/tracking", icon: TrackingIcon },
 ];
 
 export default function Sidebar() {

@@ -6,7 +6,7 @@
 
 .admin-layout {
   min-height: 100vh;
-  background-color: #1A1230;
+  background-color: #0F0C1B;
 }
 
 .admin-content {
@@ -16,5 +16,12 @@
   padding-right: 24px;
   padding-bottom: 32px;
   min-height: 100vh;
-  background-color: #1A1230;
+  background-color: #0F0C1B;
+}
+
+@media (max-width: 768px) {
+  .admin-content {
+    margin-left: 0;
+    padding: calc(var(--topbar-height) + 16px) 14px 84px;
+  }
 }
