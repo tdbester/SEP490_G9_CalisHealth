@@ -128,35 +128,6 @@ const SKILL_FALLBACK_EXERCISES = [
   { id: 206, name: "Advanced tuck front lever", muscleGroup: "Back", sets: 4, repsOrDuration: "8 sec", level: "Advanced", details: "Back, core • 4 sets • 8 sec • Front lever", description: "Progressive straight-arm static hold extending knees further from the chest." },
 ];
 
-function getFilteredFallbackExercises({ activeTab, selectedMuscles, selectedLevel, search }) {
-  let exercises =
-    activeTab === "skill" ? SKILL_FALLBACK_EXERCISES : HEALTH_FALLBACK_EXERCISES;
-  const isAll = selectedMuscles.includes("All") || selectedMuscles.length === 0;
-
-  if (!isAll) {
-    exercises = exercises.filter((exercise) =>
-      selectedMuscles.some((muscle) =>
-        (exercise.muscleGroup || "").toLowerCase().includes(muscle.toLowerCase())
-      )
-    );
-  }
-  if (selectedLevel !== "All levels") {
-    exercises = exercises.filter(
-      (exercise) => exercise.level.toLowerCase() === selectedLevel.toLowerCase()
-    );
-  }
-  if (search.trim()) {
-    const query = search.toLowerCase().trim();
-    exercises = exercises.filter(
-      (exercise) =>
-        exercise.name.toLowerCase().includes(query) ||
-        (exercise.details && exercise.details.toLowerCase().includes(query))
-    );
-  }
-
-  return exercises;
-}
-
 // SUB-COMPONENT 1: ExerciseCard (Dùng chung 1:1 cho cả Health và Skills)
 function ExerciseCard({ item, onClick }) {
   const lvl = item.level?.toLowerCase();
@@ -301,8 +272,6 @@ function SearchFilterBar({
 
 // SUB-COMPONENT 4: PaginationBar (Phân trang căn giữa dùng chung)
 function PaginationBar({ currentPage, totalPages, onPageChange }) {
-  if (totalPages <= 1) return null;
-
   return (
     <div className="mt-4 flex items-center justify-center gap-2">
       <button
@@ -315,7 +284,7 @@ function PaginationBar({ currentPage, totalPages, onPageChange }) {
         <ChevronLeftIcon className="w-3.5 h-3.5" />
       </button>
 
-      {Array.from({ length: totalPages }, (_, index) => index + 1).map((num) => {
+      {[1, 2, 3].map((num) => {
         const isActive = currentPage === num;
         return (
           <button
@@ -336,8 +305,8 @@ function PaginationBar({ currentPage, totalPages, onPageChange }) {
       <button
         type="button"
         className="h-7 w-7 rounded-md border border-[#22184c] bg-[#130d2e] text-[#8a82af] hover:text-white flex items-center justify-center text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-        disabled={currentPage >= totalPages}
-        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+        disabled={currentPage >= Math.max(3, totalPages)}
+        onClick={() => onPageChange(Math.min(Math.max(3, totalPages), currentPage + 1))}
         aria-label="Next page"
       >
         <ChevronRightIcon className="w-3.5 h-3.5" />
@@ -414,45 +383,46 @@ export default function ExerciseListPage() {
         size: pageSize,
       });
 
-      if (data && Array.isArray(data.items)) {
+      if (data && data.items && data.items.length > 0) {
         setExercises(data.items);
-        const reportedTotalPages = Number(data.totalPages);
-        const totalItems = Number(data.totalItems ?? data.totalElements);
-        setTotalPages(
-          Number.isInteger(reportedTotalPages) && reportedTotalPages > 0
-            ? reportedTotalPages
-            : Number.isFinite(totalItems)
-              ? Math.max(1, Math.ceil(totalItems / pageSize))
-              : Math.max(1, Math.ceil(data.items.length / pageSize))
-        );
+        setTotalPages(data.totalPages || 1);
       } else {
         // Fallback chuẩn theo ảnh mockup cho từng tab
-        const fallbackList = getFilteredFallbackExercises({
-          activeTab,
-          selectedMuscles,
-          selectedLevel,
-          search: debouncedSearch,
-        });
-        const totalFallbackPages = Math.max(1, Math.ceil(fallbackList.length / pageSize));
-        setExercises(
-          fallbackList.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-        );
-        setTotalPages(totalFallbackPages);
+        let fallbackList =
+          activeTab === "skill" ? SKILL_FALLBACK_EXERCISES : HEALTH_FALLBACK_EXERCISES;
+
+        if (!isAll) {
+          fallbackList = fallbackList.filter((item) =>
+            selectedMuscles.some((m) =>
+              (item.muscleGroup || "").toLowerCase().includes(m.toLowerCase())
+            )
+          );
+        }
+        if (selectedLevel !== "All levels") {
+          fallbackList = fallbackList.filter(
+            (item) => item.level.toLowerCase() === selectedLevel.toLowerCase()
+          );
+        }
+        if (debouncedSearch.trim()) {
+          const q = debouncedSearch.toLowerCase().trim();
+          fallbackList = fallbackList.filter(
+            (item) =>
+              item.name.toLowerCase().includes(q) ||
+              (item.details && item.details.toLowerCase().includes(q))
+          );
+        }
+        setExercises(fallbackList);
+        setTotalPages(3);
       }
     } catch (err) {
       console.error("Failed to fetch exercises:", err);
       // Fallback khi lỗi kết nối mạng / DB trống
-      const fallbackList = getFilteredFallbackExercises({
-        activeTab,
-        selectedMuscles,
-        selectedLevel,
-        search: debouncedSearch,
-      });
-      const totalFallbackPages = Math.max(1, Math.ceil(fallbackList.length / pageSize));
-      setExercises(
-        fallbackList.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-      );
-      setTotalPages(totalFallbackPages);
+      if (activeTab === "skill") {
+        setExercises(SKILL_FALLBACK_EXERCISES);
+      } else {
+        setExercises(HEALTH_FALLBACK_EXERCISES);
+      }
+      setTotalPages(3);
     } finally {
       setLoading(false);
     }
@@ -461,10 +431,6 @@ export default function ExerciseListPage() {
   useEffect(() => {
     fetchList();
   }, [fetchList]);
-
-  useEffect(() => {
-    setCurrentPage((page) => Math.min(page, totalPages));
-  }, [totalPages]);
 
   // Event handlers
   const handleTabSwitch = (newTab) => {

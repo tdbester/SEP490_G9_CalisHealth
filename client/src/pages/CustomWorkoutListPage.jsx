@@ -379,7 +379,7 @@ export default function CustomWorkoutListPage() {
           </div>
         ))}
       </div>
-      {totalPages > 1 && (
+      {filteredWorkouts.length > 0 && (
         <div className="mt-5 flex items-center justify-between border-t border-[#1f193f] pt-4">
           <p className="text-xs text-slate-400">
             Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, filteredWorkouts.length)} of {filteredWorkouts.length} workouts
@@ -393,7 +393,7 @@ export default function CustomWorkoutListPage() {
             >
               Previous
             </button>
-            {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+            {Array.from({ length: Math.max(totalPages, 1) }, (_, index) => index + 1).map((page) => (
               <button
                 key={page}
                 type="button"

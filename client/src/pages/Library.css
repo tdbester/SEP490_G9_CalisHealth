@@ -26,6 +26,36 @@
   margin: 0;
 }
 
+/* Error Alert */
+.library-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  padding: 12px 18px;
+  border-radius: 10px;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+
+.library-retry-btn {
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.library-retry-btn:hover {
+  opacity: 0.9;
+}
+
 /* Sections */
 .library-section {
   margin-bottom: 30px;
