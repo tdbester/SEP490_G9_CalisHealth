@@ -1,5 +1,7 @@
 ﻿import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { validateWorkoutExercises, validateWorkoutName } from "./libraryFormValidation";
 
 function DumbbellIcon({ size = "h-4 w-4" }) {
   return (
@@ -76,6 +78,8 @@ export default function CreatePersonalWorkoutPage() {
   const [levelFilter, setLevelFilter] = useState("All levels");
   const [selected, setSelected]       = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [touchedFields, setTouchedFields] = useState({});
 
   const addedIds = useMemo(() => new Set(selected.map((e) => e.id)), [selected]);
 
@@ -90,6 +94,32 @@ export default function CreatePersonalWorkoutPage() {
   const totalExercises = selected.length;
   const totalSets      = selected.reduce((sum, e) => sum + Number(e.sets || 0), 0);
   const estimatedMin   = Math.round(totalSets * 1.2);
+  const nameError = validateWorkoutName(workoutName);
+  const exerciseErrors = validateWorkoutExercises(selected);
+  const validationErrors = { ...exerciseErrors, ...(nameError ? { name: nameError } : {}) };
+  const isDirty = Boolean(workoutName || note || selected.length);
+  const showFieldError = (field) => hasSubmitted || touchedFields[field];
+  const markFieldTouched = (field) =>
+    setTouchedFields((current) => ({ ...current, [field]: true }));
+  const focusFirstInvalidField = () => {
+    const firstInvalidId = [
+      "workout-name",
+      "workout-exercises",
+      ...selected.flatMap((_, index) => [
+        `workout-sets-${index}`,
+        `workout-reps-${index}`,
+        `workout-rest-${index}`,
+      ]),
+    ].find((id) => {
+      if (id === "workout-name") return validationErrors.name;
+      if (id === "workout-exercises") return validationErrors.list;
+      const [, field, index] = id.match(/^workout-(sets|reps|rest)-(\d+)$/) || [];
+      return field && validationErrors[`${field}-${index}`];
+    });
+    const firstInvalid = firstInvalidId && document.getElementById(firstInvalidId);
+    firstInvalid?.scrollIntoView({ behavior: "smooth", block: "center" });
+    firstInvalid?.focus();
+  };
 
   const handleAdd = (ex) =>
     setSelected((prev) => [...prev, { ...ex, sets: 3, reps: 8, countBy: "Reps", restSec: 60 }]);
@@ -119,11 +149,14 @@ export default function CreatePersonalWorkoutPage() {
     setSelected((prev) => prev.map((e, i) => (i === idx ? { ...e, [field]: value } : e)));
 
   const handleCreate = () => {
-    const name = workoutName.trim();
-    if (!name) {
-      setErrorMessage("Please enter a workout name.");
+    setHasSubmitted(true);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrorMessage("");
+      toast.warning("Please fill in all required fields correctly.");
+      focusFirstInvalidField();
       return;
     }
+    const name = workoutName.trim();
 
     try {
       const savedWorkouts = JSON.parse(localStorage.getItem("my_custom_workouts") || "[]");
@@ -164,10 +197,12 @@ export default function CreatePersonalWorkoutPage() {
           ? `Could not save this workout: ${error.message}`
           : "Could not save this workout."
       );
+      toast.error("Failed to create. Please try again.");
       return;
     }
 
     setErrorMessage("");
+    toast.success("Created successfully!");
     navigate("/library/workouts");
   };
 
@@ -188,11 +223,16 @@ export default function CreatePersonalWorkoutPage() {
             <span className="text-xs text-slate-500">{workoutName.length}/60</span>
           </div>
           <input
+            id="workout-name"
             type="text" maxLength={60} value={workoutName}
-            onChange={(e) => setWorkoutName(e.target.value)}
+            onChange={(e) => {
+              setWorkoutName(e.target.value);
+              markFieldTouched("name");
+            }}
             placeholder="Upper body push day"
-            className="w-full rounded-xl border border-[#231b46] bg-[#0c0820] px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:border-[#7c3aed] focus:outline-none transition-colors"
+            className={`w-full rounded-xl border ${showFieldError("name") && nameError ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#0c0820] px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors`}
           />
+          {showFieldError("name") && nameError && <p className="text-rose-400 text-[11px] mt-1">{nameError}</p>}
         </div>
         <div>
           <div className="flex items-center justify-between mb-1.5">
@@ -299,6 +339,9 @@ export default function CreatePersonalWorkoutPage() {
               <p className="mt-1 text-[11px] text-slate-500">Click "+ Add" on the left to build your workout.</p>
             </div>
           )}
+          {showFieldError("list") && exerciseErrors.list && (
+            <p id="workout-exercises" tabIndex={-1} className="text-rose-400 text-[11px] mt-1">{exerciseErrors.list}</p>
+          )}
 
           <div className="space-y-3">
             {selected.map((ex, idx) => (
@@ -327,15 +370,23 @@ export default function CreatePersonalWorkoutPage() {
                 <div className="grid grid-cols-4 gap-2.5">
                   <div>
                     <label className="block text-[10px] text-slate-400 mb-1">Sets</label>
-                    <input type="number" min="1" value={ex.sets}
-                      onChange={(e) => updateField(idx, "sets", e.target.value)}
-                      className="w-full rounded-lg border border-[#231b46] bg-[#080518] p-2 text-center text-xs text-white focus:outline-none focus:border-[#7c3aed]" />
+                    <input id={`workout-sets-${idx}`} type="number" min="1" max="50" step="1" value={ex.sets}
+                      onChange={(e) => {
+                        updateField(idx, "sets", e.target.value);
+                        markFieldTouched(`sets-${idx}`);
+                      }}
+                      className={`w-full rounded-lg border ${showFieldError(`sets-${idx}`) && exerciseErrors[`sets-${idx}`] ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#080518] p-2 text-center text-xs text-white focus:outline-none`} />
+                    {showFieldError(`sets-${idx}`) && exerciseErrors[`sets-${idx}`] && <p className="text-rose-400 text-[11px] mt-1">{exerciseErrors[`sets-${idx}`]}</p>}
                   </div>
                   <div>
                     <label className="block text-[10px] text-slate-400 mb-1">Reps</label>
-                    <input type="number" min="0" value={ex.reps}
-                      onChange={(e) => updateField(idx, "reps", e.target.value)}
-                      className="w-full rounded-lg border border-[#231b46] bg-[#080518] p-2 text-center text-xs text-white focus:outline-none focus:border-[#7c3aed]" />
+                    <input id={`workout-reps-${idx}`} type="number" min="1" max="999" step="1" value={ex.reps}
+                      onChange={(e) => {
+                        updateField(idx, "reps", e.target.value);
+                        markFieldTouched(`reps-${idx}`);
+                      }}
+                      className={`w-full rounded-lg border ${showFieldError(`reps-${idx}`) && exerciseErrors[`reps-${idx}`] ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#080518] p-2 text-center text-xs text-white focus:outline-none`} />
+                    {showFieldError(`reps-${idx}`) && exerciseErrors[`reps-${idx}`] && <p className="text-rose-400 text-[11px] mt-1">{exerciseErrors[`reps-${idx}`]}</p>}
                   </div>
                   <div>
                     <label className="block text-[10px] text-slate-400 mb-1">Count by</label>
@@ -348,9 +399,13 @@ export default function CreatePersonalWorkoutPage() {
                   </div>
                   <div>
                     <label className="block text-[10px] text-slate-400 mb-1">Rest (sec)</label>
-                    <input type="number" min="0" value={ex.restSec}
-                      onChange={(e) => updateField(idx, "restSec", e.target.value)}
-                      className="w-full rounded-lg border border-[#231b46] bg-[#080518] p-2 text-center text-xs text-white focus:outline-none focus:border-[#7c3aed]" />
+                    <input id={`workout-rest-${idx}`} type="number" min="0" max="600" step="1" value={ex.restSec}
+                      onChange={(e) => {
+                        updateField(idx, "restSec", e.target.value);
+                        markFieldTouched(`rest-${idx}`);
+                      }}
+                      className={`w-full rounded-lg border ${showFieldError(`rest-${idx}`) && exerciseErrors[`rest-${idx}`] ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#080518] p-2 text-center text-xs text-white focus:outline-none`} />
+                    {showFieldError(`rest-${idx}`) && exerciseErrors[`rest-${idx}`] && <p className="text-rose-400 text-[11px] mt-1">{exerciseErrors[`rest-${idx}`]}</p>}
                   </div>
                 </div>
               </div>
@@ -379,7 +434,7 @@ export default function CreatePersonalWorkoutPage() {
             className="rounded-xl border border-[#2b2257] bg-[#141030] px-6 py-2.5 text-xs font-semibold text-slate-300 hover:bg-[#1f1847] transition-colors">
             Cancel
           </button>
-          <button type="button" onClick={handleCreate} disabled={!workoutName.trim()}
+          <button type="button" onClick={handleCreate} disabled={!isDirty}
             className="rounded-xl bg-[#643bf6] px-7 py-2.5 text-xs font-semibold text-white shadow-md hover:bg-[#522cd9] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
             Create workout
           </button>

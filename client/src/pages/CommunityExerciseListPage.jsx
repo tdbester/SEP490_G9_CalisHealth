@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { createMemberExercise } from "../api/library";
 
 // Mock data matching mockup 100%
@@ -108,6 +109,36 @@ const INITIAL_COMMUNITY_EXERCISES = [
   },
 ];
 
+function normalizePersonalExercise(exercise, index) {
+  const title = String(exercise?.title || exercise?.name || "Personal exercise");
+  const authorName = exercise?.author?.name || "You";
+
+  return {
+    ...exercise,
+    id: exercise?.id || `personal-${index}`,
+    slug: exercise?.slug || title.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+    title,
+    level: exercise?.level || "Intermediate",
+    muscles: exercise?.muscles || exercise?.muscleGroup || "Full body",
+    setsReps: exercise?.setsReps || "3 sets · 10 reps",
+    author: {
+      name: authorName,
+      initials:
+        exercise?.author?.initials ||
+        authorName
+          .split(/\s+/)
+          .map((part) => part[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase(),
+      avatarBg: exercise?.author?.avatarBg || "bg-[#643bf6]",
+    },
+    postedTime: exercise?.postedTime || "Recently",
+    postedDaysAgo: Number(exercise?.postedDaysAgo) || 0,
+    savesCount: Number(exercise?.savesCount) || 0,
+  };
+}
+
 // Horizontal Barbell Icon matching Figma design
 function BarbellIcon({ className = "h-5 w-5 text-[#9d7aff]" }) {
   return (
@@ -179,9 +210,12 @@ export default function CommunityExerciseListPage() {
 
   const [exercises, setExercises] = useState(() => {
     try {
-      const local = JSON.parse(
+      const storedExercises = JSON.parse(
         localStorage.getItem("my_personal_exercises") || "[]"
       );
+      const local = Array.isArray(storedExercises)
+        ? storedExercises.map(normalizePersonalExercise)
+        : [];
       return [...local, ...INITIAL_COMMUNITY_EXERCISES];
     } catch (e) {
       return INITIAL_COMMUNITY_EXERCISES;
@@ -267,10 +301,14 @@ export default function CommunityExerciseListPage() {
   // Submit new exercise
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
-    if (!createForm.title.trim()) return;
+    if (!createForm.title.trim()) {
+      toast.warning("Please fill in all required fields correctly.");
+      return;
+    }
 
     setSubmitting(true);
     try {
+      let apiFailed = false;
       // Attempt backend API call if server is running
       try {
         await createMemberExercise({
@@ -282,8 +320,10 @@ export default function CommunityExerciseListPage() {
           description: createForm.description,
           demoVideoUrl: createForm.videoUrl,
         });
-      } catch (err) {
+      } catch {
         // Fallback to local state append seamlessly
+        apiFailed = true;
+        toast.error("Failed to create. Please try again.");
       }
 
       const newExercise = {
@@ -305,7 +345,10 @@ export default function CommunityExerciseListPage() {
       };
 
       setExercises((prev) => [newExercise, ...prev]);
-      setFormSuccess("Exercise published successfully and passed automatic checks!");
+      setFormSuccess(apiFailed
+        ? "Exercise saved locally, but could not sync with the server."
+        : "Exercise published successfully and passed automatic checks!");
+      if (!apiFailed) toast.success("Created successfully!");
       setTimeout(() => {
         setFormSuccess(null);
         setShowCreateModal(false);
@@ -319,6 +362,8 @@ export default function CommunityExerciseListPage() {
           videoUrl: "",
         });
       }, 1200);
+    } catch {
+      toast.error("Failed to create. Please try again.");
     } finally {
       setSubmitting(false);
     }

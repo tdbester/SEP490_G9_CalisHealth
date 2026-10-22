@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { toast } from "react-toastify";
 import LibraryDetailPlaceholder from "./LibraryDetailPlaceholder";
 
 const STORAGE_KEY = "my_custom_workouts";
@@ -210,7 +211,9 @@ export default function MyCustomWorkoutListPage() {
       localStorage.setItem(INITIALIZED_KEY, "true");
       setWorkouts(updatedWorkouts);
       setErrorMessage("");
+      toast.success("Deleted successfully!");
     } catch (error) {
+      toast.error("Failed to delete item.");
       setErrorMessage(
         error instanceof Error ? `Could not delete workout: ${error.message}` : "Could not delete workout."
       );

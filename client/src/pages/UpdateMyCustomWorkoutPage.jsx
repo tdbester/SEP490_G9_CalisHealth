@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "react-toastify";
+import { validateWorkoutExercises, validateWorkoutName } from "./libraryFormValidation";
 
 const STORAGE_KEY = "my_custom_workouts";
 const LEVEL_PRIORITY = { Beginner: 1, Intermediate: 2, Advanced: 3 };
@@ -23,9 +25,9 @@ function createExerciseList(workout) {
       id: exercise.id || exercise.code || `exercise-${index}`,
       name: exercise.name || exercise.title || "Exercise",
       level: exercise.level || "Beginner",
-      sets: Number(exercise.sets) || 3,
-      reps: Number(exercise.reps) || 8,
-      restSec: Number(exercise.restSec) || 45,
+      sets: exercise.sets ?? 3,
+      reps: exercise.reps ?? 8,
+      restSec: exercise.restSec ?? 45,
       countBy: exercise.countBy === "Duration" ? "sec" : exercise.countBy || "reps",
     }));
   }
@@ -97,6 +99,8 @@ export default function UpdateMyCustomWorkoutPage() {
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [touchedFields, setTouchedFields] = useState({});
 
   useEffect(() => {
     try {
@@ -126,7 +130,10 @@ export default function UpdateMyCustomWorkoutPage() {
     }
   }, [id]);
 
-  const totalSets = exercises.reduce((total, exercise) => total + Number(exercise.sets || 0), 0);
+  const totalSets = exercises.reduce((total, exercise) => {
+    const sets = Number(exercise.sets);
+    return total + (Number.isFinite(sets) ? sets : 0);
+  }, 0);
   const estimatedMinutes = Math.max(1, Math.round(totalSets));
   const level = exercises.reduce(
     (currentLevel, exercise) =>
@@ -138,6 +145,31 @@ export default function UpdateMyCustomWorkoutPage() {
     [title, description, isShared, exercises]
   );
   const isDirty = baseline !== "" && baseline !== currentForm;
+  const nameError = validateWorkoutName(title);
+  const exerciseErrors = validateWorkoutExercises(exercises);
+  const validationErrors = { ...exerciseErrors, ...(nameError ? { name: nameError } : {}) };
+  const showFieldError = (field) => hasSubmitted || touchedFields[field];
+  const markFieldTouched = (field) =>
+    setTouchedFields((current) => ({ ...current, [field]: true }));
+  const focusFirstInvalidField = () => {
+    const firstInvalidId = [
+      "workout-title",
+      "workout-exercises",
+      ...exercises.flatMap((_, index) => [
+        `workout-sets-${index}`,
+        `workout-reps-${index}`,
+        `workout-rest-${index}`,
+      ]),
+    ].find((id) => {
+      if (id === "workout-title") return validationErrors.name;
+      if (id === "workout-exercises") return validationErrors.list;
+      const [, field, index] = id.match(/^workout-(sets|reps|rest)-(\d+)$/) || [];
+      return field && validationErrors[`${field}-${index}`];
+    });
+    const firstInvalid = firstInvalidId && document.getElementById(firstInvalidId);
+    firstInvalid?.scrollIntoView({ behavior: "smooth", block: "center" });
+    firstInvalid?.focus();
+  };
 
   const updateExercise = (index, field, value) => {
     setExercises((current) =>
@@ -170,8 +202,11 @@ export default function UpdateMyCustomWorkoutPage() {
   };
 
   const handleSave = () => {
-    if (!workout || !title.trim()) {
-      setErrorMessage("Workout name is required.");
+    if (!workout) return;
+    setHasSubmitted(true);
+    if (Object.keys(validationErrors).length > 0) {
+      toast.warning("Please fill in all required fields correctly.");
+      focusFirstInvalidField();
       return;
     }
 
@@ -199,8 +234,10 @@ export default function UpdateMyCustomWorkoutPage() {
       else updatedWorkouts.unshift(updatedWorkout);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedWorkouts));
       localStorage.setItem(`${STORAGE_KEY}_initialized`, "true");
+      toast.success("Saved changes successfully!");
       navigate("/library/workouts");
     } catch (error) {
+      toast.error("Failed to save changes.");
       setErrorMessage(
         error instanceof Error ? `Could not save workout: ${error.message}` : "Could not save workout."
       );
@@ -249,16 +286,24 @@ export default function UpdateMyCustomWorkoutPage() {
             <div className="space-y-3">
               <section className="rounded-2xl border border-[#33285f] bg-[#15102e] p-5 shadow-sm shadow-purple-950/20">
                 <h2 className="mb-4 text-sm font-semibold">Workout details</h2>
-                <label className="mb-1.5 block text-xs text-slate-400" htmlFor="workout-title">
-                  Workout name
-                </label>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label className="block text-xs text-slate-400" htmlFor="workout-title">
+                    Workout name
+                  </label>
+                  <span className="text-xs text-slate-400">{title.length} / 60</span>
+                </div>
                 <input
                   id="workout-title"
                   value={title}
                   maxLength={60}
-                  onChange={(event) => setTitle(event.target.value)}
-                  className="mb-3 w-full rounded-lg border border-[#493b79] bg-[#1b1538] px-3 py-2.5 text-sm text-white focus:border-[#8b6cff] focus:outline-none"
+                  onChange={(event) => {
+                    setTitle(event.target.value);
+                    markFieldTouched("name");
+                  }}
+                  className={`mb-1 w-full rounded-lg border ${showFieldError("name") && nameError ? "border-rose-500 focus:border-rose-500" : "border-[#493b79] focus:border-[#8b6cff]"} bg-[#1b1538] px-3 py-2.5 text-sm text-white focus:outline-none`}
                 />
+                {showFieldError("name") && nameError && <p className="mb-3 text-rose-400 text-[11px] mt-1">{nameError}</p>}
+                {!showFieldError("name") || !nameError ? <div className="mb-3" /> : null}
                 <label className="mb-1.5 block text-xs text-slate-400" htmlFor="workout-description">
                   Description
                 </label>
@@ -331,6 +376,9 @@ export default function UpdateMyCustomWorkoutPage() {
                 <div className="mb-2 hidden grid-cols-[minmax(120px,1fr)_56px_70px_58px_28px] gap-2 px-3 text-[10px] text-slate-400 sm:grid">
                   <span>Exercise</span><span>Sets</span><span>Reps / seconds</span><span>Rest</span><span />
                 </div>
+                {showFieldError("list") && exerciseErrors.list && (
+                  <p id="workout-exercises" tabIndex={-1} className="text-rose-400 text-[11px] mt-1">{exerciseErrors.list}</p>
+                )}
                 <div className="space-y-2">
                   {exercises.map((exercise, index) => (
                     <div
@@ -351,39 +399,66 @@ export default function UpdateMyCustomWorkoutPage() {
                         <DragHandle />
                       </span>
                       <span className="truncate text-xs font-semibold">{exercise.name}</span>
-                      <input
-                        type="number"
-                        min="1"
-                        aria-label={`${exercise.name} sets`}
-                        value={exercise.sets}
-                        onChange={(event) => updateExercise(index, "sets", event.target.value)}
-                        className="w-full rounded-lg border border-[#643bf6]/70 bg-[#120d29] px-1 py-2 text-center text-xs text-white focus:outline-none"
-                      />
-                      <div className="relative">
+                      <div>
                         <input
                           type="number"
                           min="1"
-                          aria-label={`${exercise.name} reps or seconds`}
-                          value={exercise.reps}
-                          onChange={(event) => updateExercise(index, "reps", event.target.value)}
-                          className="w-full rounded-lg border border-[#643bf6]/70 bg-[#120d29] px-1 py-2 text-center text-xs text-white focus:outline-none"
+                          max="50"
+                          step="1"
+                          id={`workout-sets-${index}`}
+                          aria-label={`${exercise.name} sets`}
+                          value={exercise.sets}
+                          onChange={(event) => {
+                            updateExercise(index, "sets", event.target.value);
+                            markFieldTouched(`sets-${index}`);
+                          }}
+                          className={`w-full rounded-lg border ${showFieldError(`sets-${index}`) && exerciseErrors[`sets-${index}`] ? "border-rose-500 focus:border-rose-500" : "border-[#643bf6]/70"} bg-[#120d29] px-1 py-2 text-center text-xs text-white focus:outline-none`}
                         />
-                        <span className="pointer-events-none absolute inset-y-0 right-1 flex items-center text-[9px] text-slate-400">
-                          {exercise.countBy === "sec" ? "sec" : "reps"}
-                        </span>
+                        {showFieldError(`sets-${index}`) && exerciseErrors[`sets-${index}`] && <p className="text-rose-400 text-[11px] mt-1">{exerciseErrors[`sets-${index}`]}</p>}
                       </div>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min="0"
-                          aria-label={`${exercise.name} rest seconds`}
-                          value={exercise.restSec}
-                          onChange={(event) => updateExercise(index, "restSec", event.target.value)}
-                          className="w-full rounded-lg border border-[#643bf6]/70 bg-[#120d29] px-1 py-2 pr-3 text-center text-xs text-white focus:outline-none"
-                        />
-                        <span className="pointer-events-none absolute inset-y-0 right-1 flex items-center text-[9px] text-slate-400">
-                          s
-                        </span>
+                      <div>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="1"
+                            max="999"
+                            step="1"
+                            id={`workout-reps-${index}`}
+                            aria-label={`${exercise.name} reps or seconds`}
+                            value={exercise.reps}
+                            onChange={(event) => {
+                              updateExercise(index, "reps", event.target.value);
+                              markFieldTouched(`reps-${index}`);
+                            }}
+                            className={`w-full rounded-lg border ${showFieldError(`reps-${index}`) && exerciseErrors[`reps-${index}`] ? "border-rose-500 focus:border-rose-500" : "border-[#643bf6]/70"} bg-[#120d29] px-1 py-2 text-center text-xs text-white focus:outline-none`}
+                          />
+                          <span className="pointer-events-none absolute inset-y-0 right-1 flex items-center text-[9px] text-slate-400">
+                            {exercise.countBy === "sec" ? "sec" : "reps"}
+                          </span>
+                        </div>
+                        {showFieldError(`reps-${index}`) && exerciseErrors[`reps-${index}`] && <p className="text-rose-400 text-[11px] mt-1">{exerciseErrors[`reps-${index}`]}</p>}
+                      </div>
+                      <div>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            max="600"
+                            step="1"
+                            id={`workout-rest-${index}`}
+                            aria-label={`${exercise.name} rest seconds`}
+                            value={exercise.restSec}
+                            onChange={(event) => {
+                              updateExercise(index, "restSec", event.target.value);
+                              markFieldTouched(`rest-${index}`);
+                            }}
+                            className={`w-full rounded-lg border ${showFieldError(`rest-${index}`) && exerciseErrors[`rest-${index}`] ? "border-rose-500 focus:border-rose-500" : "border-[#643bf6]/70"} bg-[#120d29] px-1 py-2 pr-3 text-center text-xs text-white focus:outline-none`}
+                          />
+                          <span className="pointer-events-none absolute inset-y-0 right-1 flex items-center text-[9px] text-slate-400">
+                            s
+                          </span>
+                        </div>
+                        {showFieldError(`rest-${index}`) && exerciseErrors[`rest-${index}`] && <p className="text-rose-400 text-[11px] mt-1">{exerciseErrors[`rest-${index}`]}</p>}
                       </div>
                       <button
                         type="button"
@@ -442,7 +517,7 @@ export default function UpdateMyCustomWorkoutPage() {
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={!isDirty || !title.trim()}
+                disabled={!isDirty}
                 className="rounded-lg bg-[#643bf6] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#522cd9] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Save changes

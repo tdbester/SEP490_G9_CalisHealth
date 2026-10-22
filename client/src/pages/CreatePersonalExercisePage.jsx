@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { createMemberExercise } from "../api/library";
+import { validatePersonalExercise } from "./libraryFormValidation";
 
 export default function CreatePersonalExercisePage() {
   const navigate = useNavigate();
@@ -29,8 +31,43 @@ export default function CreatePersonalExercisePage() {
   const [textCheckStatus, setTextCheckStatus] = useState("idle"); // 'idle' | 'checking' | 'passed' | 'failed'
   const [videoCheckStatus, setVideoCheckStatus] = useState("idle"); // 'idle' | 'checking' | 'passed' | 'failed'
   const [isCreating, setIsCreating] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [touchedFields, setTouchedFields] = useState({});
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const validationErrors = validatePersonalExercise({
+    title,
+    description,
+    level,
+    steps: guideSteps,
+    videoFile,
+    requireVideo: true,
+  });
+  const isDirty = Boolean(
+    title ||
+      description ||
+      videoFile ||
+      level !== "Beginner" ||
+      guideSteps[0] !== "Start in a plank with hands under shoulders" ||
+      guideSteps.length !== 2 ||
+      guideSteps[1] !== ""
+  );
+
+  const showFieldError = (field) => hasSubmitted || touchedFields[field];
+  const markFieldTouched = (field) =>
+    setTouchedFields((current) => ({ ...current, [field]: true }));
+  const focusFirstInvalidField = (errors) => {
+    const firstInvalidId = [
+      "exercise-title",
+      "exercise-description",
+      "exercise-level",
+      ...guideSteps.map((_, index) => `guide-step-${index}`),
+      "exercise-video",
+    ].find((id) => errors[id.replace("exercise-", "").replace("guide-step-", "step-")]);
+    const firstInvalid = firstInvalidId && document.getElementById(firstInvalidId);
+    firstInvalid?.scrollIntoView({ behavior: "smooth", block: "center" });
+    firstInvalid?.focus();
+  };
 
   // Step handlers
   const handleStepChange = (index, value) => {
@@ -50,12 +87,9 @@ export default function CreatePersonalExercisePage() {
 
   // Video upload handlers
   const handleFileSelect = (e) => {
+    markFieldTouched("video");
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 50 * 1024 * 1024) {
-        setErrorMessage("Video file size exceeds 50 MB limit.");
-        return;
-      }
       setErrorMessage("");
       setVideoFile(file);
     }
@@ -73,12 +107,9 @@ export default function CreatePersonalExercisePage() {
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
+    markFieldTouched("video");
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      if (file.size > 50 * 1024 * 1024) {
-        setErrorMessage("Video file size exceeds 50 MB limit.");
-        return;
-      }
       setErrorMessage("");
       setVideoFile(file);
     }
@@ -90,8 +121,11 @@ export default function CreatePersonalExercisePage() {
       e.preventDefault();
       e.stopPropagation();
     }
-    if (!title.trim()) {
-      setErrorMessage("Please enter an exercise title.");
+    setHasSubmitted(true);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrorMessage("");
+      toast.warning("Please fill in all required fields correctly.");
+      focusFirstInvalidField(validationErrors);
       return;
     }
     setErrorMessage("");
@@ -132,12 +166,18 @@ export default function CreatePersonalExercisePage() {
       const existing = JSON.parse(
         localStorage.getItem("my_personal_exercises") || "[]"
       );
+      if (!Array.isArray(existing)) {
+        throw new Error("Saved exercises are not in the expected format.");
+      }
       localStorage.setItem(
         "my_personal_exercises",
         JSON.stringify([newExercise, ...existing])
       );
-    } catch (err) {
-      console.warn("Could not save to localStorage:", err);
+    } catch {
+      setIsCreating(false);
+      setErrorMessage("Could not save exercise.");
+      toast.error("Failed to create. Please try again.");
+      return;
     }
 
     // 4. Try sending to backend API safely without redirecting on failure
@@ -158,9 +198,8 @@ export default function CreatePersonalExercisePage() {
       console.warn("Backend API sync skipped/failed:", err?.message || err);
     }
 
-    setSuccessMessage(
-      "Exercise passed all checks and was saved to your library!"
-    );
+    toast.success("Created successfully!");
+    setSuccessMessage("Exercise passed all checks and was saved to your library!");
 
     // 5. Redirect back to My exercise list - Pending
     setTimeout(() => {
@@ -225,12 +264,17 @@ export default function CreatePersonalExercisePage() {
           </div>
           <input
             type="text"
+            id="exercise-title"
             maxLength={60}
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              markFieldTouched("title");
+            }}
             placeholder="e.g. Diamond push-up"
-            className="w-full rounded-xl border border-[#231b46] bg-[#0c0820] px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:border-[#7c3aed] focus:outline-none transition-colors"
+            className={`w-full rounded-xl border ${showFieldError("title") && validationErrors.title ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#0c0820] px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors`}
           />
+          {showFieldError("title") && validationErrors.title && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.title}</p>}
         </div>
 
         {/* Description */}
@@ -244,21 +288,29 @@ export default function CreatePersonalExercisePage() {
             </span>
           </div>
           <textarea
+            id="exercise-description"
             maxLength={300}
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              markFieldTouched("description");
+            }}
             placeholder="What does this exercise train, and who is it for?"
-            className="w-full rounded-xl border border-[#231b46] bg-[#0c0820] p-4 text-xs text-white placeholder-slate-500 h-28 resize-none focus:border-[#7c3aed] focus:outline-none transition-colors leading-relaxed"
+            className={`w-full rounded-xl border ${showFieldError("description") && validationErrors.description ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#0c0820] p-4 text-xs text-white placeholder-slate-500 h-28 resize-none focus:outline-none transition-colors leading-relaxed`}
           />
+          {showFieldError("description") && validationErrors.description && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.description}</p>}
         </div>
 
         {/* Level */}
         <div>
           <label className="block text-xs text-slate-400 mb-2">Level</label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div id="exercise-level" tabIndex={-1} className={`grid grid-cols-1 md:grid-cols-3 gap-4 rounded-xl ${showFieldError("level") && validationErrors.level ? "ring-1 ring-rose-500" : ""}`}>
             {/* Beginner */}
             <div
-              onClick={() => setLevel("Beginner")}
+              onClick={() => {
+                setLevel("Beginner");
+                markFieldTouched("level");
+              }}
               className={`rounded-xl p-3.5 flex items-start justify-between cursor-pointer transition-all select-none ${
                 level === "Beginner"
                   ? "border border-[#8b6cff] bg-[#2a1d5d] shadow-md shadow-purple-900/40"
@@ -286,7 +338,10 @@ export default function CreatePersonalExercisePage() {
 
             {/* Intermediate */}
             <div
-              onClick={() => setLevel("Intermediate")}
+              onClick={() => {
+                setLevel("Intermediate");
+                markFieldTouched("level");
+              }}
               className={`rounded-xl p-3.5 flex items-start justify-between cursor-pointer transition-all select-none ${
                 level === "Intermediate"
                   ? "border border-[#8b6cff] bg-[#2a1d5d] shadow-md shadow-purple-900/40"
@@ -316,7 +371,10 @@ export default function CreatePersonalExercisePage() {
 
             {/* Advanced */}
             <div
-              onClick={() => setLevel("Advanced")}
+              onClick={() => {
+                setLevel("Advanced");
+                markFieldTouched("level");
+              }}
               className={`rounded-xl p-3.5 flex items-start justify-between cursor-pointer transition-all select-none ${
                 level === "Advanced"
                   ? "border border-[#8b6cff] bg-[#2a1d5d] shadow-md shadow-purple-900/40"
@@ -329,6 +387,7 @@ export default function CreatePersonalExercisePage() {
                   Strong and experienced
                 </p>
               </div>
+              {showFieldError("level") && validationErrors.level && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.level}</p>}
               <div
                 className={`w-4 h-4 self-center rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
                   level === "Advanced"
@@ -350,7 +409,7 @@ export default function CreatePersonalExercisePage() {
         <h2 className="text-sm font-semibold text-white">Guide</h2>
 
         {/* Steps inputs list */}
-        <div className="space-y-3">
+        <div id="guide-step-list" className="space-y-3">
           {guideSteps.map((step, index) => (
             <div key={index} className="flex items-center gap-3">
               {/* Số thứ tự */}
@@ -359,17 +418,24 @@ export default function CreatePersonalExercisePage() {
               </span>
 
               {/* Input text bước hướng dẫn */}
-              <input
-                type="text"
-                value={step}
-                onChange={(e) => handleStepChange(index, e.target.value)}
-                placeholder={
-                  index === 0
-                    ? "e.g. Start in a plank with hands under shoulders"
-                    : "Next step"
-                }
-                className="flex-1 rounded-xl border border-[#231b46] bg-[#0c0820] px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:border-[#7c3aed] focus:outline-none transition-colors"
-              />
+              <div className="flex-1">
+                <input
+                  type="text"
+                  id={`guide-step-${index}`}
+                  value={step}
+                  onChange={(e) => {
+                    handleStepChange(index, e.target.value);
+                    markFieldTouched(`step-${index}`);
+                  }}
+                  placeholder={
+                    index === 0
+                      ? "e.g. Start in a plank with hands under shoulders"
+                      : "Next step"
+                  }
+                  className={`w-full rounded-xl border ${showFieldError(`step-${index}`) && validationErrors[`step-${index}`] ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#0c0820] px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors`}
+                />
+                {showFieldError(`step-${index}`) && validationErrors[`step-${index}`] && <p className="text-rose-400 text-[11px] mt-1">{validationErrors[`step-${index}`]}</p>}
+              </div>
 
               {/* Nút xoá (X) từng bước (chỉ xoá khi còn > 1 bước) */}
               {guideSteps.length > 1 && (
@@ -395,6 +461,7 @@ export default function CreatePersonalExercisePage() {
             </div>
           ))}
         </div>
+        {showFieldError("steps") && validationErrors.steps && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.steps}</p>}
 
         {/* Nút "+ Add step" */}
         <div>
@@ -421,12 +488,14 @@ export default function CreatePersonalExercisePage() {
         <input
           ref={fileInputRef}
           type="file"
-          accept="video/mp4,video/quicktime,video/webm"
+          accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
           onChange={handleFileSelect}
           className="hidden"
         />
 
         <div
+          id="exercise-video"
+          tabIndex={-1}
           onClick={() => fileInputRef.current?.click()}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -453,6 +522,7 @@ export default function CreatePersonalExercisePage() {
               <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
           </div>
+          {showFieldError("video") && validationErrors.video && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.video}</p>}
 
           <h3 className="text-xs font-semibold text-white">
             {videoFile ? videoFile.name : "Click to upload a demo video"}
@@ -593,7 +663,7 @@ export default function CreatePersonalExercisePage() {
         {/* Nút Create */}
         <button
           type="button"
-          disabled={isCreating}
+          disabled={isCreating || !isDirty}
           onClick={handleCreate}
           className="rounded-xl bg-[#643bf6] hover:bg-[#522cd9] text-white text-xs font-semibold px-7 py-2.5 shadow-md active:scale-95 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-60"
         >
