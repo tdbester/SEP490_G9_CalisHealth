@@ -1,0 +1,7 @@
+# Use this workspace to collaborate
+workspace:
+  id: 296122f6-887f-4bb2-8cdc-57aa92803dd9
+
+localResources:
+  specs:
+    - ../server/swagger/openapi.yaml
