@@ -15,12 +15,11 @@ function DashboardIcon() {
 }
 
 function TrackingIcon() {
-  // Heart with pulse line matching Figma nav-tracking
+  // Three-column tracking icon
   return (
     <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M7.27502 0.675003L9.30002 4.875L13.875 5.55L10.575 8.775L11.325 13.35L7.27502 11.175L3.22502 13.35L3.97502 8.775L0.67502 5.55L5.25002 4.875L7.27502 0.675003Z" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" stroke="#A89BD0"/>
-</svg>
-
+      <path d="M2.25 6V12.75M7.5 1.5V12.75M12.75 4.5V12.75" stroke="#A89BD0" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
@@ -38,7 +37,7 @@ function LibraryIcon() {
 const NAV_ITEMS = [
   { label: "Dashboard", path: "/",        icon: DashboardIcon },
   { label: "Library",   path: "/library",  icon: LibraryIcon },
-  { label: "Health & Progress", path: "/tracking", icon: TrackingIcon },
+  { label: "Tracking", path: "/tracking", icon: TrackingIcon },
 ];
 
 export default function Sidebar() {
