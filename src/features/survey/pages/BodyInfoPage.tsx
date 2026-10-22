@@ -1,193 +1,376 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller, type UseFormRegisterReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { bodySchema, type BodyFormValues } from '../schemas/body.schema';
+import { bodySchema, GENDER_VALUES, type BodyFormValues, type Gender } from '../schemas/body.schema';
 import { SurveyProgressBar } from '../components/SurveyProgressBar';
 import { useSurvey } from '../context/SurveyContext';
+import { cn } from '@/lib/utils';
 
-/* ─── Ruler Icon ─── */
+/* ═══════════════════════════════════════════════════════════════════════
+Colors extracted from the Figma frame
+"CalisHealth_Body_Information_Survey 1" (1198 x 1050)
+Phần header mô phỏng trình duyệt (URL bar + back arrow) đã bỏ vì chạy trong
+browser thật. Các token dưới đây chỉ còn phần nội dung form.
+═══════════════════════════════════════════════════════════════════════ */
+const SURFACE = {
+  pageFrom: '#0d071b',
+  pageTo: '#0a0618',
+  progressActive: '#a78bfa',
+  progressIdle: '#33254f',
+  label: '#b4a0e5',
+  card: '#171128',
+  cardBorder: '#3c2a67',
+  iconFrom: '#7850f4',
+  iconTo: '#5c3ce0',
+  inputBg: '#ffffff',
+  placeholder: '#5b5864',
+  unit: '#a69ac2',
+  ctaFrom: '#c52edb',
+  ctaMid: '#8855eb',
+  ctaTo: '#3c7df3',
+} as const;
+
+/* ─── Icons (inline SVG, matching the Figma vectors) ─────────────────── */
+
+function PersonIcon() {
+  return (
+    <svg viewBox="0 0 26 32" fill="none" className="w-[30px] h-[30px]" aria-hidden="true">
+      <circle cx="13" cy="7" r="6" stroke="currentColor" strokeWidth="2.6" />
+      <path
+        d="M2 29C2 22.9253 6.92533 18 13 18C19.0747 18 24 22.9253 24 29"
+        stroke="currentColor"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 28 29" fill="none" className="w-[30px] h-[30px]" aria-hidden="true">
+      <rect x="2.6" y="5.6" width="22.8" height="21.8" rx="2" stroke="currentColor" strokeWidth="2.5" />
+      <path
+        d="M2.6 12H25.4M9 2.6V7.6M19 2.6V7.6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function RulerIcon() {
   return (
-    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg viewBox="0 0 31 31" fill="none" className="w-[30px] h-[30px]" aria-hidden="true">
+      <rect
+        x="3.4"
+        y="11.4"
+        width="24.2"
+        height="8.2"
+        rx="1.6"
+        stroke="currentColor"
+        strokeWidth="2.5"
+      />
       <path
+        d="M9 11.4V16M14 11.4V14.6M19 11.4V16M24 11.4V14.6"
+        stroke="currentColor"
+        strokeWidth="2"
         strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.8"
-        d="M3 10h18M3 14h18M7 6v12M11 8v2M11 14v2M15 8v2M15 14v2"
       />
     </svg>
   );
 }
 
-/* ─── Scale / Weight Icon ─── */
 function ScaleIcon() {
   return (
-    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg viewBox="0 0 30 30" fill="none" className="w-[30px] h-[30px]" aria-hidden="true">
+      <rect x="3" y="4.5" width="24" height="21" rx="3" stroke="currentColor" strokeWidth="2.5" />
       <path
+        d="M15 10.5V15.5M15 10.5L11.5 13.5M15 10.5L18.5 13.5"
+        stroke="currentColor"
+        strokeWidth="2.2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeWidth="1.8"
-        d="M3 6l9-4 9 4M3 6v14l9 4 9-4V6M12 2v20M3 10h18M3 14h18"
       />
     </svg>
   );
 }
 
-/* ─── Metric Input Card ─── */
+function ChevronDown() {
+  return (
+    <svg viewBox="0 0 12 6" fill="none" className="w-3 h-1.5 shrink-0" aria-hidden="true">
+      <path
+        d="M1 1L6 5L11 1"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ArrowRight() {
+  return (
+    <svg viewBox="0 0 20 16" fill="none" className="w-5 h-4" aria-hidden="true">
+      <path
+        d="M1 8H18M12.5 2L18.5 8L12.5 14"
+        stroke="currentColor"
+        strokeWidth="2.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/* ─── Card shell shared by the four metrics ───────────────────────────── */
+
+interface CardShellProps {
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+}
+
+function CardShell({ icon, title, children }: CardShellProps) {
+  return (
+    <div
+      className="w-full max-w-[487px] ml-[29px] rounded-[10px] border-[1.6px] px-6 pt-4 pb-[8.4px]"
+      style={{ background: SURFACE.card, borderColor: SURFACE.cardBorder }}
+    >
+      <div className="flex items-center gap-[18px] h-[58px]">
+        <div
+          className="w-[58px] h-[58px] rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: `linear-gradient(135deg, ${SURFACE.iconFrom} 0%, ${SURFACE.iconTo} 100%)` }}
+        >
+          {icon}
+        </div>
+        <span className="text-xl font-bold text-white leading-tight">{title}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/* ─── Numeric metric card (age / height / weight) ─────────────────────── */
+
 interface MetricCardProps {
   label: string;
   icon: React.ReactNode;
   unit: string;
-  inputId: string;
   placeholder: string;
   min: number;
   max: number;
   hasError: boolean;
   errorMessage?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  registration: any;
-  onChange: (val: number) => void;
-  defaultValue?: number;
+  registration: UseFormRegisterReturn;
+  onValueChange?: (value: number) => void;
 }
 
 function MetricCard({
-  label, icon, unit, inputId, placeholder, min, max,
-  hasError, errorMessage, registration, onChange, defaultValue,
+  label,
+  icon,
+  unit,
+  placeholder,
+  min,
+  max,
+  hasError,
+  errorMessage,
+  registration,
+  onValueChange,
 }: MetricCardProps) {
   return (
-    <div
-      className={`bg-[#151329] rounded-2xl p-4 sm:p-5 border transition-all ${
-        hasError ? 'border-rose-500/60' : 'border-[#2d294d]'
-      }`}
-    >
-      {/* Card header: icon + label */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#6d28d9] flex items-center justify-center shrink-0 shadow-md shadow-purple-900/50">
-          {icon}
-        </div>
-        <span className="text-base sm:text-lg font-semibold text-white">{label}</span>
-      </div>
-
-      {/* Input with unit */}
+    <CardShell icon={icon} title={label}>
       <div
-        className={`flex items-center bg-[#0e0b20] border rounded-xl px-4 py-3 transition-all ${
-          hasError
-            ? 'border-rose-500 ring-1 ring-rose-500/30'
-            : 'border-[#2d294d] focus-within:border-[#7c3aed] focus-within:ring-2 focus-within:ring-[#7c3aed]/25'
-        }`}
+        className={cn(
+          'flex items-center rounded-[4px] h-[31px] px-[19px] mt-1 transition-colors',
+          hasError ? 'ring-1 ring-rose-500/50' : ''
+        )}
+        style={{ background: SURFACE.inputBg }}
       >
         <input
-          id={inputId}
           type="number"
           inputMode="numeric"
           min={min}
           max={max}
           placeholder={placeholder}
-          defaultValue={defaultValue}
-          className="flex-1 bg-transparent border-0 p-0 text-white text-base sm:text-lg font-medium outline-none focus:ring-0 placeholder-gray-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className="flex-1 min-w-0 bg-transparent border-0 p-0 text-base outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          style={{ color: '#111827' }}
           {...registration}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+          onChange={(e) => {
             registration.onChange(e);
             const val = parseFloat(e.target.value);
-            if (!isNaN(val)) onChange(val);
+            if (!Number.isNaN(val)) onValueChange?.(val);
           }}
         />
-        <span className="text-sm font-semibold text-[#7c6aad] ml-2 select-none shrink-0">
+        <span className="text-base ml-2 select-none shrink-0" style={{ color: SURFACE.unit }}>
           {unit}
         </span>
       </div>
 
-      {/* Error message */}
       {hasError && errorMessage && (
         <p className="text-xs text-rose-400 mt-2 ml-1">{errorMessage}</p>
       )}
-    </div>
+    </CardShell>
+  );
+}
+
+/* ─── Gender select card ──────────────────────────────────────────────── */
+
+interface GenderCardProps {
+  hasError: boolean;
+  errorMessage?: string;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+const GENDER_LABELS: Record<(typeof GENDER_VALUES)[number], string> = {
+  male: 'Male',
+  female: 'Female',
+  other: 'Other',
+};
+
+function GenderCard({ hasError, errorMessage, value, onChange }: GenderCardProps) {
+  return (
+    <CardShell icon={<PersonIcon />} title="Gender">
+      <div className="relative flex items-center rounded-[4px] h-[31px] mt-1" style={{ background: SURFACE.inputBg }}>
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-label="Gender"
+          className="flex-1 min-w-0 h-full bg-transparent border-0 p-0 pl-[19px] pr-7 text-base outline-none cursor-pointer appearance-none"
+          style={{ color: value ? '#111827' : SURFACE.placeholder }}
+        >
+          <option value="" disabled>
+            Select gender
+          </option>
+          {GENDER_VALUES.map((g) => (
+            <option key={g} value={g} className="text-gray-900 bg-white">
+              {GENDER_LABELS[g]}
+            </option>
+          ))}
+        </select>
+        <span className="absolute right-4 pointer-events-none" style={{ color: SURFACE.unit }}>
+          <ChevronDown />
+        </span>
+      </div>
+
+      {hasError && errorMessage && (
+        <p className="text-xs text-rose-400 mt-2 ml-1">{errorMessage}</p>
+      )}
+    </CardShell>
   );
 }
 
 /* ─── Main Page ─── */
 export function BodyInfoPage() {
   const navigate = useNavigate();
-  const { setBody, data } = useSurvey();
-  const [heightVal, setHeightVal] = useState<number>(data.body?.height ?? 170);
-  const [weightVal, setWeightVal] = useState<number>(data.body?.weight ?? 65);
-
-  useEffect(() => {
-    document.title = 'CalisHealth · Survey – Body Information';
-  }, []);
+  const { setBody, data, resetSurvey } = useSurvey();
 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
-    setValue,
   } = useForm<BodyFormValues>({
     resolver: zodResolver(bodySchema),
     defaultValues: {
+      gender: data.body?.gender ?? '',
+      age: data.body?.age ?? 22,
       height: data.body?.height ?? 170,
       weight: data.body?.weight ?? 65,
     },
     mode: 'onChange',
   });
 
+  useEffect(() => {
+    document.title = 'CalisHealth · Survey – Body Information';
+  }, []);
+
   const onSubmit = (values: BodyFormValues) => {
-    setBody(values);
-    // Navigate to next survey step (step 2 — placeholder path)
-    navigate('/survey/goal');
+    // The schema already guarantees `gender` is one of GENDER_VALUES.
+    setBody({ ...values, gender: values.gender as Gender });
+    navigate('/survey/goals-and-motivation');
+  };
+
+  const handleSkip = () => {
+    resetSurvey();
+    navigate('/');
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0918] bg-[radial-gradient(ellipse_70%_55%_at_50%_10%,#1a1040_0%,#0e0b20_55%,#070611_100%)] text-white flex flex-col antialiased selection:bg-fuchsia-500/30 selection:text-white">
+    <div
+      className="min-h-screen flex flex-col antialiased selection:bg-fuchsia-500/30 selection:text-white"
+      style={{
+        background: `linear-gradient(180deg, ${SURFACE.pageFrom} 0%, ${SURFACE.pageTo} 100%)`,
+        color: '#ffffff',
+      }}
+    >
+      {/* Header mô phỏng trình duyệt (URL bar + back arrow) đã bỏ:
+          chạy trong browser thật thì phần này là thừa. */}
 
-      {/* ── Top safe area padding for mobile ── */}
-      <div className="w-full px-4 sm:px-6 pt-safe-top pt-8 sm:pt-10 pb-4 sm:pb-6 flex justify-center">
-        <div className="w-full max-w-[480px]">
+      {/* ── Content ────────────────────────────────────────────────── */}
+      <div className="flex-1 w-full flex justify-center px-4 sm:px-6 pt-10 pb-6">
+        <div className="w-full max-w-[584px]">
+          {/* Step indicator - label above the progress bar (Figma y=144) */}
           <SurveyProgressBar currentStep={1} totalSteps={4} />
-        </div>
-      </div>
-
-      {/* ── Scrollable content ── */}
-      <div className="flex-1 w-full px-4 sm:px-6 pb-6 flex justify-center">
-        <div className="w-full max-w-[480px] flex flex-col">
 
           {/* Section header */}
-          <div className="mb-6 sm:mb-8">
-            <p className="text-xs sm:text-sm font-semibold text-[#7c6aad] uppercase tracking-widest mb-1.5">
+          <div className="mt-6">
+            <p className="text-xl font-medium leading-[1.18]" style={{ color: SURFACE.label }}>
               Body information
             </p>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-tight">
+            <h1 className="text-[34px] font-bold text-white leading-[1.24] tracking-tight mt-px">
               Your body stats
             </h1>
-            <p className="text-sm sm:text-base text-[#a78bfa] mt-1.5 leading-relaxed">
+            <p className="text-lg leading-[1.37] mt-1.5 max-w-[387px]" style={{ color: SURFACE.label }}>
               We'll use this to tailor your workout plan.
             </p>
           </div>
 
-          {/* ── Input cards ── */}
+          {/* ── Form ──────────────────────────────────────────────────── */}
           <form
             id="body-info-form"
             onSubmit={handleSubmit(onSubmit)}
-            className="flex flex-col gap-4 sm:gap-5"
+            className="flex flex-col gap-3 mt-7"
             noValidate
           >
+            {/* Gender */}
+            <Controller
+              name="gender"
+              control={control}
+              render={({ field }) => (
+                <GenderCard
+                  value={field.value}
+                  onChange={field.onChange}
+                  hasError={!!errors.gender}
+                  errorMessage={errors.gender?.message}
+                />
+              )}
+            />
+
+            {/* Age */}
+            <MetricCard
+              label="Age"
+              icon={<CalendarIcon />}
+              unit="years"
+              placeholder="22"
+              min={10}
+              max={100}
+              hasError={!!errors.age}
+              errorMessage={errors.age?.message}
+              registration={register('age', { valueAsNumber: true })}
+            />
+
             {/* Height */}
             <MetricCard
               label="Height"
               icon={<RulerIcon />}
               unit="cm"
-              inputId="height"
               placeholder="170"
               min={50}
               max={300}
-              defaultValue={heightVal}
               hasError={!!errors.height}
               errorMessage={errors.height?.message}
               registration={register('height', { valueAsNumber: true })}
-              onChange={(v) => {
-                setHeightVal(v);
-                setValue('height', v, { shouldValidate: true });
-              }}
             />
 
             {/* Weight */}
@@ -195,58 +378,37 @@ export function BodyInfoPage() {
               label="Weight"
               icon={<ScaleIcon />}
               unit="kg"
-              inputId="weight"
               placeholder="65"
               min={10}
               max={500}
-              defaultValue={weightVal}
               hasError={!!errors.weight}
               errorMessage={errors.weight?.message}
               registration={register('weight', { valueAsNumber: true })}
-              onChange={(v) => {
-                setWeightVal(v);
-                setValue('weight', v, { shouldValidate: true });
-              }}
             />
           </form>
 
-          {/* ── BMI preview (bonus) ── */}
-          {heightVal > 0 && weightVal > 0 && (
-            <div className="mt-4 rounded-xl bg-[#151329] border border-[#2d294d] px-4 py-3 flex items-center justify-between">
-              <span className="text-sm text-gray-400">BMI estimate</span>
-              <span className="text-sm font-semibold text-white">
-                {(weightVal / Math.pow(heightVal / 100, 2)).toFixed(1)}
-                <span className="text-[#7c6aad] text-xs font-normal ml-1.5">
-                  {(() => {
-                    const bmi = weightVal / Math.pow(heightVal / 100, 2);
-                    if (bmi < 18.5) return '· Underweight';
-                    if (bmi < 25) return '· Normal';
-                    if (bmi < 30) return '· Overweight';
-                    return '· Obese';
-                  })()}
-                </span>
-              </span>
-            </div>
-          )}
-
-          {/* ── Spacer to push button down on tall screens ── */}
-          <div className="flex-1 min-h-6" />
-        </div>
-      </div>
-
-      {/* ── Sticky footer: Continue button ── */}
-      <div className="w-full px-4 sm:px-6 pb-safe-bottom pb-6 sm:pb-8 flex justify-center">
-        <div className="w-full max-w-[480px]">
+          {/* ── Actions ──────────────────────────────────────────────── */}
           <button
             type="submit"
             form="body-info-form"
-            className="w-full h-12 sm:h-13 rounded-2xl font-semibold text-white text-base bg-gradient-to-r from-[#7c3aed] via-[#6d28d9] to-[#5b21b6] hover:from-[#8b5cf6] hover:via-[#7c3aed] hover:to-[#6d28d9] shadow-lg shadow-purple-900/50 flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
+            className="w-full max-w-[487px] ml-[29px] mt-[28px] h-[58px] rounded-lg font-bold text-xl text-white flex items-center justify-center gap-2.5 transition-opacity active:scale-[0.99] cursor-pointer hover:opacity-90"
+            style={{
+              background: `linear-gradient(90deg, ${SURFACE.ctaFrom} 0%, ${SURFACE.ctaMid} 52%, ${SURFACE.ctaTo} 100%)`,
+            }}
           >
             <span>Continue</span>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
+            <ArrowRight />
           </button>
+
+          <div className="w-full max-w-[487px] ml-[29px] mt-[21px] text-center">            <button
+              type="button"
+              onClick={handleSkip}
+              className="bg-transparent border-0 p-0 text-base cursor-pointer transition-colors hover:text-white"
+              style={{ color: SURFACE.label, textDecoration: 'underline', textUnderlineOffset: '4px' }}
+            >
+              Skip survey
+            </button>
+          </div>
         </div>
       </div>
     </div>

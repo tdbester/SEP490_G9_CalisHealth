@@ -12,6 +12,10 @@ import { NotFoundPage } from '@/features/auth/pages/NotFoundPage';
 import { HomePage } from '@/pages/HomePage';
 import { SurveyLayout } from '@/features/survey/pages/SurveyLayout';
 import { BodyInfoPage } from '@/features/survey/pages/BodyInfoPage';
+import { GoalsPage } from '@/features/survey/pages/GoalsPage';
+import { TrainingRoutinePage } from '@/features/survey/pages/TrainingRoutinePage';
+import { LevelTestPage } from '@/features/survey/pages/LevelTestPage';
+import { SurveyResultPage } from '@/features/survey/pages/SurveyResultPage';
 import { ContentManagerLayout } from '@/features/content-manager/ContentManagerLayout';
 import { ContentManagerDashboard } from '@/features/content-manager/pages/ContentManagerDashboard';
 import { ContentManagementPage } from '@/features/content-manager/pages/ContentManagementPage';
@@ -48,22 +52,34 @@ export function AppRoutes() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify" element={<VerifyEmailPage />} />
 
+      {/* Survey flow - TẠM để ngoài ProtectedRoute để chạy/demo & báo cáo
+          trước khi backend survey sẵn sàng.
+          TODO: khi backend survey hoàn tất, gộp lại nhóm ProtectedRoute bên dưới
+          (đặt sau khi cần login) rồi xoá route public này. */}
+      <Route path="/survey" element={<SurveyLayout />}>
+        <Route index element={<Navigate to="body-information" replace />} />
+        <Route path="body-information" element={<BodyInfoPage />} />
+        {/* Figma URL in both step-2 frames: /survey/goals-and-motivation */}
+        <Route path="goals-and-motivation" element={<GoalsPage />} />
+        <Route path="current-training-routine" element={<TrainingRoutinePage />} />
+        {/* Figma URL in both step-4 frames: /survey/level-test */}
+        <Route path="level-test" element={<LevelTestPage />} />
+        {/* Figma 259:393 "Survey - Result and recommended plan" */}
+        <Route path="result" element={<SurveyResultPage />} />
+      </Route>
+
       {/* Protected - phải đăng nhập */}
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<RoleHomePage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="/account/change-password" element={<ChangePasswordPage />} />
 
-        {/* Survey flow */}
+        {/* TODO: đưa survey trở lại vào đây khi backend survey xong:
         <Route path="/survey" element={<SurveyLayout />}>
           <Route index element={<Navigate to="body-information" replace />} />
           <Route path="body-information" element={<BodyInfoPage />} />
-          {/* Future steps:
-          <Route path="goal" element={<GoalPage />} />
-          <Route path="fitness-level" element={<FitnessLevelPage />} />
-          <Route path="schedule" element={<SchedulePage />} />
-          */}
         </Route>
+        */}
       </Route>
 
       {/* Content manager area - role check is enforced by ProtectedRoute and the backend API. */}

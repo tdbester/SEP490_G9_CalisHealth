@@ -35,7 +35,9 @@ src/
 ├── components/       # UI shared (Button, Input, AuthLayout)
 ├── contexts/         # AuthContext
 ├── features/
-│   └── auth/         # Toàn bộ flow auth: api, hooks, schemas, forms, pages
+│   ├── auth/         # Toàn bộ flow auth: api, hooks, schemas, forms, pages
+│   ├── content-manager/  # Quản trị bài tập & chương trình tập
+│   └── survey/       # Khảo sát 4 bước (context, schemas, components, pages)
 ├── lib/              # axios, storage, error, utils
 ├── pages/            # Trang global (HomePage...)
 ├── routes/           # AppRoutes, ProtectedRoute, PublicRoute
@@ -43,6 +45,28 @@ src/
 ├── main.tsx
 └── index.css
 ```
+
+### Routes
+
+| Path | Trang | Trạng thái |
+|------|-------|------------|
+| `/login` | `LoginPage` | ✅ nối API |
+| `/register` | `RegisterPage` | ✅ nối API |
+| `/forgot-password` | `ForgotPasswordPage` | ✅ nối API |
+| `/reset-password` | `ResetPasswordPage` | ✅ nối API |
+| `/verify` | `VerifyEmailPage` | ✅ nối API |
+| `/change-password` | `ChangePasswordPage` | ✅ nối API |
+| `/survey/body-information` | `BodyInfoPage` | ✅ UI + validation (bước 1/4) |
+| `/survey/goals-and-motivation` | `GoalsPage` | ✅ UI + validation (bước 2/4) |
+| `/survey/current-training-routine` | `TrainingRoutinePage` | ✅ UI + validation (bước 3/4) |
+| `/survey/level-test` | `LevelTestPage` | ✅ UI + validation (bước 4/4) |
+| `/survey/result` | `SurveyResultPage` | ✅ UI + data mẫu (kết quả & plan) |
+| `/content/*` | Content manager | ✅ CRUD bài tập & chương trình |
+| `/404` | `NotFoundPage` | — |
+
+> Survey flow: `/survey` → `body-information` → `goals-and-motivation` → `current-training-routine` → `level-test` → `result`.
+> Bước 4 (level test) điều hướng sang `result`, nơi hiển thị level + plan khuyến nghị.
+> Plan hiện là **data mẫu chạy client-side** trong `features/survey/data/recommendation.ts` — khi backend có API plan thật, chỉ cần thay `buildRecommendation` mà không đổi phần UI.
 
 ### Stack
 

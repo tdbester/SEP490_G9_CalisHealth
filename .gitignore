@@ -61,3 +61,7 @@ dist-ssr/
 # Coverage / test
 coverage/
 *.tsbuildinfo
+
+# tsc -b emit ra JS từ file .ts cấu hình (vite.config.ts -> vite.config.js)
+vite.config.js
+vite.config.d.ts
