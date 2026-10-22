@@ -22,11 +22,17 @@ export default function App() {
         <Route
           path="/"
           element={
-            <ProtectedRoute>
-              <AdminLayout>
-                <Dashboard />
-              </AdminLayout>
-            </ProtectedRoute>
+            <AdminLayout>
+              <Dashboard />
+            </AdminLayout>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <AdminLayout>
+              <Dashboard />
+            </AdminLayout>
           }
         />
         <Route

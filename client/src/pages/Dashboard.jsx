@@ -110,10 +110,14 @@ export default function Dashboard() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const cached = localStorage.getItem("user");
+    const cached = localStorage.getItem("token")
+      ? localStorage.getItem("user")
+      : null;
     if (cached) setUser(JSON.parse(cached));
 
-    api.get("/auth/me").then((res) => setUser(res.data)).catch(() => {});
+    api.get("/auth/me")
+      .then((res) => setUser(res.data))
+      .catch(() => setUser(null));
   }, []);
 
   const gotoLibrary = (params) => {
@@ -123,40 +127,42 @@ export default function Dashboard() {
   return (
     <div className="dashboard">
       {/* ── Daily Workout Plan ─────────────────────────────────── */}
-      <section className="dash-plan">
-        <WorkoutIllustration />
-        <div className="dash-plan-info">
-          <span className="dash-plan-label">Daily Workout Plan</span>
-          <h2 className="dash-plan-title">
-            {TODAY_PLAN.day} · {TODAY_PLAN.focus}
-          </h2>
-          <p className="dash-plan-meta">
-            <span className="dash-plan-duration">{TODAY_PLAN.duration}</span>
-            <span className="dash-plan-sep">•</span>
-            <span>{TODAY_PLAN.status}</span>
-          </p>
+      {user && (
+        <section className="dash-plan">
+          <WorkoutIllustration />
+          <div className="dash-plan-info">
+            <span className="dash-plan-label">Daily Workout Plan</span>
+            <h2 className="dash-plan-title">
+              {TODAY_PLAN.day} · {TODAY_PLAN.focus}
+            </h2>
+            <p className="dash-plan-meta">
+              <span className="dash-plan-duration">{TODAY_PLAN.duration}</span>
+              <span className="dash-plan-sep">•</span>
+              <span>{TODAY_PLAN.status}</span>
+            </p>
 
-          <ul className="dash-plan-exercises">
-            {TODAY_PLAN.exercises.map((ex) => (
-              <li key={ex.name}>
-                {ex.name}
-                <span className="dash-plan-reps">
-                  {ex.sets} × {ex.reps}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+            <ul className="dash-plan-exercises">
+              {TODAY_PLAN.exercises.map((ex) => (
+                <li key={ex.name}>
+                  {ex.name}
+                  <span className="dash-plan-reps">
+                    {ex.sets} × {ex.reps}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-        <button
-          type="button"
-          className="dash-btn dash-btn-primary"
-          onClick={() => navigate("/tracking")}
-        >
-          Start Workout
-          <PlayArrowRoundedIcon />
-        </button>
-      </section>
+          <button
+            type="button"
+            className="dash-btn dash-btn-primary"
+            onClick={() => navigate("/tracking")}
+          >
+            Start Workout
+            <PlayArrowRoundedIcon />
+          </button>
+        </section>
+      )}
 
       {/* ── Explore ────────────────────────────────────────────── */}
       <section className="dash-explore">

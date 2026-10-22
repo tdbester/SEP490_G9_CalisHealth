@@ -382,8 +382,11 @@
 
 @media (max-width: 420px) {
   .topbar-logo-text,
-  .gradient-text,
-  .topbar-login-btn {
+  .gradient-text {
     display: none;
+  }
+
+  .topbar-login-btn {
+    width: 48px;
   }
 }

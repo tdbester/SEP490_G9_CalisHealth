@@ -32,7 +32,9 @@ export default function Topbar() {
   );
 
   useEffect(() => {
-    const cached = localStorage.getItem("user");
+    const cached = localStorage.getItem("token")
+      ? localStorage.getItem("user")
+      : null;
     if (cached) setUser(JSON.parse(cached));
   }, []);
 
@@ -95,7 +97,7 @@ export default function Topbar() {
         <span className="gradient-text">Health</span>
       </button>
 
-      {openPanel === "settings" && (
+      {user && openPanel === "settings" && (
         <div className="topbar-popover topbar-settings-popover" role="menu">
           <div className="topbar-popover-heading">Account &amp; settings</div>
           <button
@@ -129,70 +131,78 @@ export default function Topbar() {
       <div className="topbar-spacer" />
 
       <div className="topbar-right">
-        {/* Streak badge */}
-        <button
-          type="button"
-          className="topbar-streak"
-          title={`${STREAK_DAYS} day training streak`}
-          onClick={() => navigateFromPanel("/day-streak")}
-        >
-          <LocalFireDepartmentRoundedIcon className="topbar-streak-icon" />
-          <span className="topbar-streak-days">{STREAK_DAYS} days</span>
-        </button>
+        {user && (
+          <>
+            {/* Streak badge */}
+            <button
+              type="button"
+              className="topbar-streak"
+              title={`${STREAK_DAYS} day training streak`}
+              onClick={() => navigateFromPanel("/day-streak")}
+            >
+              <LocalFireDepartmentRoundedIcon className="topbar-streak-icon" />
+              <span className="topbar-streak-days">{STREAK_DAYS} days</span>
+            </button>
 
-        {/* Notifications */}
-        <div className="topbar-notification-wrap">
-          <button
-            type="button"
-            className="topbar-icon-btn"
-            aria-label="Notifications"
-            aria-expanded={openPanel === "notifications"}
-            onClick={() =>
-              setOpenPanel(openPanel === "notifications" ? null : "notifications")
-            }
-          >
-            <NotificationsNoneRoundedIcon />
-            <span className="topbar-notification-dot" />
-          </button>
-          {openPanel === "notifications" && (
-            <section className="topbar-popover topbar-notification-popover">
-              <div className="topbar-popover-heading">Notifications</div>
-              <article className="topbar-notification-item">
-                <span className="topbar-notification-mark" />
-                <div>
-                  <strong>Your workout is ready</strong>
-                  <p>Today&apos;s full-body plan is waiting for you.</p>
-                  <time>Today</time>
-                </div>
-              </article>
-              <article className="topbar-notification-item">
-                <span className="topbar-notification-mark" />
-                <div>
-                  <strong>Keep your streak going</strong>
-                  <p>You&apos;re on a {STREAK_DAYS}-day training streak.</p>
-                  <time>Today</time>
-                </div>
-              </article>
-            </section>
-          )}
-        </div>
-
-        {/* Avatar */}
-        <button
-          type="button"
-          className="topbar-avatar"
-          title={user?.fullName || "Profile"}
-          aria-label="Open account menu"
-          aria-expanded={openPanel === "settings"}
-          onClick={() => setOpenPanel(openPanel === "settings" ? null : "settings")}
-        >
-          {initials}
-        </button>
+            {/* Notifications */}
+            <div className="topbar-notification-wrap">
+              <button
+                type="button"
+                className="topbar-icon-btn"
+                aria-label="Notifications"
+                aria-expanded={openPanel === "notifications"}
+                onClick={() =>
+                  setOpenPanel(
+                    openPanel === "notifications" ? null : "notifications",
+                  )
+                }
+              >
+                <NotificationsNoneRoundedIcon />
+                <span className="topbar-notification-dot" />
+              </button>
+              {openPanel === "notifications" && (
+                <section className="topbar-popover topbar-notification-popover">
+                  <div className="topbar-popover-heading">Notifications</div>
+                  <article className="topbar-notification-item">
+                    <span className="topbar-notification-mark" />
+                    <div>
+                      <strong>Your workout is ready</strong>
+                      <p>Today&apos;s full-body plan is waiting for you.</p>
+                      <time>Today</time>
+                    </div>
+                  </article>
+                  <article className="topbar-notification-item">
+                    <span className="topbar-notification-mark" />
+                    <div>
+                      <strong>Keep your streak going</strong>
+                      <p>You&apos;re on a {STREAK_DAYS}-day training streak.</p>
+                      <time>Today</time>
+                    </div>
+                  </article>
+                </section>
+              )}
+            </div>
+          </>
+        )}
 
         {user ? (
-          <button type="button" className="topbar-login-btn" onClick={handleLogout}>
-            <span>Logout</span>
-          </button>
+          <>
+            <button
+              type="button"
+              className="topbar-avatar"
+              title={user.fullName || "Profile"}
+              aria-label="Open account menu"
+              aria-expanded={openPanel === "settings"}
+              onClick={() =>
+                setOpenPanel(openPanel === "settings" ? null : "settings")
+              }
+            >
+              {initials}
+            </button>
+            <button type="button" className="topbar-login-btn" onClick={handleLogout}>
+              <span>Logout</span>
+            </button>
+          </>
         ) : (
           <button
             type="button"
