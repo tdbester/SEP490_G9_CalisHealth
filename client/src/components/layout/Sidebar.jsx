@@ -33,7 +33,7 @@ function TrackingIcon({ isActive }) {
 const NAV_ITEMS = [
   { label: "Dashboard", path: "/dashboard", icon: DashboardIcon },
   { label: "Library", path: "/library", icon: LibraryIcon },
-  { label: "Health & Progress",  path: "/tracking",  icon: TrackingIcon },
+  { label: "Tracking",  path: "/tracking",  icon: TrackingIcon },
 ];
 
 export default function Sidebar() {
