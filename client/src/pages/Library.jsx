@@ -42,7 +42,6 @@ export default function Library() {
   }
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [counts, setCounts] = useState({
     exercise: {
       healthCount: 0,
@@ -58,7 +57,6 @@ export default function Library() {
 
   const fetchData = async () => {
     setLoading(true);
-    setError(null);
     try {
       const data = await getLibrarySummary();
       if (data) {
@@ -77,7 +75,6 @@ export default function Library() {
       }
     } catch (err) {
       console.error("Failed to load library summary:", err);
-      setError("Unable to load latest library statistics. Showing cached or default view.");
     } finally {
       setLoading(false);
     }
@@ -98,16 +95,6 @@ export default function Library() {
         <h1 className="library-title">Exercise &amp; Skill library</h1>
         <p className="library-description">Choose a section to open its list.</p>
       </header>
-
-      {/* Error state alert */}
-      {error && (
-        <div className="library-error-banner" role="alert">
-          <span>{error}</span>
-          <button className="library-retry-btn" onClick={fetchData}>
-            Retry
-          </button>
-        </div>
-      )}
 
       {/* 3. Section 1: Exercise (Bài tập) */}
       <section className="library-section">
