@@ -1,33 +1,19 @@
-/* Topbar.css - Match Figma JSON exactly */
+/* Topbar.css - Match Figma mockup screenshot */
 :root {
   /* ── Topbar ── */
   --topbar-height: 56px;
-  --topbar-bg: #1A1230;
-  --topbar-border: #2D2550;
+  --topbar-bg: #0c0822;
+  --topbar-border: #1d1542;
   /* ── Sidebar ── */
-  --sidebar-width: 130px;
-  --sidebar-bg: #1A1230;
-  --sidebar-border: #2D2550;
-  --nav-text: #A89BD0;
-  --nav-text-active: #FFFFFF;
+  --sidebar-width: 140px;
+  --sidebar-bg: #0c0822;
+  --sidebar-border: #1d1542;
+  --nav-text: #8a82af;
+  --nav-text-active: #ffffff;
   /* ── Shared ── */
-  --button-bg: #1A1230;
-  --button-border: #3B2A6B;
-  --text-white: #FFFFFF;
-  --gradient-icon: linear-gradient(135deg, #B44CFF 0%, #FF7799 100%);
-}
-
-/* ── Responsive topbar height ───────────────────────────────── */
-@media (max-width: 768px) {
-  :root { --topbar-height: 44px; }
-}
-
-@media (min-width: 769px) and (max-width: 1280px) {
-  :root { --topbar-height: 49px; }
-}
-
-@media (min-width: 1281px) {
-  :root { --topbar-height: 56px; }
+  --button-bg: #1a123d;
+  --button-border: #2e205e;
+  --text-white: #ffffff;
 }
 
 .topbar {
@@ -36,13 +22,12 @@
   left: 0;
   width: 100%;
   height: var(--topbar-height);
-  /* Topbar needs explicit dark bg when parent is light */
-  background-color: #1A1230 !important;
-  border-bottom: 1px solid var(--topbar-border);
+  background-color: #0c0822 !important;
+  border-bottom: 1px solid #1d1542;
   z-index: 1300;
   display: flex;
   align-items: center;
-  padding: 0 16px;
+  padding: 0 24px;
   box-sizing: border-box;
 }
 
@@ -56,68 +41,24 @@
 .topbar-logo-icon {
   width: 36px;
   height: 36px;
-  border-radius: 6px;
-  background-color: var(--button-bg);
-  border: 1px solid var(--button-border);
+  border-radius: 10px;
+  background-color: #1a123d;
+  border: 1px solid #2e205e;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.topbar-logo-icon svg {
-  font-size: 20px;
-  /* Gradient text via background-clip */
-  background: var(--gradient-icon);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
 .topbar-logo-text {
-  font-size: 16.8px;
-  font-weight: 800;
-  color: var(--text-white);
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
   letter-spacing: -0.01em;
-  line-height: 21px;
+  line-height: 22px;
   white-space: nowrap;
   margin-left: 10px;
 }
 
-.gradient-text {
-  font-size: 16.8px;
-  font-weight: 800;
-  background: linear-gradient(to right, #9d4edd, #ff007f);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
 .topbar-spacer {
   flex: 1;
-}
-
-.topbar-login-btn {
-  width: 60px;
-  height: 30px;
-  border-radius: 12px;
-  background-color: var(--button-bg);
-  border: 1px solid var(--button-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  transition: all 0.15s ease;
-}
-
-.topbar-login-btn:hover {
-  background-color: #251A40;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-}
-
-.topbar-login-btn span {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--text-white);
-  line-height: 17px;
 }

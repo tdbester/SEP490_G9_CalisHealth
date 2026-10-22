@@ -18,7 +18,7 @@ public class MediaFile {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "file_url", nullable = false, length = 1000)
+    @Column(name = "file_url", nullable = false, length = 255)
     private String fileUrl;
 
     @Column(name = "file_type", length = 50)
@@ -43,6 +43,6 @@ public class MediaFile {
     private LocalDateTime uploadedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "uploaded_by")
+    @JoinColumn(name = "uploader_id")
     private User uploadedBy;
 }

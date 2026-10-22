@@ -12,6 +12,9 @@
   --header-height: 49px;
 }
 
+@tailwind components;
+@tailwind utilities;
+
 * {
   box-sizing: border-box;
 }

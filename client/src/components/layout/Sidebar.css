@@ -1,4 +1,4 @@
-/* Sidebar.css — chỉ sidebar styles, --sidebar-width và --topbar-height ở Topbar.css */
+/* Sidebar.css — Matching Figma screenshot */
 
 .sidebar {
   position: fixed;
@@ -11,43 +11,56 @@
   z-index: 1200;
   display: flex;
   flex-direction: column;
+  padding-top: 12px;
 }
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+  padding: 0 10px;
 }
 
 .sidebar-nav-item {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 10px 12px;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
   cursor: pointer;
   color: var(--nav-text);
-  transition: color 0.15s ease;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
   text-decoration: none;
-  margin-top: 10px
 }
 
 .sidebar-nav-item:hover {
-  color: var(--nav-text-active);
+  color: #ffffff;
+  background-color: #171135;
 }
 
 .sidebar-nav-item.active {
-  color: var(--nav-text-active);
+  background-color: #2e1f68;
+  border-color: #5b3ce8;
+  color: #ffffff;
+}
+
+.sidebar-nav-item.active svg path,
+.sidebar-nav-item.active svg circle,
+.sidebar-nav-item.active svg polygon {
+  stroke: #c4b5fd;
+  fill: #c4b5fd;
 }
 
 .sidebar-nav-item svg {
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
   flex-shrink: 0;
 }
 
 .sidebar-nav-item span {
-  font-size: 13.6px;
-  font-weight: 400;
+  font-size: 13.5px;
+  font-weight: 500;
   line-height: 16px;
   white-space: nowrap;
 }
