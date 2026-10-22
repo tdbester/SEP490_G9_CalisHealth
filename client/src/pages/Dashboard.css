@@ -1,300 +1,689 @@
-/* Dashboard.css - Pure CSS, no MUI */
+/* Dashboard.css — Main Dashboard (Member)
+   Nền tối #0F0C1B theo mockup, card tối #1A1230, nhấn tím #8B5CF6 */
 
 .dashboard {
   width: 100%;
-  background-color: #1A1230;
-}
-
-.dashboard-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.dashboard-search {
-  flex: 1;
-  min-width: 280px;
-  max-width: 360px;
-  height: 40px;
-  padding: 0 12px 0 36px;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
-  background-color: #FFFFFF;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
-  background-repeat: no-repeat;
-  background-position: 10px center;
-  background-size: 16px 16px;
-  color: #111827;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.dashboard-search:focus {
-  outline: none;
-  border-color: #5B21B6;
-  box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
-}
-
-.dashboard-search::placeholder {
-  color: #9CA3AF;
-}
-
-.dashboard-select {
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
-  background-color: #FFFFFF;
-  color: #111827;
-  cursor: pointer;
-  min-width: 180px;
-  transition: border-color 0.15s;
-}
-
-.dashboard-select:hover {
-  border-color: #D1D5DB;
-}
-
-.dashboard-select:focus {
-  outline: none;
-  border-color: #5B21B6;
-}
-
-.dashboard-spacer {
-  flex: 1;
-}
-
-.dashboard-btn {
-  height: 40px;
-  padding: 0 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-  transition: all 0.15s ease;
-}
-
-.dashboard-btn-outlined {
-  background-color: #FFFFFF;
-  color: #111827;
-  border: 1px solid #E5E7EB;
-}
-
-.dashboard-btn-outlined:hover {
-  border-color: #5B21B6;
-  background-color: #F5F3FF;
-}
-
-.dashboard-btn-contained {
-  background-color: #5B21B6;
   color: #FFFFFF;
-  border: 1px solid #5B21B6;
+  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
 }
 
-.dashboard-btn-contained:hover {
-  background-color: #4C1D95;
-  border-color: #4C1D95;
-}
-
-.dashboard-btn svg {
-  width: 16px;
-  height: 16px;
-}
-
-/* Table card */
-.dashboard-card {
-  background-color: #FFFFFF;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.dashboard-table-wrapper {
-  overflow-x: auto;
-}
-
-.dashboard-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.dashboard-table thead {
-  background-color: #F9FAFB;
-}
-
-.dashboard-table th {
-  text-align: left;
-  padding: 12px 16px;
-  font-weight: 600;
-  color: #111827;
-  font-size: 13px;
-  border-bottom: 1px solid #E5E7EB;
-  white-space: nowrap;
-}
-
-.dashboard-table th:last-child {
-  text-align: right;
-}
-
-.dashboard-table td {
-  padding: 12px 16px;
-  color: #111827;
-  border-bottom: 1px solid #E5E7EB;
-  vertical-align: middle;
-}
-
-.dashboard-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.dashboard-name {
-  font-weight: 500;
-  color: #111827;
-}
-
-.dashboard-muted {
-  color: #6B7280;
-}
-
-.dashboard-chip {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 18px;
-  white-space: nowrap;
-}
-
-.dashboard-chip-level {
-  background-color: #EDE9FE;
-  color: #5B21B6;
-}
-
-.dashboard-progress {
-  display: flex;
+/* ── Buttons ─────────────────────────────────────────────────── */
+.dash-btn {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-width: 140px;
-}
-
-.dashboard-progress-bar {
-  flex: 1;
-  height: 6px;
-  background-color: #E5E7EB;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.dashboard-progress-fill {
-  height: 100%;
-  background-color: #5B21B6;
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-.dashboard-progress-fill.complete {
-  background-color: #10B981;
-}
-
-.dashboard-progress-label {
-  font-size: 12px;
-  color: #6B7280;
-  font-weight: 500;
-  min-width: 32px;
-}
-
-.dashboard-action-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: none;
-  background-color: transparent;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  color: #6B7280;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.15s, color 0.15s;
+  white-space: nowrap;
+  transition: filter 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.dashboard-action-btn:hover {
-  background-color: #F3F4F6;
-  color: #111827;
-}
-
-.dashboard-action-btn svg {
+.dash-btn svg {
   width: 18px;
   height: 18px;
 }
 
-/* Footer / pagination */
-.dashboard-pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-top: 1px solid #E5E7EB;
-  font-size: 13px;
-  color: #6B7280;
-  flex-wrap: wrap;
-  gap: 12px;
+.dash-btn-primary {
+  background: linear-gradient(90deg, #8B5CF6 0%, #A855F7 100%);
+  border: none;
+  color: #FFFFFF;
+  box-shadow: 0 6px 18px rgba(139, 92, 246, 0.35);
 }
 
-.dashboard-pagination-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.dash-btn-primary:hover {
+  filter: brightness(1.08);
 }
 
-.dashboard-pagination-pages {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.dash-btn-ghost {
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  color: #C4B5FD;
 }
 
-.dashboard-page-btn {
-  min-width: 32px;
-  height: 32px;
-  padding: 0 8px;
-  border: 1px solid #E5E7EB;
-  border-radius: 6px;
-  background-color: #FFFFFF;
-  color: #111827;
+.dash-btn-ghost:hover {
+  background: rgba(139, 92, 246, 0.22);
+}
+
+.dash-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: #A78BFA;
+  font-family: inherit;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.dash-link:hover {
+  color: #C4B5FD;
+}
+
+.dash-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── Daily Workout Plan banner ───────────────────────────────── */
+.dash-plan {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #241540 0%, #1A1230 55%, #1E1538 100%);
+  border: 1px solid #2D2550;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.dash-plan-illustration {
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #2A1B49, #201638);
+  color: #C084FC;
+}
+
+.dash-plan-illustration svg {
+  width: 44px;
+  height: 44px;
+}
+
+.dash-plan-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dash-plan-label {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.dash-plan-title {
+  margin: 3px 0 5px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #FFFFFF;
+}
+
+.dash-plan-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: 12px;
+  color: #B6A5D5;
+}
+
+.dash-plan-duration {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.dash-plan-sep {
+  color: #4C3F73;
+}
+
+.dash-plan-exercises {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.dash-plan-exercises li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #2D2550;
+  font-size: 13px;
+  color: #E7DEF9;
+}
+
+.dash-plan-reps {
+  color: #A78BFA;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* ── Section headers ─────────────────────────────────────────── */
+.dash-explore {
+  margin-top: 30px;
+}
+
+.dash-section-head {
+  margin-bottom: 18px;
+}
+
+.dash-section-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #FFFFFF;
+}
+
+.dash-section-subtitle {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #9C8FC4;
+}
+
+.dash-subsection-title {
+  margin: 24px 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #C4B5FD;
+  letter-spacing: 0.01em;
+}
+
+/* ── Carousel ─────────────────────────────────────────────────── */
+.dash-carousel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash-carousel-btn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
+  border-radius: 50%;
+  border: 1px solid #2D2550;
+  background: #1A1230;
+  color: #A89BD0;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.dashboard-page-btn:hover:not(:disabled) {
-  background-color: #F9FAFB;
-  border-color: #D1D5DB;
+.dash-carousel-btn:hover {
+  background: #241540;
+  color: #FFFFFF;
+  border-color: #4C3F73;
 }
 
-.dashboard-page-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.dash-carousel-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
-.dashboard-updated {
-  padding: 8px 16px;
-  border-top: 1px solid #E5E7EB;
-  background-color: #F9FAFB;
-  font-size: 12px;
-  color: #6B7280;
+.dash-carousel-btn:disabled:hover {
+  background: #1A1230;
+  color: #A89BD0;
+  border-color: #2D2550;
+}
+
+.dash-carousel-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.dash-carousel-track {
+  display: grid;
+  grid-auto-columns: calc((100% - 36px) / 4);
+  grid-auto-flow: column;
+  grid-template-rows: 1fr;
+  flex: 1;
+  min-width: 0;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 4px 2px 10px;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+}
+
+.dash-carousel-track::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Muscle cards ────────────────────────────────────────────── */
+.dash-muscle-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #1A1230;
+  border: 1px solid #2D2550;
+  color: #FFFFFF;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.dash-muscle-card:hover {
+  transform: translateY(-3px);
+  background: #22183C;
+  border-color: #4C3F73;
+}
+
+.dash-muscle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: rgba(139, 92, 246, 0.16);
+  color: #A78BFA;
+  margin: 0;
+}
+
+.dash-muscle-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.dash-muscle-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  color: #FFFFFF;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-muscle-count {
+  font-size: 11px;
+  color: #9C8FC4;
+  white-space: nowrap;
+}
+
+/* tone variants */
+.tone-blue .dash-muscle-icon { background: rgba(59, 130, 246, 0.16); color: #60A5FA; }
+.tone-green .dash-muscle-icon { background: rgba(16, 185, 129, 0.16); color: #34D399; }
+.tone-orange .dash-muscle-icon { background: rgba(249, 115, 22, 0.16); color: #FB923C; }
+.tone-pink .dash-muscle-icon { background: rgba(236, 72, 153, 0.16); color: #F472B6; }
+.tone-cyan .dash-muscle-icon { background: rgba(34, 211, 238, 0.16); color: #22D3EE; }
+
+.tone-blue .dash-skill-icon { background: rgba(59, 130, 246, 0.16); color: #60A5FA; }
+.tone-green .dash-skill-icon { background: rgba(16, 185, 129, 0.16); color: #34D399; }
+.tone-orange .dash-skill-icon { background: rgba(249, 115, 22, 0.16); color: #FB923C; }
+.tone-pink .dash-skill-icon { background: rgba(236, 72, 153, 0.16); color: #F472B6; }
+.tone-cyan .dash-skill-icon { background: rgba(34, 211, 238, 0.16); color: #22D3EE; }
+
+/* ── Skill cards ─────────────────────────────────────────────── */
+.dash-skill-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #1A1230;
+  border: 1px solid #2D2550;
+  color: #FFFFFF;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.dash-skill-card:hover {
+  transform: translateY(-3px);
+  background: #22183C;
+  border-color: #4C3F73;
+}
+
+.dash-skill-head {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dash-skill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: rgba(139, 92, 246, 0.16);
+  color: #A78BFA;
+}
+
+.dash-skill-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.dash-skill-level {
+  display: none;
+}
+
+.dash-skill-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 700;
+  color: #FFFFFF;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-skill-steps {
+  font-size: 11px;
+  color: #A78BFA;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Bottom grid: Health & Community ─────────────────────────── */
+.dash-bottom-grid {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.dash-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px 24px;
+  border-radius: 16px;
+  background: #1A1230;
+  border: 1px solid #2D2550;
+}
+
+.dash-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dash-panel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(139, 92, 246, 0.16);
+  color: #A78BFA;
+}
+
+.dash-panel-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.dash-panel-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+/* metrics */
+.dash-metric-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dash-metric-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.dash-metric-label {
+  color: #9C8FC4;
+}
+
+.dash-metric-value {
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.dash-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dash-progress-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: #2D2550;
+  overflow: hidden;
+}
+
+.dash-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #8B5CF6 0%, #D946EF 100%);
+  transition: width 0.3s ease;
+}
+
+.dash-progress-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #C4B5FD;
+  min-width: 38px;
+  text-align: right;
+}
+
+.dash-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+/* community */
+.dash-community-text {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: #C4B5FD;
+}
+
+.dash-community-stats {
+  display: flex;
+  gap: 32px;
+}
+
+.dash-community-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dash-community-number {
+  font-size: 22px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.dash-community-label {
+  font-size: 12.5px;
+  color: #9C8FC4;
+}
+
+/* ── Greeting ────────────────────────────────────────────────── */
+.dash-greeting {
+  margin: 24px 0 0;
+  font-size: 13px;
+  color: #6F6396;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 1080px) {
+  .dash-bottom-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .dash-plan {
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .dash-plan-illustration {
+    flex-basis: 50px;
+    width: 50px;
+    height: 50px;
+  }
+
+  .dash-plan-illustration svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .dash-plan-info {
+    flex-basis: calc(100% - 64px);
+  }
+
+  .dash-plan-title {
+    font-size: 16px;
+  }
+
+  .dash-plan-meta {
+    gap: 5px;
+    font-size: 11px;
+  }
+
+  .dash-plan-exercises {
+    display: none;
+  }
+
+  .dash-plan > .dash-btn {
+    flex: 1 0 100%;
+    justify-content: center;
+  }
+
+  .dash-carousel-track {
+    grid-auto-columns: calc((100% - 12px) / 2);
+  }
+
+  .dash-carousel {
+    gap: 5px;
+  }
+
+  .dash-carousel-btn {
+    width: 24px;
+    height: 24px;
+  }
+
+  .dash-muscle-card,
+  .dash-skill-card {
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 4px 7px;
+    padding: 9px;
+  }
+
+  .dash-muscle-icon,
+  .dash-skill-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .dash-muscle-name {
+    font-size: 13px;
+  }
+
+  .dash-muscle-count,
+  .dash-skill-steps {
+    font-size: 10px;
+  }
+
+  .dash-panel {
+    padding: 18px;
+  }
+
+  .dash-subsection-title {
+    margin-top: 20px;
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1024px) {
+  .dash-carousel-track {
+    grid-auto-columns: calc((100% - 24px) / 3);
+  }
+
+  .dash-plan-exercises {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .dash-plan {
+    flex-wrap: wrap;
+  }
+
+  .dash-plan-info {
+    flex-basis: calc(100% - 64px);
+  }
+
+  .dash-plan > .dash-btn {
+    width: 100%;
+  }
+
+  .dash-section-title {
+    font-size: 20px;
+  }
+
+  .dash-section-subtitle {
+    font-size: 12px;
+  }
+
+  .dash-community-stats {
+    gap: 24px;
+  }
 }

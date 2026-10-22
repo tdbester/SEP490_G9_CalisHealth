@@ -5,7 +5,7 @@
   --topbar-bg: #1A1230;
   --topbar-border: #2D2550;
   /* ── Sidebar ── */
-  --sidebar-width: 130px;
+  --sidebar-width: 220px;
   --sidebar-bg: #1A1230;
   --sidebar-border: #2D2550;
   --nav-text: #A89BD0;
@@ -51,6 +51,10 @@
   align-items: center;
   cursor: pointer;
   text-decoration: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
 }
 
 .topbar-logo-icon {
@@ -96,6 +100,99 @@
   flex: 1;
 }
 
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Streak badge */
+.topbar-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 15px;
+  background: rgba(249, 115, 22, 0.14);
+  border: 1px solid rgba(249, 115, 22, 0.45);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.topbar-streak-icon {
+  font-size: 17px !important;
+  color: #FB923C;
+}
+
+.topbar-streak-days {
+  font-size: 12px;
+  font-weight: 700;
+  color: #FDBA74;
+  line-height: 17px;
+  white-space: nowrap;
+}
+
+/* Notification icon button */
+.topbar-icon-btn {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #B6A5D5;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.topbar-notification-wrap {
+  position: relative;
+}
+
+.topbar-notification-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #F472B6;
+}
+
+.topbar-icon-btn:hover {
+  background: #251A40;
+  border-color: var(--button-border);
+  color: #FFFFFF;
+}
+
+.topbar-icon-btn svg {
+  font-size: 20px;
+}
+
+/* User avatar */
+.topbar-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #8B5CF6 0%, #D946EF 100%);
+  border: 1px solid #3B2A6B;
+  color: #FFFFFF;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  user-select: none;
+  padding: 0;
+}
+
 .topbar-login-btn {
   width: 60px;
   height: 30px;
@@ -108,6 +205,8 @@
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   transition: all 0.15s ease;
+  color: inherit;
+  font: inherit;
 }
 
 .topbar-login-btn:hover {
@@ -120,4 +219,171 @@
   font-weight: 400;
   color: var(--text-white);
   line-height: 17px;
+}
+
+.topbar-popover {
+  position: absolute;
+  top: calc(var(--topbar-height) - 2px);
+  z-index: 1400;
+  width: min(310px, calc(100vw - 24px));
+  padding: 12px;
+  border: 1px solid var(--topbar-border);
+  border-radius: 14px;
+  background: #171126;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.45);
+  color: #FFFFFF;
+}
+
+.topbar-settings-popover {
+  top: calc(100% + 10px);
+  right: 16px;
+}
+
+.topbar-notification-popover {
+  top: calc(100% + 10px);
+  right: 0;
+}
+
+.topbar-popover-heading {
+  padding: 4px 8px 10px;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.topbar-menu-item {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #D8CEEC;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+
+.topbar-menu-item:hover {
+  background: #251A40;
+  color: #FFFFFF;
+}
+
+.topbar-menu-item svg {
+  font-size: 19px;
+  color: #A78BFA;
+}
+
+.topbar-language {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 50px;
+  padding: 6px 8px;
+  color: #D8CEEC;
+  font-size: 13px;
+}
+
+.topbar-language select {
+  max-width: 130px;
+  padding: 7px 8px;
+  border: 1px solid #3B2A6B;
+  border-radius: 8px;
+  background: #1A1230;
+  color: #FFFFFF;
+  font: inherit;
+}
+
+.topbar-notification-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 8px;
+  border-top: 1px solid rgba(168, 155, 208, 0.14);
+}
+
+.topbar-notification-mark {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: #A78BFA;
+}
+
+.topbar-notification-item strong {
+  display: block;
+  font-size: 12.5px;
+}
+
+.topbar-notification-item p {
+  margin: 4px 0;
+  color: #A89BD0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.topbar-notification-item time {
+  color: #776B99;
+  font-size: 11px;
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    padding: 0 12px;
+  }
+
+  .topbar-right {
+    gap: 7px;
+  }
+
+  .topbar-logo-text,
+  .gradient-text {
+    font-size: 14px;
+  }
+
+  .topbar-logo-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .topbar-streak {
+    height: 28px;
+    padding: 0 8px;
+  }
+
+  .topbar-streak-days {
+    font-size: 11px;
+  }
+
+  .topbar-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+  }
+
+  .topbar-login-btn {
+    width: 52px;
+    height: 28px;
+  }
+
+  .topbar-login-btn span {
+    font-size: 11px;
+  }
+
+  .topbar-settings-popover {
+    right: 12px;
+  }
+}
+
+@media (max-width: 420px) {
+  .topbar-logo-text,
+  .gradient-text,
+  .topbar-login-btn {
+    display: none;
+  }
 }

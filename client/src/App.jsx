@@ -7,6 +7,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import ResetPassword from "./pages/ResetPassword";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PlaceholderPage from "./pages/PlaceholderPage";
 
 export default function App() {
   return (
@@ -32,7 +33,12 @@ export default function App() {
           path="/library"
           element={
             <ProtectedRoute>
-              <AdminLayout />
+              <AdminLayout>
+                <PlaceholderPage
+                  title="Library"
+                  subtitle="Personal and saved exercise collection, skill progressions and community workouts."
+                />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -40,7 +46,51 @@ export default function App() {
           path="/tracking"
           element={
             <ProtectedRoute>
-              <AdminLayout />
+              <AdminLayout>
+                <PlaceholderPage
+                  title="Health & Progress"
+                  subtitle="Body metrics, training history and progress charts."
+                />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/day-streak"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <PlaceholderPage
+                  title="Day Streak"
+                  subtitle="Track your training consistency and keep your workout streak going."
+                />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <PlaceholderPage
+                  title="Profile"
+                  subtitle="View and manage your CalisHealth profile."
+                />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <PlaceholderPage
+                  title="Settings"
+                  subtitle="Manage your account and application preferences."
+                />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
