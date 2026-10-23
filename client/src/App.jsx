@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "./components/layout/AdminLayout";
 import Dashboard from "./pages/Dashboard";
+import DayStreak from "./pages/DayStreak";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -35,7 +36,14 @@ export default function App() {
         />
         <Route path="/library" element={<Navigate to="/" replace />} />
         <Route path="/tracking" element={<Navigate to="/" replace />} />
-        <Route path="/day-streak" element={<Navigate to="/" replace />} />
+        <Route
+          path="/day-streak"
+          element={
+            <AdminLayout>
+              <DayStreak />
+            </AdminLayout>
+          }
+        />
         <Route path="/profile" element={<Navigate to="/" replace />} />
         <Route path="/settings" element={<Navigate to="/" replace />} />
 
