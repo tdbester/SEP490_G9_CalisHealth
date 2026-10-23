@@ -42,12 +42,13 @@ export default function App() {
         <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Member App Routes */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route
-          path="/"
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <AdminLayout>
-                <Library />
+                <Dashboard />
               </AdminLayout>
             </ProtectedRoute>
           }

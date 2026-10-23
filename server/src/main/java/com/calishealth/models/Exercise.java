@@ -72,6 +72,16 @@ public class Exercise {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
+    @Transient
+    public boolean isSystem() {
+        return "SYSTEM".equalsIgnoreCase(source);
+    }
+
+    @Transient
+    public Long getAuthorId() {
+        return createdBy != null ? createdBy.getId() : null;
+    }
+
     @OneToMany(mappedBy = "exercise", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ExerciseMuscleGroup> muscleGroups = new ArrayList<>();
 

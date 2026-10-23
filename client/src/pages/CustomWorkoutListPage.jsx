@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getCommunityWorkouts } from "../api/library";
 
 const STORAGE_KEY = "custom_workouts";
 const PERSONAL_STORAGE_KEY = "my_custom_workouts";
@@ -230,13 +231,30 @@ const SORT_OPTIONS = [
 
 export default function CustomWorkoutListPage() {
   const navigate = useNavigate();
-  const [workouts] = useState(loadCustomWorkouts);
+  const [workouts, setWorkouts] = useState([]);
+  const [errorMessage, setErrorMessage] = useState("");
   const [query, setQuery] = useState("");
   const [level, setLevel] = useState("all");
   const [length, setLength] = useState("all");
   const [sort, setSort] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
+
+  useEffect(() => {
+    let active = true;
+    getCommunityWorkouts({ page: 0, size: 100 })
+      .then((response) => {
+        if (active) setWorkouts(response.content);
+      })
+      .catch((error) => {
+        if (active) {
+          setErrorMessage(error.response?.data?.message || "Could not load community workouts.");
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filteredWorkouts = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -286,6 +304,7 @@ export default function CustomWorkoutListPage() {
             Workouts other members built from accepted exercises. Browse them for ideas.
           </p>
         </div>
+        {errorMessage && <p role="alert" className="text-xs text-rose-400">{errorMessage}</p>}
         <div className="flex items-center gap-3">
           <button
             type="button"

@@ -1,7 +1,8 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { validateWorkoutExercises, validateWorkoutName } from "./libraryFormValidation";
+import { createMyWorkout, getAvailableWorkoutExercises } from "../api/library";
 
 function DumbbellIcon({ size = "h-4 w-4" }) {
   return (
@@ -61,17 +62,10 @@ function LevelBadge({ level }) {
   );
 }
 
-const ACCEPTED_EXERCISES = [
-  { id: "ex1", title: "Pike push-up",      level: "Intermediate", muscles: "Shoulders, triceps" },
-  { id: "ex2", title: "Australian row",    level: "Beginner",     muscles: "Back, biceps" },
-  { id: "ex3", title: "Hollow body hold",  level: "Beginner",     muscles: "Core" },
-  { id: "ex4", title: "Bodyweight squat",  level: "Beginner",     muscles: "Legs, glutes" },
-  { id: "ex5", title: "Tuck planche lean", level: "Advanced",     muscles: "Shoulders, wrists" },
-];
-
 export default function CreatePersonalWorkoutPage() {
   const navigate = useNavigate();
 
+  const [availableExercises, setAvailableExercises] = useState([]);
   const [workoutName, setWorkoutName] = useState("");
   const [note, setNote]               = useState("");
   const [search, setSearch]           = useState("");
@@ -81,15 +75,41 @@ export default function CreatePersonalWorkoutPage() {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [touchedFields, setTouchedFields] = useState({});
 
+  useEffect(() => {
+    let active = true;
+    getAvailableWorkoutExercises()
+      .then((items) => {
+        if (active) {
+          setAvailableExercises(items.map((exercise) => ({
+            id: exercise.id,
+            title: exercise.title,
+            level: String(exercise.level).toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase()),
+            muscles: exercise.targetMuscle,
+            defaultReps: exercise.defaultReps,
+            defaultDuration: exercise.defaultDuration,
+          })));
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          setErrorMessage(error.response?.data?.message || "Could not load accepted exercises.");
+          toast.error("Could not load accepted exercises.");
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const addedIds = useMemo(() => new Set(selected.map((e) => e.id)), [selected]);
 
   const filteredExercises = useMemo(() =>
-    ACCEPTED_EXERCISES.filter((ex) => {
+    availableExercises.filter((ex) => {
       const matchSearch = ex.title.toLowerCase().includes(search.toLowerCase());
       const matchLevel  = levelFilter === "All levels" || ex.level === levelFilter;
       return matchSearch && matchLevel;
     }),
-  [search, levelFilter]);
+  [availableExercises, search, levelFilter]);
 
   const totalExercises = selected.length;
   const totalSets      = selected.reduce((sum, e) => sum + Number(e.sets || 0), 0);
@@ -122,7 +142,13 @@ export default function CreatePersonalWorkoutPage() {
   };
 
   const handleAdd = (ex) =>
-    setSelected((prev) => [...prev, { ...ex, sets: 3, reps: 8, countBy: "Reps", restSec: 60 }]);
+    setSelected((prev) => [...prev, {
+      ...ex,
+      sets: 3,
+      reps: ex.defaultDuration || ex.defaultReps || 8,
+      countBy: ex.defaultDuration ? "Duration" : "Reps",
+      restSec: 60,
+    }]);
 
   const handleRemove = (id) =>
     setSelected((prev) => prev.filter((e) => e.id !== id));
@@ -148,7 +174,7 @@ export default function CreatePersonalWorkoutPage() {
   const updateField = (idx, field, value) =>
     setSelected((prev) => prev.map((e, i) => (i === idx ? { ...e, [field]: value } : e)));
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     setHasSubmitted(true);
     if (Object.keys(validationErrors).length > 0) {
       setErrorMessage("");
@@ -159,43 +185,23 @@ export default function CreatePersonalWorkoutPage() {
     const name = workoutName.trim();
 
     try {
-      const savedWorkouts = JSON.parse(localStorage.getItem("my_custom_workouts") || "[]");
-      if (!Array.isArray(savedWorkouts)) {
-        throw new Error("Saved workouts are not in the expected format.");
-      }
-
-      const levelPriority = { Beginner: 1, Intermediate: 2, Advanced: 3 };
-      const level = selected.reduce(
-        (highest, exercise) =>
-          levelPriority[exercise.level] > levelPriority[highest] ? exercise.level : highest,
-        "Beginner"
-      );
-      const createdWorkout = {
-        id: `personal-${Date.now()}`,
+      await createMyWorkout({
         title: name,
-        level,
-        description: note.trim() || "Personal workout",
-        author: { name: "You", avatarText: "YO" },
-        postedTime: "Just now",
-        savesCount: 0,
-        exercisesCount: totalExercises,
-        setsCount: totalSets,
-        duration: `About ${estimatedMin} min`,
-        createdLabel: "Created just now",
-        isShared: false,
-        createdAt: new Date().toISOString(),
-        exercises: selected,
-      };
-
-      localStorage.setItem(
-        "my_custom_workouts",
-        JSON.stringify([createdWorkout, ...savedWorkouts])
-      );
+        description: note.trim(),
+        isSharedWithCommunity: false,
+        items: selected.map((exercise, orderIndex) => ({
+          exerciseId: Number(exercise.id),
+          orderIndex,
+          sets: Number(exercise.sets),
+          reps: exercise.countBy === "Reps" ? Number(exercise.reps) : null,
+          duration: exercise.countBy === "Duration" ? Number(exercise.reps) : null,
+          countBy: exercise.countBy === "Duration" ? "SECONDS" : "REPS",
+          restSeconds: Number(exercise.restSec),
+        })),
+      });
     } catch (error) {
       setErrorMessage(
-        error instanceof Error
-          ? `Could not save this workout: ${error.message}`
-          : "Could not save this workout."
+        error.response?.data?.message || "Could not save this workout."
       );
       toast.error("Failed to create. Please try again.");
       return;
@@ -260,7 +266,7 @@ export default function CreatePersonalWorkoutPage() {
         <div className="rounded-2xl border border-[#231b46] bg-[#120d29]/90 p-6 space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-white">Accepted exercises</p>
-            <span className="text-xs text-slate-400">{ACCEPTED_EXERCISES.length} available</span>
+            <span className="text-xs text-slate-400">{availableExercises.length} available</span>
           </div>
           <div className="rounded-xl border border-[#231b46] bg-[#0d0922] p-3.5 text-xs text-slate-400 leading-relaxed">
             Only exercises accepted by the system can be added. Pending and rejected ones are not available until they pass the checks.

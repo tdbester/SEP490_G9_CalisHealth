@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { getExerciseTree } from "../api/library";
 
 // Movement groups and their Calisthenics progression tree data
 const TREE_DATA = {
@@ -406,9 +407,7 @@ const CARD_WIDTH = 144;
 const CARD_HEIGHT = 144;
 const GAP_X = 48;
 const GAP_Y = 48;
-const GRID_WIDTH = 5 * CARD_WIDTH + 4 * GAP_X; // 912px
-const GRID_HEIGHT = 2 * CARD_HEIGHT + GAP_Y; // 336px
-
+const GRID_WIDTH = 5 * CARD_WIDTH + 4 * GAP_X;
 export default function CalisthenicsExerciseTreePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -420,6 +419,9 @@ export default function CalisthenicsExerciseTreePage() {
 
   const [selectedGroup, setSelectedGroup] = useState(initialGroup);
   const [direction, setDirection] = useState("Easy → Hard");
+  const [treeResponse, setTreeResponse] = useState(null);
+  const [treeError, setTreeError] = useState("");
+  const [treeLoading, setTreeLoading] = useState(true);
 
   // Keep document title synced to match mockup window header: CalisHealth - Explore
   useEffect(() => {
@@ -439,7 +441,76 @@ export default function CalisthenicsExerciseTreePage() {
     }
   }, [pathParam]);
 
-  const groupData = TREE_DATA[selectedGroup] || TREE_DATA.Push;
+  useEffect(() => {
+    let isMounted = true;
+    setTreeLoading(true);
+    setTreeError("");
+    getExerciseTree({
+      movementGroup: selectedGroup.toUpperCase(),
+      order: direction === "Hard → Easy" ? "HARD_TO_EASY" : "EASY_TO_HARD",
+    })
+      .then((data) => {
+        if (isMounted) setTreeResponse(data);
+      })
+      .catch((error) => {
+        console.error("Failed to load exercise tree:", error);
+        if (isMounted) {
+          setTreeResponse(null);
+          setTreeError("Unable to load this exercise tree. Please try again.");
+        }
+      })
+      .finally(() => {
+        if (isMounted) setTreeLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedGroup, direction]);
+
+  const groupData = useMemo(() => {
+    const expectedGroup = selectedGroup.toUpperCase();
+    if (!treeResponse || treeResponse.movementGroup !== expectedGroup) {
+      return { ...(TREE_DATA[selectedGroup] || TREE_DATA.Push), nodes: [] };
+    }
+
+    const sortedNodes = [...(treeResponse.nodes || [])].sort(
+      (first, second) => first.level - second.level || first.id - second.id
+    );
+    const rowsByLevel = new Map();
+    const nodes = sortedNodes.map((node) => {
+      const level = node.level || 1;
+      const row = rowsByLevel.get(level) || 0;
+      rowsByLevel.set(level, row + 1);
+      return {
+        ...node,
+        level: `Lv ${level}`,
+        levelNumber: level,
+        state: node.state?.toLowerCase(),
+        col: Math.max(0, Math.min(4, level - 1)),
+        row,
+        muscleGroups: node.targetMuscle ? node.targetMuscle.split(",").map((muscle) => muscle.trim()) : [],
+        previous: (node.prerequisiteIds || [])
+          .map((id) => sortedNodes.find((candidate) => candidate.id === id)?.name)
+          .filter(Boolean),
+        next: (node.nextExerciseIds || [])
+          .map((id) => sortedNodes.find((candidate) => candidate.id === id)?.name)
+          .filter(Boolean),
+      };
+    });
+    return {
+      name: selectedGroup,
+      nodes,
+      legend: treeResponse.legend,
+    };
+  }, [selectedGroup, treeResponse]);
+  const maxRow = Math.max(0, ...groupData.nodes.map((node) => node.row || 0));
+  const gridHeight = Math.max(1, maxRow + 1) * CARD_HEIGHT + maxRow * GAP_Y;
+  const nodeById = new Map(groupData.nodes.map((node) => [node.id, node]));
+  const treeEdges = groupData.nodes.flatMap((node) =>
+    (node.nextExerciseIds || [])
+      .map((nextId) => ({ from: node, to: nodeById.get(nextId) }))
+      .filter((edge) => edge.to)
+  );
 
   // Find default selected exercise (prefer state 'current', else first node)
   const defaultExercise = useMemo(() => {
@@ -485,9 +556,6 @@ export default function CalisthenicsExerciseTreePage() {
   };
 
   // Arrow lines calculations based on direction
-  const branchFromCol = groupData.branchFromCol ?? 1;
-  const branchTargetCol = groupData.branchTargetCol ?? 2;
-
   return (
     <div className="exercise-tree-page w-full max-w-7xl mx-auto text-white pb-12">
       {/* Explicit scoped style reset for buttons */}
@@ -560,16 +628,25 @@ export default function CalisthenicsExerciseTreePage() {
 
       {/* 3. KHUNG CÂY TIẾN TRÌNH (EXERCISE TREE BOX) */}
       <section className="rounded-2xl border border-[#382b68] bg-[#171133] p-6 mt-5 relative shadow-2xl overflow-x-auto">
+        {treeLoading && <p className="mb-4 text-sm text-slate-400">Loading exercise tree…</p>}
+        {treeError && (
+          <p role="alert" className="mb-4 rounded-lg border border-rose-900/70 bg-rose-950/40 px-4 py-3 text-sm text-rose-300">
+            {treeError}
+          </p>
+        )}
+        {!treeError && treeResponse?.movementGroup === selectedGroup.toUpperCase() && groupData.nodes.length === 0 && (
+          <p className="mb-4 text-sm text-slate-400">No exercises are configured for this movement group yet.</p>
+        )}
         <div
           className="relative mx-auto select-none"
-          style={{ width: `${GRID_WIDTH}px`, height: `${GRID_HEIGHT}px` }}
+          style={{ width: `${GRID_WIDTH}px`, height: `${gridHeight}px` }}
         >
           {/* SVG Connection Lines & Arrows */}
           <svg
             className="absolute inset-0 pointer-events-none"
             width={GRID_WIDTH}
-            height={GRID_HEIGHT}
-            viewBox={`0 0 ${GRID_WIDTH} ${GRID_HEIGHT}`}
+            height={gridHeight}
+            viewBox={`0 0 ${GRID_WIDTH} ${gridHeight}`}
           >
             <defs>
               <marker
@@ -585,80 +662,18 @@ export default function CalisthenicsExerciseTreePage() {
               </marker>
             </defs>
 
-            {/* Standard Easy -> Hard Layout Arrows */}
-            {!isReverse ? (
-              <>
-                {/* Row 1 Main Progression: Col 0 -> Col 1 -> Col 2 -> Col 3 -> Col 4 */}
-                {[0, 1, 2, 3].map((colIdx) => (
-                  <line
-                    key={`r1-arr-${colIdx}`}
-                    x1={colIdx * (CARD_WIDTH + GAP_X) + CARD_WIDTH}
-                    y1={CARD_HEIGHT / 2}
-                    x2={(colIdx + 1) * (CARD_WIDTH + GAP_X) - 4}
-                    y2={CARD_HEIGHT / 2}
-                    stroke="#806bb8"
-                    strokeWidth="2"
-                    markerEnd="url(#tree-arrow)"
-                  />
-                ))}
-
-                {/* Branch line from Row 0 to Row 1 */}
-                <path
-                  d={`M ${
-                    branchFromCol * (CARD_WIDTH + GAP_X) + CARD_WIDTH / 2
-                  } ${CARD_HEIGHT} L ${
-                    branchFromCol * (CARD_WIDTH + GAP_X) + CARD_WIDTH / 2
-                  } ${CARD_HEIGHT + GAP_Y + CARD_HEIGHT / 2} L ${
-                    branchTargetCol * (CARD_WIDTH + GAP_X) - 4
-                  } ${CARD_HEIGHT + GAP_Y + CARD_HEIGHT / 2}`}
-                  fill="none"
-                  stroke="#806bb8"
-                  strokeWidth="2"
-                  markerEnd="url(#tree-arrow)"
-                />
-
-                {/* Row 2 Branch Progression: Col 2 -> Col 3 */}
-                <line
-                  x1={branchTargetCol * (CARD_WIDTH + GAP_X) + CARD_WIDTH}
-                  y1={CARD_HEIGHT + GAP_Y + CARD_HEIGHT / 2}
-                  x2={(branchTargetCol + 1) * (CARD_WIDTH + GAP_X) - 4}
-                  y2={CARD_HEIGHT + GAP_Y + CARD_HEIGHT / 2}
-                  stroke="#806bb8"
-                  strokeWidth="2"
-                  markerEnd="url(#tree-arrow)"
-                />
-              </>
-            ) : (
-              /* Hard -> Easy Layout Arrows (Reversed direction) */
-              <>
-                {[0, 1, 2, 3].map((colIdx) => (
-                  <line
-                    key={`r1-rev-arr-${colIdx}`}
-                    x1={colIdx * (CARD_WIDTH + GAP_X) + CARD_WIDTH}
-                    y1={CARD_HEIGHT / 2}
-                    x2={(colIdx + 1) * (CARD_WIDTH + GAP_X) - 4}
-                    y2={CARD_HEIGHT / 2}
-                    stroke="#806bb8"
-                    strokeWidth="2"
-                    markerEnd="url(#tree-arrow)"
-                  />
-                ))}
-                {/* Branch line in reverse */}
-                <path
-                  d={`M ${
-                    (4 - branchFromCol) * (CARD_WIDTH + GAP_X) + CARD_WIDTH / 2
-                  } ${CARD_HEIGHT} L ${
-                    (4 - branchFromCol) * (CARD_WIDTH + GAP_X) + CARD_WIDTH / 2
-                  } ${CARD_HEIGHT + GAP_Y + CARD_HEIGHT / 2} L ${
-                    (4 - branchTargetCol) * (CARD_WIDTH + GAP_X) + CARD_WIDTH + 4
-                  } ${CARD_HEIGHT + GAP_Y + CARD_HEIGHT / 2}`}
-                  fill="none"
-                  stroke="#806bb8"
-                  strokeWidth="2"
-                  markerEnd="url(#tree-arrow)"
-                />
-              </>
-            )}
+            {treeEdges.map(({ from, to }) => (
+              <line
+                key={`${from.id}-${to.id}`}
+                x1={getNodeX(from.col) + CARD_WIDTH / 2}
+                y1={getNodeY(from.row) + CARD_HEIGHT / 2}
+                x2={getNodeX(to.col) + CARD_WIDTH / 2}
+                y2={getNodeY(to.row) + CARD_HEIGHT / 2}
+                stroke="#806bb8"
+                strokeWidth="2"
+                markerEnd="url(#tree-arrow)"
+              />
+            ))}
           </svg>
 
           {/* Exercise Nodes */}
@@ -782,15 +797,15 @@ export default function CalisthenicsExerciseTreePage() {
           <div className="flex items-center gap-5">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block shadow-sm" />
-              <span className="text-slate-300 font-medium">Mastered</span>
+              <span className="text-slate-300 font-medium">{groupData.legend?.MASTERED || "Mastered"}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#a855f7] inline-block shadow-sm" />
-              <span className="text-slate-300 font-medium">Current</span>
+              <span className="text-slate-300 font-medium">{groupData.legend?.CURRENT || "Current"}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full border border-slate-500 inline-block bg-transparent" />
-              <span className="text-slate-300 font-medium">Locked</span>
+              <span className="text-slate-300 font-medium">{groupData.legend?.LOCKED || "Locked"}</span>
             </div>
           </div>
 

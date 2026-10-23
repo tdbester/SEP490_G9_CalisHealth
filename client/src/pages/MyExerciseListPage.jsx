@@ -1,6 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import {
+  deletePersonalExercise,
+  getPersonalExerciseCounts,
+  getPersonalExercises,
+} from "../api/library";
 
 /* -------------------- ICONS -------------------- */
 function BarbellIcon({ className = "h-5 w-5 text-[#9d7aff]" }) {
@@ -247,74 +252,103 @@ export default function MyExerciseListPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const [pendingList, setPendingList] = useState(() => {
-    try {
-      const raw = JSON.parse(localStorage.getItem("my_personal_exercises") || "[]");
-      if (raw.length) {
-        const mapped = raw.map((e) => ({
-          id: e.id,
-          slug: e.slug || e.id,
-          title: e.title,
-          level: e.level || "Intermediate",
-          meta: `${e.muscles || "Full body"} · ${e.setsReps || "3 sets · 10 reps"} · Submitted just now`,
-          scanText: "Scanning video with MediaPipe...",
-          status: "pending",
-        }));
-        return [...mapped, ...INITIAL_PENDING];
-      }
-    } catch (_) {}
-    return INITIAL_PENDING;
-  });
-
-  const [rejectedList, setRejectedList] = useState(INITIAL_REJECTED);
-  const [acceptedList, setAcceptedList] = useState(INITIAL_ACCEPTED);
-
   const [searchInput, setSearchInput] = useState("");
   const [selectedLevel, setSelectedLevel] = useState("All levels");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 3;
-
-  const handleTabSwitch = (tab) => { setActiveTab(tab); setSearchParams({ status: tab }); setSearchInput(""); setSelectedLevel("All levels"); setCurrentPage(1); };
-  const handleCancelPending = (id) => {
-    try {
-      setPendingList((items) => items.filter((item) => item.id !== id));
-      toast.success("Deleted successfully!");
-    } catch {
-      toast.error("Failed to delete item.");
-    }
-  };
-  const handleDeleteRejected = (id) => {
-    try {
-      setRejectedList((items) => items.filter((item) => item.id !== id));
-      toast.success("Deleted successfully!");
-    } catch {
-      toast.error("Failed to delete item.");
-    }
-  };
-  const handleDeleteAccepted = (id) => {
-    try {
-      setAcceptedList((items) => items.filter((item) => item.id !== id));
-      toast.success("Deleted successfully!");
-    } catch {
-      toast.error("Failed to delete item.");
-    }
-  };
-
-  const activeItems = useMemo(() => {
-    let list = activeTab === "pending" ? pendingList : activeTab === "rejected" ? rejectedList : acceptedList;
-    if (selectedLevel !== "All levels") list = list.filter((i) => i.level.toLowerCase() === selectedLevel.toLowerCase());
-    if (searchInput.trim()) {
-      const q = searchInput.toLowerCase().trim();
-      list = list.filter((i) => i.title.toLowerCase().includes(q) || i.meta.toLowerCase().includes(q));
-    }
-    return list;
-  }, [activeTab, pendingList, rejectedList, acceptedList, selectedLevel, searchInput]);
-  const totalPages = Math.ceil(activeItems.length / pageSize);
-  const visibleItems = activeItems.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const [exercises, setExercises] = useState([]);
+  const [statusCounts, setStatusCounts] = useState({ pending: 0, rejected: 0, accepted: 0 });
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    setCurrentPage((page) => Math.min(page, Math.max(1, totalPages)));
-  }, [totalPages]);
+    let active = true;
+    setLoading(true);
+    setLoadError("");
+    const toQuery = (status, page, size, includeFilters) => ({
+      status: status.toUpperCase(),
+      page,
+      size,
+      ...(includeFilters && {
+        search: searchInput.trim() || undefined,
+        level: selectedLevel === "All levels" ? undefined : selectedLevel.toUpperCase(),
+      }),
+    });
+    Promise.all([
+      getPersonalExercises(toQuery(activeTab, currentPage - 1, pageSize, true)),
+      getPersonalExerciseCounts(),
+    ])
+      .then(([pageData, counts]) => {
+        if (!active) return;
+        const items = (pageData?.content || []).map((item) => {
+          const repetitions = item.defaultDuration != null
+            ? `${item.defaultDuration} sec`
+            : item.defaultReps != null
+              ? `${item.defaultReps} reps`
+              : "Not specified";
+          const status = (item.status || activeTab).toLowerCase();
+          return {
+            ...item,
+            slug: item.id,
+            level: item.level || "Intermediate",
+            meta: `${item.targetMuscle || "Full body"} · ${item.defaultSets ?? 3} sets · ${repetitions} · Submitted ${item.createdAt ? new Date(item.createdAt).toLocaleString() : "recently"}`,
+            status,
+            scanText: status === "pending" ? "Waiting for review" : undefined,
+            reason: item.rejectionReason
+              ? (item.rejectionReason.startsWith("Reason:")
+                ? item.rejectionReason
+                : `Reason: ${item.rejectionReason}`)
+              : undefined,
+          };
+        });
+        setExercises(items);
+        setTotalElements(pageData?.totalElements || 0);
+        setTotalPages(pageData?.totalPages || 0);
+        if (pageData?.totalPages > 0 && currentPage > pageData.totalPages) {
+          setCurrentPage(pageData.totalPages);
+        }
+        setStatusCounts({
+          pending: counts?.pendingCount || 0,
+          rejected: counts?.rejectedCount || 0,
+          accepted: counts?.acceptedCount || 0,
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to load personal exercises:", error);
+        if (active) {
+          setExercises([]);
+          setTotalElements(0);
+          setTotalPages(0);
+          setStatusCounts({ pending: 0, rejected: 0, accepted: 0 });
+          setLoadError("Unable to load your exercises. Please try again.");
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [activeTab, currentPage, searchInput, selectedLevel, refreshKey]);
+
+  const handleTabSwitch = (tab) => { setActiveTab(tab); setSearchParams({ status: tab }); setSearchInput(""); setSelectedLevel("All levels"); setCurrentPage(1); };
+  const handleDeleteExercise = async (id) => {
+    try {
+      await deletePersonalExercise(id);
+      setRefreshKey((value) => value + 1);
+      toast.success("Deleted successfully!");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to delete item.");
+    }
+  };
+  const handleCancelPending = handleDeleteExercise;
+  const handleDeleteRejected = handleDeleteExercise;
+  const handleDeleteAccepted = handleDeleteExercise;
+
+  const activeItems = exercises;
 
   return (
     <div className="my-ex-list w-full max-w-5xl mx-auto text-white pb-16">
@@ -330,9 +364,9 @@ export default function MyExerciseListPage() {
       </div>
       <div className="flex items-center gap-2 mt-6 border-b border-[#2a224b] select-none">
         {[
-          { key: "pending", label: "Pending", count: pendingList.length, pill: "bg-amber-400/15 text-amber-300" },
-          { key: "rejected", label: "Rejected", count: rejectedList.length, pill: "bg-rose-400/15 text-rose-300" },
-          { key: "accepted", label: "Accepted", count: acceptedList.length, pill: "bg-emerald-400/15 text-emerald-300" },
+          { key: "pending", label: "Pending", count: statusCounts.pending, pill: "bg-amber-400/15 text-amber-300" },
+          { key: "rejected", label: "Rejected", count: statusCounts.rejected, pill: "bg-rose-400/15 text-rose-300" },
+          { key: "accepted", label: "Accepted", count: statusCounts.accepted, pill: "bg-emerald-400/15 text-emerald-300" },
         ].map(({ key, label, count, pill }) => (
           <button
             key={key}
@@ -379,22 +413,26 @@ export default function MyExerciseListPage() {
         </div>
       </div>
       <div className="space-y-4 mt-5">
-        {activeItems.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-14 text-sm text-slate-400">Loading exercises...</div>
+        ) : loadError ? (
+          <div role="alert" className="text-center py-14 text-sm text-rose-300">{loadError}</div>
+        ) : activeItems.length === 0 ? (
           <div className="text-center py-14 px-4 rounded-2xl border border-dashed border-[#231b46] bg-[#120d29]">
             <div className="w-10 h-10 mx-auto mb-3 flex items-center justify-center"><BarbellIcon className="h-6 w-6 text-[#9d7aff]" /></div>
             <h3 className="text-base font-bold text-white mb-1">No exercises in this list</h3>
             <p className="text-xs text-slate-400">Try adjusting your search or create a new exercise.</p>
           </div>
         ) : (
-          visibleItems.map((it) => (
+          activeItems.map((it) => (
             <ExerciseCard key={it.id} item={it} activeTab={activeTab} onCancelPending={handleCancelPending} onDeleteRejected={handleDeleteRejected} onDeleteAccepted={handleDeleteAccepted} navigate={navigate} />
           ))
         )}
       </div>
-      {totalPages > 1 && (
+      {totalPages > 0 && (
         <div className="mt-5 flex items-center justify-between border-t border-[#1f193f] pt-4">
           <p className="text-xs text-slate-400">
-            Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, activeItems.length)} of {activeItems.length} exercises
+            Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, totalElements)} of {totalElements} exercises
           </p>
           <div className="flex items-center gap-2">
             <button

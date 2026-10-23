@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import LibraryDetailPlaceholder from "./LibraryDetailPlaceholder";
+import { deleteMyWorkout, getMyWorkouts } from "../api/library";
 
 const STORAGE_KEY = "my_custom_workouts";
 const INITIALIZED_KEY = `${STORAGE_KEY}_initialized`;
@@ -152,7 +153,7 @@ function loadWorkouts() {
 export default function MyCustomWorkoutListPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [workouts, setWorkouts] = useState(SAMPLE_WORKOUTS);
+  const [workouts, setWorkouts] = useState([]);
   const [query, setQuery] = useState("");
   const [level, setLevel] = useState("all");
   const [length, setLength] = useState("all");
@@ -162,13 +163,17 @@ export default function MyCustomWorkoutListPage() {
   const pageSize = 3;
 
   useEffect(() => {
-    try {
-      setWorkouts(loadWorkouts());
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? `Could not load workouts: ${error.message}` : "Could not load workouts."
-      );
-    }
+    let active = true;
+    getMyWorkouts({ page: 0, size: 100 })
+      .then((response) => {
+        if (active) setWorkouts(response.content);
+      })
+      .catch((error) => {
+        if (active) setErrorMessage(error.response?.data?.message || "Could not load workouts.");
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const filteredWorkouts = useMemo(() => {
@@ -204,19 +209,15 @@ export default function MyCustomWorkoutListPage() {
     setCurrentPage((page) => Math.min(page, Math.max(totalPages, 1)));
   }, [totalPages]);
 
-  const handleDelete = (id) => {
-    const updatedWorkouts = workouts.filter((workout) => workout.id !== id);
+  const handleDelete = async (id) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedWorkouts));
-      localStorage.setItem(INITIALIZED_KEY, "true");
-      setWorkouts(updatedWorkouts);
+      await deleteMyWorkout(id);
+      setWorkouts((current) => current.filter((workout) => String(workout.id) !== String(id)));
       setErrorMessage("");
       toast.success("Deleted successfully!");
     } catch (error) {
       toast.error("Failed to delete item.");
-      setErrorMessage(
-        error instanceof Error ? `Could not delete workout: ${error.message}` : "Could not delete workout."
-      );
+      setErrorMessage(error.response?.data?.message || "Could not delete workout.");
     }
   };
 

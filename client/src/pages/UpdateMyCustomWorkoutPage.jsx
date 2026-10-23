@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { validateWorkoutExercises, validateWorkoutName } from "./libraryFormValidation";
+import { getAvailableWorkoutExercises, getMyWorkout, updateMyWorkout } from "../api/library";
 
 const STORAGE_KEY = "my_custom_workouts";
 const LEVEL_PRIORITY = { Beginner: 1, Intermediate: 2, Advanced: 3 };
@@ -91,6 +92,7 @@ export default function UpdateMyCustomWorkoutPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [workout, setWorkout] = useState(null);
+  const [availableExercises, setAvailableExercises] = useState([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isShared, setIsShared] = useState(false);
@@ -103,31 +105,37 @@ export default function UpdateMyCustomWorkoutPage() {
   const [touchedFields, setTouchedFields] = useState({});
 
   useEffect(() => {
-    try {
-      const currentWorkout = readWorkout(id);
-      if (!currentWorkout) {
-        setErrorMessage("Workout not found.");
-        return;
-      }
-
-      const initialExercises = createExerciseList(currentWorkout);
-      const initialForm = {
-        title: currentWorkout.title || "",
-        description: currentWorkout.description || "",
-        isShared: Boolean(currentWorkout.isShared),
-        exercises: initialExercises,
-      };
-      setWorkout(currentWorkout);
-      setTitle(initialForm.title);
-      setDescription(initialForm.description);
-      setIsShared(initialForm.isShared);
-      setExercises(initialExercises);
-      setBaseline(JSON.stringify(initialForm));
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? `Could not load workout: ${error.message}` : "Could not load workout."
-      );
-    }
+    let active = true;
+    Promise.all([getMyWorkout(id), getAvailableWorkoutExercises()])
+      .then(([currentWorkout, available]) => {
+        if (!active) return;
+        const initialExercises = createExerciseList(currentWorkout);
+        const initialForm = {
+          title: currentWorkout.title || "",
+          description: currentWorkout.description || "",
+          isShared: Boolean(currentWorkout.isShared),
+          exercises: initialExercises,
+        };
+        setAvailableExercises(available.map((exercise) => ({
+          id: exercise.id,
+          name: exercise.title,
+          level: String(exercise.level).toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase()),
+          countBy: exercise.defaultDuration ? "sec" : "reps",
+          reps: exercise.defaultDuration || exercise.defaultReps || 8,
+        })));
+        setWorkout(currentWorkout);
+        setTitle(initialForm.title);
+        setDescription(initialForm.description);
+        setIsShared(initialForm.isShared);
+        setExercises(initialExercises);
+        setBaseline(JSON.stringify(initialForm));
+      })
+      .catch((error) => {
+        if (active) setErrorMessage(error.response?.data?.message || "Could not load workout.");
+      });
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   const totalSets = exercises.reduce((total, exercise) => {
@@ -201,7 +209,7 @@ export default function UpdateMyCustomWorkoutPage() {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!workout) return;
     setHasSubmitted(true);
     if (Object.keys(validationErrors).length > 0) {
@@ -211,36 +219,25 @@ export default function UpdateMyCustomWorkoutPage() {
     }
 
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      const storedWorkouts = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(storedWorkouts)) {
-        throw new Error("Saved workouts are not in the expected format.");
-      }
-
-      const updatedWorkout = {
-        ...workout,
+      await updateMyWorkout(id, {
         title: title.trim(),
         description: description.trim(),
-        level,
-        isShared,
-        exercises,
-        exercisesCount: exercises.length,
-        setsCount: totalSets,
-        duration: `About ${estimatedMinutes} min`,
-      };
-      const workoutIndex = storedWorkouts.findIndex((item) => String(item.id) === id);
-      const updatedWorkouts = [...storedWorkouts];
-      if (workoutIndex >= 0) updatedWorkouts[workoutIndex] = updatedWorkout;
-      else updatedWorkouts.unshift(updatedWorkout);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedWorkouts));
-      localStorage.setItem(`${STORAGE_KEY}_initialized`, "true");
+        isSharedWithCommunity: isShared,
+        items: exercises.map((exercise, orderIndex) => ({
+          exerciseId: Number(exercise.id),
+          orderIndex,
+          sets: Number(exercise.sets),
+          reps: exercise.countBy === "sec" ? null : Number(exercise.reps),
+          duration: exercise.countBy === "sec" ? Number(exercise.reps) : null,
+          countBy: exercise.countBy === "sec" ? "SECONDS" : "REPS",
+          restSeconds: Number(exercise.restSec),
+        })),
+      });
       toast.success("Saved changes successfully!");
       navigate("/library/workouts");
     } catch (error) {
       toast.error("Failed to save changes.");
-      setErrorMessage(
-        error instanceof Error ? `Could not save workout: ${error.message}` : "Could not save workout."
-      );
+      setErrorMessage(error.response?.data?.message || "Could not save workout.");
     }
   };
 
@@ -353,7 +350,7 @@ export default function UpdateMyCustomWorkoutPage() {
                     </button>
                     {addMenuOpen && (
                       <div className="absolute right-0 z-10 mt-2 w-52 rounded-xl border border-[#34285f] bg-[#120d29] p-1 shadow-xl">
-                        {ADDABLE_EXERCISES.filter(
+                        {availableExercises.filter(
                           (exercise) => !exercises.some((item) => item.id === exercise.id)
                         ).map((exercise) => (
                           <button

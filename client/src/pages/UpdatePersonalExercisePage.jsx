@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { validatePersonalExercise } from './libraryFormValidation';
+import { getPersonalExercise, resubmitPersonalExercise } from '../api/library';
 
 /* Icons */
 function BarbellIcon({ className = 'h-5 w-5 text-[#9d7aff]' }) {
@@ -30,40 +31,9 @@ function CheckCircleIcon({ className = 'w-3.5 h-3.5' }) {
   );
 }
 
-const REJECTED_MOCK = {
-  id: 'rej-1',
-  slug: 'wall-sit-challenge',
-  title: 'Wall sit challenge',
-  description: 'A stupid simple wall sit to build leg endurance.',
-  level: 'Beginner',
-  guide: ['Find a wall and lean your back against it', 'Slide down until your knees are bent', 'Hold position for 60 seconds'],
-  video: { name: 'wall-sit.mp4', size: '8.2 MB' },
-  reason: 'Reason: Text check: the description contains inappropriate wording ("stupid"). Edit the description and save again.',
-};
-
-function readExercise(id, stateExercise) {
-  if (stateExercise && String(stateExercise.id) === id) return stateExercise;
-
-  const storedExercises = JSON.parse(localStorage.getItem('my_personal_exercises') || '[]');
-  if (!Array.isArray(storedExercises)) {
-    throw new Error('Saved exercises are not in the expected format.');
-  }
-  const storedExercise = storedExercises.find((item) => String(item.id) === id);
-  if (storedExercise) {
-    return {
-      ...storedExercise,
-      guide: storedExercise.guide || storedExercise.instructions || [],
-      video: storedExercise.video || null,
-    };
-  }
-  if (id === REJECTED_MOCK.id) return REJECTED_MOCK;
-  throw new Error('Rejected exercise not found.');
-}
-
 export default function UpdatePersonalExercisePage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const fileInputRef = useRef(null);
 
   const [exercise, setExercise] = useState(null);
@@ -84,35 +54,46 @@ export default function UpdatePersonalExercisePage() {
   const [touchedFields, setTouchedFields] = useState({});
 
   useEffect(() => {
-    try {
-      const currentExercise = readExercise(id, location.state?.exercise);
-      const initialGuide = Array.isArray(currentExercise.guide)
-        ? currentExercise.guide
-        : Array.isArray(currentExercise.instructions)
-          ? currentExercise.instructions
+    let active = true;
+    setErrorMessage('');
+    getPersonalExercise(id)
+      .then((currentExercise) => {
+        if (!active) return;
+        const initialGuide = Array.isArray(currentExercise.guideSteps)
+          ? currentExercise.guideSteps
           : [];
-      const initialState = {
-        title: currentExercise.title || '',
-        description: currentExercise.description || '',
-        level: currentExercise.level || 'Beginner',
-        guide: initialGuide,
-        video: currentExercise.video || null,
-      };
-      setExercise({ ...currentExercise, guide: initialGuide });
-      setTitle(initialState.title);
-      setDescription(initialState.description);
-      setLevel(initialState.level);
-      setGuide(initialState.guide);
-      setVideo(initialState.video);
-      setBaseline(JSON.stringify(initialState));
-      setErrorMessage('');
-    } catch (error) {
-      setExercise(null);
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Could not load rejected exercise.'
-      );
-    }
-  }, [id, location.state]);
+        const initialState = {
+          title: currentExercise.title || '',
+          description: currentExercise.description || '',
+          level: currentExercise.level || 'Beginner',
+          guide: initialGuide,
+          video: currentExercise.videoUrl
+            ? { name: currentExercise.videoUrl.split('/').pop(), size: 'Uploaded' }
+            : null,
+        };
+        setExercise({
+          ...currentExercise,
+          guide: initialGuide,
+          reason: currentExercise.rejectionReason,
+        });
+        setTitle(initialState.title);
+        setDescription(initialState.description);
+        setLevel(initialState.level);
+        setGuide(initialState.guide);
+        setVideo(initialState.video);
+        setBaseline(JSON.stringify(initialState));
+      })
+      .catch((error) => {
+        if (!active) return;
+        setExercise(null);
+        setErrorMessage(
+          error?.response?.data?.message || 'Could not load this personal exercise.'
+        );
+      });
+    return () => {
+      active = false;
+    };
+  }, [id]);
 
   const currentState = JSON.stringify({ title, description, level, guide, video });
   const isDirty = baseline !== '' && (
@@ -124,6 +105,7 @@ export default function UpdatePersonalExercisePage() {
     level,
     steps: guide,
     videoFile: uploadedFile,
+    requireVideo: !video && !uploadedFile,
   });
   const showFieldError = (field) => hasSubmitted || touchedFields[field];
   const markFieldTouched = (field) =>
@@ -189,7 +171,7 @@ export default function UpdatePersonalExercisePage() {
 
   const charCount = (str, max) => `${str.length}/${max}`;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!isDirty || !exercise) return;
     setHasSubmitted(true);
     if (Object.keys(validationErrors).length > 0) {
@@ -201,37 +183,32 @@ export default function UpdatePersonalExercisePage() {
     setSaving(true);
     setErrorMessage('');
     try {
-      const raw = JSON.parse(localStorage.getItem('my_personal_exercises') || '[]');
-      if (!Array.isArray(raw)) {
-        throw new Error('Saved exercises are not in the expected format.');
-      }
-      const updatedExercise = {
-        ...exercise,
-        id,
-        slug: exercise.slug || title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      const updatedExercise = await resubmitPersonalExercise(id, {
         title: title.trim(),
         description: description.trim(),
-        level,
-        guide: guide.filter((step) => step.trim()),
-        instructions: guide.filter((step) => step.trim()),
-        video: video ? { name: video.name, size: video.size } : null,
-        videoFileName: uploadedFile?.name || exercise.videoFileName,
-        status: 'pending',
-        postedTime: 'Just now',
-        postedDaysAgo: 0,
-      };
-      localStorage.setItem(
-        'my_personal_exercises',
-        JSON.stringify([updatedExercise, ...raw.filter((item) => String(item.id) !== id)])
-      );
-      toast.success("Saved changes successfully!");
-      navigate('/library/personal?status=pending');
+        level: level.toUpperCase(),
+        guideSteps: guide.filter((step) => step.trim()),
+        targetMuscle: exercise.targetMuscle || "Full body",
+        defaultSets: exercise.defaultSets || 3,
+        defaultReps: exercise.defaultReps ?? null,
+        defaultDuration: exercise.defaultDuration ?? null,
+        keepCurrentVideo: Boolean(video && !uploadedFile),
+      }, uploadedFile);
+      if (updatedExercise.status === 'REJECTED') {
+        toast.error(updatedExercise.rejectionReason || "The exercise did not pass the checks.");
+        navigate('/library/personal?status=rejected');
+      } else if (updatedExercise.status === 'ACCEPTED') {
+        toast.success("Exercise approved and added to your library.");
+        navigate('/library/personal?status=accepted');
+      } else {
+        toast.success("Exercise resubmitted for review.");
+        navigate('/library/personal?status=pending');
+      }
     } catch (error) {
       setSaving(false);
-      toast.error("Failed to save changes.");
-      setErrorMessage(
-        error instanceof Error ? `Could not save exercise: ${error.message}` : 'Could not save exercise.'
-      );
+      const message = error?.response?.data?.message || "Could not resubmit exercise.";
+      toast.error(message);
+      setErrorMessage(message);
     }
   };
 
@@ -264,13 +241,13 @@ export default function UpdatePersonalExercisePage() {
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-xs font-semibold text-slate-300">Title</label>
-            <span className="text-xs text-slate-500 font-mono">{charCount(title, 60)}</span>
+            <span className="text-xs text-slate-500 font-mono">{charCount(title, 50)}</span>
           </div>
           <input
             type="text"
             id="exercise-title"
             value={title}
-            maxLength={60}
+            maxLength={50}
             onChange={(e) => {
               setTitle(e.target.value);
               markFieldTouched('title');
@@ -463,7 +440,7 @@ export default function UpdatePersonalExercisePage() {
         )}
         {showFieldError('video') && validationErrors.video && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.video}</p>}
         <p className="text-[11px] text-slate-500">
-          If you replace the video, it is scanned again with MediaPipe. Keeping the current video skips that scan.
+          Replacing the video runs a file validation check. Keeping the current video skips that check.
         </p>
       </section>
 
@@ -484,12 +461,12 @@ export default function UpdatePersonalExercisePage() {
               <CheckCircleIcon className="w-4 h-4 text-[#a78bfa]" />
             </div>
             <div>
-              <h3 className="text-xs font-medium text-white">Video check (MediaPipe)</h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">The demo video is scanned for a clearly visible body pose.</p>
+              <h3 className="text-xs font-medium text-white">Video file check</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">A replacement video is checked for an accepted format and readable container.</p>
             </div>
           </div>
         </div>
-        <p className="text-[11px] text-slate-500">Both checks run when you press Save. The exercise is saved only if both pass.</p>
+        <p className="text-[11px] text-slate-500">Text is checked every time you save. A replacement video is also validated before the exercise is updated.</p>
       </section>
 
       <footer className="flex items-center justify-between gap-4 border-t border-[#1c163a] pt-4">

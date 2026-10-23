@@ -71,7 +71,7 @@ export default function Login() {
       // res.data = { token, email, fullName }
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify({ email: res.data.email, fullName: res.data.fullName }));
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       const msg =
         err.response?.data?.error ||

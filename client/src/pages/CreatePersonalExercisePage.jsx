@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { createMemberExercise } from "../api/library";
+import { createPersonalExercise } from "../api/library";
 import { validatePersonalExercise } from "./libraryFormValidation";
 
 export default function CreatePersonalExercisePage() {
@@ -130,81 +130,44 @@ export default function CreatePersonalExercisePage() {
     }
     setErrorMessage("");
     setIsCreating(true);
-
-    // 1. Text Check Simulation
     setTextCheckStatus("checking");
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setTextCheckStatus("passed");
-
-    // 2. Video Check (MediaPipe Pose Detection) Simulation
     setVideoCheckStatus("checking");
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setVideoCheckStatus("passed");
-
-    // 3. Save exercise to localStorage (so it's immediately available in community & member lists)
-    const newExercise = {
-      id: `personal-${Date.now()}`,
-      slug: title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-      title: title.trim(),
-      level,
-      muscles: "Full body",
-      setsReps: "3 sets · 10 reps",
-      author: {
-        name: "Linh Tran (You)",
-        initials: "LT",
-        avatarBg: "bg-[#643bf6]",
-      },
-      postedTime: "Just now",
-      postedDaysAgo: 0,
-      savesCount: 0,
-      isMine: true,
-      description: description.trim(),
-      instructions: guideSteps.filter((s) => s.trim()),
-    };
 
     try {
-      const existing = JSON.parse(
-        localStorage.getItem("my_personal_exercises") || "[]"
-      );
-      if (!Array.isArray(existing)) {
-        throw new Error("Saved exercises are not in the expected format.");
+      const created = await createPersonalExercise({
+        title: title.trim(),
+        description: description.trim(),
+        level: level.toUpperCase(),
+        guideSteps: guideSteps.map((step) => step.trim()).filter(Boolean),
+        targetMuscle: "Full body",
+        defaultSets: 3,
+        defaultReps: 10,
+        defaultDuration: null,
+        shareWithCommunity: true,
+      }, videoFile);
+      if (created.status === "REJECTED") {
+        setTextCheckStatus("failed");
+        setVideoCheckStatus("failed");
+        setErrorMessage(created.rejectionReason || "The exercise did not pass the automatic checks.");
+        toast.error("Exercise rejected. Review the reason and update your submission.");
+        return;
       }
-      localStorage.setItem(
-        "my_personal_exercises",
-        JSON.stringify([newExercise, ...existing])
-      );
-    } catch {
-      setIsCreating(false);
-      setErrorMessage("Could not save exercise.");
-      toast.error("Failed to create. Please try again.");
-      return;
-    }
-
-    // 4. Try sending to backend API safely without redirecting on failure
-    try {
-      const token = localStorage.getItem("token");
-      if (token) {
-        await createMemberExercise({
-          name: title.trim(),
-          level,
-          description: description.trim(),
-          instructions: guideSteps.filter((s) => s.trim()).join("\n"),
-          muscleGroup: "Full body",
-          sets: 3,
-          repsOrDuration: "10 reps",
-        });
-      }
+      setTextCheckStatus("passed");
+      setVideoCheckStatus("passed");
+      toast.success("Exercise submitted for review.");
+      setSuccessMessage("Automatic checks passed. Your exercise is waiting for review.");
+      setTimeout(() => {
+        navigate("/library/personal?status=pending");
+      }, 1000);
     } catch (err) {
-      console.warn("Backend API sync skipped/failed:", err?.message || err);
+      setTextCheckStatus("failed");
+      setVideoCheckStatus("failed");
+      const message = err?.response?.data?.message || "Could not create exercise. Please try again.";
+      setErrorMessage(message);
+      toast.error(message);
+    } finally {
+      setIsCreating(false);
     }
-
-    toast.success("Created successfully!");
-    setSuccessMessage("Exercise passed all checks and was saved to your library!");
-
-    // 5. Redirect back to My exercise list - Pending
-    setTimeout(() => {
-      navigate("/library/personal?status=pending");
-    }, 1000);
   };
 
   return (
@@ -259,13 +222,13 @@ export default function CreatePersonalExercisePage() {
               Title
             </label>
             <span className="text-xs text-slate-500 font-mono">
-              {title.length}/60
+              {title.length}/50
             </span>
           </div>
           <input
             type="text"
             id="exercise-title"
-            maxLength={60}
+            maxLength={50}
             value={title}
             onChange={(e) => {
               setTitle(e.target.value);
@@ -538,8 +501,8 @@ export default function CreatePersonalExercisePage() {
 
         {/* Chú thích */}
         <p className="text-[11px] text-slate-500">
-          The video is scanned with MediaPipe to read your body pose, so the AI
-          camera can compare your form with this demo.
+          Video format and file integrity are checked automatically. Approved
+          files are sent to the review queue; keep your whole body in frame.
         </p>
       </section>
 
@@ -594,7 +557,7 @@ export default function CreatePersonalExercisePage() {
             </div>
           </div>
 
-          {/* 2. Video check (MediaPipe) */}
+          {/* 2. Video file check */}
           <div className="flex items-center gap-3 rounded-xl border border-[#33265f] bg-[#0d0922] p-3">
             {/* Vòng tròn trạng thái */}
             <div className="flex h-4 flex-shrink-0 items-center">
@@ -622,11 +585,11 @@ export default function CreatePersonalExercisePage() {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-medium text-white">
-                  Video check (MediaPipe)
+                  Video file check
                 </h3>
                 {videoCheckStatus === "checking" && (
                   <span className="text-[10px] text-purple-400 font-semibold animate-pulse">
-                    Analyzing pose with MediaPipe...
+                    Checking video format...
                   </span>
                 )}
                 {videoCheckStatus === "passed" && (
@@ -636,7 +599,7 @@ export default function CreatePersonalExercisePage() {
                 )}
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                The demo video is scanned for a clearly visible body pose.
+                The video file is checked for an accepted format and readable container.
               </p>
             </div>
           </div>
@@ -644,8 +607,8 @@ export default function CreatePersonalExercisePage() {
 
         {/* Ghi chú */}
         <p className="text-[11px] text-slate-500">
-          Both checks run when you press Create. The exercise is saved only if
-          both pass.
+          Both checks run when you press Create. Passing submissions are sent
+          to the review queue.
         </p>
       </section>
 

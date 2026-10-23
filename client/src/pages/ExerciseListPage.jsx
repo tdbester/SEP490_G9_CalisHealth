@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate, useParams } from "react-router-dom";
 import { getExercises } from "../api/library";
 import "./ExerciseListPage.css";
@@ -109,7 +109,7 @@ const MUSCLE_GROUPS = [
 const LEVEL_OPTIONS = ["All levels", "Beginner", "Intermediate", "Advanced"];
 
 // Dữ liệu mẫu chuẩn 100% Mockup Figma cho Tab Health (6 bài)
-const HEALTH_FALLBACK_EXERCISES = [
+export const HEALTH_FALLBACK_EXERCISES = [
   { id: 101, name: "Jumping jacks", muscleGroup: "Full body", sets: 3, repsOrDuration: "30 sec", level: "Beginner", details: "Full body • 3 sets • 30 sec", description: "Classic rhythmic cardiovascular warm-up drill activating the entire kinetic chain." },
   { id: 102, name: "Mountain climbers", muscleGroup: "Core", sets: 3, repsOrDuration: "30 sec", level: "Intermediate", details: "Core, cardio • 3 sets • 30 sec", description: "Dynamic quadruped sprint drill challenging anti-extension core stability and hip flexors." },
   { id: 103, name: "Burpees", muscleGroup: "Full body", sets: 3, repsOrDuration: "10 reps", level: "Advanced", details: "Full body • 3 sets • 10 reps", description: "Full-body metabolic conditioning exercise combining a squat, plank, push-up, and explosive vertical jump." },
@@ -119,7 +119,7 @@ const HEALTH_FALLBACK_EXERCISES = [
 ];
 
 // Dữ liệu mẫu chuẩn 100% Mockup Figma cho Tab Skills (6 bài)
-const SKILL_FALLBACK_EXERCISES = [
+export const SKILL_FALLBACK_EXERCISES = [
   { id: 201, name: "Wall handstand hold", muscleGroup: "Arms", sets: 4, repsOrDuration: "30 sec", level: "Beginner", details: "Shoulders, core • 4 sets • 30 sec • Handstand", description: "Balance drill on hands demanding wrist mobility, shoulder flexion, and overhead stability." },
   { id: 202, name: "Handstand push-up", muscleGroup: "Arms", sets: 3, repsOrDuration: "5 reps", level: "Advanced", details: "Shoulders, triceps • 3 sets • 5 reps • Handstand", description: "Elite vertical pressing calisthenic skill lifting 100% of body mass overhead." },
   { id: 203, name: "Explosive pull-up", muscleGroup: "Back", sets: 4, repsOrDuration: "5 reps", level: "Intermediate", details: "Back, arms • 4 sets • 5 reps • Muscle-up", description: "Explosive pulling variation building the height and power required for muscle-up transitions." },
@@ -134,11 +134,12 @@ function ExerciseCard({ item, onClick }) {
   const isBeginner = lvl === "beginner";
   const isAdvanced = lvl === "advanced";
 
-  const detailText =
-    item.details ||
-    `${item.muscleGroup || "Full body"} • ${item.sets || 3} sets • ${
-      item.repsOrDuration || "12 reps"
-    }`;
+  const detailText = item.details || [
+    item.muscleGroup || "Full body",
+    item.sets != null ? `${item.sets} sets` : null,
+    item.repsOrDuration,
+    item.equipment || item.exerciseType,
+  ].filter(Boolean).join(" • ");
 
   return (
     <div
@@ -272,6 +273,12 @@ function SearchFilterBar({
 
 // SUB-COMPONENT 4: PaginationBar (Phân trang căn giữa dùng chung)
 function PaginationBar({ currentPage, totalPages, onPageChange }) {
+  const firstPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+  const visiblePages = Array.from(
+    { length: Math.min(5, totalPages) },
+    (_, index) => firstPage + index
+  );
+
   return (
     <div className="mt-4 flex items-center justify-center gap-2">
       <button
@@ -284,7 +291,7 @@ function PaginationBar({ currentPage, totalPages, onPageChange }) {
         <ChevronLeftIcon className="w-3.5 h-3.5" />
       </button>
 
-      {[1, 2, 3].map((num) => {
+      {visiblePages.map((num) => {
         const isActive = currentPage === num;
         return (
           <button
@@ -305,8 +312,8 @@ function PaginationBar({ currentPage, totalPages, onPageChange }) {
       <button
         type="button"
         className="h-7 w-7 rounded-md border border-[#22184c] bg-[#130d2e] text-[#8a82af] hover:text-white flex items-center justify-center text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-        disabled={currentPage >= Math.max(3, totalPages)}
-        onClick={() => onPageChange(Math.min(Math.max(3, totalPages), currentPage + 1))}
+        disabled={currentPage >= totalPages}
+        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
         aria-label="Next page"
       >
         <ChevronRightIcon className="w-3.5 h-3.5" />
@@ -345,6 +352,7 @@ export default function ExerciseListPage() {
   const [loading, setLoading] = useState(true);
   const [exercises, setExercises] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
 
   // Đồng bộ activeTab khi route path hoặc query thay đổi
   useEffect(() => {
@@ -368,61 +376,38 @@ export default function ExerciseListPage() {
     try {
       const isAll = selectedMuscles.includes("All") || selectedMuscles.length === 0;
       const mappedMuscles = selectedMuscles.map((m) =>
-        m === "Arms" ? "Arm/Shoulders,Arms" : m
+        m === "Arms" ? "Arm/Shoulders,Arms,Shoulders" : m
       );
       const musclesQuery = isAll ? undefined : mappedMuscles.join(",");
 
       const data = await getExercises({
-        type: activeTab,
-        source: "system",
-        level: selectedLevel === "All levels" ? "all" : selectedLevel,
-        muscleGroup: isAll ? "all" : musclesQuery,
-        muscles: musclesQuery,
+        type: activeTab === "skill" ? "SKILL" : "HEALTH",
+        level: selectedLevel === "All levels" ? undefined : selectedLevel.toUpperCase(),
+        targetMuscle: musclesQuery,
         search: debouncedSearch.trim() || undefined,
-        page: currentPage,
+        page: currentPage - 1,
         size: pageSize,
       });
 
-      if (data && data.items && data.items.length > 0) {
-        setExercises(data.items);
-        setTotalPages(data.totalPages || 1);
-      } else {
-        // Fallback chuẩn theo ảnh mockup cho từng tab
-        let fallbackList =
-          activeTab === "skill" ? SKILL_FALLBACK_EXERCISES : HEALTH_FALLBACK_EXERCISES;
-
-        if (!isAll) {
-          fallbackList = fallbackList.filter((item) =>
-            selectedMuscles.some((m) =>
-              (item.muscleGroup || "").toLowerCase().includes(m.toLowerCase())
-            )
-          );
-        }
-        if (selectedLevel !== "All levels") {
-          fallbackList = fallbackList.filter(
-            (item) => item.level.toLowerCase() === selectedLevel.toLowerCase()
-          );
-        }
-        if (debouncedSearch.trim()) {
-          const q = debouncedSearch.toLowerCase().trim();
-          fallbackList = fallbackList.filter(
-            (item) =>
-              item.name.toLowerCase().includes(q) ||
-              (item.details && item.details.toLowerCase().includes(q))
-          );
-        }
-        setExercises(fallbackList);
-        setTotalPages(3);
-      }
+      const content = Array.isArray(data?.content) ? data.content : [];
+      setExercises(content.map((item) => ({
+        ...item,
+        name: item.title,
+        muscleGroup: item.targetMuscle,
+        sets: item.sets,
+        repsOrDuration: item.duration != null
+          ? `${item.duration} sec`
+          : item.reps != null
+            ? `${item.reps} reps`
+            : null,
+      })));
+      setTotalPages(data?.totalPages ?? 0);
+      setTotalElements(data?.totalElements ?? 0);
     } catch (err) {
       console.error("Failed to fetch exercises:", err);
-      // Fallback khi lỗi kết nối mạng / DB trống
-      if (activeTab === "skill") {
-        setExercises(SKILL_FALLBACK_EXERCISES);
-      } else {
-        setExercises(HEALTH_FALLBACK_EXERCISES);
-      }
-      setTotalPages(3);
+      setExercises([]);
+      setTotalPages(0);
+      setTotalElements(0);
     } finally {
       setLoading(false);
     }
@@ -486,9 +471,7 @@ export default function ExerciseListPage() {
   };
 
   const handleCardClick = (item) => {
-    const slug =
-      item.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-") || item.id || item.code;
-    navigate(`/library/exercise/${slug}`);
+    navigate(`/library/exercise/${item.id}`);
   };
 
   // Subtitle linh hoạt theo Tab
@@ -526,16 +509,7 @@ export default function ExerciseListPage() {
     [activeTab]
   );
 
-  // Số lượng bài tập hiển thị ở đầu danh sách
-  const displayedTotalCount = useMemo(() => {
-    if (isAllActive) {
-      return getMuscleBadgeCount("All");
-    }
-    if (selectedMuscles.length === 1) {
-      return getMuscleBadgeCount(selectedMuscles[0]);
-    }
-    return selectedMuscles.reduce((sum, mg) => sum + getMuscleBadgeCount(mg), 0);
-  }, [isAllActive, selectedMuscles, getMuscleBadgeCount]);
+  const displayedTotalCount = totalElements;
 
   return (
     <div className="exercise-list-page w-full max-w-7xl mx-auto text-white">
@@ -594,7 +568,6 @@ export default function ExerciseListPage() {
         selectedLevel={selectedLevel}
         onLevelChange={handleLevelChange}
       />
-
       {/* 4. BỐ CỤC CHÍNH 2 CỘT ĐỒNG BỘ 1:1 CHO CẢ HEALTH VÀ SKILLS */}
       <div className="flex flex-col md:flex-row items-start gap-4 w-full">
         {/* CỘT TRÁI - KHỐI MUSCLE GROUP */}

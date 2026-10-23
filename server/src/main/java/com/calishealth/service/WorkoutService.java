@@ -163,14 +163,14 @@ public class WorkoutService {
     private WorkoutResponse toResponse(WorkoutEntry workout) {
         List<WorkoutExerciseResponse> workoutExercises = workout.getExercises().stream()
                 .map(exercise -> new WorkoutExerciseResponse(
-                        exercise.getCode(), exercise.getName(), exercise.getLevel(), exercise.getMuscleGroup()
+                        exercise.getCode(), exercise.getName(), levelLabel(exercise.getLevel()), exercise.getMuscleGroup()
                 )).toList();
         if ("DAILY_TRAINING_PLAN".equals(workout.getType())) {
             workoutExercises = workout.getPlanItems().stream()
                     .map(WorkoutPlanItem::getExercise)
                     .distinct()
                     .map(exercise -> new WorkoutExerciseResponse(
-                            exercise.getCode(), exercise.getName(), exercise.getLevel(), exercise.getMuscleGroup()
+                            exercise.getCode(), exercise.getName(), levelLabel(exercise.getLevel()), exercise.getMuscleGroup()
                     )).toList();
         }
         List<WorkoutPlanItemResponse> planItems = workout.getPlanItems().stream()
@@ -183,5 +183,13 @@ public class WorkoutService {
                 workout.getContent(), workout.getType() == null ? REGULAR_WORKOUT : workout.getType(),
                 workout.getLevel(), workout.isActive(),
                 workout.getUpdatedAt(), workoutExercises, planItems);
+    }
+
+    private String levelLabel(ExerciseEntry.EntryLevel level) {
+        if (level == null) {
+            return null;
+        }
+        String normalized = level.name().toLowerCase(Locale.ROOT);
+        return Character.toUpperCase(normalized.charAt(0)) + normalized.substring(1);
     }
 }

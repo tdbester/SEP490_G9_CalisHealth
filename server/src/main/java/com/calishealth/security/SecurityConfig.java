@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -22,6 +23,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
@@ -46,6 +48,14 @@ public class SecurityConfig {
                         .requestMatchers("/media/exercise-anatomy/**").permitAll()
                         .requestMatchers("/api/content/**").hasRole("CONTENT_MANAGER")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/library/exercises/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/exercise-tree/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/member-exercises/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/personal-exercises/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/custom-workouts/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/my-workouts/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/workout-exercises/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/overview").hasRole("MEMBER")
                         .requestMatchers("/api/library/**").permitAll()
                         .requestMatchers("/api/exercises/**").permitAll()
                         .anyRequest().authenticated())

@@ -13,7 +13,7 @@ export function validatePersonalExercise({
   const errors = {};
 
   if (!title.trim()) errors.title = "Title is required";
-  else if (title.length > 60) errors.title = "Title cannot exceed 60 characters";
+  else if (title.length > 50) errors.title = "Title cannot exceed 50 characters";
 
   if (!description.trim()) errors.description = "Description is required";
   else if (description.length > 300) {

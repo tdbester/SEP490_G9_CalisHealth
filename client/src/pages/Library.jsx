@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Navigate } from "react-router-dom";
-import { getLibrarySummary } from "../api/library";
+import { getLibraryOverview } from "../api/library";
 import "./Library.css";
 
 // Icons
@@ -60,18 +60,18 @@ export default function Library() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getLibrarySummary();
+      const data = await getLibraryOverview();
       if (data) {
         setCounts({
           exercise: {
-            healthCount: data.exercise?.healthCount ?? 0,
-            skillCount: data.exercise?.skillCount ?? 0,
-            memberCount: data.exercise?.memberCount ?? 0,
+            healthCount: data.healthExercisesCount ?? 0,
+            skillCount: data.skillExercisesCount ?? 0,
+            memberCount: data.memberExercisesCount ?? 0,
           },
           workout: {
-            healthCount: data.workout?.healthCount ?? 0,
-            skillCount: data.workout?.skillCount ?? 0,
-            customCount: data.workout?.customCount ?? 0,
+            healthCount: data.healthWorkoutsCount ?? 0,
+            skillCount: data.skillWorkoutsCount ?? 0,
+            customCount: data.customWorkoutsCount ?? 0,
           },
         });
       }

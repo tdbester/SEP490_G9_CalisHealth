@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { createMemberExercise } from "../api/library";
+import { createMemberExercise, getMemberExerciseList } from "../api/library";
 
 // Mock data matching mockup 100%
 const INITIAL_COMMUNITY_EXERCISES = [
@@ -208,23 +208,77 @@ export default function CommunityExerciseListPage() {
     };
   }, []);
 
-  const [exercises, setExercises] = useState(() => {
-    try {
-      const storedExercises = JSON.parse(
-        localStorage.getItem("my_personal_exercises") || "[]"
-      );
-      const local = Array.isArray(storedExercises)
-        ? storedExercises.map(normalizePersonalExercise)
-        : [];
-      return [...local, ...INITIAL_COMMUNITY_EXERCISES];
-    } catch (e) {
-      return INITIAL_COMMUNITY_EXERCISES;
-    }
-  });
+  const [exercises, setExercises] = useState([]);
   const [searchInput, setSearchInput] = useState("");
   const [selectedLevel, setSelectedLevel] = useState("All levels");
   const [sortOrder, setSortOrder] = useState("Newest");
-  const [isMyView, setIsMyView] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const pageSize = 6;
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setLoadError("");
+    getMemberExerciseList({
+      tab: "COMMUNITY",
+      search: searchInput.trim() || undefined,
+      level: selectedLevel === "All levels" ? undefined : selectedLevel.toUpperCase(),
+      sortBy: sortOrder === "Most saved" ? "MOST_SAVED" : sortOrder === "Oldest" ? "OLDEST" : "NEWEST",
+      page: currentPage,
+      size: pageSize,
+    })
+      .then((data) => {
+        if (!active) return;
+        setExercises((data?.content || []).map((item) => {
+          const authorName = item.authorName || "Member";
+          const initials = authorName
+            .split(/\s+/)
+            .map((part) => part[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase();
+          const repsDuration = item.defaultDuration != null
+            ? `${item.defaultDuration} sec`
+            : item.defaultReps != null
+              ? `${item.defaultReps} reps`
+              : "Not specified";
+          return {
+            ...item,
+            title: item.title,
+            muscles: item.targetMuscle || "Full body",
+            setsReps: `${item.defaultSets ?? 3} sets · ${repsDuration}`,
+            author: { name: authorName, initials, avatarBg: "bg-[#643bf6]" },
+            postedTime: item.postedTimeAgo,
+            savesCount: item.saveCount ?? 0,
+            slug: item.id,
+          };
+        }));
+        setTotalPages(data?.totalPages || 0);
+        setTotalElements(data?.totalElements || 0);
+        if (data?.totalPages > 0 && currentPage >= data.totalPages) {
+          setCurrentPage(data.totalPages - 1);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load member exercises:", error);
+        if (active) {
+          setExercises([]);
+          setTotalPages(0);
+          setTotalElements(0);
+          setLoadError("Unable to load member exercises. Please try again.");
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [searchInput, selectedLevel, sortOrder, currentPage]);
 
   // Modal Create Exercise State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -240,50 +294,7 @@ export default function CommunityExerciseListPage() {
     videoUrl: "",
   });
 
-  // Toggle My exercise list filter
-  const toggleMyExercises = () => {
-    setIsMyView((prev) => !prev);
-  };
-
-  // Filter & Sort list
-  const filteredExercises = useMemo(() => {
-    let list = [...exercises];
-
-    // Filter by My Submissions if active
-    if (isMyView) {
-      list = list.filter((item) => item.isMine);
-    }
-
-    // Filter by Level
-    if (selectedLevel !== "All levels") {
-      list = list.filter(
-        (item) => item.level.toLowerCase() === selectedLevel.toLowerCase()
-      );
-    }
-
-    // Filter by search keywords (title or author name)
-    if (searchInput.trim()) {
-      const q = searchInput.toLowerCase().trim();
-      list = list.filter(
-        (item) =>
-          item.title.toLowerCase().includes(q) ||
-          item.author.name.toLowerCase().includes(q) ||
-          item.muscles.toLowerCase().includes(q)
-      );
-    }
-
-    // Sort order
-    if (sortOrder === "Most saved") {
-      list.sort((a, b) => b.savesCount - a.savesCount);
-    } else if (sortOrder === "Oldest") {
-      list.sort((a, b) => b.postedDaysAgo - a.postedDaysAgo);
-    } else {
-      // Newest
-      list.sort((a, b) => a.postedDaysAgo - b.postedDaysAgo);
-    }
-
-    return list;
-  }, [exercises, isMyView, selectedLevel, searchInput, sortOrder]);
+  const filteredExercises = exercises;
 
   const handleView = (item) => {
     const slug =
@@ -308,47 +319,17 @@ export default function CommunityExerciseListPage() {
 
     setSubmitting(true);
     try {
-      let apiFailed = false;
-      // Attempt backend API call if server is running
-      try {
-        await createMemberExercise({
-          name: createForm.title.trim(),
-          level: createForm.level,
-          muscleGroup: createForm.muscles,
-          sets: Number(createForm.sets) || 3,
-          repsOrDuration: createForm.repsOrDuration,
-          description: createForm.description,
-          demoVideoUrl: createForm.videoUrl,
-        });
-      } catch {
-        // Fallback to local state append seamlessly
-        apiFailed = true;
-        toast.error("Failed to create. Please try again.");
-      }
-
-      const newExercise = {
-        id: `comm-${Date.now()}`,
-        slug: createForm.title.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-        title: createForm.title.trim(),
+      await createMemberExercise({
+        name: createForm.title.trim(),
         level: createForm.level,
-        muscles: createForm.muscles,
-        setsReps: `${createForm.sets} sets · ${createForm.repsOrDuration}`,
-        author: {
-          name: "Linh Tran (You)",
-          initials: "LT",
-          avatarBg: "bg-[#643bf6]",
-        },
-        postedTime: "Just now",
-        postedDaysAgo: 0,
-        savesCount: 0,
-        isMine: true,
-      };
-
-      setExercises((prev) => [newExercise, ...prev]);
-      setFormSuccess(apiFailed
-        ? "Exercise saved locally, but could not sync with the server."
-        : "Exercise published successfully and passed automatic checks!");
-      if (!apiFailed) toast.success("Created successfully!");
+        muscleGroup: createForm.muscles,
+        sets: Number(createForm.sets) || 3,
+        repsOrDuration: createForm.repsOrDuration,
+        description: createForm.description,
+        demoVideoUrl: createForm.videoUrl,
+      });
+      setFormSuccess("Exercise submitted and is pending review.");
+      toast.success("Exercise submitted for review.");
       setTimeout(() => {
         setFormSuccess(null);
         setShowCreateModal(false);
@@ -362,7 +343,8 @@ export default function CommunityExerciseListPage() {
           videoUrl: "",
         });
       }, 1200);
-    } catch {
+    } catch (error) {
+      console.error("Failed to submit member exercise:", error);
       toast.error("Failed to create. Please try again.");
     } finally {
       setSubmitting(false);
@@ -425,11 +407,6 @@ export default function CommunityExerciseListPage() {
         {/* Thông báo hệ thống (System Notice) */}
         <div className="w-full rounded-xl border border-[#231b46] bg-[#120d29]/80 px-5 py-2.5 mt-3 text-xs text-slate-300 shadow-sm flex items-center justify-between flex-wrap gap-2">
           <span>Only exercises that passed the automatic checks are shown here.</span>
-          {isMyView && (
-            <span className="text-[11px] font-semibold text-purple-300 bg-purple-950/60 border border-purple-800/80 px-2.5 py-0.5 rounded-full">
-              Showing My Submissions ({filteredExercises.length})
-            </span>
-          )}
         </div>
       </div>
 
@@ -445,7 +422,10 @@ export default function CommunityExerciseListPage() {
             className="w-full rounded-xl bg-[#120d29] border border-[#231b46] pl-10 pr-4 py-2.5 text-xs md:text-sm text-white placeholder-slate-500 outline-none focus:border-[#6340f1] transition-all"
             placeholder="Search by title or member"
             value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
+            onChange={(e) => {
+              setSearchInput(e.target.value);
+              setCurrentPage(0);
+            }}
           />
         </div>
 
@@ -454,7 +434,10 @@ export default function CommunityExerciseListPage() {
           <select
             className="w-full appearance-none rounded-xl bg-[#120d29] border border-[#231b46] px-4 py-2.5 pr-10 text-xs md:text-sm font-medium text-white outline-none focus:border-[#6340f1] cursor-pointer transition-all"
             value={selectedLevel}
-            onChange={(e) => setSelectedLevel(e.target.value)}
+            onChange={(e) => {
+              setSelectedLevel(e.target.value);
+              setCurrentPage(0);
+            }}
           >
             <option value="All levels" className="bg-[#120d29] text-white">
               All levels
@@ -479,7 +462,10 @@ export default function CommunityExerciseListPage() {
           <select
             className="w-full appearance-none rounded-xl bg-[#120d29] border border-[#231b46] px-4 py-2.5 pr-10 text-xs md:text-sm font-medium text-white outline-none focus:border-[#6340f1] cursor-pointer transition-all"
             value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
+            onChange={(e) => {
+              setSortOrder(e.target.value);
+              setCurrentPage(0);
+            }}
           >
             <option value="Newest" className="bg-[#120d29] text-white">
               Newest
@@ -499,7 +485,11 @@ export default function CommunityExerciseListPage() {
 
       {/* D. DANH SÁCH CARD BÀI TẬP CỘNG ĐỒNG (FULL-WIDTH LIST) */}
       <div className="w-full space-y-2 mt-3">
-        {filteredExercises.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-12 text-sm text-slate-400">Loading exercises...</div>
+        ) : loadError ? (
+          <div role="alert" className="text-center py-12 text-sm text-rose-300">{loadError}</div>
+        ) : filteredExercises.length === 0 ? (
           <div className="text-center py-12 px-4 rounded-2xl border border-dashed border-[#231b46] bg-[#120d29] text-slate-400">
             <div className="w-10 h-10 mx-auto mb-2 text-purple-400 flex items-center justify-center">
               <BarbellIcon className="h-6 w-6 text-[#9d7aff]" />
@@ -515,7 +505,8 @@ export default function CommunityExerciseListPage() {
               onClick={() => {
                 setSearchInput("");
                 setSelectedLevel("All levels");
-                setIsMyView(false);
+                setSortOrder("Newest");
+                setCurrentPage(0);
               }}
               className="bg-[#643bf6] hover:bg-[#522cd9] text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all cursor-pointer"
             >
@@ -595,6 +586,32 @@ export default function CommunityExerciseListPage() {
           })
         )}
       </div>
+      {totalPages > 0 && (
+        <div className="mt-5 flex items-center justify-between border-t border-[#1f193f] pt-4">
+          <p className="text-xs text-slate-400">
+            Showing {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, totalElements)} of {totalElements} exercises
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.max(0, page - 1))}
+              disabled={currentPage === 0 || loading}
+              className="rounded-md border border-[#22184c] bg-[#130d2e] px-3 py-1.5 text-xs font-medium text-[#8a82af] hover:border-[#382672] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 transition-all"
+            >
+              Previous
+            </button>
+            <span className="text-xs text-slate-400">{currentPage + 1} / {totalPages}</span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.min(totalPages - 1, page + 1))}
+              disabled={currentPage + 1 >= totalPages || loading}
+              className="rounded-md border border-[#22184c] bg-[#130d2e] px-3 py-1.5 text-xs font-medium text-[#8a82af] hover:border-[#382672] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 transition-all"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* MODAL TẠO BÀI TẬP (+ CREATE EXERCISE MODAL) */}
       {showCreateModal && (

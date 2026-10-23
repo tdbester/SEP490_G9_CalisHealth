@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { getExerciseDetail } from "../api/library";
+import { getExerciseDetail, getSystemExerciseDetail } from "../api/library";
 
 // Default detailed guide data matching Figma mockup 100%
 const EXERCISE_CATALOG = {
@@ -323,6 +323,7 @@ export default function ExerciseDetailPage() {
   const isMemberExercise =
     location.pathname.startsWith("/library/community/") ||
     location.pathname.startsWith("/library/member/");
+  const isSystemExercise = location.pathname.startsWith("/library/exercise/");
   const memberAuthor = location.state?.author || "Linh Tran";
   const memberPostedTime = location.state?.postedTime || "3 days ago";
 
@@ -338,11 +339,13 @@ export default function ExerciseDetailPage() {
   const [exercise, setExercise] = useState(catalogItem);
 
   // Video player state
-  const totalDuration = exercise.duration || 84;
+  const [videoDuration, setVideoDuration] = useState(null);
+  const totalDuration = videoDuration || exercise.duration || 84;
   const [currentTime, setCurrentTime] = useState(exercise.initialTime ?? 25);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const playerRef = useRef(null);
+  const videoRef = useRef(null);
 
   // Sync document title to match mockup window header: CalisHealth - [Exercise name]
   useEffect(() => {
@@ -358,28 +361,41 @@ export default function ExerciseDetailPage() {
     async function loadData() {
       if (!id) return;
       try {
-        const data = await getExerciseDetail(id);
+        const data = isSystemExercise
+          ? await getSystemExerciseDetail(id)
+          : await getExerciseDetail(id);
         if (data && isMounted) {
           setExercise((prev) => ({
             ...prev,
-            ...data,
-            name: data.name || prev.name,
+            ...(isSystemExercise
+              ? {
+                  ...data,
+                  name: data.title || prev.name,
+                  steps: (data.guideSteps || []).map((content, index) => ({
+                    step: index + 1,
+                    title: `Step ${index + 1}`,
+                    content,
+                  })),
+                }
+              : data),
+            name: data.title || data.name || prev.name,
             level: data.level || prev.level,
             description: data.description || prev.description,
           }));
         }
-      } catch (e) {
-        // Fallback already pre-loaded
+      } catch (error) {
+        console.error("Failed to fetch exercise details:", error);
       }
     }
     loadData();
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [id, isSystemExercise]);
 
   // Simulated player timer
   useEffect(() => {
+    if (exercise.videoUrl) return undefined;
     let timer = null;
     if (isPlaying) {
       timer = setInterval(() => {
@@ -395,14 +411,27 @@ export default function ExerciseDetailPage() {
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [isPlaying, totalDuration]);
+  }, [isPlaying, totalDuration, exercise.videoUrl]);
 
   const togglePlay = () => {
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play().catch((error) => {
+          console.error("Failed to play exercise video:", error);
+        });
+      } else {
+        videoRef.current.pause();
+      }
+      return;
+    }
     setIsPlaying((prev) => !prev);
   };
 
   const toggleMute = () => {
-    setIsMuted((prev) => !prev);
+    setIsMuted((prev) => {
+      if (videoRef.current) videoRef.current.muted = !prev;
+      return !prev;
+    });
   };
 
   const toggleFullscreen = () => {
@@ -418,7 +447,9 @@ export default function ExerciseDetailPage() {
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const pct = Math.max(0, Math.min(1, clickX / rect.width));
-    setCurrentTime(Math.floor(pct * totalDuration));
+    const time = Math.floor(pct * totalDuration);
+    if (videoRef.current) videoRef.current.currentTime = time;
+    setCurrentTime(time);
   };
 
   const progressPercent = Math.min(100, Math.max(0, (currentTime / totalDuration) * 100));
@@ -515,10 +546,10 @@ export default function ExerciseDetailPage() {
               </p>
             )}
           </div>
-          {!isMemberExercise && (
+          {!isMemberExercise && (!isSystemExercise || exercise.hasExerciseTree) && (
             <button
               type="button"
-              onClick={() => navigate("/explore")}
+              onClick={() => navigate(`/explore?path=${exercise.movementGroup.toLowerCase()}`)}
               className="exercise-tree-btn shrink-0 px-7 py-3 text-sm font-semibold text-white transition-colors"
             >
               Exercise tree
@@ -543,6 +574,22 @@ export default function ExerciseDetailPage() {
                 background: "radial-gradient(circle at center, #1e1548 0%, #0d0924 70%, #080518 100%)",
               }}
             >
+              {exercise.videoUrl && (
+                <video
+                  ref={videoRef}
+                  src={exercise.videoUrl}
+                  className="absolute inset-0 h-full w-full object-contain"
+                  muted={isMuted}
+                  onLoadedMetadata={(event) => {
+                    setVideoDuration(event.currentTarget.duration);
+                    setCurrentTime(0);
+                  }}
+                  onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+                  onEnded={() => setIsPlaying(false)}
+                />
+              )}
               {/* Overlay decor pattern */}
               <div className="absolute inset-0 bg-gradient-to-tr from-[#1b1244]/40 to-transparent pointer-events-none" />
 
