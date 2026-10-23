@@ -6,7 +6,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/calishealth?createDatabaseIfNotExist=true
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:123456}
+    password: ${DB_PASSWORD:12345678}
     driver-class-name: com.mysql.cj.jdbc.Driver
   flyway:
     enabled: true
@@ -15,7 +15,7 @@ spring:
     validate-on-migrate: true
   jpa:
     hibernate:
-      ddl-auto: none    # Flyway là nguồn sự thật duy nhất cho schema
+      ddl-auto: none # Flyway là nguồn sự thật duy nhất cho schema
     show-sql: true
     properties:
       hibernate:
