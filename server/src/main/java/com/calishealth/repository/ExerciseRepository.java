@@ -10,4 +10,6 @@ public interface ExerciseRepository extends JpaRepository<ExerciseEntry, Long> {
     Optional<ExerciseEntry> findByCode(String code);
     boolean existsByCode(String code);
     List<ExerciseEntry> findAllByCodeIn(List<String> codes);
+    long countByTypeAndActive(ExerciseEntry.EntryType type, boolean active);
+    long countByType(ExerciseEntry.EntryType type);
 }
