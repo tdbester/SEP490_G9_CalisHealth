@@ -133,18 +133,15 @@ export default function Topbar() {
       <div className="topbar-right">
         {user && (
           <>
-            {/* Streak badge */}
-            <button
-              type="button"
+            <div
               className="topbar-streak"
               title={`${STREAK_DAYS} day training streak`}
-              onClick={() => navigateFromPanel("/day-streak")}
+              aria-label={`${STREAK_DAYS} day training streak`}
             >
               <LocalFireDepartmentRoundedIcon className="topbar-streak-icon" />
               <span className="topbar-streak-days">{STREAK_DAYS} days</span>
-            </button>
+            </div>
 
-            {/* Notifications */}
             <div className="topbar-notification-wrap">
               <button
                 type="button"
@@ -175,7 +172,7 @@ export default function Topbar() {
                     <span className="topbar-notification-mark" />
                     <div>
                       <strong>Keep your streak going</strong>
-                      <p>You&apos;re on a {STREAK_DAYS}-day training streak.</p>
+                      <p>Complete a workout to keep your streak going.</p>
                       <time>Today</time>
                     </div>
                   </article>

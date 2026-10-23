@@ -35,7 +35,6 @@ export default function App() {
         />
         <Route path="/library" element={<Navigate to="/" replace />} />
         <Route path="/tracking" element={<Navigate to="/" replace />} />
-        <Route path="/day-streak" element={<Navigate to="/" replace />} />
         <Route path="/profile" element={<Navigate to="/" replace />} />
         <Route path="/settings" element={<Navigate to="/" replace />} />
 
