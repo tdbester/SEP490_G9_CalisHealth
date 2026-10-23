@@ -131,6 +131,15 @@ Import collection `postman/CalisHealth-Auth-Pro.postman_collection.json` vào Po
 - `GET  /api/auth/me`
 - `GET  /api/auth/verify-email?token=…`
 
+### Onboarding survey
+
+Collection `postman/CalisHealth-Survey.postman_collection.json` cùng environment `postman/CalisHealth-Local.postman_environment.json` chứa 63 request có assertion. Hướng dẫn chạy nằm ở [postman/README-Survey.md](postman/README-Survey.md), còn kiến trúc, cách thêm câu hỏi và cách thêm loại câu hỏi nằm ở [server/docs/survey-engine.md](server/docs/survey-engine.md).
+
+- `GET  /api/surveys/{surveyCode}`
+- `POST /api/survey-sessions` · `GET /api/survey-sessions?surveyCode=` · `GET /api/survey-sessions/{id}`
+- `PUT  /api/survey-sessions/{id}/steps/{stepCode}/answers`
+- `POST /api/survey-sessions/{id}/complete` · `/skip` · `/resume`
+
 ## Roadmap
 
 - [x] Monorepo `client/` + `server/`
