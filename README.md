@@ -1,74 +1,118 @@
-# SEP490_G9_CalisHealth
+# CalisHealth
 
-Ứng dụng sức khỏe & kỹ năng calisthenics.
+Web app hỗ trợ học, lên kế hoạch và theo dõi tiến trình tập **calisthenics** (bodyweight), kèm trang quản trị để quản lý nội dung, bài tập, video và quy tắc thăng tiến.
 
-- **Backend**: Spring Boot 3 + JWT + MySQL (xem `src/main/java/com/calishealth/`)
-- **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS
+## Công nghệ
 
----
+| Tầng | Stack |
+|------|-------|
+| **Frontend** (`client/`) | React 18 · Vite 5 · React Router 6 · Material UI 6 · CSS thuần |
+| **Backend** (`server/`) | Java 17 · Spring Boot 4 (Web, Data JPA, Security, Validation, Mail) · MySQL · JWT (jjwt 0.12) · Lombok |
+| **Build** | npm (client) · Maven (server) |
 
-## Frontend — chạy local
+## Cấu trúc repo
+
+```
+SEP490_G9_CalisHealth/
+├── client/                                # React + Vite frontend (admin panel)
+│   ├── src/
+│   │   ├── App.jsx                        # Router (BrowserRouter + Routes)
+│   │   ├── main.jsx
+│   │   ├── components/
+│   │   │   └── layout/                    # AdminLayout, Sidebar, Topbar
+│   │   ├── pages/                         # Dashboard, Login, PlaceholderPage…
+│   │   └── assets/
+│   ├── index.html
+│   ├── package.json
+│   └── vite.config.js
+├── server/                                # Spring Boot backend
+│   ├── src/main/java/com/calishealth/
+│   │   ├── CalisHealthApplication.java
+│   │   ├── controllers/AuthController.java
+│   │   ├── service/                       # AuthService, EmailService
+│   │   ├── security/                      # SecurityConfig, JwtService, JwtAuthFilter
+│   │   ├── models/                        # User, AuthToken
+│   │   ├── dtos/AuthDtos.java
+│   │   ├── repository/                    # UserRepository, TokenRepository
+│   │   ├── validation/                    # @ValidEmail, @StrongPassword
+│   │   └── exception/GlobalExceptionHandler.java
+│   ├── src/main/resources/
+│   │   ├── application.yml                # MySQL + JWT + mail config
+│   │   └── application.properties
+│   └── pom.xml
+├── postman/
+│   └── CalisHealth-Auth-Pro.postman_collection.json
+└── README.md
+```
+
+## Chạy local
+
+### 1. Backend — `server/`
+
+Yêu cầu: **JDK 17+** · **Maven 3.9+** · **MySQL 8+**
 
 ```bash
-# 1. Cài dependencies (chỉ làm lần đầu)
+cd server
+
+# (Tùy chọn) tạo DB — Spring sẽ tự tạo nếu createDatabaseIfNotExist=true
+# mysql -u root -p -e "CREATE DATABASE calishealth;"
+
+# Cấu hình env nếu muốn override default
+# DB_USERNAME / DB_PASSWORD (mặc định: root / 12345678)
+# app.mail.username / app.mail.password — dùng cho flow quên mật khẩu (Gmail + App Password)
+
+# Chạy dev
+./mvnw spring-boot:run
+# hoặc:  mvn spring-boot:run
+```
+
+API mặc định chạy ở **http://localhost:8080**.
+CORS đã whitelist `http://localhost:5173` (xem `app.frontend-url` trong `application.yml`).
+
+### 2. Frontend — `client/`
+
+Yêu cầu: **Node 18+** · **npm 9+**
+
+```bash
+cd client
+
+# Cài dependencies (lần đầu)
 npm install
 
-# 2. Copy file env mẫu
-cp .env.example .env.local
-# Sửa VITE_API_URL nếu backend chạy ở URL khác
-
-# 3. Chạy dev server
+# Dev server
 npm run dev
 # Mặc định mở http://localhost:5173
 
-# 4. Build production
+# Build production
 npm run build
+
+# Preview bản build
+npm run preview
+
+# Lint
+npm run lint
 ```
 
-Backend phải chạy ở `http://localhost:8080` (cấu hình trong `application.yml`).
-CORS backend đã cho phép `http://localhost:5173` (xem `SecurityConfig.java`).
-
-### Cấu trúc thư mục (rút gọn)
-
-```
-src/
-├── components/       # UI shared (Button, Input, AuthLayout)
-├── contexts/         # AuthContext
-├── features/
-│   ├── auth/         # Toàn bộ flow auth: api, hooks, schemas, forms, pages
-│   ├── content-manager/  # Quản trị bài tập & chương trình tập
-│   └── survey/       # Khảo sát 4 bước (context, schemas, components, pages)
-├── lib/              # axios, storage, error, utils
-├── pages/            # Trang global (HomePage...)
-├── routes/           # AppRoutes, ProtectedRoute, PublicRoute
-├── App.tsx
-├── main.tsx
-└── index.css
-```
-
-### Routes
+## Routes (frontend)
 
 | Path | Trang | Trạng thái |
 |------|-------|------------|
-| `/login` | `LoginPage` | ✅ nối API |
-| `/register` | `RegisterPage` | ✅ nối API |
-| `/forgot-password` | `ForgotPasswordPage` | ✅ nối API |
-| `/reset-password` | `ResetPasswordPage` | ✅ nối API |
-| `/verify` | `VerifyEmailPage` | ✅ nối API |
-| `/change-password` | `ChangePasswordPage` | ✅ nối API |
-| `/survey/body-information` | `BodyInfoPage` | ✅ UI + validation (bước 1/4) |
-| `/survey/goals-and-motivation` | `GoalsPage` | ✅ UI + validation (bước 2/4) |
-| `/survey/current-training-routine` | `TrainingRoutinePage` | ✅ UI + validation (bước 3/4) |
-| `/survey/level-test` | `LevelTestPage` | ✅ UI + validation (bước 4/4) |
-| `/survey/result` | `SurveyResultPage` | ✅ UI + data mẫu (kết quả & plan) |
-| `/content/*` | Content manager | ✅ CRUD bài tập & chương trình |
-| `/404` | `NotFoundPage` | — |
+| `/login` | `Login` | ✅ UI sẵn, chưa nối API |
+| `/` | `Dashboard` (Tổng quan) | ✅ UI mock |
+| `/library` | `PlaceholderPage` | 🚧 WIP |
+| `/tracking` | `PlaceholderPage` | 🚧 WIP |
+| `*` | redirect → `/login` | — |
 
-> Survey flow: `/survey` → `body-information` → `goals-and-motivation` → `current-training-routine` → `level-test` → `result`.
-> Bước 4 (level test) điều hướng sang `result`, nơi hiển thị level + plan khuyến nghị.
-> Plan hiện là **data mẫu chạy client-side** trong `features/survey/data/recommendation.ts` — khi backend có API plan thật, chỉ cần thay `buildRecommendation` mà không đổi phần UI.
+## Thiết kế
 
-### Stack
+- **Brand color**: deep purple `#5B21B6`
+- **Sidebar**: 256px cố định, nền tím đậm, chữ trắng; item active nền tím nhạt (`#EDE9FE`), chữ tím đậm
+- **Topbar**: 64px cố định, nền trắng
+- **Canvas**: nền xám nhạt (`#F9FAFB`)
+- Font: **Inter** → Roboto → Helvetica → Arial
+- Không dùng shadcn/Tailwind — UI viết tay bằng CSS, dùng MUI cho icon + theme token (đang dần thay thế bằng CSS thuần ở các page)
+
+## Cấu hình hữu ích
 
 - **Database**: `server/src/main/resources/application.yml` — đổi `spring.datasource.url` / `username` / `password` nếu không dùng default
 - **JWT secret**: `app.jwt.secret` trong `application.yml` (>= 32 ký tự) — **đổi trước khi deploy**
