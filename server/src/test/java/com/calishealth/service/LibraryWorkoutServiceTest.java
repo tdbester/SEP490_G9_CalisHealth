@@ -2,6 +2,7 @@ package com.calishealth.service;
 
 import com.calishealth.dtos.CreateUpdateWorkoutRequestDTO;
 import com.calishealth.dtos.WorkoutItemDTO;
+import com.calishealth.exception.ResourceNotFoundException;
 import com.calishealth.models.ExerciseEntry;
 import com.calishealth.models.User;
 import com.calishealth.models.WorkoutEntry;
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -71,5 +73,22 @@ class LibraryWorkoutServiceTest {
         assertEquals(4, saved.getTotalSets());
         assertEquals(4, saved.getEstimatedDuration());
         assertEquals("ADVANCED", saved.getLevel());
+    }
+
+    @Test
+    void communityWorkoutDetailHidesUnsharedWorkouts() {
+        User member = new User();
+        member.setId(4L);
+        member.setEmail("member@example.test");
+        when(users.findByEmail(member.getEmail())).thenReturn(Optional.of(member));
+
+        WorkoutEntry workout = new WorkoutEntry();
+        workout.setId(7L);
+        workout.setSharedWithCommunity(false);
+        when(workouts.findById(7L)).thenReturn(Optional.of(workout));
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> service.getCommunityWorkoutDetail(member.getEmail(), 7L));
     }
 }

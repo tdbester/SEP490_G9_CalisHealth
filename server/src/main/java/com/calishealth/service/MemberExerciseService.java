@@ -1,6 +1,7 @@
 package com.calishealth.service;
 
 import com.calishealth.dtos.MemberExerciseFilterRequestDTO;
+import com.calishealth.dtos.MemberExerciseDetailResponseDTO;
 import com.calishealth.dtos.MemberExerciseItemResponseDTO;
 import com.calishealth.dtos.PageResponseDTO;
 import com.calishealth.models.ExerciseEntry;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import com.calishealth.exception.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +34,48 @@ public class MemberExerciseService {
     private final ExerciseRepository exercises;
     private final MemberSavedExerciseRepository savedExercises;
     private final UserRepository users;
+
+    @Transactional(readOnly = true)
+    public MemberExerciseDetailResponseDTO getMemberExerciseDetail(Long exerciseId, String memberEmail) {
+        User member = users.findByEmail(memberEmail)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated member not found"));
+        ExerciseEntry exercise = exercises.findById(exerciseId)
+                .filter(item -> !item.isSystem())
+                .filter(item -> item.getStatus() == ExerciseEntry.EntryStatus.ACCEPTED)
+                .filter(item -> item.isShareWithCommunity()
+                        || (item.getAuthor() != null && member.getId().equals(item.getAuthor().getId())))
+                .orElseThrow(() -> new ResourceNotFoundException("Community exercise not found"));
+
+        boolean isSaved = savedExercises.findAllByMemberIdAndExerciseIdIn(member.getId(), List.of(exerciseId))
+                .stream()
+                .findAny()
+                .isPresent();
+        String guide = exercise.getGuideSteps();
+        if (guide == null || guide.isBlank()) {
+            guide = exercise.getGuide();
+        }
+        List<String> steps = guide == null || guide.isBlank()
+                ? List.of()
+                : guide.lines().map(String::trim).filter(line -> !line.isBlank()).toList();
+
+        return new MemberExerciseDetailResponseDTO(
+                exercise.getId(),
+                exercise.getName(),
+                exercise.getDescription(),
+                levelLabel(exercise.getLevel()),
+                exercise.getMuscleGroup(),
+                exercise.getDefaultSets(),
+                exercise.getDefaultReps(),
+                exercise.getDefaultDuration(),
+                exercise.getEquipment(),
+                exercise.getVideoUrl(),
+                steps,
+                exercise.getAuthor() == null ? null : exercise.getAuthor().getFullName(),
+                timeAgo(exercise.getCreatedAt()),
+                exercise.getSaveCount() == null ? 0 : exercise.getSaveCount(),
+                isSaved,
+                exercise.getStatus().name());
+    }
 
     @Transactional(readOnly = true)
     public PageResponseDTO<MemberExerciseItemResponseDTO> getMemberExercises(

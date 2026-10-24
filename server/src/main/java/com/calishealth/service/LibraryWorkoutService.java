@@ -76,6 +76,17 @@ public class LibraryWorkoutService {
         return toDetail(workout);
     }
 
+    @Transactional(readOnly = true)
+    public WorkoutDetailResponseDTO getCommunityWorkoutDetail(String memberEmail, Long workoutId) {
+        requireMember(memberEmail);
+        WorkoutEntry workout = workouts.findById(workoutId)
+                .filter(entry -> !entry.isSystem()
+                        && entry.isSharedWithCommunity()
+                        && "ACCEPTED".equalsIgnoreCase(entry.getStatus()))
+                .orElseThrow(() -> new ResourceNotFoundException("Community workout not found"));
+        return toDetail(workout);
+    }
+
     @Transactional
     public WorkoutDetailResponseDTO createWorkout(String memberEmail, CreateUpdateWorkoutRequestDTO request) {
         User member = requireMember(memberEmail);

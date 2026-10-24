@@ -32,6 +32,14 @@ public class LibraryWorkoutController {
         return ResponseEntity.ok(workoutService.getCommunityWorkouts(authentication.getName(), filter));
     }
 
+    @GetMapping("/custom-workouts/{id}")
+    public ResponseEntity<WorkoutDetailResponseDTO> communityDetail(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(workoutService.getCommunityWorkoutDetail(authentication.getName(), id));
+    }
+
     @GetMapping("/my-workouts")
     public ResponseEntity<PageResponseDTO<WorkoutListItemDTO>> mine(
             @Valid @ModelAttribute WorkoutFilterRequestDTO filter,

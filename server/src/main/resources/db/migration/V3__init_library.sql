@@ -658,3 +658,84 @@ FROM (
 JOIN content_workouts w ON w.code = CONCAT('MY-DEMO-', w.author_id, '-', item.workout_suffix)
 JOIN exercise_entries e ON e.code = item.exercise_code
 WHERE e.status = 'ACCEPTED' AND e.active = TRUE;
+
+-- Ensure seeded member submissions are visible to the development account.
+UPDATE exercise_entries
+SET author_id = COALESCE(
+        (SELECT id FROM users WHERE id = 1),
+        (SELECT MIN(id) FROM users WHERE role = 'MEMBER')
+    )
+WHERE is_system = FALSE
+  AND code LIKE 'PERSONAL-DEMO-%'
+  AND author_id IS NULL
+  AND EXISTS (SELECT 1 FROM users WHERE role = 'MEMBER');
+
+-- Additional personal submissions for testing each My Submissions tab.
+INSERT IGNORE INTO exercise_entries (
+    code, name, description, type, category, muscle_group, level, active,
+    guide, guide_steps, updated_at, video_url, is_system, status, rejection_reason,
+    default_sets, default_reps, default_duration, share_with_community,
+    equipment, author_id, created_at, save_count
+)
+SELECT seed.code, seed.name, seed.description, 'HEALTH', 'Strength', seed.muscle_group,
+       seed.level, TRUE, seed.guide, seed.guide, NOW(6), NULL, FALSE, seed.status,
+       seed.rejection_reason, seed.default_sets, seed.default_reps, seed.default_duration,
+       seed.share_with_community, seed.equipment,
+       COALESCE((SELECT id FROM users WHERE id = 1),
+                (SELECT MIN(id) FROM users WHERE role = 'MEMBER')),
+       DATE_SUB(NOW(6), INTERVAL seed.age_days DAY), seed.save_count
+FROM (
+    SELECT 'PERSONAL-DEMO-PENDING-002' code, 'Tempo decline push-up' name,
+           'A controlled decline push-up progression for upper-body strength.' description,
+           'Chest, shoulders' muscle_group, 'INTERMEDIATE' level, 'PENDING' status,
+           NULL rejection_reason, 3 default_sets, 8 default_reps, NULL default_duration,
+           TRUE share_with_community, 'Bench' equipment,
+           CONCAT('Place your feet on a stable low surface.', CHAR(10),
+                  'Brace your core and keep your body aligned.', CHAR(10),
+                  'Lower your chest with control.', CHAR(10),
+                  'Press through your palms to return to the start.') guide,
+           3 age_days, 0 save_count
+    UNION ALL
+    SELECT 'PERSONAL-DEMO-PENDING-003', 'Scapular push-up',
+           'A simple shoulder-control drill performed from a stable plank position.',
+           'Shoulders, chest', 'BEGINNER', 'PENDING', NULL, 3, 12, NULL, FALSE, 'Bodyweight',
+           CONCAT('Start in a high plank with arms straight.', CHAR(10),
+                  'Keep your elbows locked and brace your abdomen.', CHAR(10),
+                  'Allow your chest to lower slightly between your shoulders.', CHAR(10),
+                  'Push the floor away to spread your shoulder blades.'), 1, 0
+    UNION ALL
+    SELECT 'PERSONAL-DEMO-REJECTED-003', 'Stupid-fast burpee',
+           'A fast burpee variation with an inappropriate term in the description.',
+           'Full body', 'INTERMEDIATE', 'REJECTED',
+           'Reason: Text check: content contains inappropriate wording (''stupid'').',
+           3, 10, NULL, TRUE, 'Bodyweight',
+           CONCAT('Stand with feet shoulder-width apart.', CHAR(10),
+                  'Place your hands down and step back to a plank.', CHAR(10),
+                  'Step forward and stand with control.'), 6, 0
+    UNION ALL
+    SELECT 'PERSONAL-DEMO-REJECTED-004', 'Single-leg glute bridge',
+           'A bridge progression submitted with a video that failed review.',
+           'Glutes, hamstrings', 'BEGINNER', 'REJECTED',
+           'Reason: Video check: we could not detect a full body in most frames. Re-record in better light with your whole body in frame.',
+           3, 10, NULL, TRUE, 'Bodyweight',
+           CONCAT('Lie on your back with one foot planted.', CHAR(10),
+                  'Brace your abdomen and lift your hips.', CHAR(10),
+                  'Pause briefly and lower with control.'), 4, 0
+    UNION ALL
+    SELECT 'PERSONAL-DEMO-ACCEPTED-004', 'Slow mountain climber',
+           'A controlled core exercise emphasizing stability and steady breathing.',
+           'Core, shoulders', 'INTERMEDIATE', 'ACCEPTED', NULL, 3, 12, NULL, TRUE, 'Bodyweight',
+           CONCAT('Begin in a high plank with shoulders over wrists.', CHAR(10),
+                  'Brace your core and keep your back level.', CHAR(10),
+                  'Bring one knee toward your chest without rotating your hips.', CHAR(10),
+                  'Return to the plank and alternate sides.'), 5, 0
+    UNION ALL
+    SELECT 'PERSONAL-DEMO-ACCEPTED-005', 'Calf raise hold',
+           'A lower-body strength exercise with a brief pause at the top.',
+           'Calves', 'BEGINNER', 'ACCEPTED', NULL, 3, NULL, 30, FALSE, 'Bodyweight',
+           CONCAT('Stand tall with feet hip-width apart.', CHAR(10),
+                  'Rise onto the balls of your feet.', CHAR(10),
+                  'Hold the top position while staying balanced.', CHAR(10),
+                  'Lower your heels slowly to the floor.'), 2, 0
+) seed
+WHERE EXISTS (SELECT 1 FROM users WHERE role = 'MEMBER');

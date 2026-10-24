@@ -337,6 +337,8 @@ export default function ExerciseDetailPage() {
     EXERCISE_CATALOG["diamond-push-up"];
 
   const [exercise, setExercise] = useState(catalogItem);
+  const displayedMemberAuthor = exercise.authorName || memberAuthor;
+  const displayedMemberPostedTime = exercise.postedTimeAgo || memberPostedTime;
 
   // Video player state
   const [videoDuration, setVideoDuration] = useState(null);
@@ -377,7 +379,16 @@ export default function ExerciseDetailPage() {
                     content,
                   })),
                 }
-              : data),
+              : {
+                  ...data,
+                  name: data.title || data.name || prev.name,
+                  videoUrl: data.videoUrl || data.demoVideoUrl,
+                  steps: (data.guideSteps || []).map((content, index) => ({
+                    step: index + 1,
+                    title: `Step ${index + 1}`,
+                    content,
+                  })),
+                }),
             name: data.title || data.name || prev.name,
             level: data.level || prev.level,
             description: data.description || prev.description,
@@ -532,7 +543,7 @@ export default function ExerciseDetailPage() {
             {isMemberExercise && (
               <p className="mt-2 flex items-center gap-2 text-xs text-slate-400">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#643bf6] text-[9px] font-semibold text-white">
-                  {memberAuthor
+                  {displayedMemberAuthor
                     .split(/\s+/)
                     .map((namePart) => namePart[0])
                     .join("")
@@ -540,8 +551,8 @@ export default function ExerciseDetailPage() {
                     .toUpperCase()}
                 </span>
                 <span>
-                  Shared by <strong className="font-semibold text-slate-200">{memberAuthor}</strong>
-                  {" · "}{memberPostedTime}
+                  Shared by <strong className="font-semibold text-slate-200">{displayedMemberAuthor}</strong>
+                  {" · "}{displayedMemberPostedTime}
                 </span>
               </p>
             )}

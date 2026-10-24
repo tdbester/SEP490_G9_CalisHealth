@@ -14,6 +14,7 @@ import MyExerciseListPage from "./pages/MyExerciseListPage";
 import CalisthenicsExerciseTreePage from "./pages/CalisthenicsExerciseTreePage";
 import LibraryDetailPlaceholder from "./pages/LibraryDetailPlaceholder";
 import CustomWorkoutListPage from "./pages/CustomWorkoutListPage";
+import CustomWorkoutDetailPage from "./pages/CustomWorkoutDetailPage";
 import CreatePersonalWorkoutPage from "./pages/CreatePersonalWorkoutPage";
 import MyCustomWorkoutListPage from "./pages/MyCustomWorkoutListPage";
 import UpdateMyCustomWorkoutPage from "./pages/UpdateMyCustomWorkoutPage";
@@ -238,7 +239,7 @@ export default function App() {
           element={
             <ProtectedRoute>
               <AdminLayout>
-                <LibraryDetailPlaceholder title="Custom Workout Detail" type="custom-workouts" />
+                <CustomWorkoutDetailPage />
               </AdminLayout>
             </ProtectedRoute>
           }

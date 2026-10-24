@@ -47,6 +47,7 @@ class MemberExerciseServiceTest {
         author.setFullName("Exercise Author");
         ExerciseEntry exercise = new ExerciseEntry();
         exercise.setId(25L);
+        exercise.setSystem(false);
         exercise.setName("Community push-up");
         exercise.setLevel(ExerciseEntry.EntryLevel.INTERMEDIATE);
         exercise.setMuscleGroup("Chest, triceps");
@@ -85,5 +86,47 @@ class MemberExerciseServiceTest {
         assertThat(result.totalPages()).isEqualTo(1);
         assertThat(result.hasNext()).isFalse();
         assertThat(result.hasPrevious()).isFalse();
+    }
+
+    @Test
+    void mapsAcceptedCommunityExerciseDetailForMember() {
+        User member = new User();
+        member.setId(10L);
+        when(users.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+
+        User author = new User();
+        author.setFullName("Exercise Author");
+        ExerciseEntry exercise = new ExerciseEntry();
+        exercise.setId(25L);
+        exercise.setSystem(false);
+        exercise.setName("Community push-up");
+        exercise.setDescription("A controlled push-up variation.");
+        exercise.setLevel(ExerciseEntry.EntryLevel.INTERMEDIATE);
+        exercise.setMuscleGroup("Chest, triceps");
+        exercise.setDefaultSets(3);
+        exercise.setDefaultReps(8);
+        exercise.setEquipment("Bodyweight");
+        exercise.setGuideSteps("Set your hands.\nBrace your core.");
+        exercise.setAuthor(author);
+        exercise.setCreatedAt(LocalDateTime.now().minusDays(2));
+        exercise.setSaveCount(11);
+        exercise.setStatus(ExerciseEntry.EntryStatus.ACCEPTED);
+        exercise.setShareWithCommunity(true);
+        when(exercises.findById(25L)).thenReturn(Optional.of(exercise));
+        when(savedExercises.findAllByMemberIdAndExerciseIdIn(10L, List.of(25L))).thenReturn(List.of());
+
+        var result = service.getMemberExerciseDetail(25L, "member@example.com");
+
+        assertThat(result.id()).isEqualTo(25L);
+        assertThat(result.title()).isEqualTo("Community push-up");
+        assertThat(result.level()).isEqualTo("Intermediate");
+        assertThat(result.targetMuscle()).isEqualTo("Chest, triceps");
+        assertThat(result.equipment()).isEqualTo("Bodyweight");
+        assertThat(result.guideSteps()).containsExactly("Set your hands.", "Brace your core.");
+        assertThat(result.authorName()).isEqualTo("Exercise Author");
+        assertThat(result.postedTimeAgo()).isEqualTo("2 days ago");
+        assertThat(result.saveCount()).isEqualTo(11);
+        assertThat(result.isSavedByCurrentMember()).isFalse();
+        assertThat(result.status()).isEqualTo("ACCEPTED");
     }
 }

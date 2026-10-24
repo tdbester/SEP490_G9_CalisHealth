@@ -118,6 +118,11 @@ export const getCommunityWorkouts = async (params = {}) => {
   return { ...response.data, content: response.data.content.map(normalizeWorkout) };
 };
 
+export const getCommunityWorkout = async (id) => {
+  const response = await api.get(`/v1/library/custom-workouts/${id}`);
+  return normalizeWorkout(response.data);
+};
+
 export const getMyWorkouts = async (params = {}) => {
   const response = await api.get("/v1/library/my-workouts", { params });
   return { ...response.data, content: response.data.content.map(normalizeWorkout) };
@@ -155,12 +160,8 @@ export const createMemberExercise = async (data) => {
 };
 
 export const getExerciseDetail = async (id) => {
-  try {
-    const response = await api.get(`/library/exercises/${id}`);
-    return response.data;
-  } catch (err) {
-    return null;
-  }
+  const response = await api.get(`/v1/library/member-exercises/${id}`);
+  return response.data;
 };
 
 export const getSystemExerciseDetail = async (id) => {
