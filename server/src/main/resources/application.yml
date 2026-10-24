@@ -15,7 +15,7 @@ spring:
     validate-on-migrate: true
   jpa:
     hibernate:
-      ddl-auto: none    # Flyway là nguồn sự thật duy nhất cho schema
+      ddl-auto: none # Flyway là nguồn sự thật duy nhất cho schema
     show-sql: true
     properties:
       hibernate:
