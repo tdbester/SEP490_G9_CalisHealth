@@ -1,0 +1,465 @@
+/* PerformanceAnalytics.css — Performance analytics (Member)
+   Cùng tông với HealthTracking: nền #0F0C1B, card #15102A, viền #2D2550 */
+
+.performance-analytics {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  color: #FFFFFF;
+  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+}
+
+.performance-analytics h1,
+.performance-analytics h2,
+.performance-analytics h3,
+.performance-analytics p,
+.performance-analytics dl,
+.performance-analytics dd {
+  margin: 0;
+}
+
+.pa-card {
+  border-radius: 14px;
+  border: 1px solid #2D2550;
+  background: #15102A;
+}
+
+.pa-card-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.pa-card-subtitle {
+  margin-top: 6px !important;
+  font-size: 12.5px;
+  color: #9A95B8;
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.pa-eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #D946EF;
+}
+
+.pa-title {
+  margin-top: 4px !important;
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.pa-subtitle {
+  margin-top: 8px !important;
+  font-size: 15px;
+  color: #9A95B8;
+}
+
+/* ── Range tabs ──────────────────────────────────────────────── */
+.pa-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 5px;
+  margin-top: -6px;
+  border-radius: 12px;
+  border: 1px solid #2D2550;
+  background: #120D24;
+}
+
+.pa-tab {
+  height: 38px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #9A95B8;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pa-tab:hover {
+  color: #FFFFFF;
+}
+
+.pa-tab.active {
+  border-color: #6D4EE8;
+  background: linear-gradient(90deg, #2E1F68 0%, #3A2672 100%);
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+/* ── Sections ────────────────────────────────────────────────── */
+.pa-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pa-section-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: uppercase;
+  color: #D946EF;
+}
+
+.pa-section-label span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid #6D4EE8;
+  font-size: 9px;
+  color: #C4B5FD;
+}
+
+.pa-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.pa-grid .pa-card {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 24px;
+}
+
+.pa-card-body {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 36px;
+  margin-top: 20px;
+}
+
+/* ── Donut ───────────────────────────────────────────────────── */
+.pa-donut {
+  position: relative;
+  flex: 0 0 140px;
+  width: 140px;
+  height: 140px;
+}
+
+.pa-donut svg {
+  width: 100%;
+  height: 100%;
+}
+
+.pa-donut-track {
+  fill: none;
+  stroke: #262046;
+  stroke-width: 14;
+}
+
+.pa-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.pa-donut-center strong {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.pa-donut-center span {
+  font-size: 11px;
+  color: #9A95B8;
+}
+
+.pa-legend {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pa-legend li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.pa-legend-dot {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.pa-legend-label {
+  flex: 1;
+  color: #D8CEEC;
+}
+
+.pa-legend strong {
+  font-weight: 700;
+}
+
+/* ── Clean reps ──────────────────────────────────────────────── */
+.pa-reps {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.pa-reps div {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+}
+
+.pa-reps div + div {
+  border-top: 1px solid #2D2550;
+}
+
+.pa-reps strong {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.pa-reps span {
+  font-size: 12.5px;
+  color: #9A95B8;
+}
+
+.pa-formula {
+  margin-top: 12px !important;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: #1C1638;
+  text-align: center;
+  font-size: 11px;
+  color: #9A95B8;
+}
+
+/* ── Volume ──────────────────────────────────────────────────── */
+.pa-volume {
+  padding: 20px 24px 40px;
+}
+
+.pa-volume-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pa-volume-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.pa-volume-total strong {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.pa-volume-total span {
+  font-size: 12.5px;
+  color: #9A95B8;
+}
+
+.pa-volume-chart {
+  margin-top: 24px;
+}
+
+/* ── Duration ────────────────────────────────────────────────── */
+.pa-duration {
+  padding: 20px 24px 18px;
+}
+
+.pa-duration-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.pa-icon-box {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid #3B2A6B;
+  background: #1C1638;
+  color: #A78BFA;
+}
+
+.pa-icon-box svg {
+  width: 20px;
+  height: 20px;
+}
+
+.pa-duration-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.pa-duration-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 150px);
+}
+
+.pa-duration-stats dt {
+  font-size: 10.5px;
+  color: #9A95B8;
+}
+
+.pa-duration-stats dd {
+  margin-top: 4px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.pa-progress {
+  height: 8px;
+  margin-top: 20px;
+  border-radius: 4px;
+  background: #262046;
+  overflow: hidden;
+}
+
+.pa-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #A855F7 0%, #6C8CFF 100%);
+  transition: width 0.3s ease;
+}
+
+.pa-progress-legend {
+  display: flex;
+  gap: 22px;
+  margin-top: 16px;
+  font-size: 11px;
+  color: #9A95B8;
+}
+
+.pa-progress-legend span::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: #4A4466;
+  vertical-align: 1px;
+}
+
+.pa-progress-legend span.active::before {
+  background: #A855F7;
+}
+
+/* ── AI insight ──────────────────────────────────────────────── */
+.pa-insight {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 24px;
+  border-color: #5B3CE8;
+  background: linear-gradient(90deg, #1E1442 0%, #15102A 100%);
+}
+
+.pa-insight-icon {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #E0569B 0%, #A855F7 100%);
+  color: #FFFFFF;
+}
+
+.pa-insight-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.pa-insight-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #D946EF;
+}
+
+.pa-insight-title {
+  margin-top: 4px !important;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.pa-insight-text {
+  margin-top: 4px !important;
+  font-size: 12.5px;
+  color: #9A95B8;
+}
+
+.pa-empty {
+  padding: 40px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #9A95B8;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .pa-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pa-duration-head {
+    flex-wrap: wrap;
+  }
+
+  .pa-duration-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .pa-grid .pa-card,
+  .pa-volume,
+  .pa-duration,
+  .pa-insight {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .pa-card-body {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+  }
+
+  .pa-donut {
+    align-self: center;
+  }
+
+  .pa-duration-stats dd {
+    font-size: 15px;
+  }
+}

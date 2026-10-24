@@ -1,0 +1,204 @@
+/* WorkoutLogModal.css — popup chi tiết buổi tập (Workout log) */
+
+.modal-dialog.wlm {
+  width: min(720px, 100%);
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.wlm-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.wlm-breadcrumb {
+  display: block;
+  font-size: 11.5px;
+  color: #9A95B8;
+}
+
+.wlm-date {
+  display: block;
+  margin-top: 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #A259FF;
+}
+
+.wlm-title {
+  margin-top: 4px !important;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* ── Total time ──────────────────────────────────────────────── */
+.wlm-total {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px;
+  border-radius: 14px;
+  border: 1px solid #5B3CE8;
+  background: linear-gradient(90deg, #1E1442 0%, #160F2E 100%);
+}
+
+.wlm-total-icon {
+  flex: 0 0 60px;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #E0569B 0%, #A855F7 100%);
+  color: #FFFFFF;
+}
+
+.wlm-total-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.wlm-total-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #C084FC;
+}
+
+.wlm-total-value {
+  display: block;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.wlm-total-note {
+  font-size: 12px;
+  color: #9A95B8;
+}
+
+/* ── Exercise table ──────────────────────────────────────────── */
+.wlm-section-title {
+  margin-top: 24px !important;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.wlm-table-head,
+.wlm-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 100px 82px 70px;
+  align-items: center;
+  column-gap: 12px;
+}
+
+.wlm-table-head {
+  margin: 6px 0 10px;
+  padding-right: 24px;
+  font-size: 11px;
+  color: #7D77A0;
+}
+
+.wlm-table-head span:first-child {
+  font-size: 12.5px;
+  color: #9A95B8;
+}
+
+.wlm-table-head span:last-child,
+.wlm-row-time {
+  text-align: right;
+}
+
+.wlm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wlm-row {
+  min-height: 60px;
+  padding: 0 24px 0 14px;
+  border-radius: 12px;
+  border: 1px solid #2D2550;
+  background: #120D24;
+}
+
+.wlm-row-name {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.wlm-row-index {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #2A2150;
+  color: #C4B5FD;
+  font-size: 13px;
+}
+
+.wlm-row-stat {
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.wlm-row-stat small {
+  margin-left: 1px;
+  font-size: 11px;
+  color: #7D77A0;
+}
+
+.wlm-done {
+  margin-top: 18px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .wlm-title {
+    font-size: 24px;
+  }
+
+  .wlm-table-head {
+    display: none;
+  }
+
+  .wlm-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .wlm-row-name {
+    grid-column: 1 / -1;
+  }
+
+  .wlm-row-stat::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10.5px;
+    font-weight: 400;
+    color: #7D77A0;
+  }
+
+  .wlm-row-time {
+    text-align: left;
+  }
+}

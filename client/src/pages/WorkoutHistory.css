@@ -1,0 +1,383 @@
+/* WorkoutHistory.css — Workout History (Member)
+   Cùng tông với HealthTracking: nền #0F0C1B, card #15102A, viền #2D2550 */
+
+.workout-history {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  color: #FFFFFF;
+  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+}
+
+.workout-history h1,
+.workout-history h2,
+.workout-history p {
+  margin: 0;
+}
+
+.wh-card {
+  border-radius: 14px;
+  border: 1px solid #2D2550;
+  background: #15102A;
+}
+
+/* ── Header ───────────────────────────────────────────── */
+.wh-eyebrow {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #A259FF;
+}
+
+.wh-title {
+  margin-top: 6px !important;
+  font-size: clamp(30px, 4vw, 46px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.wh-subtitle {
+  margin-top: 8px !important;
+  font-size: 15px;
+  color: #9A95B8;
+}
+
+/* ── Summary ─────────────────────────────────────────────────── */
+.wh-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.wh-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 12px 14px;
+}
+
+.wh-stat-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.wh-stat-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.wh-stat-icon.tone-purple {
+  background: #2E2163;
+  color: #C4B5FD;
+}
+
+.wh-stat-icon.tone-blue {
+  background: #1C2A55;
+  color: #7FA2FF;
+}
+
+.wh-stat-icon.tone-pink {
+  background: #3A1631;
+  color: #F472B6;
+}
+
+.wh-stat-value {
+  margin-top: 6px;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.wh-stat-label {
+  font-size: 12.5px;
+  color: #9A95B8;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────── */
+.wh-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wh-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.wh-filter {
+  height: 40px;
+  padding: 0 22px;
+  border-radius: 10px;
+  border: 1px solid #2D2550;
+  background: #15102A;
+  color: #B0ABD0;
+  font-family: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wh-filter:hover {
+  color: #FFFFFF;
+  background: #1D1638;
+}
+
+.wh-filter.active {
+  border-color: #5B3CE8;
+  background: #2E1F68;
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+.wh-date-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 6px 0 12px;
+  border-radius: 16px;
+  border: 1px solid #5B3CE8;
+  background: rgba(91, 60, 232, 0.16);
+  font-size: 12.5px;
+  color: #E5E1FF;
+}
+
+.wh-date-chip button {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #C4B5FD;
+  cursor: pointer;
+}
+
+.wh-date-chip button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.wh-date-chip svg {
+  width: 14px;
+  height: 14px;
+}
+
+.wh-date-picker {
+  position: relative;
+}
+
+/* Input date ẩn, chỉ dùng để mở picker của trình duyệt */
+.wh-date-picker input {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.wh-icon-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid #2D2550;
+  background: #15102A;
+  color: #D8CEEC;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wh-icon-btn:hover,
+.wh-icon-btn.active {
+  border-color: #5B3CE8;
+  background: #2E1F68;
+  color: #FFFFFF;
+}
+
+.wh-icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── List ────────────────────────────────────────────────────── */
+.wh-group-title {
+  margin-bottom: 14px !important;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: #D8CEEC;
+}
+
+.wh-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wh-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  min-height: 84px;
+  padding: 14px 24px 14px 16px;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.wh-row:hover {
+  border-color: #4B3A9E;
+  background: #1A1433;
+}
+
+.wh-row-icon {
+  flex: 0 0 56px;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.wh-row-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.wh-row-icon.featured {
+  background: linear-gradient(135deg, #E0569B 0%, #A855F7 100%);
+  color: #FFFFFF;
+}
+
+.wh-row-icon.tone-cardio {
+  background: #2C1530;
+  color: #F472B6;
+}
+
+.wh-row-icon.tone-strength {
+  background: #16223F;
+  color: #7FA2FF;
+}
+
+.wh-row-icon.tone-mobility {
+  background: #2A1C4D;
+  color: #C084FC;
+}
+
+.wh-row-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.wh-row-date,
+.wh-row-duration {
+  font-size: 11.5px;
+  color: #9A95B8;
+}
+
+.wh-row-duration {
+  font-size: 12.5px;
+}
+
+.wh-row-name {
+  margin: 2px 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.wh-row-accuracy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 56px;
+}
+
+.wh-row-accuracy strong {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #C46BFF;
+}
+
+.wh-row-accuracy span {
+  font-size: 11px;
+  color: #9A95B8;
+}
+
+.wh-row-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 32px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #C084FC;
+}
+
+.wh-row:hover .wh-row-link {
+  color: #E9D5FF;
+}
+
+.wh-row-link svg {
+  width: 18px;
+  height: 18px;
+}
+
+.wh-empty {
+  padding: 40px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #9A95B8;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .wh-stats {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .wh-toolbar {
+    align-items: flex-start;
+  }
+
+  .wh-row {
+    gap: 14px;
+    padding: 12px;
+  }
+
+  .wh-row-icon {
+    flex-basis: 44px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .wh-row-link {
+    display: none;
+  }
+}
