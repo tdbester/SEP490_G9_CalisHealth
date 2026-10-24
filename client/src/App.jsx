@@ -1,6 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "./components/layout/AdminLayout";
 import Dashboard from "./pages/Dashboard";
+import HealthTracking from "./pages/HealthTracking";
+import WorkoutHistory from "./pages/WorkoutHistory";
+import PerformanceAnalytics from "./pages/PerformanceAnalytics";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -34,7 +37,30 @@ export default function App() {
           }
         />
         <Route path="/library" element={<Navigate to="/" replace />} />
-        <Route path="/tracking" element={<Navigate to="/" replace />} />
+        <Route
+          path="/tracking"
+          element={
+            <AdminLayout>
+              <HealthTracking />
+            </AdminLayout>
+          }
+        />
+        <Route
+          path="/tracking/workout-history"
+          element={
+            <AdminLayout>
+              <WorkoutHistory />
+            </AdminLayout>
+          }
+        />
+        <Route
+          path="/tracking/assessment"
+          element={
+            <AdminLayout>
+              <PerformanceAnalytics />
+            </AdminLayout>
+          }
+        />
         <Route path="/day-streak" element={<Navigate to="/" replace />} />
         <Route path="/profile" element={<Navigate to="/" replace />} />
         <Route path="/settings" element={<Navigate to="/" replace />} />
