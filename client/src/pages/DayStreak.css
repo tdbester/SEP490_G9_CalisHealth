@@ -1,0 +1,578 @@
+/* DayStreak.css — màn Day Streak (Member)
+   Dùng lại palette tối của Topbar.css / Dashboard.css:
+   nền #0F0C1B, card #1A1230, viền #2D2550, nhấn tím #A78BFA / hồng #F472B6 */
+
+.day-streak {
+  width: 100%;
+  color: #FFFFFF;
+  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (min-width: 769px) {
+  .day-streak {
+    width: calc(100% + 48px);
+    margin-left: -24px;
+  }
+}
+
+/* ── Page header ──────────────────────────────────────────────── */
+.streak-page-head {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.streak-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  height: 34px;
+  padding: 0 16px;
+  border: 1px solid #2D2550;
+  border-radius: 10px;
+  background: #1A1230;
+  color: #D8CEEC;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+@media (min-width: 769px) {
+  .streak-back {
+    margin-left: 24px;
+  }
+}
+
+.streak-back:hover {
+  background: #241540;
+  border-color: #4C3F73;
+  color: #FFFFFF;
+}
+
+.streak-back svg {
+  width: 17px;
+  height: 17px;
+}
+
+.streak-page-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.streak-page-heading {
+  margin: 0;
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #FFFFFF;
+}
+
+.streak-page-caption {
+  display: none;
+}
+
+.streak-active-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(244, 114, 182, 0.14);
+  border: 1px solid rgba(244, 114, 182, 0.45);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  color: #F9A8D4;
+  white-space: nowrap;
+}
+
+.streak-active-badge svg {
+  width: 16px;
+  height: 16px;
+  font-size: 16px !important;
+  color: #F472B6;
+}
+
+/* ── Layout ───────────────────────────────────────────────────── */
+.streak-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+@media (min-width: 769px) {
+  .streak-layout {
+    width: calc(100% - 24px);
+    margin-left: 24px;
+  }
+}
+
+.streak-panel {
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: #1A1230;
+  border: 1px solid #2D2550;
+}
+
+/* ── Calendar ─────────────────────────────────────────────────── */
+.streak-calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.streak-calendar-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.streak-calendar-nav {
+  display: flex;
+  gap: 6px;
+}
+
+.streak-nav-btn {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #2D2550;
+  border-radius: 8px;
+  background: #241540;
+  color: #C4B5FD;
+  cursor: pointer;
+  font: inherit;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.streak-nav-btn:hover {
+  background: #2D2550;
+  border-color: #4C3F73;
+  color: #FFFFFF;
+}
+
+.streak-nav-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* weekday header */
+.streak-weekdays,
+.streak-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.streak-weekdays {
+  margin-bottom: 6px;
+}
+
+.streak-weekday {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #776B99;
+}
+
+/* day cells */
+.streak-cell {
+  position: relative;
+  height: clamp(58px, calc((100vh - 220px) / 6), 72px);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  color: #E7DEF9;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.streak-cell-empty {
+  cursor: default;
+}
+
+.streak-cell-day:hover {
+  background: #22183C;
+  border-color: #2D2550;
+}
+
+.streak-cell-number {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* logged workout — white dot above the number */
+.streak-cell-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #FFFFFF;
+}
+
+/* rest day — dimmed number */
+.streak-cell-day:not(.is-logged):not(.is-streak) .streak-cell-number {
+  color: #6F6396;
+}
+
+.streak-cell-day.is-upcoming .streak-cell-number {
+  color: #574B7A;
+}
+
+/* streak day — pink-purple block */
+.streak-cell-day.is-streak {
+  background: linear-gradient(135deg, #8B5CF6 0%, #F472B6 100%);
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(244, 114, 182, 0.28);
+}
+
+.streak-cell-day.is-streak .streak-cell-number {
+  color: #FFFFFF;
+}
+
+.streak-cell-day.is-streak:hover {
+  background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
+}
+
+/* current active day — flame icon + outline ring */
+.streak-cell-day.is-today {
+  box-shadow: 0 0 0 2px #F472B6, 0 4px 14px rgba(244, 114, 182, 0.32);
+}
+
+.streak-cell-flame {
+  width: 14px !important;
+  height: 14px !important;
+  font-size: 14px !important;
+  color: #FFFFFF;
+  order: -1;
+}
+
+/* ── Legend ───────────────────────────────────────────────────── */
+.streak-legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 14px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px solid #2D2550;
+}
+
+.streak-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  color: #A89BD0;
+}
+
+.streak-legend-mark {
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.streak-legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #FFFFFF;
+}
+
+.streak-legend-block {
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #8B5CF6 0%, #F472B6 100%);
+}
+
+.streak-legend-flame {
+  width: 15px !important;
+  height: 15px !important;
+  font-size: 15px !important;
+  color: #F472B6;
+}
+
+/* ── Summary column ───────────────────────────────────────────── */
+.streak-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: repeat(3, minmax(0, 1fr)) auto;
+  gap: 12px;
+}
+
+.streak-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: #1A1230;
+  border: 1px solid #2D2550;
+}
+
+.streak-stat-icon {
+  display: none;
+}
+
+.streak-stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: #8E80B8;
+}
+
+.streak-stat-value {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #FFFFFF;
+}
+
+.streak-stat-unit {
+  font-size: 17px;
+  font-weight: 600;
+  color: #A78BFA;
+}
+
+.streak-stat-caption {
+  font-size: 11px;
+  color: #9C8FC4;
+}
+
+/* ── Weekly goal card ─────────────────────────────────────────── */
+.streak-goal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: linear-gradient(150deg, #241540 0%, #1A1230 60%);
+  border: 1px solid #3B2A6B;
+}
+
+.streak-goal-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.streak-goal-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: rgba(244, 114, 182, 0.16);
+  color: #F472B6;
+}
+
+.streak-goal-icon svg {
+  width: 18px;
+  height: 18px;
+  font-size: 18px !important;
+}
+
+.streak-goal-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.streak-goal-percent {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: #F9A8D4;
+}
+
+.streak-goal-bar {
+  height: 7px;
+  border-radius: 4px;
+  background: #2D2550;
+  overflow: hidden;
+}
+
+.streak-goal-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #8B5CF6 0%, #F472B6 100%);
+  transition: width 0.3s ease;
+}
+
+.streak-goal-note {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #C4B5FD;
+}
+
+.streak-start-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #8B5CF6 0%, #D946EF 100%);
+  color: #FFFFFF;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(139, 92, 246, 0.35);
+  transition: filter 0.15s ease;
+  width: 100%;
+}
+
+.streak-start-btn:hover {
+  filter: brightness(1.08);
+}
+
+.streak-start-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Responsive ───────────────────────────────────────────────── */
+@media (max-width: 850px) {
+  .streak-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .streak-page-head {
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .streak-active-badge {
+    margin-left: 0;
+    height: 30px;
+    padding: 0 11px;
+  }
+
+  .streak-panel {
+    padding: 16px 12px;
+  }
+
+  .streak-layout {
+    gap: 12px;
+  }
+
+  .streak-calendar-head {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .streak-weekdays,
+  .streak-grid {
+    gap: 4px;
+  }
+
+  .streak-cell {
+    height: 46px;
+    border-radius: 8px;
+  }
+
+  .streak-cell-number {
+    font-size: 13px;
+  }
+
+  .streak-cell-flame {
+    width: 12px !important;
+    height: 12px !important;
+    font-size: 12px !important;
+  }
+
+  .streak-legend {
+    gap: 8px 12px;
+    margin-top: 12px;
+    padding-top: 10px;
+  }
+
+  .streak-legend li {
+    font-size: 9px;
+  }
+
+  .streak-summary {
+    grid-template-rows: none;
+    gap: 10px;
+  }
+
+  .streak-stat-card {
+    padding: 12px 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .streak-page-heading {
+    font-size: 22px;
+  }
+
+  .streak-back {
+    gap: 7px;
+    height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .streak-calendar-title {
+    font-size: 14px;
+  }
+
+  .streak-nav-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  .streak-weekday {
+    font-size: 9px;
+  }
+
+  .streak-cell {
+    height: 40px;
+  }
+
+  .streak-legend li {
+    gap: 5px;
+    font-size: 8px;
+  }
+
+  .streak-stat-value {
+    font-size: 28px;
+  }
+
+  .streak-stat-card {
+    padding: 11px 12px;
+  }
+}
