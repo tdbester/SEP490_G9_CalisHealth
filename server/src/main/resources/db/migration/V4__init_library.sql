@@ -456,17 +456,24 @@ CREATE TABLE IF NOT EXISTS member_saved_exercises (
         REFERENCES exercise_entries (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Local development only: never deploy the shared demo credential to a production database.
+-- The account is created only when the database has no users.
+INSERT IGNORE INTO users (email, password, full_name, role, enabled, created_at)
+SELECT 'demo@calishealth.com',
+       '$2a$10$P3bf6Kza8/UJGv0fKTCgye6IO77E95sO2QY0uvIWfPv88fJu0Cqxe',
+       'CalisHealth Demo', 'MEMBER', TRUE, NOW(6)
+WHERE NOT EXISTS (SELECT 1 FROM users);
+
 INSERT IGNORE INTO exercise_entries (
     code, name, description, type, category, muscle_group, level, active, guide,
     updated_at, is_system, status, default_sets, default_reps, default_duration, share_with_community,
-    equipment, goal, target_skill, author_id, created_at, save_count
+    equipment, goal, target_skill, created_at, save_count
 ) VALUES
 (
     'MEMBER-DEMO-001', 'Tempo Push-up', 'A community push-up variation with a controlled lowering phase.',
     'HEALTH', 'Strength', 'Chest, triceps', 'INTERMEDIATE', 1,
     CONCAT('Start in a high plank with hands under your shoulders.', CHAR(10), 'Brace your core and keep a straight line from head to heels.', CHAR(10), 'Lower your chest slowly for a three-count.', CHAR(10), 'Press the floor away to return to the start.'),
     NOW(6), FALSE, 'ACCEPTED', 3, 10, NULL, TRUE, 'Bodyweight', 'BUILD_MUSCLE', NULL,
-    NULL,
     DATE_SUB(NOW(6), INTERVAL 2 DAY), 18
 ),
 (
@@ -474,7 +481,6 @@ INSERT IGNORE INTO exercise_entries (
     'HEALTH', 'Strength', 'Quadriceps, glutes', 'BEGINNER', 1,
     CONCAT('Stand with feet about shoulder-width apart.', CHAR(10), 'Brace your abdomen and sit your hips back.', CHAR(10), 'Lower until your thighs are near parallel, keeping your heels down.', CHAR(10), 'Pause briefly, then drive through your feet to stand.'),
     NOW(6), FALSE, 'ACCEPTED', 3, 12, NULL, TRUE, 'Bodyweight', 'STAY_FIT', NULL,
-    NULL,
     DATE_SUB(NOW(6), INTERVAL 5 DAY), 9
 ),
 (
@@ -482,7 +488,6 @@ INSERT IGNORE INTO exercise_entries (
     'HEALTH', 'Strength', 'Chest, triceps', 'BEGINNER', 1,
     CONCAT('Place your hands close together on a stable elevated surface.', CHAR(10), 'Step your feet back and brace your body in a straight line.', CHAR(10), 'Bend your elbows close to your sides and lower your chest.', CHAR(10), 'Push through your palms to return to the starting position.'),
     NOW(6), FALSE, 'ACCEPTED', 3, 12, NULL, TRUE, 'Bench', 'BUILD_MUSCLE', NULL,
-    NULL,
     DATE_SUB(NOW(6), INTERVAL 8 DAY), 5
 ),
 (
@@ -490,7 +495,6 @@ INSERT IGNORE INTO exercise_entries (
     'SKILL', 'Skill', 'Shoulders, core', 'INTERMEDIATE', 1,
     CONCAT('Place your hands shoulder-width apart near a clear wall.', CHAR(10), 'Kick up carefully until your heels rest lightly against the wall.', CHAR(10), 'Push tall through your shoulders and brace your abdomen.', CHAR(10), 'Breathe steadily, then step down with control.'),
     NOW(6), FALSE, 'ACCEPTED', 3, NULL, 20, TRUE, 'Wall', NULL, 'HANDSTAND',
-    NULL,
     DATE_SUB(NOW(6), INTERVAL 12 DAY), 13
 );
 
@@ -505,7 +509,7 @@ INSERT IGNORE INTO exercise_entries (
     'HEALTH', 'Strength', 'Shoulders, triceps', 'ADVANCED', 1,
     CONCAT('Face a clear wall and place your hands shoulder-width apart.', CHAR(10), 'Kick into a stable wall handstand with your body braced.', CHAR(10), 'Bend your elbows slowly and lower your head toward a padded surface.', CHAR(10), 'Press through your palms to return to the start.'),
     CONCAT('Face a clear wall and place your hands shoulder-width apart.', CHAR(10), 'Kick into a stable wall handstand with your body braced.', CHAR(10), 'Bend your elbows slowly and lower your head toward a padded surface.', CHAR(10), 'Press through your palms to return to the start.'),
-    NOW(6), NULL, FALSE, 'PENDING', NULL, 3, 5, NULL, TRUE, 'Wall', (SELECT id FROM users WHERE id = 1),
+    NOW(6), NULL, FALSE, 'PENDING', NULL, 3, 5, NULL, TRUE, 'Wall', (SELECT id FROM users ORDER BY id ASC LIMIT 1),
     DATE_SUB(NOW(6), INTERVAL 1 DAY), 0
 ),
 (
@@ -515,8 +519,8 @@ INSERT IGNORE INTO exercise_entries (
     CONCAT('Stand with your back against a clear wall.', CHAR(10), 'Walk your feet forward and slide down the wall.', CHAR(10), 'Stop when your knees are comfortably bent.', CHAR(10), 'Hold the position while breathing steadily.'),
     CONCAT('Stand with your back against a clear wall.', CHAR(10), 'Walk your feet forward and slide down the wall.', CHAR(10), 'Stop when your knees are comfortably bent.', CHAR(10), 'Hold the position while breathing steadily.'),
     NOW(6), '/media/exercise-demos/demo-wall-sit.mp4', FALSE, 'REJECTED',
-    'Reason: Text check: the description contains inappropriate wording ("stupid"). Edit the description and save again.',
-    3, NULL, 60, TRUE, 'Wall', (SELECT id FROM users WHERE id = 1),
+    'Reason: Text check: the description contains inappropriate wording. Edit the description and save again.',
+    3, NULL, 60, TRUE, 'Wall', (SELECT id FROM users ORDER BY id ASC LIMIT 1),
     DATE_SUB(NOW(6), INTERVAL 8 DAY), 0
 ),
 (
@@ -527,215 +531,113 @@ INSERT IGNORE INTO exercise_entries (
     CONCAT('Place the parallettes on a stable, non-slip surface.', CHAR(10), 'Grip the bars and press down to lift your body.', CHAR(10), 'Keep your shoulders depressed and raise your legs in front.', CHAR(10), 'Hold with control, then lower your feet gently.'),
     NOW(6), NULL, FALSE, 'REJECTED',
     'Reason: Video check: we could not detect a full body in most frames. Re-record in better light with your whole body in frame.',
-    4, NULL, 15, TRUE, 'Parallettes', (SELECT id FROM users WHERE id = 1),
+    4, NULL, 15, TRUE, 'Parallettes', (SELECT id FROM users ORDER BY id ASC LIMIT 1),
     DATE_SUB(NOW(6), INTERVAL 11 DAY), 0
 ),
 (
     'PERSONAL-DEMO-ACCEPTED-001', 'Pike push-up',
     'A bodyweight pressing exercise that emphasizes the shoulders and triceps.',
-    'HEALTH', 'Strength', 'Shoulders, triceps', 'INTERMEDIATE', 1,
+    'HEALTH', 'Strength', 'Shoulders', 'INTERMEDIATE', 1,
     CONCAT('Start in a pike position with hands shoulder-width apart.', CHAR(10), 'Brace your core and keep your hips raised.', CHAR(10), 'Bend your elbows and lower your head toward the floor.', CHAR(10), 'Press through your hands to return to the pike position.'),
     CONCAT('Start in a pike position with hands shoulder-width apart.', CHAR(10), 'Brace your core and keep your hips raised.', CHAR(10), 'Bend your elbows and lower your head toward the floor.', CHAR(10), 'Press through your hands to return to the pike position.'),
-    NOW(6), NULL, FALSE, 'ACCEPTED', NULL, 3, 8, NULL, TRUE, 'Bodyweight', (SELECT id FROM users WHERE id = 1),
+    NOW(6), NULL, FALSE, 'ACCEPTED', NULL, 3, 8, NULL, TRUE, 'Bodyweight', (SELECT id FROM users ORDER BY id ASC LIMIT 1),
     DATE_SUB(NOW(6), INTERVAL 9 DAY), 0
 ),
 (
     'PERSONAL-DEMO-ACCEPTED-002', 'Australian row',
     'A horizontal pulling exercise using a low, secure bar.',
-    'HEALTH', 'Strength', 'Back, biceps', 'BEGINNER', 1,
+    'HEALTH', 'Strength', 'Back', 'BEGINNER', 1,
     CONCAT('Position yourself under a secure low bar and grip it firmly.', CHAR(10), 'Straighten your body and brace your abdomen.', CHAR(10), 'Pull your chest toward the bar by driving your elbows back.', CHAR(10), 'Lower under control until your arms are extended.'),
     CONCAT('Position yourself under a secure low bar and grip it firmly.', CHAR(10), 'Straighten your body and brace your abdomen.', CHAR(10), 'Pull your chest toward the bar by driving your elbows back.', CHAR(10), 'Lower under control until your arms are extended.'),
-    NOW(6), NULL, FALSE, 'ACCEPTED', NULL, 3, 10, NULL, TRUE, 'Low bar', (SELECT id FROM users WHERE id = 1),
+    NOW(6), NULL, FALSE, 'ACCEPTED', NULL, 3, 10, NULL, TRUE, 'Low bar', (SELECT id FROM users ORDER BY id ASC LIMIT 1),
     DATE_SUB(NOW(6), INTERVAL 13 DAY), 0
 ),
 (
     'PERSONAL-DEMO-ACCEPTED-003', 'Pseudo planche push-up',
     'A demanding push-up variation that develops forward-leaning shoulder strength.',
-    'HEALTH', 'Strength', 'Shoulders, chest', 'ADVANCED', 1,
+    'HEALTH', 'Strength', 'Shoulders', 'ADVANCED', 1,
     CONCAT('Begin in a high plank and turn your hands slightly outward if comfortable.', CHAR(10), 'Lean your shoulders forward beyond your wrists while bracing your core.', CHAR(10), 'Bend your elbows and lower your chest with control.', CHAR(10), 'Press the floor away while maintaining the forward lean.'),
     CONCAT('Begin in a high plank and turn your hands slightly outward if comfortable.', CHAR(10), 'Lean your shoulders forward beyond your wrists while bracing your core.', CHAR(10), 'Bend your elbows and lower your chest with control.', CHAR(10), 'Press the floor away while maintaining the forward lean.'),
-    NOW(6), NULL, FALSE, 'ACCEPTED', NULL, 4, 6, NULL, TRUE, 'Bodyweight', (SELECT id FROM users WHERE id = 1),
+    NOW(6), NULL, FALSE, 'ACCEPTED', NULL, 4, 6, NULL, TRUE, 'Bodyweight', (SELECT id FROM users ORDER BY id ASC LIMIT 1),
     DATE_SUB(NOW(6), INTERVAL 18 DAY), 0
 );
 
 -- ============================================================
 -- SAMPLE COMMUNITY AND MEMBER WORKOUTS
 -- ============================================================
+INSERT IGNORE INTO exercise_entries (
+    code, name, description, type, category, muscle_group, level, active,
+    guide, guide_steps, updated_at, video_url, is_system, status, rejection_reason,
+    default_sets, default_reps, default_duration, share_with_community,
+    equipment, author_id, created_at, save_count
+) VALUES (
+    'PERSONAL-DEMO-ACCEPTED-004', 'Bodyweight squat',
+    'A foundational squat variation for building lower-body strength.',
+    'HEALTH', 'Strength', 'Legs', 'BEGINNER', TRUE,
+    CONCAT('Stand with your feet about shoulder-width apart.', CHAR(10),
+           'Brace your core and sit your hips back while bending your knees.', CHAR(10),
+           'Lower with control while keeping your heels on the floor.', CHAR(10),
+           'Drive through your feet to stand tall.'),
+    CONCAT('Stand with your feet about shoulder-width apart.', CHAR(10),
+           'Brace your core and sit your hips back while bending your knees.', CHAR(10),
+           'Lower with control while keeping your heels on the floor.', CHAR(10),
+           'Drive through your feet to stand tall.'),
+    NOW(6), NULL, FALSE, 'ACCEPTED', NULL, 3, 12, NULL, TRUE,
+    'Bodyweight', (SELECT id FROM users ORDER BY id ASC LIMIT 1),
+    DATE_SUB(NOW(6), INTERVAL 3 DAY), 0
+);
+
 INSERT IGNORE INTO content_workouts (
     code, name, description, content, type, level, active, updated_at,
     is_system, author_id, is_shared_with_community, status, save_count,
     total_sets, estimated_duration, created_at
 )
 SELECT seed.code, seed.name, seed.description, NULL, 'CUSTOM', seed.level, TRUE, NOW(6),
-       FALSE, (SELECT MIN(id) FROM users), TRUE, 'ACCEPTED', seed.save_count,
-       seed.total_sets, seed.estimated_duration, DATE_SUB(NOW(6), INTERVAL seed.age_days DAY)
+       FALSE, (SELECT id FROM users ORDER BY id ASC LIMIT 1), seed.is_shared, 'ACCEPTED',
+       0, seed.total_sets, seed.estimated_duration,
+       DATE_SUB(NOW(6), INTERVAL seed.age_days DAY)
 FROM (
     SELECT 'LIB-DEMO-COMM-01' code, 'Upper body push day' name,
-           'Shoulder and tricep focus, finishing with a core hold.' description,
-           'INTERMEDIATE' level, 42 save_count, 9 total_sets, 9 estimated_duration, 2 age_days
+           'Shoulder and tricep focus with controlled pushing exercises.' description,
+           'INTERMEDIATE' level, TRUE is_shared, 2 age_days, 9 total_sets, 20 estimated_duration
     UNION ALL SELECT 'LIB-DEMO-COMM-02', 'Beginner full body',
-           'Easy start for the first weeks. Rest as long as you need.',
-           'BEGINNER', 97, 12, 15, 4
+           'A balanced beginner routine using accessible bodyweight movements.',
+           'BEGINNER', TRUE, 4, 9, 20
     UNION ALL SELECT 'LIB-DEMO-COMM-03', 'Planche progression',
-           'Shoulder strength and wrist prep for planche training.',
-           'ADVANCED', 31, 9, 12, 7
-    UNION ALL SELECT 'LIB-DEMO-COMM-04', '10-minute core',
-           'Quick core session you can do anywhere.',
-           'BEGINNER', 67, 6, 10, 9
+           'Progressive shoulder and core work for planche strength.',
+           'ADVANCED', TRUE, 7, 10, 25
+    UNION ALL SELECT 'LIB-DEMO-PERSONAL-01', 'Morning mobility',
+           'A personal routine for gentle upper-body and lower-body movement.',
+           'BEGINNER', FALSE, 1, 9, 15
 ) seed
-WHERE EXISTS (SELECT 1 FROM users);
-
-INSERT IGNORE INTO content_workouts (
-    code, name, description, content, type, level, active, updated_at,
-    is_system, author_id, is_shared_with_community, status, save_count,
-    total_sets, estimated_duration, created_at
-)
-SELECT CONCAT('MY-DEMO-', u.id, '-', seed.code), seed.name, seed.description, NULL,
-       'CUSTOM', seed.level, TRUE, NOW(6), FALSE, u.id, seed.is_shared, 'ACCEPTED',
-       seed.save_count, seed.total_sets, seed.estimated_duration,
-       DATE_SUB(NOW(6), INTERVAL seed.age_days DAY)
-FROM users u
-CROSS JOIN (
-    SELECT '01' code, 'Upper body push day' name,
-           'Shoulder and tricep focus, finishing with a core hold.' description,
-           'INTERMEDIATE' level, TRUE is_shared, 0 save_count, 9 total_sets, 9 estimated_duration, 2 age_days
-    UNION ALL SELECT '02', 'Morning mobility',
-           'Gentle warm-up for wrists, shoulders and hips.',
-           'BEGINNER', FALSE, 0, 8, 10, 5
-    UNION ALL SELECT '03', 'Handstand practice',
-           'Wall holds and shoulder taps to build balance.',
-           'ADVANCED', TRUE, 0, 10, 18, 7
-    UNION ALL SELECT '04', 'Leg day, no equipment',
-           'Squat variations and lunges for a full leg session.',
-           'INTERMEDIATE', FALSE, 0, 12, 20, 21
-) seed;
+WHERE (SELECT id FROM users ORDER BY id ASC LIMIT 1) IS NOT NULL;
 
 INSERT IGNORE INTO workout_exercises (
     workout_id, exercise_id, display_order, order_index, sets, reps, duration, count_by, rest_seconds
 )
-SELECT w.id, e.id, item.order_index, item.order_index, item.sets, item.reps, item.duration,
+SELECT (SELECT id FROM content_workouts WHERE code = item.workout_code LIMIT 1),
+       (SELECT id FROM exercise_entries WHERE code = item.exercise_code LIMIT 1),
+       item.display_order, item.order_index, item.sets, item.reps, NULL,
        item.count_by, item.rest_seconds
 FROM (
-    SELECT 'LIB-DEMO-COMM-01' workout_code, 'EX-001' exercise_code, 0 order_index, 3 sets, 8 reps, NULL duration, 'REPS' count_by, 60 rest_seconds
-    UNION ALL SELECT 'LIB-DEMO-COMM-01', 'EX-016', 1, 3, 8, NULL, 'REPS', 60
-    UNION ALL SELECT 'LIB-DEMO-COMM-01', 'EX-013', 2, 3, NULL, 30, 'SECONDS', 60
-    UNION ALL SELECT 'LIB-DEMO-COMM-02', 'EX-001', 0, 3, 10, NULL, 'REPS', 60
-    UNION ALL SELECT 'LIB-DEMO-COMM-02', 'EX-008', 1, 3, 10, NULL, 'REPS', 60
-    UNION ALL SELECT 'LIB-DEMO-COMM-02', 'EX-010', 2, 3, 12, NULL, 'REPS', 60
-    UNION ALL SELECT 'LIB-DEMO-COMM-02', 'EX-013', 3, 3, NULL, 30, 'SECONDS', 60
-    UNION ALL SELECT 'LIB-DEMO-COMM-03', 'EX-001', 0, 3, 8, NULL, 'REPS', 75
-    UNION ALL SELECT 'LIB-DEMO-COMM-03', 'EX-118', 1, 3, 8, NULL, 'REPS', 75
-    UNION ALL SELECT 'LIB-DEMO-COMM-03', 'EX-015', 2, 3, NULL, 25, 'SECONDS', 75
-    UNION ALL SELECT 'LIB-DEMO-COMM-04', 'EX-013', 0, 2, NULL, 30, 'SECONDS', 45
-    UNION ALL SELECT 'LIB-DEMO-COMM-04', 'EX-015', 1, 2, NULL, 30, 'SECONDS', 45
-    UNION ALL SELECT 'LIB-DEMO-COMM-04', 'EX-014', 2, 2, 10, NULL, 'REPS', 45
+    SELECT 'LIB-DEMO-COMM-01' workout_code, 'PERSONAL-DEMO-ACCEPTED-001' exercise_code, 0 display_order, 1 order_index, 3 sets, 8 reps, 'REPS' count_by, 60 rest_seconds
+    UNION ALL SELECT 'LIB-DEMO-COMM-01', 'PERSONAL-DEMO-ACCEPTED-003', 1, 2, 3, 8, 'REPS', 60
+    UNION ALL SELECT 'LIB-DEMO-COMM-01', 'PERSONAL-DEMO-ACCEPTED-002', 2, 3, 3, 10, 'REPS', 45
+    UNION ALL SELECT 'LIB-DEMO-COMM-02', 'PERSONAL-DEMO-ACCEPTED-002', 0, 1, 3, 10, 'REPS', 60
+    UNION ALL SELECT 'LIB-DEMO-COMM-02', 'PERSONAL-DEMO-ACCEPTED-004', 1, 2, 3, 10, 'REPS', 45
+    UNION ALL SELECT 'LIB-DEMO-COMM-02', 'PERSONAL-DEMO-ACCEPTED-001', 2, 3, 3, 8, 'REPS', 60
+    UNION ALL SELECT 'LIB-DEMO-COMM-03', 'PERSONAL-DEMO-ACCEPTED-003', 0, 1, 4, 8, 'REPS', 60
+    UNION ALL SELECT 'LIB-DEMO-COMM-03', 'PERSONAL-DEMO-ACCEPTED-001', 1, 2, 3, 8, 'REPS', 60
+    UNION ALL SELECT 'LIB-DEMO-COMM-03', 'PERSONAL-DEMO-ACCEPTED-004', 2, 3, 3, 10, 'REPS', 45
+    UNION ALL SELECT 'LIB-DEMO-PERSONAL-01', 'PERSONAL-DEMO-ACCEPTED-001', 0, 1, 3, 10, 'REPS', 45
+    UNION ALL SELECT 'LIB-DEMO-PERSONAL-01', 'PERSONAL-DEMO-ACCEPTED-002', 1, 2, 3, 10, 'REPS', 45
+    UNION ALL SELECT 'LIB-DEMO-PERSONAL-01', 'PERSONAL-DEMO-ACCEPTED-004', 2, 3, 3, 12, 'REPS', 45
 ) item
-JOIN content_workouts w ON w.code = item.workout_code
-JOIN exercise_entries e ON e.code = item.exercise_code
-WHERE e.status = 'ACCEPTED' AND e.active = TRUE;
-
-INSERT IGNORE INTO workout_exercises (
-    workout_id, exercise_id, display_order, order_index, sets, reps, duration, count_by, rest_seconds
-)
-SELECT w.id, e.id, item.order_index, item.order_index, item.sets, item.reps, item.duration,
-       item.count_by, item.rest_seconds
-FROM (
-    SELECT '01' workout_suffix, 'EX-001' exercise_code, 0 order_index, 3 sets, 8 reps, NULL duration, 'REPS' count_by, 60 rest_seconds
-    UNION ALL SELECT '01', 'EX-016', 1, 3, 8, NULL, 'REPS', 60
-    UNION ALL SELECT '01', 'EX-013', 2, 3, NULL, 30, 'SECONDS', 60
-    UNION ALL SELECT '02', 'EX-001', 0, 2, 8, NULL, 'REPS', 30
-    UNION ALL SELECT '02', 'EX-010', 1, 2, 10, NULL, 'REPS', 30
-    UNION ALL SELECT '02', 'EX-013', 2, 2, NULL, 30, 'SECONDS', 30
-    UNION ALL SELECT '02', 'EX-015', 3, 2, NULL, 20, 'SECONDS', 30
-    UNION ALL SELECT '03', 'EX-202', 0, 4, 5, NULL, 'REPS', 75
-    UNION ALL SELECT '03', 'EX-015', 1, 3, NULL, 25, 'SECONDS', 60
-    UNION ALL SELECT '03', 'EX-116', 2, 3, 8, NULL, 'REPS', 60
-    UNION ALL SELECT '04', 'EX-010', 0, 3, 12, NULL, 'REPS', 60
-    UNION ALL SELECT '04', 'EX-011', 1, 3, 8, NULL, 'REPS', 60
-    UNION ALL SELECT '04', 'EX-112', 2, 3, 10, NULL, 'REPS', 60
-    UNION ALL SELECT '04', 'EX-013', 3, 3, NULL, 30, 'SECONDS', 60
-) item
-JOIN content_workouts w ON w.code = CONCAT('MY-DEMO-', w.author_id, '-', item.workout_suffix)
-JOIN exercise_entries e ON e.code = item.exercise_code
-WHERE e.status = 'ACCEPTED' AND e.active = TRUE;
-
--- Ensure seeded member submissions are visible to the development account.
-UPDATE exercise_entries
-SET author_id = COALESCE(
-        (SELECT id FROM users WHERE id = 1),
-        (SELECT MIN(id) FROM users WHERE role = 'MEMBER')
-    )
-WHERE is_system = FALSE
-  AND code LIKE 'PERSONAL-DEMO-%'
-  AND author_id IS NULL
-  AND EXISTS (SELECT 1 FROM users WHERE role = 'MEMBER');
-
--- Additional personal submissions for testing each My Submissions tab.
-INSERT IGNORE INTO exercise_entries (
-    code, name, description, type, category, muscle_group, level, active,
-    guide, guide_steps, updated_at, video_url, is_system, status, rejection_reason,
-    default_sets, default_reps, default_duration, share_with_community,
-    equipment, author_id, created_at, save_count
-)
-SELECT seed.code, seed.name, seed.description, 'HEALTH', 'Strength', seed.muscle_group,
-       seed.level, TRUE, seed.guide, seed.guide, NOW(6), NULL, FALSE, seed.status,
-       seed.rejection_reason, seed.default_sets, seed.default_reps, seed.default_duration,
-       seed.share_with_community, seed.equipment,
-       COALESCE((SELECT id FROM users WHERE id = 1),
-                (SELECT MIN(id) FROM users WHERE role = 'MEMBER')),
-       DATE_SUB(NOW(6), INTERVAL seed.age_days DAY), seed.save_count
-FROM (
-    SELECT 'PERSONAL-DEMO-PENDING-002' code, 'Tempo decline push-up' name,
-           'A controlled decline push-up progression for upper-body strength.' description,
-           'Chest, shoulders' muscle_group, 'INTERMEDIATE' level, 'PENDING' status,
-           NULL rejection_reason, 3 default_sets, 8 default_reps, NULL default_duration,
-           TRUE share_with_community, 'Bench' equipment,
-           CONCAT('Place your feet on a stable low surface.', CHAR(10),
-                  'Brace your core and keep your body aligned.', CHAR(10),
-                  'Lower your chest with control.', CHAR(10),
-                  'Press through your palms to return to the start.') guide,
-           3 age_days, 0 save_count
-    UNION ALL
-    SELECT 'PERSONAL-DEMO-PENDING-003', 'Scapular push-up',
-           'A simple shoulder-control drill performed from a stable plank position.',
-           'Shoulders, chest', 'BEGINNER', 'PENDING', NULL, 3, 12, NULL, FALSE, 'Bodyweight',
-           CONCAT('Start in a high plank with arms straight.', CHAR(10),
-                  'Keep your elbows locked and brace your abdomen.', CHAR(10),
-                  'Allow your chest to lower slightly between your shoulders.', CHAR(10),
-                  'Push the floor away to spread your shoulder blades.'), 1, 0
-    UNION ALL
-    SELECT 'PERSONAL-DEMO-REJECTED-003', 'Stupid-fast burpee',
-           'A fast burpee variation with an inappropriate term in the description.',
-           'Full body', 'INTERMEDIATE', 'REJECTED',
-           'Reason: Text check: content contains inappropriate wording (''stupid'').',
-           3, 10, NULL, TRUE, 'Bodyweight',
-           CONCAT('Stand with feet shoulder-width apart.', CHAR(10),
-                  'Place your hands down and step back to a plank.', CHAR(10),
-                  'Step forward and stand with control.'), 6, 0
-    UNION ALL
-    SELECT 'PERSONAL-DEMO-REJECTED-004', 'Single-leg glute bridge',
-           'A bridge progression submitted with a video that failed review.',
-           'Glutes, hamstrings', 'BEGINNER', 'REJECTED',
-           'Reason: Video check: we could not detect a full body in most frames. Re-record in better light with your whole body in frame.',
-           3, 10, NULL, TRUE, 'Bodyweight',
-           CONCAT('Lie on your back with one foot planted.', CHAR(10),
-                  'Brace your abdomen and lift your hips.', CHAR(10),
-                  'Pause briefly and lower with control.'), 4, 0
-    UNION ALL
-    SELECT 'PERSONAL-DEMO-ACCEPTED-004', 'Slow mountain climber',
-           'A controlled core exercise emphasizing stability and steady breathing.',
-           'Core, shoulders', 'INTERMEDIATE', 'ACCEPTED', NULL, 3, 12, NULL, TRUE, 'Bodyweight',
-           CONCAT('Begin in a high plank with shoulders over wrists.', CHAR(10),
-                  'Brace your core and keep your back level.', CHAR(10),
-                  'Bring one knee toward your chest without rotating your hips.', CHAR(10),
-                  'Return to the plank and alternate sides.'), 5, 0
-    UNION ALL
-    SELECT 'PERSONAL-DEMO-ACCEPTED-005', 'Calf raise hold',
-           'A lower-body strength exercise with a brief pause at the top.',
-           'Calves', 'BEGINNER', 'ACCEPTED', NULL, 3, NULL, 30, FALSE, 'Bodyweight',
-           CONCAT('Stand tall with feet hip-width apart.', CHAR(10),
-                  'Rise onto the balls of your feet.', CHAR(10),
-                  'Hold the top position while staying balanced.', CHAR(10),
-                  'Lower your heels slowly to the floor.'), 2, 0
-) seed
-WHERE EXISTS (SELECT 1 FROM users WHERE role = 'MEMBER');
+WHERE EXISTS (
+    SELECT 1
+    FROM content_workouts w
+    JOIN exercise_entries e ON e.code = item.exercise_code
+    WHERE w.code = item.workout_code
+      AND e.status = 'ACCEPTED'
+      AND e.active = TRUE
+);
