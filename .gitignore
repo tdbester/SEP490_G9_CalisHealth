@@ -5,16 +5,11 @@ out/
 *.class
 *.jar
 *.war
-dist/
-
-# ===== Dependencies =====
-node_modules/
 
 # ===== Logs =====
 *.log
 logs/
 spring.log
-npm-debug.log*
 
 # ===== IDE - IntelliJ =====
 .idea/
@@ -35,7 +30,6 @@ desktop.ini
 
 # ===== Env / secrets =====
 .env
-.env.local
 application-local.yml
 application-local.properties
 
@@ -68,5 +62,6 @@ dist-ssr/
 coverage/
 *.tsbuildinfo
 
-# Lockfile rac do chay npm nham thu muc goc
-/package-lock.json
+# tsc -b emit ra JS từ file .ts cấu hình (vite.config.ts -> vite.config.js)
+vite.config.js
+vite.config.d.ts

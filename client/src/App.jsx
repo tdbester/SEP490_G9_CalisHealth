@@ -4,6 +4,7 @@ import Dashboard from "./pages/Dashboard";
 import HealthTracking from "./pages/HealthTracking";
 import WorkoutHistory from "./pages/WorkoutHistory";
 import PerformanceAnalytics from "./pages/PerformanceAnalytics";
+import DayStreak from "./pages/DayStreak";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
