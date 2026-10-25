@@ -7,8 +7,17 @@ import AccessibilityNewRoundedIcon from "@mui/icons-material/AccessibilityNewRou
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import DirectionsWalkRoundedIcon from "@mui/icons-material/DirectionsWalkRounded";
 import HorizontalRuleRoundedIcon from "@mui/icons-material/HorizontalRuleRounded";
-import { formatFullDate } from "../data/dayStreak";
 import "./DayReportModal.css";
+
+function formatReportDate(dayKey) {
+  const [year, month, day] = dayKey.split("-").map(Number);
+  return new Intl.DateTimeFormat("en", {
+    weekday: "long",
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  }).format(new Date(year, month - 1, day));
+}
 
 const EXERCISE_ICONS = {
   squat: DirectionsWalkRoundedIcon,
@@ -20,7 +29,7 @@ const EXERCISE_ICONS = {
   muscleup: TrendingUpRoundedIcon,
 };
 
-/** Icon bài tập theo key trong mock data, fallback về icon chung. */
+/** Icon bài tập được suy ra từ type do API trả về. */
 function ExerciseIcon({ icon }) {
   const Icon = EXERCISE_ICONS[icon] ?? FitnessCenterRoundedIcon;
   return (
@@ -90,7 +99,7 @@ function ExerciseCard({ exercise, expanded, onToggle }) {
  * Day Report — popup read-only hiển thị chi tiết một ngày đã tập.
  * Đóng bằng nút "Back to Day Streak", nút X, phím Esc hoặc bấm ra ngoài.
  */
-export default function DayReportModal({ dayKey, report, onClose }) {
+export default function DayReportModal({ dayKey, report, loading, error, onClose }) {
   const [expandedId, setExpandedId] = useState(null);
   const dialogRef = useRef(null);
 
@@ -156,22 +165,34 @@ export default function DayReportModal({ dayKey, report, onClose }) {
           <h2 className="report-title" id="report-title">
             Day Report
           </h2>
-          <p className="report-date">{formatFullDate(dayKey)}</p>
+          <p className="report-date">{formatReportDate(dayKey)}</p>
         </div>
 
         {/* ── Completed exercises ───────────────────────────────── */}
         <h3 className="report-section-title">Completed Exercises</h3>
 
-        <ul className="report-ex-list">
-          {report.exercises.map((exercise) => (
-            <ExerciseCard
-              key={exercise.id}
-              exercise={exercise}
-              expanded={expandedId === exercise.id}
-              onToggle={() => toggleExercise(exercise.id)}
-            />
-          ))}
-        </ul>
+        {loading ? (
+          <p role="status">Loading workout report...</p>
+        ) : error ? (
+          <p role="alert">No completed workout report is available for this date.</p>
+        ) : report ? (
+          <>
+            <ul className="report-ex-list">
+              {report.exercises.map((exercise) => (
+                <ExerciseCard
+                  key={exercise.id}
+                  exercise={{
+                    ...exercise,
+                    icon: exercise.type?.toLowerCase(),
+                    formAccuracy: Math.round(exercise.formAccuracy),
+                  }}
+                  expanded={expandedId === exercise.id}
+                  onToggle={() => toggleExercise(exercise.id)}
+                />
+              ))}
+            </ul>
+          </>
+        ) : null}
       </div>
     </div>
   );

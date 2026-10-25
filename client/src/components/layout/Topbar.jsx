@@ -4,7 +4,7 @@ import NotificationsNoneRoundedIcon from "@mui/icons-material/NotificationsNoneR
 import LocalFireDepartmentRoundedIcon from "@mui/icons-material/LocalFireDepartmentRounded";
 import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
-import { STREAK_DAYS } from "../../data/dashboard";
+import api from "../../api/client";
 import "./Topbar.css";
 
 function Logo() {
@@ -26,6 +26,7 @@ export default function Topbar() {
   const navigate = useNavigate();
   const topbarRef = useRef(null);
   const [user, setUser] = useState(null);
+  const [currentStreak, setCurrentStreak] = useState(null);
   const [openPanel, setOpenPanel] = useState(null);
   const [language, setLanguage] = useState(
     () => localStorage.getItem("language") || "en",
@@ -37,6 +38,29 @@ export default function Topbar() {
       : null;
     if (cached) setUser(JSON.parse(cached));
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setCurrentStreak(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const today = new Date();
+    api.get("/member/day-streak", {
+      params: { year: today.getFullYear(), month: today.getMonth() + 1 },
+    })
+      .then(({ data }) => {
+        if (!cancelled) setCurrentStreak(data?.currentStreak ?? 0);
+      })
+      .catch(() => {
+        if (!cancelled) setCurrentStreak(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   useEffect(() => {
     const closePanel = (event) => {
@@ -133,14 +157,16 @@ export default function Topbar() {
       <div className="topbar-right">
         {user && (
           <>
-            <div
+            <button
+              type="button"
               className="topbar-streak"
-              title={`${STREAK_DAYS} day training streak`}
-              aria-label={`${STREAK_DAYS} day training streak`}
+              title={`Open your ${currentStreak ?? "current"} day training streak`}
+              aria-label={`Open your ${currentStreak ?? "current"} day training streak`}
+              onClick={() => navigateFromPanel("/day-streak")}
             >
               <LocalFireDepartmentRoundedIcon className="topbar-streak-icon" />
-              <span className="topbar-streak-days">{STREAK_DAYS} days</span>
-            </div>
+              <span className="topbar-streak-days">{currentStreak ?? "-"} days</span>
+            </button>
 
             <div className="topbar-notification-wrap">
               <button

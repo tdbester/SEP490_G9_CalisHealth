@@ -137,7 +137,7 @@ WHERE u.role = 'MEMBER'
 CREATE TABLE IF NOT EXISTS workout_sessions (
     id                BIGINT       NOT NULL AUTO_INCREMENT,
     member_profile_id BIGINT       NOT NULL,
-    -- Cố ý KHÔNG khai báo FK tới content_workouts: bảng đó thuộc module
+    -- Cố ý KHÔNG khai báo FK tới workout_entries: bảng đó thuộc module
     -- Library/Content và chưa có migration nào tạo. Thêm FK ở đây sẽ làm
     -- V3 fail ngay. Gắn FK sau khi có V4__content_schema.sql.
     workout_id        BIGINT       DEFAULT NULL,

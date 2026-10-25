@@ -34,6 +34,14 @@ export default function App() {
             </AdminLayout>
           }
         />
+        <Route
+          path="/day-streak"
+          element={
+            <AdminLayout>
+              <DayStreak />
+            </AdminLayout>
+          }
+        />
         <Route path="/library" element={<Navigate to="/" replace />} />
         <Route path="/tracking" element={<Navigate to="/" replace />} />
         <Route path="/profile" element={<Navigate to="/" replace />} />

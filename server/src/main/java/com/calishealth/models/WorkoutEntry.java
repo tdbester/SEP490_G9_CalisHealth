@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "content_workouts")
+@Table(name = "workout_entries")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -39,6 +39,10 @@ public class WorkoutEntry {
 
     @Column(nullable = false)
     private boolean active = true;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
 
     @ManyToMany
     @JoinTable(
