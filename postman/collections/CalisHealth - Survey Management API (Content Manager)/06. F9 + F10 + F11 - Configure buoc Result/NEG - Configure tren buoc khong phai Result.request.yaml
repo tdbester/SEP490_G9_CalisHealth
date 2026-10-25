@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}/result-config"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 400', () => pm.response.to.have.status(400));
+      pm.test('code = NOT_A_RESULT_STEP', () => pm.expect(pm.response.json().code).to.eql('NOT_A_RESULT_STEP'));
+    language: text/javascript
+order: 8000

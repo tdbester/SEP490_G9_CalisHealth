@@ -1,0 +1,9 @@
+$kind: http-request
+description: View survey
+url: http://localhost:8080/api/surveys/CALISHEALTH_ONBOARDING
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{json_web_token_14zb}}"
+order: 3000

@@ -1,0 +1,19 @@
+$kind: http-request
+name: NEG - INACTIVE -> DRAFT (khong quay lai DRAFT)
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{newStepId}}/status"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "status": "DRAFT"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 409', () => pm.response.to.have.status(409));
+      pm.test('code = INVALID_STATUS_TRANSITION', () => pm.expect(pm.response.json().code).to.eql('INVALID_STATUS_TRANSITION'));
+    language: text/javascript
+order: 3000

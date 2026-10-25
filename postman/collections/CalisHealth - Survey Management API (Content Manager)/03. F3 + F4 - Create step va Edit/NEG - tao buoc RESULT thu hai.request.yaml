@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "stepName": "Second result {{$timestamp}}",
+      "stepType": "RESULT"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 409', () => pm.response.to.have.status(409));
+      pm.test('code = RESULT_STEP_EXISTS', () => pm.expect(pm.response.json().code).to.eql('RESULT_STEP_EXISTS'));
+    language: text/javascript
+order: 8000

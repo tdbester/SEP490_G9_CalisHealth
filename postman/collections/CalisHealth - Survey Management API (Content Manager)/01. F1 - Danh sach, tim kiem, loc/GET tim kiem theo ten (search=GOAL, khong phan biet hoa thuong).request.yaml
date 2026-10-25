@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps?search=GOAL"
+method: GET
+queryParams:
+  search: GOAL
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('chi con buoc Goals and motivation', () => { pm.expect(j.steps).to.have.lengthOf(1); pm.expect(j.steps[0].stepCode).to.eql('GOALS_AND_MOTIVATION'); });
+      pm.test('giu nguyen so STEP (position = 2)', () => pm.expect(j.steps[0].position).to.eql(2));
+      pm.test('counts tinh theo ket qua tim kiem', () => pm.expect(j.counts.all).to.eql(1));
+    language: text/javascript
+order: 2000

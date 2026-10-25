@@ -3,6 +3,8 @@ package com.calishealth.dtos;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -22,7 +24,35 @@ public class SurveyDtos {
             String surveyName,
             String description,
             int version,
-            List<StepResponse> steps) {}
+            List<StepResponse> steps,
+            /** Bước "Result and recommended plan" đang ACTIVE; null nếu survey không có. Không nằm trong steps. */
+            ResultStepResponse result) {}
+
+    public record ResultStepResponse(String stepCode, String stepName, String description, ResultConfig config) {}
+
+    /**
+     * Cấu hình bước RESULT (lưu ở survey_steps.result_config). Level của member được tính từ level criteria;
+     * các field dưới đây quyết định phần kết quả hiển thị và kế hoạch gợi ý.
+     */
+    public record ResultConfig(
+            @NotNull(message = "showLevelBreakdown is required") Boolean showLevelBreakdown,
+            @NotNull(message = "showPlanPreview is required") Boolean showPlanPreview,
+            @NotNull(message = "planDurationWeeks is required")
+            @Min(value = 1, message = "planDurationWeeks must be between 1 and 52")
+            @Max(value = 52, message = "planDurationWeeks must be between 1 and 52") Integer planDurationWeeks,
+            @NotNull(message = "sessionsPerWeek is required")
+            @Min(value = 1, message = "sessionsPerWeek must be between 1 and 7")
+            @Max(value = 7, message = "sessionsPerWeek must be between 1 and 7") Integer sessionsPerWeek,
+            @NotNull(message = "minutesPerSession is required")
+            @Min(value = 10, message = "minutesPerSession must be between 10 and 180")
+            @Max(value = 180, message = "minutesPerSession must be between 10 and 180") Integer minutesPerSession,
+            /** Level dùng khi member bỏ qua level test hoặc không đạt tiêu chí nào; null = không gán level. */
+            Long fallbackFitnessLevelId) {
+
+        public static ResultConfig defaults() {
+            return new ResultConfig(true, true, 4, 3, 30, null);
+        }
+    }
 
     public record StepResponse(
             String stepCode,
