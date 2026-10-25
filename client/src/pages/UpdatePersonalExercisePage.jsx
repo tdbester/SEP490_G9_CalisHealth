@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { validatePersonalExercise } from './libraryFormValidation';
+import {
+  getApiErrorMessage,
+  validatePersonalExercise,
+  validateVideoFile,
+} from './libraryFormValidation';
 import { getPersonalExercise, resubmitPersonalExercise } from '../api/library';
 
 /* Icons */
@@ -35,6 +39,7 @@ export default function UpdatePersonalExercisePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const submissionLock = useRef(false);
 
   const [exercise, setExercise] = useState(null);
 
@@ -107,7 +112,8 @@ export default function UpdatePersonalExercisePage() {
     videoFile: uploadedFile,
     requireVideo: !video && !uploadedFile,
   });
-  const showFieldError = (field) => hasSubmitted || touchedFields[field];
+  const showFieldError = (field) =>
+    hasSubmitted || touchedFields[field] || Boolean(validationErrors[field]);
   const markFieldTouched = (field) =>
     setTouchedFields((current) => ({ ...current, [field]: true }));
   const focusFirstInvalidField = (errors) => {
@@ -147,6 +153,8 @@ export default function UpdatePersonalExercisePage() {
       setErrorMessage('');
       setUploadedFile(file);
       setVideo({ name: file.name, size: `${(file.size / (1024 * 1024)).toFixed(1)} MB` });
+      const fileError = validateVideoFile(file);
+      if (fileError) toast.error(fileError);
     }
   };
 
@@ -166,13 +174,15 @@ export default function UpdatePersonalExercisePage() {
       setErrorMessage('');
       setUploadedFile(file);
       setVideo({ name: file.name, size: `${(file.size / (1024 * 1024)).toFixed(1)} MB` });
+      const fileError = validateVideoFile(file);
+      if (fileError) toast.error(fileError);
     }
   };
 
   const charCount = (str, max) => `${str.length}/${max}`;
 
   const handleSave = async () => {
-    if (!isDirty || !exercise) return;
+    if (!isDirty || !exercise || submissionLock.current) return;
     setHasSubmitted(true);
     if (Object.keys(validationErrors).length > 0) {
       toast.warning("Please fill in all required fields correctly.");
@@ -180,6 +190,7 @@ export default function UpdatePersonalExercisePage() {
       return;
     }
 
+    submissionLock.current = true;
     setSaving(true);
     setErrorMessage('');
     try {
@@ -205,10 +216,12 @@ export default function UpdatePersonalExercisePage() {
         navigate('/library/personal?status=pending');
       }
     } catch (error) {
-      setSaving(false);
-      const message = error?.response?.data?.message || "Could not resubmit exercise.";
+      const message = getApiErrorMessage(error, "Could not resubmit exercise.");
       toast.error(message);
       setErrorMessage(message);
+    } finally {
+      submissionLock.current = false;
+      setSaving(false);
     }
   };
 
@@ -252,6 +265,10 @@ export default function UpdatePersonalExercisePage() {
               setTitle(e.target.value);
               markFieldTouched('title');
             }}
+            onBlur={() => {
+              markFieldTouched('title');
+              setTitle((value) => value.trim());
+            }}
             placeholder="e.g. Diamond push-up"
             className={`w-full rounded-xl border ${showFieldError('title') && validationErrors.title ? 'border-rose-500 focus:border-rose-500' : 'border-[#493b79] focus:border-[#9d7aff]'} bg-[#0d0922] px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none transition-colors`}
           />
@@ -270,6 +287,10 @@ export default function UpdatePersonalExercisePage() {
             onChange={(e) => {
               setDescription(e.target.value);
               markFieldTouched('description');
+            }}
+            onBlur={() => {
+              markFieldTouched('description');
+              setDescription((value) => value.trim());
             }}
             className={`w-full rounded-xl border ${showFieldError('description') && validationErrors.description ? 'border-rose-500 focus:border-rose-500' : 'border-[#493b79] focus:border-[#9d7aff]'} bg-[#0d0922] p-4 text-sm text-white placeholder-slate-500 h-28 resize-none focus:outline-none transition-colors leading-relaxed`}
           />
@@ -336,6 +357,7 @@ export default function UpdatePersonalExercisePage() {
                   handleGuideChange(idx, e.target.value);
                   markFieldTouched(`step-${idx}`);
                 }}
+                maxLength={250}
                 placeholder={idx === 0 ? 'e.g. Start in a plank with hands under shoulders' : 'Next step'}
                 className={`w-full rounded-xl border ${showFieldError(`step-${idx}`) && validationErrors[`step-${idx}`] ? 'border-rose-500 focus:border-rose-500' : 'border-[#493b79] focus:border-[#9d7aff]'} bg-[#0d0922] px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none transition-colors`}
               />
@@ -480,9 +502,10 @@ export default function UpdatePersonalExercisePage() {
           <button
             type="button"
             onClick={handleSave}
-            disabled={!isDirty || saving}
+            disabled={!isDirty || saving || Object.keys(validationErrors).length > 0}
             className="rounded-xl border border-[#8065ff] bg-[#643bf6] hover:bg-[#7554ff] text-white text-sm font-semibold px-7 py-2.5 shadow-md shadow-purple-950/40 active:scale-95 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
+            {saving && <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />}
             {saving ? 'Saving...' : 'Save'}
           </button>
         </div>

@@ -11,10 +11,15 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record CreatePersonalExerciseRequestDTO(
-        @NotBlank @Size(max = 50) String title,
-        @NotBlank @Size(max = 300) String description,
-        @NotNull ExerciseEntry.EntryLevel level,
-        @NotEmpty List<@NotBlank @Size(max = 250) String> guideSteps,
+        @NotBlank(message = "Tên bài tập không được để trống")
+        @Size(max = 50, message = "Tên bài tập không quá 50 ký tự")
+        String title,
+        @Size(max = 300, message = "Mô tả không quá 300 ký tự")
+        String description,
+        @NotNull(message = "Vui lòng chọn cấp độ bài tập")
+        ExerciseEntry.EntryLevel level,
+        @NotEmpty(message = "Phải có ít nhất 1 bước hướng dẫn")
+        List<@NotBlank(message = "Bước hướng dẫn không được để trống") @Size(max = 250) String> guideSteps,
         @NotBlank @Size(max = 120) String targetMuscle,
         @NotNull @Min(1) @Max(20) Integer defaultSets,
         @Min(1) @Max(1000)

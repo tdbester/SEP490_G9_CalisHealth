@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
+import com.calishealth.exception.RequestValidationException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -33,29 +34,10 @@ public class ExerciseVideoStorageService {
     }
 
     public String store(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a video file to upload");
-        }
-        if (file.getSize() > MAX_FILE_SIZE) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Video must be 50 MB or smaller");
-        }
-
+        validateVideoFile(file, true);
         String originalName = file.getOriginalFilename();
         int extensionIndex = originalName == null ? -1 : originalName.lastIndexOf('.');
-        if (extensionIndex < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Video must be an MP4, MOV, or WebM file");
-        }
-
         String extension = originalName.substring(extensionIndex + 1).toLowerCase(Locale.ROOT);
-        if (!ALLOWED_TYPES.contains(extension)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Video must be an MP4, MOV, or WebM file");
-        }
-
-        String contentType = file.getContentType();
-        if (contentType != null && !contentType.isBlank()
-                && !contentType.toLowerCase(Locale.ROOT).startsWith("video/")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Uploaded file must be a video");
-        }
 
         String fileName = UUID.randomUUID() + "." + extension;
         Path destination = storageDirectory.resolve(fileName).normalize();
@@ -69,6 +51,33 @@ public class ExerciseVideoStorageService {
             return "/media/exercise-demos/" + fileName;
         } catch (IOException exception) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not save the video file", exception);
+        }
+    }
+
+    public void validateVideoFile(MultipartFile file, boolean required) {
+        if (file == null || file.isEmpty()) {
+            if (required) {
+                throw new RequestValidationException("videoFile", "Vui lòng chọn video bài tập");
+            }
+            return;
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new RequestValidationException("videoFile", "Video không được vượt quá 50 MB");
+        }
+
+        String originalName = file.getOriginalFilename();
+        int extensionIndex = originalName == null ? -1 : originalName.lastIndexOf('.');
+        String extension = extensionIndex < 0
+                ? ""
+                : originalName.substring(extensionIndex + 1).toLowerCase(Locale.ROOT);
+        if (!ALLOWED_TYPES.contains(extension)) {
+            throw new RequestValidationException("videoFile", "Video phải có định dạng MP4, MOV hoặc WebM");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType != null && !contentType.isBlank()
+                && !contentType.toLowerCase(Locale.ROOT).startsWith("video/")) {
+            throw new RequestValidationException("videoFile", "Tệp tải lên phải là video");
         }
     }
 

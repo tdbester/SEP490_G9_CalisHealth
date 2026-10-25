@@ -1,7 +1,12 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { validateWorkoutExercises, validateWorkoutName } from "./libraryFormValidation";
+import {
+  getApiErrorMessage,
+  validateWorkoutDescription,
+  validateWorkoutExercises,
+  validateWorkoutName,
+} from "./libraryFormValidation";
 import { createMyWorkout, getAvailableWorkoutExercises } from "../api/library";
 
 function DumbbellIcon({ size = "h-4 w-4" }) {
@@ -64,6 +69,7 @@ function LevelBadge({ level }) {
 
 export default function CreatePersonalWorkoutPage() {
   const navigate = useNavigate();
+  const submissionLock = useRef(false);
 
   const [availableExercises, setAvailableExercises] = useState([]);
   const [workoutName, setWorkoutName] = useState("");
@@ -74,6 +80,7 @@ export default function CreatePersonalWorkoutPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [touchedFields, setTouchedFields] = useState({});
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -115,15 +122,22 @@ export default function CreatePersonalWorkoutPage() {
   const totalSets      = selected.reduce((sum, e) => sum + Number(e.sets || 0), 0);
   const estimatedMin   = Math.round(totalSets * 1.2);
   const nameError = validateWorkoutName(workoutName);
+  const descriptionError = validateWorkoutDescription(note);
   const exerciseErrors = validateWorkoutExercises(selected);
-  const validationErrors = { ...exerciseErrors, ...(nameError ? { name: nameError } : {}) };
+  const validationErrors = {
+    ...exerciseErrors,
+    ...(nameError ? { name: nameError } : {}),
+    ...(descriptionError ? { description: descriptionError } : {}),
+  };
   const isDirty = Boolean(workoutName || note || selected.length);
-  const showFieldError = (field) => hasSubmitted || touchedFields[field];
+  const showFieldError = (field) =>
+    hasSubmitted || touchedFields[field] || Boolean(validationErrors[field]);
   const markFieldTouched = (field) =>
     setTouchedFields((current) => ({ ...current, [field]: true }));
   const focusFirstInvalidField = () => {
     const firstInvalidId = [
       "workout-name",
+      "workout-description",
       "workout-exercises",
       ...selected.flatMap((_, index) => [
         `workout-sets-${index}`,
@@ -132,6 +146,7 @@ export default function CreatePersonalWorkoutPage() {
       ]),
     ].find((id) => {
       if (id === "workout-name") return validationErrors.name;
+      if (id === "workout-description") return validationErrors.description;
       if (id === "workout-exercises") return validationErrors.list;
       const [, field, index] = id.match(/^workout-(sets|reps|rest)-(\d+)$/) || [];
       return field && validationErrors[`${field}-${index}`];
@@ -175,6 +190,7 @@ export default function CreatePersonalWorkoutPage() {
     setSelected((prev) => prev.map((e, i) => (i === idx ? { ...e, [field]: value } : e)));
 
   const handleCreate = async () => {
+    if (submissionLock.current) return;
     setHasSubmitted(true);
     if (Object.keys(validationErrors).length > 0) {
       setErrorMessage("");
@@ -184,6 +200,8 @@ export default function CreatePersonalWorkoutPage() {
     }
     const name = workoutName.trim();
 
+    submissionLock.current = true;
+    setIsCreating(true);
     try {
       await createMyWorkout({
         title: name,
@@ -200,11 +218,13 @@ export default function CreatePersonalWorkoutPage() {
         })),
       });
     } catch (error) {
-      setErrorMessage(
-        error.response?.data?.message || "Could not save this workout."
-      );
-      toast.error("Failed to create. Please try again.");
+      const message = getApiErrorMessage(error, "Could not save this workout.");
+      setErrorMessage(message);
+      toast.error(message);
       return;
+    } finally {
+      submissionLock.current = false;
+      setIsCreating(false);
     }
 
     setErrorMessage("");
@@ -235,6 +255,10 @@ export default function CreatePersonalWorkoutPage() {
               setWorkoutName(e.target.value);
               markFieldTouched("name");
             }}
+            onBlur={() => {
+              markFieldTouched("name");
+              setWorkoutName((value) => value.trim());
+            }}
             placeholder="Upper body push day"
             className={`w-full rounded-xl border ${showFieldError("name") && nameError ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#0c0820] px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors`}
           />
@@ -247,10 +271,18 @@ export default function CreatePersonalWorkoutPage() {
           </div>
           <textarea
             maxLength={200} rows={3} value={note}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={(e) => {
+              setNote(e.target.value);
+              markFieldTouched("description");
+            }}
+            onBlur={() => {
+              markFieldTouched("description");
+              setNote((value) => value.trim());
+            }}
             placeholder="Anything you want to remember about this workout"
             className="w-full resize-none rounded-xl border border-[#231b46] bg-[#0c0820] px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:border-[#7c3aed] focus:outline-none transition-colors"
           />
+          {showFieldError("description") && descriptionError && <p className="text-rose-400 text-[11px] mt-1">{descriptionError}</p>}
         </div>
       </div>
       {errorMessage && (
@@ -345,7 +377,7 @@ export default function CreatePersonalWorkoutPage() {
               <p className="mt-1 text-[11px] text-slate-500">Click "+ Add" on the left to build your workout.</p>
             </div>
           )}
-          {showFieldError("list") && exerciseErrors.list && (
+          {exerciseErrors.list && (
             <p id="workout-exercises" tabIndex={-1} className="text-rose-400 text-[11px] mt-1">{exerciseErrors.list}</p>
           )}
 
@@ -376,7 +408,7 @@ export default function CreatePersonalWorkoutPage() {
                 <div className="grid grid-cols-4 gap-2.5">
                   <div>
                     <label className="block text-[10px] text-slate-400 mb-1">Sets</label>
-                    <input id={`workout-sets-${idx}`} type="number" min="1" max="50" step="1" value={ex.sets}
+                    <input id={`workout-sets-${idx}`} type="number" min="1" max="100" step="1" value={ex.sets}
                       onChange={(e) => {
                         updateField(idx, "sets", e.target.value);
                         markFieldTouched(`sets-${idx}`);
@@ -386,7 +418,7 @@ export default function CreatePersonalWorkoutPage() {
                   </div>
                   <div>
                     <label className="block text-[10px] text-slate-400 mb-1">Reps</label>
-                    <input id={`workout-reps-${idx}`} type="number" min="1" max="999" step="1" value={ex.reps}
+                    <input id={`workout-reps-${idx}`} type="number" min="1" max="2147483647" step="1" value={ex.reps}
                       onChange={(e) => {
                         updateField(idx, "reps", e.target.value);
                         markFieldTouched(`reps-${idx}`);
@@ -440,9 +472,10 @@ export default function CreatePersonalWorkoutPage() {
             className="rounded-xl border border-[#2b2257] bg-[#141030] px-6 py-2.5 text-xs font-semibold text-slate-300 hover:bg-[#1f1847] transition-colors">
             Cancel
           </button>
-          <button type="button" onClick={handleCreate} disabled={!isDirty}
+          <button type="button" onClick={handleCreate} disabled={!isDirty || isCreating || Object.keys(validationErrors).length > 0}
             className="rounded-xl bg-[#643bf6] px-7 py-2.5 text-xs font-semibold text-white shadow-md hover:bg-[#522cd9] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-            Create workout
+            {isCreating && <span className="mr-2 inline-block h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent align-[-2px] animate-spin" />}
+            {isCreating ? "Creating..." : "Create workout"}
           </button>
         </div>
       </div>

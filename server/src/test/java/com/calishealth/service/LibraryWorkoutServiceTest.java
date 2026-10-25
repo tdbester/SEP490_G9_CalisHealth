@@ -58,20 +58,20 @@ class LibraryWorkoutServiceTest {
                 "Details",
                 false,
                 List.of(
-                        new WorkoutItemDTO(10L, 0, 2, 10, null, "REPS", 30),
-                        new WorkoutItemDTO(20L, 1, 2, null, 20, "SECONDS", 60)));
+                        new WorkoutItemDTO(10L, 0, 100, 101, null, "REPS", 600),
+                        new WorkoutItemDTO(20L, 1, 2, null, 3601, "SECONDS", 60)));
 
         var response = service.createWorkout(member.getEmail(), request);
 
-        assertEquals(4, response.totalSets());
-        assertEquals(4, response.estimatedDuration());
+        assertEquals(102, response.totalSets());
+        assertEquals(1617, response.estimatedDuration());
         assertEquals("ADVANCED", response.level());
 
         ArgumentCaptor<WorkoutEntry> workoutCaptor = ArgumentCaptor.forClass(WorkoutEntry.class);
         verify(workouts, times(2)).saveAndFlush(workoutCaptor.capture());
         WorkoutEntry saved = workoutCaptor.getValue();
-        assertEquals(4, saved.getTotalSets());
-        assertEquals(4, saved.getEstimatedDuration());
+        assertEquals(102, saved.getTotalSets());
+        assertEquals(1617, saved.getEstimatedDuration());
         assertEquals("ADVANCED", saved.getLevel());
     }
 

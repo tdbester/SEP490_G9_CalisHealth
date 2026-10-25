@@ -44,6 +44,7 @@ public class PersonalExerciseService {
             MultipartFile videoFile
     ) {
         User member = requireMember(memberEmail);
+            videoStorage.validateVideoFile(videoFile, true);
             String textReason = moderation.checkText(request.title(), request.description(), request.guideSteps());
             String videoReason = moderation.checkVideo(videoFile);
             ContentModerationService.ModerationResult result = moderation.combine(textReason, videoReason);
@@ -52,7 +53,7 @@ public class PersonalExerciseService {
             ExerciseEntry exercise = new ExerciseEntry();
             exercise.setCode("PER-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase(Locale.ROOT));
             exercise.setName(request.title().trim());
-            exercise.setDescription(request.description().trim());
+            exercise.setDescription(request.description() == null ? "" : request.description().trim());
             exercise.setType(ExerciseEntry.EntryType.HEALTH);
             exercise.setSystem(false);
             exercise.setAuthor(member);
@@ -138,6 +139,9 @@ public class PersonalExerciseService {
 
         String textReason = moderation.checkText(request.title(), request.description(), request.guideSteps());
         boolean hasNewVideo = videoFile != null && !videoFile.isEmpty();
+        if (hasNewVideo) {
+            videoStorage.validateVideoFile(videoFile, true);
+        }
         boolean keepCurrentVideo = Boolean.TRUE.equals(request.keepCurrentVideo()) && !hasNewVideo;
         String videoReason = hasNewVideo
                 ? moderation.checkVideo(videoFile)
@@ -156,7 +160,7 @@ public class PersonalExerciseService {
         String previousVideoUrl = exercise.getVideoUrl();
         try {
             exercise.setName(request.title().trim());
-            exercise.setDescription(request.description().trim());
+            exercise.setDescription(request.description() == null ? "" : request.description().trim());
             exercise.setLevel(request.level());
             exercise.setMuscleGroup(request.targetMuscle().trim());
             exercise.setDefaultSets(request.defaultSets());

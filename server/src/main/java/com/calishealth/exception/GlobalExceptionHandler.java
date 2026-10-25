@@ -5,21 +5,27 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 
+import jakarta.validation.ConstraintViolationException;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<Map<String, String>> handleStatus(ResponseStatusException e) {
-        return ResponseEntity.status(e.getStatusCode()).body(Map.of("message", e.getReason()));
+    public ResponseEntity<Map<String, Object>> handleStatus(ResponseStatusException e) {
+        if (e.getStatusCode().value() == HttpStatus.BAD_REQUEST.value()) {
+            String message = e.getReason() == null ? "Yêu cầu không hợp lệ" : e.getReason();
+            return validationError(Map.of("request", message));
+        }
+        String message = e.getReason() == null ? "Request failed" : e.getReason();
+        return ResponseEntity.status(e.getStatusCode()).body(Map.of("message", message));
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -33,13 +39,31 @@ public class GlobalExceptionHandler {
         e.getBindingResult().getFieldErrors().forEach(f ->
                 errors.putIfAbsent(f.getField(), f.getDefaultMessage()));
 
-        String message = errors.isEmpty()
-                ? "Dữ liệu không hợp lệ"
-                : errors.values().stream().distinct().collect(Collectors.joining("; "));
+        return validationError(errors);
+    }
 
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException e) {
+        Map<String, String> errors = new LinkedHashMap<>();
+        e.getConstraintViolations().forEach(violation ->
+                errors.putIfAbsent(violation.getPropertyPath().toString(), violation.getMessage()));
+        return validationError(errors);
+    }
+
+    @ExceptionHandler(RequestValidationException.class)
+    public ResponseEntity<Map<String, Object>> handleRequestValidation(RequestValidationException e) {
+        return validationError(Map.of(e.getField(), e.getMessage()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleMaxUploadSize(MaxUploadSizeExceededException e) {
+        return validationError(Map.of("file", "Dung lượng tệp tải lên vượt quá giới hạn cho phép"));
+    }
+
+    private static ResponseEntity<Map<String, Object>> validationError(Map<String, String> errors) {
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("code", "INVALID_REQUEST");
-        body.put("message", message);
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("message", "Dữ liệu không hợp lệ");
         body.put("errors", errors);
         return ResponseEntity.badRequest().body(body);
     }

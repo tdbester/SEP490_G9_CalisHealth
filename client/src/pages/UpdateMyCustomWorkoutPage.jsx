@@ -1,7 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import { validateWorkoutExercises, validateWorkoutName } from "./libraryFormValidation";
+import {
+  getApiErrorMessage,
+  validateWorkoutDescription,
+  validateWorkoutExercises,
+  validateWorkoutName,
+} from "./libraryFormValidation";
 import { getAvailableWorkoutExercises, getMyWorkout, updateMyWorkout } from "../api/library";
 
 const STORAGE_KEY = "my_custom_workouts";
@@ -91,6 +96,7 @@ function LevelBadge({ level }) {
 export default function UpdateMyCustomWorkoutPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const submissionLock = useRef(false);
   const [workout, setWorkout] = useState(null);
   const [availableExercises, setAvailableExercises] = useState([]);
   const [title, setTitle] = useState("");
@@ -103,6 +109,7 @@ export default function UpdateMyCustomWorkoutPage() {
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [touchedFields, setTouchedFields] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -154,14 +161,21 @@ export default function UpdateMyCustomWorkoutPage() {
   );
   const isDirty = baseline !== "" && baseline !== currentForm;
   const nameError = validateWorkoutName(title);
+  const descriptionError = validateWorkoutDescription(description);
   const exerciseErrors = validateWorkoutExercises(exercises);
-  const validationErrors = { ...exerciseErrors, ...(nameError ? { name: nameError } : {}) };
-  const showFieldError = (field) => hasSubmitted || touchedFields[field];
+  const validationErrors = {
+    ...exerciseErrors,
+    ...(nameError ? { name: nameError } : {}),
+    ...(descriptionError ? { description: descriptionError } : {}),
+  };
+  const showFieldError = (field) =>
+    hasSubmitted || touchedFields[field] || Boolean(validationErrors[field]);
   const markFieldTouched = (field) =>
     setTouchedFields((current) => ({ ...current, [field]: true }));
   const focusFirstInvalidField = () => {
     const firstInvalidId = [
       "workout-title",
+      "workout-description",
       "workout-exercises",
       ...exercises.flatMap((_, index) => [
         `workout-sets-${index}`,
@@ -170,6 +184,7 @@ export default function UpdateMyCustomWorkoutPage() {
       ]),
     ].find((id) => {
       if (id === "workout-title") return validationErrors.name;
+      if (id === "workout-description") return validationErrors.description;
       if (id === "workout-exercises") return validationErrors.list;
       const [, field, index] = id.match(/^workout-(sets|reps|rest)-(\d+)$/) || [];
       return field && validationErrors[`${field}-${index}`];
@@ -210,7 +225,7 @@ export default function UpdateMyCustomWorkoutPage() {
   };
 
   const handleSave = async () => {
-    if (!workout) return;
+    if (!workout || submissionLock.current) return;
     setHasSubmitted(true);
     if (Object.keys(validationErrors).length > 0) {
       toast.warning("Please fill in all required fields correctly.");
@@ -218,6 +233,8 @@ export default function UpdateMyCustomWorkoutPage() {
       return;
     }
 
+    submissionLock.current = true;
+    setIsSaving(true);
     try {
       await updateMyWorkout(id, {
         title: title.trim(),
@@ -236,8 +253,12 @@ export default function UpdateMyCustomWorkoutPage() {
       toast.success("Saved changes successfully!");
       navigate("/library/workouts");
     } catch (error) {
-      toast.error("Failed to save changes.");
-      setErrorMessage(error.response?.data?.message || "Could not save workout.");
+      const message = getApiErrorMessage(error, "Could not save workout.");
+      toast.error(message);
+      setErrorMessage(message);
+    } finally {
+      submissionLock.current = false;
+      setIsSaving(false);
     }
   };
 
@@ -297,6 +318,10 @@ export default function UpdateMyCustomWorkoutPage() {
                     setTitle(event.target.value);
                     markFieldTouched("name");
                   }}
+                  onBlur={() => {
+                    markFieldTouched("name");
+                    setTitle((value) => value.trim());
+                  }}
                   className={`mb-1 w-full rounded-lg border ${showFieldError("name") && nameError ? "border-rose-500 focus:border-rose-500" : "border-[#493b79] focus:border-[#8b6cff]"} bg-[#1b1538] px-3 py-2.5 text-sm text-white focus:outline-none`}
                 />
                 {showFieldError("name") && nameError && <p className="mb-3 text-rose-400 text-[11px] mt-1">{nameError}</p>}
@@ -307,14 +332,24 @@ export default function UpdateMyCustomWorkoutPage() {
                 <textarea
                   id="workout-description"
                   value={description}
-                  maxLength={150}
+                  maxLength={200}
                   rows={3}
-                  onChange={(event) => setDescription(event.target.value)}
-                  className="w-full resize-none rounded-lg border border-[#493b79] bg-[#1b1538] px-3 py-2.5 text-sm text-white focus:border-[#8b6cff] focus:outline-none"
+                  onChange={(event) => {
+                    setDescription(event.target.value);
+                    markFieldTouched("description");
+                  }}
+                  onBlur={() => {
+                    markFieldTouched("description");
+                    setDescription((value) => value.trim());
+                  }}
+                  className={`w-full resize-none rounded-lg border ${showFieldError("description") && descriptionError ? "border-rose-500 focus:border-rose-500" : "border-[#493b79] focus:border-[#8b6cff]"} bg-[#1b1538] px-3 py-2.5 text-sm text-white focus:outline-none`}
                 />
-                <p className="mb-3 text-right text-[10px] text-slate-400">
-                  {description.length} / 150
-                </p>
+                <div className="mb-3 flex justify-between">
+                  {showFieldError("description") && descriptionError
+                    ? <p className="text-rose-400 text-[11px] mt-1">{descriptionError}</p>
+                    : <span />}
+                  <p className="text-right text-[10px] text-slate-400">{description.length} / 200</p>
+                </div>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold">
                     <input
@@ -373,7 +408,7 @@ export default function UpdateMyCustomWorkoutPage() {
                 <div className="mb-2 hidden grid-cols-[minmax(120px,1fr)_56px_70px_58px_28px] gap-2 px-3 text-[10px] text-slate-400 sm:grid">
                   <span>Exercise</span><span>Sets</span><span>Reps / seconds</span><span>Rest</span><span />
                 </div>
-                {showFieldError("list") && exerciseErrors.list && (
+                {exerciseErrors.list && (
                   <p id="workout-exercises" tabIndex={-1} className="text-rose-400 text-[11px] mt-1">{exerciseErrors.list}</p>
                 )}
                 <div className="space-y-2">
@@ -400,7 +435,7 @@ export default function UpdateMyCustomWorkoutPage() {
                         <input
                           type="number"
                           min="1"
-                          max="50"
+                          max="100"
                           step="1"
                           id={`workout-sets-${index}`}
                           aria-label={`${exercise.name} sets`}
@@ -418,7 +453,7 @@ export default function UpdateMyCustomWorkoutPage() {
                           <input
                             type="number"
                             min="1"
-                            max="999"
+                            max="2147483647"
                             step="1"
                             id={`workout-reps-${index}`}
                             aria-label={`${exercise.name} reps or seconds`}
@@ -514,10 +549,11 @@ export default function UpdateMyCustomWorkoutPage() {
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={!isDirty}
+                disabled={!isDirty || isSaving || Object.keys(validationErrors).length > 0}
                 className="rounded-lg bg-[#643bf6] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#522cd9] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Save changes
+                {isSaving && <span className="mr-2 inline-block h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent align-[-2px] animate-spin" />}
+                {isSaving ? "Saving..." : "Save changes"}
               </button>
             </div>
           </footer>

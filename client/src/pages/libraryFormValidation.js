@@ -11,12 +11,13 @@ export function validatePersonalExercise({
   requireVideo = false,
 }) {
   const errors = {};
+  const normalizedTitle = title.trim();
+  const normalizedDescription = description.trim();
 
-  if (!title.trim()) errors.title = "Title is required";
-  else if (title.length > 50) errors.title = "Title cannot exceed 50 characters";
+  if (!normalizedTitle) errors.title = "Title is required";
+  else if (normalizedTitle.length > 50) errors.title = "Title cannot exceed 50 characters";
 
-  if (!description.trim()) errors.description = "Description is required";
-  else if (description.length > 300) {
+  if (normalizedDescription.length > 300) {
     errors.description = "Description cannot exceed 300 characters";
   }
 
@@ -29,20 +30,38 @@ export function validatePersonalExercise({
   if (requireVideo && !videoFile) {
     errors.video = "A demo video is required";
   } else if (videoFile) {
-    const extension = videoFile.name.split(".").pop()?.toLowerCase();
-    if (!extension || !VIDEO_EXTENSIONS.has(extension)) {
-      errors.video = "Video must be an MP4, MOV, or WebM file";
-    } else if (videoFile.size > VIDEO_MAX_SIZE) {
-      errors.video = "Video file size cannot exceed 50 MB";
-    }
+    const videoError = validateVideoFile(videoFile);
+    if (videoError) errors.video = videoError;
   }
 
   return errors;
 }
 
 export function validateWorkoutName(name) {
-  if (!name.trim()) return "Workout name is required";
-  if (name.length > 60) return "Workout name cannot exceed 60 characters";
+  const normalizedName = name.trim();
+  if (!normalizedName) return "Workout name is required";
+  if (normalizedName.length > 60) return "Workout name cannot exceed 60 characters";
+  return "";
+}
+
+export function validateWorkoutDescription(description) {
+  return description.trim().length > 200
+    ? "Description cannot exceed 200 characters"
+    : "";
+}
+
+export function validateVideoFile(file) {
+  if (!file) return "";
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  if (!extension || !VIDEO_EXTENSIONS.has(extension)) {
+    return "Video must be an MP4, MOV, or WebM file";
+  }
+  if (file.type && !file.type.toLowerCase().startsWith("video/")) {
+    return "The selected file must be a video";
+  }
+  if (file.size > VIDEO_MAX_SIZE) {
+    return "Video file size cannot exceed 50 MB";
+  }
   return "";
 }
 
@@ -60,11 +79,11 @@ export function validateWorkoutExercises(exercises) {
       Number.isInteger(Number(value)) &&
       Number(value) >= min &&
       Number(value) <= max;
-    if (!isValidInteger(exercise.sets, 1, 50)) {
-      errors[`sets-${index}`] = "Sets must be an integer from 1 to 50";
+    if (!isValidInteger(exercise.sets, 1, 100)) {
+      errors[`sets-${index}`] = "Sets must be an integer from 1 to 100";
     }
-    if (!isValidInteger(exercise.reps, 1, 999)) {
-      errors[`reps-${index}`] = "Value must be an integer from 1 to 999";
+    if (!isValidInteger(exercise.reps, 1, 2147483647)) {
+      errors[`reps-${index}`] = "Value must be an integer greater than 0";
     }
     if (!isValidInteger(exercise.restSec, 0, 600)) {
       errors[`rest-${index}`] = "Rest must be an integer from 0 to 600";
@@ -72,4 +91,16 @@ export function validateWorkoutExercises(exercises) {
   });
 
   return errors;
+}
+
+export function getApiErrorMessage(error, fallback) {
+  const responseData = error?.response?.data;
+  const fieldErrors = responseData?.errors;
+  if (fieldErrors && typeof fieldErrors === "object") {
+    const messages = Object.values(fieldErrors).filter(
+      (message) => typeof message === "string" && message.trim()
+    );
+    if (messages.length) return messages.join("; ");
+  }
+  return responseData?.message || fallback;
 }

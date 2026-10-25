@@ -2,11 +2,16 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { createPersonalExercise } from "../api/library";
-import { validatePersonalExercise } from "./libraryFormValidation";
+import {
+  getApiErrorMessage,
+  validatePersonalExercise,
+  validateVideoFile,
+} from "./libraryFormValidation";
 
 export default function CreatePersonalExercisePage() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const submissionLock = useRef(false);
 
   // Sync document title to match mockup window header: CalisHealth - Library
   useEffect(() => {
@@ -53,7 +58,8 @@ export default function CreatePersonalExercisePage() {
       guideSteps[1] !== ""
   );
 
-  const showFieldError = (field) => hasSubmitted || touchedFields[field];
+  const showFieldError = (field) =>
+    hasSubmitted || touchedFields[field] || Boolean(validationErrors[field]);
   const markFieldTouched = (field) =>
     setTouchedFields((current) => ({ ...current, [field]: true }));
   const focusFirstInvalidField = (errors) => {
@@ -92,6 +98,8 @@ export default function CreatePersonalExercisePage() {
     if (file) {
       setErrorMessage("");
       setVideoFile(file);
+      const fileError = validateVideoFile(file);
+      if (fileError) toast.error(fileError);
     }
   };
 
@@ -112,6 +120,8 @@ export default function CreatePersonalExercisePage() {
     if (file) {
       setErrorMessage("");
       setVideoFile(file);
+      const fileError = validateVideoFile(file);
+      if (fileError) toast.error(fileError);
     }
   };
 
@@ -122,12 +132,14 @@ export default function CreatePersonalExercisePage() {
       e.stopPropagation();
     }
     setHasSubmitted(true);
+    if (submissionLock.current) return;
     if (Object.keys(validationErrors).length > 0) {
       setErrorMessage("");
       toast.warning("Please fill in all required fields correctly.");
       focusFirstInvalidField(validationErrors);
       return;
     }
+    submissionLock.current = true;
     setErrorMessage("");
     setIsCreating(true);
     setTextCheckStatus("checking");
@@ -162,10 +174,11 @@ export default function CreatePersonalExercisePage() {
     } catch (err) {
       setTextCheckStatus("failed");
       setVideoCheckStatus("failed");
-      const message = err?.response?.data?.message || "Could not create exercise. Please try again.";
+      const message = getApiErrorMessage(err, "Could not create exercise. Please try again.");
       setErrorMessage(message);
       toast.error(message);
     } finally {
+      submissionLock.current = false;
       setIsCreating(false);
     }
   };
@@ -234,6 +247,10 @@ export default function CreatePersonalExercisePage() {
               setTitle(e.target.value);
               markFieldTouched("title");
             }}
+            onBlur={() => {
+              markFieldTouched("title");
+              setTitle((value) => value.trim());
+            }}
             placeholder="e.g. Diamond push-up"
             className={`w-full rounded-xl border ${showFieldError("title") && validationErrors.title ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#0c0820] px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors`}
           />
@@ -257,6 +274,10 @@ export default function CreatePersonalExercisePage() {
             onChange={(e) => {
               setDescription(e.target.value);
               markFieldTouched("description");
+            }}
+            onBlur={() => {
+              markFieldTouched("description");
+              setDescription((value) => value.trim());
             }}
             placeholder="What does this exercise train, and who is it for?"
             className={`w-full rounded-xl border ${showFieldError("description") && validationErrors.description ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#0c0820] p-4 text-xs text-white placeholder-slate-500 h-28 resize-none focus:outline-none transition-colors leading-relaxed`}
@@ -390,6 +411,7 @@ export default function CreatePersonalExercisePage() {
                     handleStepChange(index, e.target.value);
                     markFieldTouched(`step-${index}`);
                   }}
+                  maxLength={250}
                   placeholder={
                     index === 0
                       ? "e.g. Start in a plank with hands under shoulders"
@@ -626,7 +648,7 @@ export default function CreatePersonalExercisePage() {
         {/* Nút Create */}
         <button
           type="button"
-          disabled={isCreating || !isDirty}
+          disabled={isCreating || !isDirty || Object.keys(validationErrors).length > 0}
           onClick={handleCreate}
           className="rounded-xl bg-[#643bf6] hover:bg-[#522cd9] text-white text-xs font-semibold px-7 py-2.5 shadow-md active:scale-95 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-60"
         >

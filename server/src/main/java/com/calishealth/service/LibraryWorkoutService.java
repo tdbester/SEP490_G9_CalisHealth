@@ -2,6 +2,7 @@ package com.calishealth.service;
 
 import com.calishealth.dtos.*;
 import com.calishealth.exception.ResourceNotFoundException;
+import com.calishealth.exception.RequestValidationException;
 import com.calishealth.models.ExerciseEntry;
 import com.calishealth.models.User;
 import com.calishealth.models.WorkoutEntry;
@@ -210,7 +211,8 @@ public class LibraryWorkoutService {
             maximumLevel = Math.max(maximumLevel, levelRank(exercise.getLevel()));
         }
         workout.setTotalSets(totalSets);
-        workout.setEstimatedDuration((int) Math.ceil(totalSeconds / 60.0));
+        long estimatedMinutes = (long) Math.ceil(totalSeconds / 60.0);
+        workout.setEstimatedDuration((int) Math.min(Integer.MAX_VALUE, estimatedMinutes));
         workout.setLevel(switch (maximumLevel) {
             case 3 -> "ADVANCED";
             case 2 -> "INTERMEDIATE";
@@ -320,18 +322,28 @@ public class LibraryWorkoutService {
 
     private void validateItems(List<WorkoutItemDTO> items) {
         if (items == null || items.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Add at least one exercise");
+            throw new RequestValidationException("items", "Giáo trình phải chứa ít nhất 1 bài tập");
+        }
+        if (items.stream().anyMatch(item -> item == null)) {
+            throw new RequestValidationException("items", "Bài tập trong giáo trình không được để trống");
         }
         Set<Integer> indexes = items.stream().map(WorkoutItemDTO::orderIndex).collect(Collectors.toSet());
         if (indexes.size() != items.size() || indexes.stream().anyMatch(index -> index < 0)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exercise order must be unique and non-negative");
+            throw new RequestValidationException("items", "Thứ tự bài tập phải duy nhất và không âm");
         }
-        for (WorkoutItemDTO item : items) {
+        for (int index = 0; index < items.size(); index++) {
+            WorkoutItemDTO item = items.get(index);
             String countBy = normalizedCountBy(item);
-            if (item.sets() < 1 || item.sets() > 20 || item.restSeconds() < 0
-                    || ("REPS".equals(countBy) && (item.reps() == null || item.reps() < 1 || item.reps() > 100))
-                    || ("SECONDS".equals(countBy) && (item.duration() == null || item.duration() < 1 || item.duration() > 3600))) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid workout exercise configuration");
+            if (item.sets() < 1 || item.sets() > 100
+                    || item.restSeconds() < 0 || item.restSeconds() > 600
+                    || (item.reps() != null && item.reps() < 1)
+                    || (item.duration() != null && item.duration() < 1)
+                    || ("REPS".equals(countBy) && item.reps() == null)
+                    || ("SECONDS".equals(countBy) && item.duration() == null)) {
+                throw new RequestValidationException(
+                        "items[" + index + "]",
+                        "Cấu hình bài tập không hợp lệ: số hiệp từ 1 đến 100, số lần/thời lượng tối thiểu 1 và thời gian nghỉ từ 0 đến 600 giây"
+                );
             }
         }
     }
@@ -339,7 +351,7 @@ public class LibraryWorkoutService {
     private String normalizedCountBy(WorkoutItemDTO item) {
         String countBy = item.countBy() == null ? "REPS" : item.countBy().trim().toUpperCase(Locale.ROOT);
         if (!"REPS".equals(countBy) && !"SECONDS".equals(countBy)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "countBy must be REPS or SECONDS");
+            throw new RequestValidationException("items.countBy", "countBy phải là REPS hoặc SECONDS");
         }
         return countBy;
     }
