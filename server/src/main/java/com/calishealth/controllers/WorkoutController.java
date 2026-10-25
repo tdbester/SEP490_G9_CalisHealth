@@ -5,6 +5,7 @@ import com.calishealth.dtos.ExerciseDtos.WorkoutResponse;
 import com.calishealth.service.WorkoutService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,7 +28,7 @@ public class WorkoutController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public WorkoutResponse create(@RequestBody CreateWorkoutRequest request) {
-        return workouts.create(request);
+    public WorkoutResponse create(@RequestBody CreateWorkoutRequest request, Authentication authentication) {
+        return workouts.create(request, authentication.getName());
     }
 }

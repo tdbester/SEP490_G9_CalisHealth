@@ -118,6 +118,13 @@
   border: 1px solid rgba(249, 115, 22, 0.45);
   color: inherit;
   font: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.topbar-streak:hover {
+  background: rgba(249, 115, 22, 0.24);
+  border-color: rgba(249, 115, 22, 0.7);
 }
 
 .topbar-streak-icon {
