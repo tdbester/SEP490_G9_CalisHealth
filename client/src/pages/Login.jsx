@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import api from "../api/client";
 import "./Login.css";
 
@@ -56,6 +56,7 @@ function Logo() {
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -67,18 +68,30 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      const res = await api.post("/auth/login", { email, password });
+      const res = await api.post("/auth/login", {
+        email: email.trim().toLowerCase(),
+        password,
+      });
       // res.data = { token, email, fullName }
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify({ email: res.data.email, fullName: res.data.fullName }));
-      navigate("/dashboard");
+      const returnTo = new URLSearchParams(location.search).get("returnTo");
+      const destination =
+        returnTo?.startsWith("/") && !returnTo.startsWith("//") && returnTo !== "/login"
+          ? returnTo
+          : "/";
+      navigate(destination, { replace: true });
     } catch (err) {
       const msg =
         err.response?.data?.error ||
         err.response?.data?.message ||
-        err.response?.data ||
-        "Đăng nhập thất bại. Vui lòng thử lại.";
-      setError(typeof msg === "string" ? msg : "Email hoặc mật khẩu không đúng.");
+        err.response?.data?.detail ||
+        (err.response?.status === 401
+          ? "Email hoặc mật khẩu không đúng."
+          : err.response?.status === 403
+            ? "Tài khoản chưa được xác minh hoặc không được phép đăng nhập."
+            : "Không thể đăng nhập. Vui lòng thử lại.");
+      setError(typeof msg === "string" ? msg : "Không thể đăng nhập. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }

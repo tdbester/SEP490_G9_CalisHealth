@@ -16,11 +16,13 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401 && !err.config?.skipAuthRedirect) {
+    const isLoginRequest = err.config?.url?.includes("/auth/login");
+    if (err.response?.status === 401 && !isLoginRequest) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
+        const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        window.location.href = `/login?returnTo=${encodeURIComponent(returnTo)}`;
       }
     }
     return Promise.reject(err);

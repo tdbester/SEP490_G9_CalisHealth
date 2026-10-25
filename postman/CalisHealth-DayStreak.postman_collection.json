@@ -1,0 +1,170 @@
+{
+  "info": {
+    "name": "CalisHealth - Day Streak API",
+    "description": "Postman checks for the authenticated Day Streak and Day Report backend APIs.\n\nSet `baseUrl`, `memberEmail`, and `memberPassword` before running. Use a verified MEMBER account. Run `1. Login (save JWT)` first; its script stores the token for the protected requests.\n\nRequests:\n- `1. Login (save JWT)` authenticates and stores the Bearer token.\n- `2. Get Day Streak` checks the month calendar, streak totals, and weekly goal response.\n- `3. Get Day Report` checks workout exercise details for `reportDate`.\n- `4. Day Streak without token` confirms the endpoint is protected and returns 401.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "memberEmail", "value": "" },
+    { "key": "memberPassword", "value": "" },
+    { "key": "token", "value": "" },
+    { "key": "year", "value": "2026" },
+    { "key": "month", "value": "10" },
+    { "key": "reportDate", "value": "2026-10-23" }
+  ],
+  "item": [
+    {
+      "name": "1. Login (save JWT)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{memberEmail}}\",\n  \"password\": \"{{memberPassword}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/auth/login",
+        "description": "Provide a verified MEMBER account in collection variables. The test script saves the returned JWT as `token`."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Login returns 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.test('Login response contains JWT and member details', function () {",
+              "    pm.expect(body.token).to.be.a('string').and.not.empty;",
+              "    pm.expect(body.email).to.be.a('string').and.not.empty;",
+              "    pm.expect(body.role).to.eql('MEMBER');",
+              "  });",
+              "  pm.collectionVariables.set('token', body.token);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Get Day Streak",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{token}}", "type": "string" }
+          ]
+        },
+        "method": "GET",
+        "url": "{{baseUrl}}/api/member/day-streak?year={{year}}&month={{month}}",
+        "description": "Expected response includes workoutDays, currentStreakDays, currentStreak, longestStreak, active, and weeklyGoal."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Day Streak returns 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.test('Response matches Day Streak contract', function () {",
+              "    pm.expect(body.year).to.eql(Number(pm.collectionVariables.get('year')));",
+              "    pm.expect(body.month).to.eql(Number(pm.collectionVariables.get('month')));",
+              "    pm.expect(body.workoutDays).to.be.an('array');",
+              "    pm.expect(body.currentStreakDays).to.be.an('array');",
+              "    pm.expect(body.currentStreak).to.be.a('number');",
+              "    pm.expect(body.longestStreak).to.be.a('number');",
+              "    pm.expect(body.active).to.be.a('boolean');",
+              "    pm.expect(body.weeklyGoal.sessionsDone).to.be.a('number');",
+              "    pm.expect(body.weeklyGoal.targetSessions).to.be.a('number');",
+              "    pm.expect(body.weeklyGoal.percent).to.be.a('number');",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Get Day Report",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            { "key": "token", "value": "{{token}}", "type": "string" }
+          ]
+        },
+        "method": "GET",
+        "url": "{{baseUrl}}/api/member/day-report?date={{reportDate}}",
+        "description": "Select a date with a completed workout. The seeded local DB has sample workouts on 2026-10-23. Dates without completed workouts return 404."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Day Report returns 200 for a completed workout date', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.test('Response matches Day Report contract', function () {",
+              "    pm.expect(body.date).to.eql(pm.collectionVariables.get('reportDate'));",
+              "    pm.expect(body.duration).to.be.a('string');",
+              "    pm.expect(body.totalVolume).to.be.a('number');",
+              "    pm.expect(body.exercises).to.be.an('array').that.is.not.empty;",
+              "    body.exercises.forEach(function (exercise) {",
+              "      pm.expect(exercise.id).to.be.a('number');",
+              "      pm.expect(exercise.name).to.be.a('string');",
+              "      pm.expect(exercise.type).to.be.a('string');",
+              "      pm.expect(exercise.sets).to.be.a('number');",
+              "      pm.expect(exercise.reps).to.be.a('number');",
+              "      pm.expect(exercise.formAccuracy).to.be.a('number');",
+              "    });",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Day Streak without token",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "url": "{{baseUrl}}/api/member/day-streak?year={{year}}&month={{month}}",
+        "description": "Negative authorization test. This request intentionally omits the Bearer token and should return 401."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Day Streak rejects requests without a token', function () {",
+              "  pm.response.to.have.status(401);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
