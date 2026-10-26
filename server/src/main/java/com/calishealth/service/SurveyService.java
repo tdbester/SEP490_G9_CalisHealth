@@ -45,8 +45,12 @@ public class SurveyService {
         return toResponse(loader.load(survey), activeResultStep(survey));
     }
 
-    /** Bước RESULT đang ACTIVE của survey; cấu hình JSON hỏng được coi là lỗi cấu hình survey. */
-    private ResultStepResponse activeResultStep(Survey survey) {
+    /**
+     * Bước RESULT đang ACTIVE của survey (null nếu không có); cấu hình JSON hỏng được coi là lỗi cấu hình survey.
+     * Dùng cả khi chấm level (level dự phòng, số tuần/buổi của kế hoạch gợi ý).
+     */
+    @Transactional(readOnly = true)
+    public ResultStepResponse activeResultStep(Survey survey) {
         return steps.findBySurveyIdAndStepTypeAndStatus(survey.getId(), SurveyStep.Type.RESULT, SurveyStep.Status.ACTIVE)
                 .map(step -> {
                     ResultConfig config;

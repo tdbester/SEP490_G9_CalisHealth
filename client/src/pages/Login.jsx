@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import api from "../api/client";
+import { markOnboardingPrompted, needsOnboarding } from "../api/survey";
 import "./Login.css";
 
 function MailIcon() {
@@ -72,15 +73,22 @@ export default function Login() {
         email: email.trim().toLowerCase(),
         password,
       });
-      // res.data = { token, email, fullName }
+      // res.data = { token, email, fullName, role }
       localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify({ email: res.data.email, fullName: res.data.fullName }));
+      localStorage.setItem(
+        "user",
+        JSON.stringify({ email: res.data.email, fullName: res.data.fullName, role: res.data.role })
+      );
+      // Member chưa hoàn thành / chưa bỏ qua khảo sát onboarding -> vào survey trước,
+      // kể cả khi có returnTo (vd vào "/" lúc chưa đăng nhập bị chuyển sang /login?returnTo=/)
+      if (res.data.role === "MEMBER" && (await needsOnboarding())) {
+        markOnboardingPrompted();
+        navigate("/survey", { replace: true });
+        return;
+      }
       const returnTo = new URLSearchParams(location.search).get("returnTo");
-      const destination =
-        returnTo?.startsWith("/") && !returnTo.startsWith("//") && returnTo !== "/login"
-          ? returnTo
-          : "/";
-      navigate(destination, { replace: true });
+      const hasReturnTo = returnTo?.startsWith("/") && !returnTo.startsWith("//") && returnTo !== "/login";
+      navigate(hasReturnTo ? returnTo : "/", { replace: true });
     } catch (err) {
       const msg =
         err.response?.data?.error ||

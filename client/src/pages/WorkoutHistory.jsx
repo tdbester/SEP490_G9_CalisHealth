@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dayjs from "dayjs";
 import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
 import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
@@ -9,11 +9,8 @@ import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import BackButton from "../components/common/BackButton";
 import WorkoutLogModal from "../components/tracking/WorkoutLogModal";
+import trackingApi from "../api/tracking";
 import "./WorkoutHistory.css";
-
-// Seed data là tùy chọn: glob trả về {} khi file đã bị xóa, nên trang không bị lỗi build.
-const seedModules = import.meta.glob("../data/workoutHistory.seed.js", { eager: true });
-const SEED = Object.values(seedModules)[0]?.default ?? null;
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -45,24 +42,56 @@ export default function WorkoutHistory() {
   const dateInputRef = useRef(null);
   const [filter, setFilter] = useState("all");
   const [date, setDate] = useState("");
+  // { status: "loading" | "ready" | "error", workout } của buổi đang xem; null = popup đóng
   const [selected, setSelected] = useState(null);
+  const [apiData, setApiData] = useState(null);
+  const [loadError, setLoadError] = useState(false);
   const closeLog = useCallback(() => setSelected(null), []);
 
+  // Danh sách chỉ có thông tin tóm tắt; bài tập của buổi lấy từ API chi tiết khi mở popup
+  const openLog = useCallback((workout) => {
+    setSelected({ status: "loading", workout: { ...workout, exercises: [] } });
+    trackingApi
+      .getWorkoutSessionDetail(workout.id)
+      .then((detail) =>
+        setSelected((cur) => (cur?.workout.id === workout.id ? { status: "ready", workout: detail } : cur)),
+      )
+      .catch(() =>
+        setSelected((cur) => (cur?.workout.id === workout.id ? { ...cur, status: "error" } : cur)),
+      );
+  }, []);
+
+  useEffect(() => {
+    trackingApi
+      .getWorkoutHistory({
+        category: filter === "all" ? undefined : filter,
+        date: date || undefined,
+      })
+      .then((res) => {
+        setApiData(res);
+        setLoadError(false);
+      })
+      .catch(() => setLoadError(true));
+  }, [filter, date]);
+
+  const rawWorkouts = apiData?.workouts ?? [];
   const workouts = useMemo(
     () =>
-      [...(SEED?.workouts ?? [])].sort(
+      [...rawWorkouts].sort(
         (a, b) => dayjs(b.completedAt).valueOf() - dayjs(a.completedAt).valueOf(),
       ),
-    [],
+    [rawWorkouts],
   );
-  const summary = SEED?.summary ?? summarize(workouts);
+  const summary = apiData?.summary ?? summarize(workouts);
   const latestId = workouts[0]?.id;
 
-  const visible = workouts.filter(
-    (w) =>
-      (filter === "all" || w.category === filter) &&
-      (!date || dayjs(w.completedAt).format("YYYY-MM-DD") === date),
-  );
+  const visible = apiData
+    ? workouts
+    : workouts.filter(
+        (w) =>
+          (filter === "all" || w.category === filter) &&
+          (!date || dayjs(w.completedAt).format("YYYY-MM-DD") === date),
+      );
   const groups = groupByMonth(visible);
 
   const stats = [
@@ -160,9 +189,11 @@ export default function WorkoutHistory() {
       {/* ── List ───────────────────────────────────────────────── */}
       {groups.length === 0 ? (
         <p className="wh-card wh-empty">
-          {workouts.length === 0
-            ? "No workouts yet. Completed sessions will show up here."
-            : "No workouts match this filter."}
+          {loadError
+            ? "We could not load your workout history. Please try again later."
+            : workouts.length === 0
+              ? "No workouts yet. Completed sessions will show up here."
+              : "No workouts match this filter."}
         </p>
       ) : (
         groups.map((group) => (
@@ -176,7 +207,7 @@ export default function WorkoutHistory() {
                     <button
                       type="button"
                       className="wh-card wh-row"
-                      onClick={() => setSelected(workout)}
+                      onClick={() => openLog(workout)}
                     >
                       <span
                         className={`wh-row-icon ${isLatest ? "featured" : `tone-${workout.category}`}`}
@@ -207,7 +238,7 @@ export default function WorkoutHistory() {
         ))
       )}
 
-      <WorkoutLogModal workout={selected} onClose={closeLog} />
+      <WorkoutLogModal workout={selected?.workout ?? null} status={selected?.status} onClose={closeLog} />
     </div>
   );
 }

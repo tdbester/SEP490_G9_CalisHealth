@@ -11,9 +11,18 @@ function formatExerciseTime(totalSeconds) {
   return seconds ? `${minutes}m ${String(seconds).padStart(2, "0")}s` : `${minutes}m`;
 }
 
-/** Popup chi tiết một buổi tập (Workout log). `workout` = null thì popup đóng. */
-export default function WorkoutLogModal({ workout, onClose }) {
-  const exerciseCount = workout?.exercises.length ?? 0;
+/** API trả tổng reps của bài (mọi set) -> cột "Reps / set" = tổng / số set. */
+function repsPerSet(exercise) {
+  return exercise.sets > 0 ? Math.round(exercise.reps / exercise.sets) : exercise.reps;
+}
+
+/**
+ * Popup chi tiết một buổi tập (Workout log). `workout` = null thì popup đóng.
+ * status: "loading" khi đang lấy danh sách bài tập từ API chi tiết, "error" khi lấy thất bại.
+ */
+export default function WorkoutLogModal({ workout, status = "ready", onClose }) {
+  const exercises = workout?.exercises ?? [];
+  const exerciseCount = status === "ready" ? exercises.length : workout?.exerciseCount ?? 0;
   const countLabel = `${exerciseCount} exercise${exerciseCount === 1 ? "" : "s"}`;
 
   return (
@@ -53,9 +62,16 @@ export default function WorkoutLogModal({ workout, onClose }) {
               <span>Exercise time</span>
             </div>
 
+            {status !== "ready" && (
+              <p className="wlm-total-note" role={status === "error" ? "alert" : undefined}>
+                {status === "loading"
+                  ? "Loading exercises…"
+                  : "We could not load the exercises of this workout. Please try again."}
+              </p>
+            )}
             <ol className="wlm-list">
-              {workout.exercises.map((exercise, index) => (
-                <li key={exercise.name} className="wlm-row">
+              {exercises.map((exercise, index) => (
+                <li key={`${exercise.name}-${index}`} className="wlm-row">
                   <span className="wlm-row-name">
                     <span className="wlm-row-index">{index + 1}</span>
                     {exercise.name}
@@ -65,7 +81,7 @@ export default function WorkoutLogModal({ workout, onClose }) {
                     <small>sets</small>
                   </span>
                   <span className="wlm-row-stat" data-label="Reps / set">
-                    {exercise.reps}
+                    {repsPerSet(exercise)}
                     <small>reps</small>
                   </span>
                   <span className="wlm-row-stat wlm-row-time" data-label="Exercise time">

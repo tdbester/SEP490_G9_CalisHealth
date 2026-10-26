@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
@@ -11,6 +11,9 @@ import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import BarChart from "../components/common/BarChart";
 import UpdateStatsModal from "../components/tracking/UpdateStatsModal";
 import { calculateBmi, classifyBmi } from "../utils/bmi";
+import trackingApi from "../api/tracking";
+import { isMemberSession } from "../api/survey";
+import SurveyReminder from "../components/survey/SurveyReminder";
 import "./HealthTracking.css";
 
 // Seed data là tùy chọn: glob trả về {} khi file đã bị xóa, nên trang không bị lỗi build.
@@ -98,7 +101,9 @@ function MetricCard({ icon: Icon, label, value, unit, note, onEdit }) {
 }
 
 function BmiChart({ records }) {
-  const baseline = Math.floor(Math.min(...records.map((r) => r.bmi))) - 1;
+  const baseline = records.length > 0
+    ? Math.floor(Math.min(...records.map((r) => Number(r.bmi)))) - 1
+    : 18;
 
   return (
     <div className="ht-chart">
@@ -108,9 +113,9 @@ function BmiChart({ records }) {
         data={records.map((record) => ({
           key: record.month,
           label: dayjs(record.month).format("MMM"),
-          value: record.bmi,
-          display: record.bmi.toFixed(1),
-          title: `${dayjs(record.month).format("MMMM YYYY")}: ${record.bmi.toFixed(1)}`,
+          value: Number(record.bmi),
+          display: Number(record.bmi).toFixed(1),
+          title: `${dayjs(record.month).format("MMMM YYYY")}: ${Number(record.bmi).toFixed(1)}`,
         }))}
       />
     </div>
@@ -119,26 +124,55 @@ function BmiChart({ records }) {
 
 export default function HealthTracking() {
   const navigate = useNavigate();
-  const healthScore = SEED?.healthScore ?? null;
+  const [healthScore, setHealthScore] = useState(SEED?.healthScore ?? null);
   const [metrics, setMetrics] = useState(SEED?.bodyMetrics ?? null);
+  const [bmiRecords, setBmiRecords] = useState(SEED?.bmiByMonth ?? []);
   const [isUpdateOpen, setIsUpdateOpen] = useState(false);
-  const bmiRecords = SEED?.bmiByMonth ?? [];
 
   const openUpdate = () => setIsUpdateOpen(true);
   const closeUpdate = useCallback(() => setIsUpdateOpen(false), []);
 
-  // Chưa có API: chỉ cập nhật state của trang, reload sẽ quay về dữ liệu seed.
-  const saveMeasurements = ({ weightKg, heightCm }) => {
-    setMetrics((prev) => ({
-      ...prev,
-      weightKg,
-      heightCm,
-      weightChangeKg:
-        prev?.weightChangeKg != null
-          ? Math.round((prev.weightChangeKg + weightKg - prev.weightKg) * 10) / 10
-          : null,
-      updatedAt: new Date().toISOString(),
-    }));
+  const loadData = useCallback(() => {
+    trackingApi
+      .getOverview()
+      .then((res) => {
+        if (res.healthScore) {
+          setHealthScore(res.healthScore);
+        }
+        if (res.bodyMetrics && res.bodyMetrics.weightKg != null) {
+          setMetrics(res.bodyMetrics);
+        }
+        if (res.bmiOverview?.records) {
+          setBmiRecords(res.bmiOverview.records);
+        }
+      })
+      .catch(() => {
+        // Fallback dữ liệu tĩnh nếu API chưa online
+      });
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const saveMeasurements = async ({ weightKg, heightCm }) => {
+    try {
+      const res = await trackingApi.updateMeasurements({ weightKg, heightCm });
+      setMetrics(res);
+      loadData();
+    } catch {
+      // Fallback state
+      setMetrics((prev) => ({
+        ...prev,
+        weightKg,
+        heightCm,
+        weightChangeKg:
+          prev?.weightChangeKg != null
+            ? Math.round((prev.weightChangeKg + weightKg - prev.weightKg) * 10) / 10
+            : null,
+        updatedAt: new Date().toISOString(),
+      }));
+    }
     setIsUpdateOpen(false);
   };
 
@@ -152,8 +186,13 @@ export default function HealthTracking() {
       ? `${weightChange > 0 ? "+" : ""}${weightChange} kg this month`
       : null;
 
+  const hasScore = healthScore?.score != null && healthScore.score > 0;
+
   return (
     <div className="health-tracking">
+      {/* ── Nút làm survey cho member chưa hoàn thành (đã bỏ qua lần đầu) ── */}
+      {isMemberSession() && <SurveyReminder />}
+
       {/* ── Header ─────────────────────────────────────────────── */}
       <header className="ht-header">
         <span className="ht-date">{dayjs().format("dddd, DD MMMM YYYY")}</span>
@@ -165,21 +204,23 @@ export default function HealthTracking() {
 
       {/* ── Health score ───────────────────────────────────────── */}
       <section className="ht-hero">
-        <ScoreGauge score={healthScore?.score} />
+        <ScoreGauge score={hasScore ? healthScore.score : null} />
         <div className="ht-hero-info">
-          {healthScore?.changePercent != null && (
+          {hasScore && healthScore.changePercent != null && (
             <span className="ht-pill">
               <TrendingUpRoundedIcon />
               {healthScore.changePercent}% this month
             </span>
           )}
           <h2 className="ht-hero-title">
-            {healthScore ? "Great momentum" : "No health score yet"}
+            {hasScore
+              ? (healthScore.statusHeadline || "Great momentum")
+              : (healthScore?.statusHeadline || "No health score yet")}
           </h2>
           <p className="ht-hero-text">
-            {healthScore
-              ? `You are ahead of ${healthScore.peerPercentile}% of people with similar goals.`
-              : "Log your body metrics and workouts to get your weekly score."}
+            {hasScore
+              ? (healthScore.statusDescription || `You are ahead of ${healthScore.peerPercentile}% of people with similar goals.`)
+              : (healthScore?.statusDescription || "Log your body metrics and workouts to get your weekly score.")}
           </p>
           <button
             type="button"

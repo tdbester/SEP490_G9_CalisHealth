@@ -15,6 +15,7 @@ import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import ShowChartRoundedIcon from "@mui/icons-material/ShowChartRounded";
 import api from "../api/client";
+import OnboardingRedirect from "../components/survey/OnboardingRedirect";
 import {
   TODAY_PLAN,
   MUSCLE_GROUPS,
@@ -126,6 +127,8 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
+      {user?.role === "MEMBER" && <OnboardingRedirect />}
+
       {/* ── Daily Workout Plan ─────────────────────────────────── */}
       {user && (
         <section className="dash-plan">

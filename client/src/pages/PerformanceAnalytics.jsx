@@ -1,13 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import BackButton from "../components/common/BackButton";
 import BarChart from "../components/common/BarChart";
+import trackingApi from "../api/tracking";
 import "./PerformanceAnalytics.css";
-
-// Seed data là tùy chọn: glob trả về {} khi file đã bị xóa, nên trang không bị lỗi build.
-const seedModules = import.meta.glob("../data/performanceAnalytics.seed.js", { eager: true });
-const SEED = Object.values(seedModules)[0]?.default ?? null;
 
 const RANGES = [
   { id: "1M", period: "this month" },
@@ -108,8 +105,23 @@ function SectionLabel({ index, children }) {
 
 export default function PerformanceAnalytics() {
   const [range, setRange] = useState("1M");
+  // Số liệu luôn lấy từ tài khoản đang đăng nhập; không còn dữ liệu mẫu dự phòng
+  const [state, setState] = useState({ status: "loading", data: null });
   const period = RANGES.find((r) => r.id === range).period;
-  const data = SEED?.[range] ?? null;
+
+  useEffect(() => {
+    let active = true;
+    setState({ status: "loading", data: null });
+    trackingApi
+      .getAnalytics(range)
+      .then((res) => active && setState({ status: "ready", data: res }))
+      .catch(() => active && setState({ status: "error", data: null }));
+    return () => {
+      active = false;
+    };
+  }, [range]);
+
+  const data = state.status === "ready" && state.data?.sessions > 0 ? state.data : null;
 
   const cleanRatio = data?.reps.total
     ? Math.round((data.reps.valid / data.reps.total) * 100)
@@ -149,8 +161,12 @@ export default function PerformanceAnalytics() {
       </div>
 
       {!data ? (
-        <p className="pa-card pa-empty">
-          No analytics yet. Complete a few AI-tracked workouts to see your trends.
+        <p className="pa-card pa-empty" role={state.status === "error" ? "alert" : undefined}>
+          {state.status === "loading"
+            ? "Loading your analytics…"
+            : state.status === "error"
+              ? "We could not load your analytics. Please try again later."
+              : `No workouts recorded ${period}. Complete a few AI-tracked workouts to see your trends.`}
         </p>
       ) : (
         <>
@@ -163,6 +179,9 @@ export default function PerformanceAnalytics() {
                 <p className="pa-card-subtitle">Issues detected by AI coaching</p>
                 <div className="pa-card-body">
                   <ErrorDonut items={data.formErrors.items} total={data.formErrors.totalTags} />
+                  {data.formErrors.items.length === 0 && (
+                    <p className="pa-card-subtitle">No form errors flagged {period}.</p>
+                  )}
                   <ul className="pa-legend">
                     {data.formErrors.items.map((item, i) => (
                       <li key={item.label}>
@@ -278,7 +297,7 @@ export default function PerformanceAnalytics() {
                 <AutoAwesomeRoundedIcon />
               </span>
               <div>
-                <span className="pa-insight-label">AI insight</span>
+                <span className="pa-insight-label">Insight</span>
                 <p className="pa-insight-title">{data.insight.title}</p>
                 <p className="pa-insight-text">{data.insight.text}</p>
               </div>

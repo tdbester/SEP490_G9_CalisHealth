@@ -10,6 +10,10 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import ResetPassword from "./pages/ResetPassword";
+import ProtectedRoute from "./components/ProtectedRoute";
+import SurveyFlow, { SurveyEntry } from "./pages/survey/SurveyFlow";
+import SurveyStepPage from "./pages/survey/SurveyStepPage";
+import SurveyResult from "./pages/survey/SurveyResult";
 
 export default function App() {
   return (
@@ -20,6 +24,27 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+
+        {/* Onboarding survey của member (sau khi đăng nhập); URL theo Figma: /survey/body-information … */}
+        <Route
+          path="/survey"
+          element={
+            <ProtectedRoute>
+              <SurveyFlow />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<SurveyEntry />} />
+          <Route path=":stepSlug" element={<SurveyStepPage />} />
+        </Route>
+        <Route
+          path="/survey/result"
+          element={
+            <ProtectedRoute>
+              <SurveyResult />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/"

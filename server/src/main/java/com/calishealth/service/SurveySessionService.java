@@ -1,11 +1,13 @@
 package com.calishealth.service;
 
 import com.calishealth.dtos.SurveyDtos.AnswerItem;
+import com.calishealth.dtos.SurveyDtos.LevelAssessment;
 import com.calishealth.dtos.SurveyDtos.SaveAnswersRequest;
 import com.calishealth.dtos.SurveyDtos.SessionQuestionResponse;
 import com.calishealth.dtos.SurveyDtos.SessionResponse;
 import com.calishealth.dtos.SurveyDtos.SessionStepResponse;
 import com.calishealth.dtos.SurveyDtos.SessionSummaryResponse;
+import com.calishealth.dtos.SurveyDtos.SurveyResultResponse;
 import com.calishealth.exception.SurveyException;
 import com.calishealth.exception.SurveyException.ErrorItem;
 import com.calishealth.models.AssessmentAnswer;
@@ -22,6 +24,7 @@ import com.calishealth.service.survey.definition.QuestionDefinition;
 import com.calishealth.service.survey.definition.StepDefinition;
 import com.calishealth.service.survey.definition.StepQuestion;
 import com.calishealth.service.survey.definition.SurveyDefinition;
+import com.calishealth.service.survey.level.LevelAssessmentService;
 import com.calishealth.service.survey.questiontype.AnswerCheck;
 import com.calishealth.service.survey.questiontype.QuestionTypeHandler;
 import com.calishealth.service.survey.questiontype.QuestionTypeRegistry;
@@ -57,6 +60,7 @@ public class SurveySessionService {
     private final SurveyService surveys;
     private final SurveyDefinitionLoader loader;
     private final QuestionTypeRegistry registry;
+    private final LevelAssessmentService levels;
 
     public record StartResult(SessionResponse session, boolean created) {}
 
@@ -214,7 +218,7 @@ public class SurveySessionService {
     /**
      * Hoàn thành: mọi câu bắt buộc đang áp dụng phải có câu trả lời hợp lệ (kiểm tra lại theo cấu hình),
      * và không còn câu trả lời cho câu hỏi đã hết áp dụng (frontend phải gửi null để xóa).
-     * Không tính level / không sinh giáo án.
+     * Hoàn thành xong thì chấm level theo bộ luật (LevelAssessmentService) trong cùng transaction.
      */
     @Transactional
     public SessionResponse complete(String email, Long sessionId) {
@@ -258,7 +262,30 @@ public class SurveySessionService {
         session.setStatus(SurveySession.Status.COMPLETED);
         session.setCompletedAt(now);
         session.setUpdatedAt(now);
+        levels.assess(session, definition, values);
         return view(session, definition, values);
+    }
+
+    /**
+     * Kết quả level + kế hoạch gợi ý của phiên đã hoàn thành. Phiên hoàn thành trước khi có tính năng chấm level
+     * được chấm bù 1 lần (khóa dòng phiên để 2 request song song không cùng chấm).
+     */
+    @Transactional
+    public SurveyResultResponse result(String email, Long sessionId) {
+        User user = currentUser(email);
+        SurveySession session = owned(sessions.findWithSurveyById(sessionId), user);
+        if (session.getStatus() != SurveySession.Status.COMPLETED) {
+            throw SurveyException.conflict("SESSION_NOT_COMPLETED",
+                    "The survey must be completed before its result is available (current status: "
+                            + session.getStatus() + ")");
+        }
+        LevelAssessment assessment = levels.find(session).orElseGet(() -> {
+            SurveySession locked = owned(sessions.findByIdForUpdate(sessionId), user);
+            return levels.find(locked).orElseGet(() ->
+                    levels.assess(locked, loader.load(locked.getSurvey()), values(storedAnswers(locked))));
+        });
+        return new SurveyResultResponse(session.getId(), session.getSurvey().getSurveyCode(),
+                session.getSurveyVersion(), session.getCompletedAt(), assessment);
     }
 
     /** Bỏ qua: giữ nguyên câu trả lời đã lưu. */

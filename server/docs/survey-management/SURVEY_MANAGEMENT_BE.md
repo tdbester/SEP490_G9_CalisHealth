@@ -337,3 +337,32 @@ Các phần sau cần màn riêng nên chưa làm:
 - Sửa **điều kiện hiển thị**.
 
 Câu hỏi hiện có được nạp qua file seed.
+
+## 8. Chấm level sau onboarding (member) – `V6__level_assessment_rules.sql`
+
+Khi member hoàn thành khảo sát (`POST /api/survey-sessions/{id}/complete`), backend chấm level theo **bộ luật lưu trong DB**. Java chỉ có thuật toán chung (`LevelRuleEvaluator`), không chứa ngưỡng của bài tập nào.
+
+| Bảng | Nội dung |
+|---|---|
+| `level_rule_sets` | 1 bộ luật / `survey_code`, có version như `surveys` (DRAFT → ACTIVE → ARCHIVED), `scoring_method` = `WEIGHTED_AVERAGE` \| `MINIMUM` |
+| `level_rule_criteria` | Tiêu chí = 1 câu hỏi NUMBER (vd `PUSH_UP_MAX_REPS`), `weight`, `required` |
+| `level_rule_bands` | Khoảng `[min_value, max_value)` → `score` + level của bài đó, `band_label` (vd "Limited"), `applies_when` = điều kiện theo câu trả lời khác (cùng cú pháp `conditional_rules`, vd tách theo `GENDER` / `AGE`) |
+| `level_rule_outcomes` | Điểm tổng ≥ `min_score` → fitness level; `sort_order` = thứ hạng; `summary` + `recommendation` (JSON kế hoạch gợi ý) |
+| `survey_level_results` | Kết quả của 1 phiên: level, điểm, `method` (`RULES` \| `FALLBACK` \| `NONE`), `breakdown` = ảnh chụp toàn bộ màn Result |
+
+Thuật toán:
+1. Mỗi tiêu chí lấy khoảng **đầu tiên** (theo `sort_order`) có `applies_when` thỏa và chứa giá trị → điểm.
+2. Điểm tổng: trung bình có trọng số (hoặc điểm thấp nhất với `MINIMUM`).
+3. Level là mốc có `min_score` cao nhất mà điểm tổng đạt được.
+4. Không chấm được thì dùng `fallbackFitnessLevelId` của bước Result. Lý do được lưu ở `reason`: `NO_RULE_SET`, `RULES_INVALID`, `MISSING_REQUIRED_ANSWER`, `NO_MATCHING_BAND`, `NOTHING_SCORED`, `BELOW_LOWEST_OUTCOME`.
+5. Level được ghi vào `member_profiles.fitness_level_id`.
+
+Kế hoạch gợi ý lấy nội dung (tên, buổi tập, bài tập) theo level. Số tuần, số buổi mỗi tuần và số phút mỗi buổi lấy từ cấu hình bước Result (F9/F10). Các buổi được trải đều trong tuần.
+
+API member: `GET /api/survey-sessions/{id}/result`, chỉ cho phiên `COMPLETED` (nếu chưa → 409 `SESSION_NOT_COMPLETED`). Phiên đã hoàn thành trước khi có V6 sẽ được chấm bù ở lần gọi đầu.
+
+Kiểm tra cấu hình: lúc khởi động, log in `Level rule set ONBOARDING_LEVEL v<n> configuration OK` hoặc liệt kê từng lỗi. Bộ luật lỗi không chặn member hoàn thành khảo sát mà rơi về level dự phòng.
+
+Seed: [seed_onboarding_level_rules.sql](seed_onboarding_level_rules.sql). File có bảng ngưỡng Push-up / Squat / Plank, `display_config` cho màn onboarding và ví dụ kết quả mong đợi. Chạy sau `seed_survey_management.sql`, chạy lại nhiều lần được. Mỗi lần chạy tạo 1 version ACTIVE mới, version cũ chuyển sang ARCHIVED.
+
+Mã nguồn: `service/survey/level/*` (definition, evaluator, loader, service, startup check), `models/LevelRule*.java`, `models/SurveyLevelResult.java`, test `LevelRuleEvaluatorTest` (13 test).

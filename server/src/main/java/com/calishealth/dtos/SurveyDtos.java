@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import tools.jackson.databind.JsonNode;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -187,4 +188,69 @@ public class SurveyDtos {
             LocalDateTime startedAt,
             LocalDateTime completedAt,
             LocalDateTime skippedAt) {}
+
+    // ---------- Result (GET /api/survey-sessions/{id}/result) ----------
+
+    public record SurveyResultResponse(
+            Long sessionId,
+            String surveyCode,
+            int surveyVersion,
+            LocalDateTime completedAt,
+            LevelAssessment assessment) {}
+
+    /**
+     * Ảnh chụp kết quả chấm level, lưu nguyên ở survey_level_results.breakdown để màn Result hiển thị lại
+     * đúng như lúc chấm dù bộ luật / cấu hình bước Result đổi về sau.
+     */
+    public record LevelAssessment(
+            /** RULES | FALLBACK | NONE */
+            String method,
+            /** Lý do không chấm được theo luật (null khi method = RULES), vd NO_RULE_SET, MISSING_REQUIRED_ANSWER. */
+            String reason,
+            LevelItem level,
+            /** Thang level của bộ luật, thấp -> cao (rỗng nếu không có bộ luật). */
+            List<LevelItem> levels,
+            BigDecimal totalScore,
+            String summary,
+            boolean showLevelBreakdown,
+            boolean showPlanPreview,
+            List<CriterionResultItem> criteria,
+            /** null khi level không có kế hoạch gợi ý. */
+            PlanResponse plan,
+            LocalDateTime evaluatedAt) {}
+
+    /** rank null khi level không thuộc thang của bộ luật (vd level dự phòng khi chưa có bộ luật). */
+    public record LevelItem(Long id, String name, Integer rank) {}
+
+    public record CriterionResultItem(
+            String criterionCode,
+            String label,
+            String questionCode,
+            BigDecimal value,
+            String unit,
+            BigDecimal score,
+            BigDecimal weight,
+            String levelName,
+            String bandLabel,
+            boolean scored) {}
+
+    public record PlanResponse(
+            String name,
+            String description,
+            String note,
+            int weeks,
+            int sessionsPerWeek,
+            int minutesPerSession,
+            /** Lịch 1 tuần: các ngày có buổi tập, buổi lặp vòng theo danh sách sessions của Recommendation. */
+            List<PlanDayItem> rhythm) {}
+
+    /** day: MON..SUN */
+    public record PlanDayItem(String day, String name, List<PlanExerciseItem> exercises) {}
+
+    public record PlanExerciseItem(String name, String detail) {}
+
+    /** JSON cấu hình ở level_rule_outcomes.recommendation. */
+    public record Recommendation(String planName, String description, String note, List<SessionTemplate> sessions) {}
+
+    public record SessionTemplate(String name, List<PlanExerciseItem> exercises) {}
 }
