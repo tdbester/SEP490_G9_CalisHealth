@@ -18,7 +18,7 @@ export default function ResetPassword() {
     e.preventDefault();
     setError("");
     if (form.newPassword !== form.confirmNewPassword) {
-      setError("Mật khẩu xác nhận không khớp");
+      setError("The confirmation password does not match");
       return;
     }
     setLoading(true);
@@ -30,8 +30,8 @@ export default function ResetPassword() {
       const msg =
         (data && typeof data === "object"
           ? Object.values(data).flat().join(" • ")
-          : data) || "Đặt lại mật khẩu thất bại.";
-      setError(typeof msg === "string" ? msg : "Đặt lại mật khẩu thất bại.");
+          : data) || "Could not reset the password.";
+      setError(typeof msg === "string" ? msg : "Could not reset the password.");
     } finally {
       setLoading(false);
     }
@@ -44,13 +44,13 @@ export default function ResetPassword() {
           <span className="login-logo-text">Calis</span>
           <span className="logo-gradient-text">Health</span>
         </div>
-        <h1 className="login-title">Đặt lại mật khẩu</h1>
+        <h1 className="login-title">Reset password</h1>
 
         {success ? (
           <div className="login-form">
-            <div className="login-success">Đặt lại mật khẩu thành công! Hãy đăng nhập lại.</div>
+            <div className="login-success">Password reset successfully! Please sign in again.</div>
             <button className="login-submit" onClick={() => navigate("/login")}>
-              <span className="login-submit-text">Đăng nhập</span>
+              <span className="login-submit-text">Sign in</span>
             </button>
           </div>
         ) : (
@@ -58,7 +58,7 @@ export default function ResetPassword() {
             {error && <div className="login-error">{error}</div>}
 
             <div className="login-field">
-              <label className="login-label">Mật khẩu mới</label>
+              <label className="login-label">New password</label>
               <div className="login-input-wrap">
                 <input
                   className="login-input"
@@ -72,7 +72,7 @@ export default function ResetPassword() {
             </div>
 
             <div className="login-field">
-              <label className="login-label">Xác nhận mật khẩu mới</label>
+              <label className="login-label">Confirm new password</label>
               <div className="login-input-wrap">
                 <input
                   className="login-input"
@@ -86,13 +86,13 @@ export default function ResetPassword() {
             </div>
 
             <button type="submit" className="login-submit" disabled={loading}>
-              <span className="login-submit-text">{loading ? "Đang xử lý..." : "Đặt lại mật khẩu"}</span>
+              <span className="login-submit-text">{loading ? "Processing..." : "Reset password"}</span>
             </button>
           </form>
         )}
 
         <div className="login-links">
-          <button className="login-link" onClick={() => navigate("/login")}>Về trang đăng nhập</button>
+          <button className="login-link" onClick={() => navigate("/login")}>Back to login</button>
         </div>
       </div>
     </div>

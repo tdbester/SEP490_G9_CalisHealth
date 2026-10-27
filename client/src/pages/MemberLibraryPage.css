@@ -1,0 +1,182 @@
+.member-library {
+  max-width: 1180px;
+  margin: 0 auto;
+  color: #f5f1ff;
+}
+
+.member-library-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
+.member-library-eyebrow {
+  color: #a89bd0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0 0 6px;
+}
+
+.member-library-title {
+  font-size: clamp(1.8rem, 4vw, 2.5rem) !important;
+  font-weight: 700 !important;
+  margin: 0 !important;
+}
+
+.member-library-description {
+  color: #aaa2bd;
+  margin-top: 8px !important;
+}
+
+.member-library-total {
+  min-width: 96px;
+  padding: 12px 16px;
+  border: 1px solid #302942;
+  border-radius: 8px;
+  text-align: right;
+  background: #171326;
+}
+
+.member-library-total span,
+.member-library-total small {
+  display: block;
+}
+
+.member-library-total span {
+  color: #c8b7ff;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.member-library-total small {
+  color: #aaa2bd;
+  font-size: 0.75rem;
+}
+
+.member-library-tabs {
+  border-bottom: 1px solid #302942;
+  margin-bottom: 18px;
+}
+
+.member-library-tabs .MuiTab-root {
+  color: #aaa2bd;
+  min-height: 48px;
+  text-transform: none;
+}
+
+.member-library-tabs .Mui-selected {
+  color: #d7caff;
+}
+
+.member-library-tools {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 22px;
+  max-width: 660px;
+}
+
+.member-library-tools .MuiOutlinedInput-root {
+  background: #171326;
+  color: #f5f1ff;
+}
+
+.member-library-tools .MuiOutlinedInput-notchedOutline {
+  border-color: #3a3150;
+}
+
+.member-library-tools .MuiInputBase-input::placeholder {
+  color: #8e86a1;
+  opacity: 1;
+}
+
+.member-library-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.member-library-card {
+  min-height: 170px;
+  border-color: #302942 !important;
+  border-radius: 8px !important;
+  background: #171326 !important;
+  color: #f5f1ff !important;
+}
+
+.member-library-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.member-library-card-title {
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+}
+
+.member-library-card-description {
+  color: #aaa2bd;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  margin-top: 12px !important;
+  min-height: 60px;
+}
+
+.member-library-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #c8b7ff;
+  font-size: 0.78rem;
+  margin-top: 16px;
+}
+
+.member-library-meta span + span::before {
+  color: #665b7d;
+  content: "•";
+  margin-right: 8px;
+}
+
+.member-library-state {
+  align-items: center;
+  border: 1px dashed #3a3150;
+  border-radius: 8px;
+  color: #aaa2bd;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+  min-height: 240px;
+  text-align: center;
+}
+
+.member-library-state h6 {
+  color: #f5f1ff;
+}
+
+@media (max-width: 800px) {
+  .member-library-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .member-library-header {
+    align-items: flex-start;
+  }
+
+  .member-library-total {
+    min-width: 78px;
+    padding: 9px 10px;
+  }
+
+  .member-library-grid {
+    grid-template-columns: 1fr;
+  }
+}

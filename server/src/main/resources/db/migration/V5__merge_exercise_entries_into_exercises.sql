@@ -105,6 +105,79 @@ SET @sql := IF(@drop_exercise_columns IS NOT NULL,
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- ============================================================
+-- 2b. WORKOUT TEMPLATES (module Library/Content)
+-- ------------------------------------------------------------
+-- V1-V4 trên main chưa tạo các bảng này nên V5 tạo (idempotent).
+--   workout_entries     -> 1 workout template / 7-day training plan
+--   workout_exercises   -> join table workout <-> exercises, giữ thứ tự
+--   workout_plan_items  -> bài tập theo từng thứ trong tuần
+-- ============================================================
+CREATE TABLE IF NOT EXISTS workout_entries (
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    code        VARCHAR(30)  NOT NULL,
+    name        VARCHAR(120) NOT NULL,
+    description TEXT         DEFAULT NULL,
+    content     TEXT         DEFAULT NULL,
+    type        VARCHAR(40)  DEFAULT 'WORKOUT',
+    level       VARCHAR(30)  NOT NULL,
+    active      TINYINT(1)   NOT NULL DEFAULT 1,
+    created_by  BIGINT       DEFAULT NULL,
+    updated_at  DATETIME(6)  NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_workout_entries_code (code),
+    KEY idx_workout_entries_created_by (created_by),
+    KEY idx_workout_entries_active (active),
+    CONSTRAINT fk_workout_entries_created_by FOREIGN KEY (created_by) REFERENCES users (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS workout_exercises (
+    workout_id    BIGINT NOT NULL,
+    exercise_id   BIGINT NOT NULL,
+    display_order INT    NOT NULL DEFAULT 0,
+    PRIMARY KEY (workout_id, display_order),
+    KEY idx_workout_exercises_exercise (exercise_id),
+    CONSTRAINT fk_workout_exercises_workout FOREIGN KEY (workout_id) REFERENCES workout_entries (id) ON DELETE CASCADE,
+    CONSTRAINT fk_workout_exercises_exercise FOREIGN KEY (exercise_id) REFERENCES exercises (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS workout_plan_items (
+    id                BIGINT NOT NULL AUTO_INCREMENT,
+    workout_id        BIGINT NOT NULL,
+    exercise_id       BIGINT NOT NULL,
+    day_of_week       INT    NOT NULL,
+    beginner_sets     INT    NOT NULL,
+    beginner_reps     INT    NOT NULL,
+    intermediate_sets INT    NOT NULL,
+    intermediate_reps INT    NOT NULL,
+    advanced_sets     INT    NOT NULL,
+    advanced_reps     INT    NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_workout_plan_items_workout_day (workout_id, day_of_week),
+    KEY idx_workout_plan_items_exercise (exercise_id),
+    CONSTRAINT fk_workout_plan_items_workout FOREIGN KEY (workout_id) REFERENCES workout_entries (id) ON DELETE CASCADE,
+    CONSTRAINT fk_workout_plan_items_exercise FOREIGN KEY (exercise_id) REFERENCES exercises (id),
+    CONSTRAINT ck_workout_plan_items_day CHECK (day_of_week BETWEEN 1 AND 7),
+    CONSTRAINT ck_workout_plan_items_sets_reps CHECK (
+        beginner_sets BETWEEN 1 AND 20 AND beginner_reps BETWEEN 1 AND 100
+        AND intermediate_sets BETWEEN 1 AND 20 AND intermediate_reps BETWEEN 1 AND 100
+        AND advanced_sets BETWEEN 1 AND 20 AND advanced_reps BETWEEN 1 AND 100
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- FK workout_sessions.workout_id -> workout_entries (V3 cố ý bỏ vì bảng chưa tồn tại).
+SET @fk_exists := (
+    SELECT COUNT(*)
+    FROM information_schema.TABLE_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'workout_sessions'
+      AND CONSTRAINT_NAME = 'fk_workout_sessions_workout'
+);
+SET @sql := IF(@fk_exists = 0,
+    'ALTER TABLE workout_sessions ADD CONSTRAINT fk_workout_sessions_workout FOREIGN KEY (workout_id) REFERENCES workout_entries (id)',
+    'DO 0');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- ============================================================
 -- 3. CHUYỂN DỮ LIỆU TỪ exercise_entries (nếu còn)
 -- ============================================================
 SET @has_entries := (
@@ -396,6 +469,42 @@ WHERE u.role = 'MEMBER'
   AND u.enabled = TRUE
   AND NOT EXISTS (SELECT 1 FROM member_profiles mp WHERE mp.user_id = u.id);
 
+-- Ensure V4's demo member exists even when earlier versions wrote a literal
+-- BCrypt hash that was expanded as a Flyway placeholder.
+INSERT INTO users (email, password, full_name, role, enabled, created_at)
+SELECT 'halevinh1000@gmail.com', '$2a$10$zwNeeUeqbvISJFlYVfD4VONnkOhYg1QckPaAYt2ZE.xmQ715MxAp.', 'Hale Vinh', 'MEMBER', TRUE, CURRENT_TIMESTAMP(6)
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'halevinh1000@gmail.com');
+UPDATE users SET enabled = TRUE WHERE email = 'halevinh1000@gmail.com';
+
+-- Older databases may have the moderation table without historical snapshots.
+SET @history_columns := (
+    SELECT GROUP_CONCAT(CONCAT('ADD COLUMN `', required_columns.column_name, '` ', required_columns.column_definition)
+                        ORDER BY required_columns.position SEPARATOR ', ')
+    FROM (
+        SELECT 'exercise_name' AS column_name, 'VARCHAR(150) NOT NULL DEFAULT ''''' AS column_definition, 1 AS position
+        UNION ALL SELECT 'type', 'VARCHAR(40) DEFAULT NULL', 2
+        UNION ALL SELECT 'muscle_group', 'VARCHAR(500) DEFAULT NULL', 3
+        UNION ALL SELECT 'level', 'VARCHAR(40) DEFAULT NULL', 4
+        UNION ALL SELECT 'description', 'TEXT DEFAULT NULL', 5
+        UNION ALL SELECT 'category', 'VARCHAR(120) DEFAULT NULL', 6
+        UNION ALL SELECT 'guide', 'TEXT DEFAULT NULL', 7
+        UNION ALL SELECT 'demo_video_url', 'VARCHAR(1000) DEFAULT NULL', 8
+        UNION ALL SELECT 'anatomy_image_url', 'VARCHAR(1000) DEFAULT NULL', 9
+        UNION ALL SELECT 'created_by_name', 'VARCHAR(150) DEFAULT NULL', 10
+        UNION ALL SELECT 'decision', 'VARCHAR(20) NOT NULL DEFAULT ''APPROVED''', 11
+        UNION ALL SELECT 'reviewed_at', 'DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)', 12
+    ) required_columns
+    LEFT JOIN information_schema.COLUMNS existing
+      ON existing.TABLE_SCHEMA = DATABASE()
+     AND existing.TABLE_NAME = 'exercise_moderation_history'
+     AND existing.COLUMN_NAME = required_columns.column_name
+    WHERE existing.COLUMN_NAME IS NULL
+      AND EXISTS (SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'exercise_moderation_history')
+);
+SET @sql := IF(@history_columns IS NOT NULL,
+    CONCAT('ALTER TABLE exercise_moderation_history ', @history_columns), 'DO 0');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
 -- Pending moderation examples owned by a demo member. Their non-SYSTEM source
 -- and inactive state make them appear in the Content Manager review queue.
 INSERT INTO exercises
@@ -474,8 +583,13 @@ CREATE TABLE IF NOT EXISTS exercise_moderation_history (
     exercise_code   VARCHAR(30)   NOT NULL,
     exercise_name   VARCHAR(150)  NOT NULL,
     type            VARCHAR(40)   DEFAULT NULL,
-    muscle_group    VARCHAR(255)  DEFAULT NULL,
+    muscle_group    VARCHAR(500)  DEFAULT NULL,
     level           VARCHAR(40)   DEFAULT NULL,
+    description     TEXT          DEFAULT NULL,
+    category        VARCHAR(120)  DEFAULT NULL,
+    guide           TEXT          DEFAULT NULL,
+    demo_video_url  VARCHAR(1000) DEFAULT NULL,
+    anatomy_image_url VARCHAR(1000) DEFAULT NULL,
     created_by_name VARCHAR(150)  DEFAULT NULL,
     decision        VARCHAR(20)   NOT NULL,
     reviewed_at     DATETIME(6)   NOT NULL,
@@ -485,8 +599,14 @@ CREATE TABLE IF NOT EXISTS exercise_moderation_history (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO exercise_moderation_history
-    (exercise_code, exercise_name, type, muscle_group, level, created_by_name, decision, reviewed_at)
-SELECT e.code, e.name, e.type, NULL, e.difficulty_level, u.full_name, 'APPROVED', e.updated_at
+    (exercise_code, exercise_name, type, muscle_group, level, description, category, guide,
+     demo_video_url, anatomy_image_url, created_by_name, decision, reviewed_at)
+SELECT e.code, e.name, e.type,
+       (SELECT GROUP_CONCAT(DISTINCT mg.name ORDER BY mg.name SEPARATOR ' · ')
+        FROM exercise_muscle_groups emg JOIN muscle_groups mg ON mg.id = emg.muscle_group_id
+        WHERE emg.exercise_id = e.id),
+       e.difficulty_level, e.instructions, e.category, e.execution_steps,
+       e.video_url, e.anatomy_image_url, u.full_name, 'APPROVED', e.updated_at
 FROM exercises e
 LEFT JOIN users u ON u.id = e.created_by
 WHERE e.active = TRUE
@@ -496,18 +616,30 @@ WHERE e.active = TRUE
       SELECT 1 FROM exercise_moderation_history h WHERE h.exercise_code = e.code
   );
 
--- Store the muscle-group snapshot for seeded approval-history rows.
+-- Backfill snapshots for older history rows while their source exercise still exists.
 UPDATE exercise_moderation_history h
 JOIN exercises e ON e.code = h.exercise_code
-SET h.muscle_group = (
-    SELECT GROUP_CONCAT(DISTINCT mg.name ORDER BY mg.name SEPARATOR ' · ')
-    FROM exercise_muscle_groups emg
-    JOIN muscle_groups mg ON mg.id = emg.muscle_group_id
-    WHERE emg.exercise_id = e.id
-)
-WHERE (h.muscle_group IS NULL OR h.muscle_group = '')
-  AND EXISTS (
-      SELECT 1
-      FROM exercise_muscle_groups emg2
-      WHERE emg2.exercise_id = e.id
-  );
+LEFT JOIN users u ON u.id = e.created_by
+SET h.exercise_name = e.name,
+    h.type = e.type,
+    h.muscle_group = COALESCE(
+        (SELECT GROUP_CONCAT(DISTINCT mg.name ORDER BY mg.name SEPARATOR ' · ')
+         FROM exercise_muscle_groups emg
+         JOIN muscle_groups mg ON mg.id = emg.muscle_group_id
+         WHERE emg.exercise_id = e.id),
+        e.category
+    ),
+    h.level = e.difficulty_level,
+    h.description = e.instructions,
+    h.category = e.category,
+    h.guide = e.execution_steps,
+    h.demo_video_url = e.video_url,
+    h.anatomy_image_url = e.anatomy_image_url,
+    h.created_by_name = COALESCE(h.created_by_name, u.full_name)
+WHERE h.description IS NULL
+   OR h.category IS NULL
+   OR h.guide IS NULL
+   OR h.demo_video_url IS NULL
+   OR h.anatomy_image_url IS NULL
+   OR h.muscle_group IS NULL;
+

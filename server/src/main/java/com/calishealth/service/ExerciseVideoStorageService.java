@@ -5,6 +5,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,6 +18,7 @@ import java.util.UUID;
 
 @Service
 public class ExerciseVideoStorageService {
+    private static final Logger logger = LoggerFactory.getLogger(ExerciseVideoStorageService.class);
     private static final long MAX_FILE_SIZE = 50L * 1024 * 1024;
     private static final Set<String> ALLOWED_TYPES = Set.of("mp4", "mov", "webm");
     private static final long MAX_IMAGE_SIZE = 10L * 1024 * 1024;
@@ -130,7 +133,7 @@ public class ExerciseVideoStorageService {
         try {
             Files.deleteIfExists(file);
         } catch (IOException exception) {
-            throw new IllegalStateException("Could not remove an unused exercise video", exception);
+            logger.warn("Could not remove unused exercise media file {}", file, exception);
         }
     }
 

@@ -5,7 +5,7 @@ import com.calishealth.dtos.ExerciseDtos.WorkoutExerciseResponse;
 import com.calishealth.dtos.ExerciseDtos.WorkoutPlanItemRequest;
 import com.calishealth.dtos.ExerciseDtos.WorkoutPlanItemResponse;
 import com.calishealth.dtos.ExerciseDtos.WorkoutResponse;
-import com.calishealth.models.ExerciseEntry;
+import com.calishealth.models.Exercise;
 import com.calishealth.models.WorkoutEntry;
 import com.calishealth.models.WorkoutPlanItem;
 import com.calishealth.repository.ExerciseRepository;
@@ -52,52 +52,62 @@ public class WorkoutService {
     }
 
     @Transactional
-    public WorkoutResponse create(CreateWorkoutRequest request, String creatorEmail) {
-        if (request == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Workout data is required");
+    public WorkoutResponse updateStatus(String code, boolean active) {
+        WorkoutEntry workout = workouts.findByCode(code)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Workout not found"));
+        workout.setActive(active);
+        return toResponse(workouts.saveAndFlush(workout));
+    }
+
+    @Transactional
+    public void deleteByCode(String code) {
+        WorkoutEntry workout = workouts.findByCode(code)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Workout not found"));
+        try {
+            workouts.delete(workout);
+            workouts.flush();
+        } catch (org.springframework.dao.DataIntegrityViolationException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "This workout is referenced by other records and cannot be deleted",
+                    exception
+            );
         }
-        if (request.name() == null || request.name().isBlank() || request.name().length() > 60) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Workout title is required and must be at most 60 characters");
+    }
+
+    @Transactional
+    public WorkoutResponse update(String code, CreateWorkoutRequest request) {
+        WorkoutEntry workout = workouts.findByCode(code)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Workout not found"));
+        if (!REGULAR_WORKOUT.equals(workout.getType())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only regular workouts can be edited here");
         }
-        if (request.description() == null || request.description().isBlank() || request.description().length() > 300) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Workout description is required and must be at most 300 characters");
+        validateWorkoutRequest(request);
+        List<String> requestedCodes = request.exerciseCodes().stream().distinct().toList();
+        Map<String, Exercise> exercisesByCode = exercises.findAllByCodeIn(requestedCodes).stream()
+                .collect(Collectors.toMap(Exercise::getCode, exercise -> exercise));
+        if (exercisesByCode.size() != requestedCodes.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "One or more selected exercises no longer exist");
         }
-        if (request.content() != null && request.content().length() > 2000) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Workout content must be at most 2000 characters");
-        }
-        String type = request.type() == null ? "" : request.type().trim().toUpperCase(Locale.ROOT);
-        if (!ALLOWED_TYPES.contains(type)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose Workout or Daily training plan");
-        }
-        if (type.equals(REGULAR_WORKOUT)
-                && (request.level() == null || !ALLOWED_LEVELS.contains(request.level()))) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a valid workout level");
-        }
-        if (type.equals(REGULAR_WORKOUT)
-                && (request.exerciseCodes() == null || request.exerciseCodes().isEmpty())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Add at least one system exercise");
-        }
-        if (type.equals(REGULAR_WORKOUT)
-                && request.exerciseCodes().stream().distinct().count() != request.exerciseCodes().size()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "An exercise can only be added once");
-        }
-        List<WorkoutPlanItemRequest> planRequests = request.planItems() == null ? List.of() : request.planItems();
-        if (type.equals(DAILY_TRAINING_PLAN) && planRequests.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Add at least one exercise to the 7-day plan");
-        }
-        if (type.equals(DAILY_TRAINING_PLAN)) {
-            validatePlanItems(planRequests);
+        if (exercisesByCode.values().stream().anyMatch(exercise -> !exercise.isActive())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Inactive exercises cannot be added to a workout");
         }
 
-        if (type.equals(REGULAR_WORKOUT)
-                && request.exerciseCodes().stream().anyMatch(code -> code == null || code.isBlank())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selected exercise codes must be valid");
-        }
-        List<String> requestedCodes = type.equals(REGULAR_WORKOUT)
-                ? request.exerciseCodes()
-                : planRequests.stream().map(WorkoutPlanItemRequest::exerciseCode).distinct().toList();
-        Map<String, ExerciseEntry> exercisesByCode = exercises.findAllByCodeIn(requestedCodes).stream()
-                .collect(Collectors.toMap(ExerciseEntry::getCode, exercise -> exercise));
+        workout.setName(request.name().trim());
+        workout.setDescription(request.description().trim());
+        workout.setRestSeconds(request.restSeconds());
+        workout.setLevel(request.level().trim());
+        workout.setExercises(request.exerciseCodes().stream().map(exercisesByCode::get).toList());
+        return toResponse(workouts.saveAndFlush(workout));
+    }
+
+    @Transactional
+    public WorkoutResponse create(CreateWorkoutRequest request, String creatorEmail) {
+        validateWorkoutRequest(request);
+        String type = REGULAR_WORKOUT;
+        List<String> requestedCodes = request.exerciseCodes().stream().distinct().toList();
+        Map<String, Exercise> exercisesByCode = exercises.findAllByCodeIn(requestedCodes).stream()
+                .collect(Collectors.toMap(Exercise::getCode, exercise -> exercise));
         if (exercisesByCode.size() != requestedCodes.size()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "One or more selected exercises no longer exist");
         }
@@ -109,19 +119,39 @@ public class WorkoutService {
         workout.setCode("WO-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT));
         workout.setName(request.name().trim());
         workout.setDescription(request.description().trim());
-        workout.setContent(request.content());
         workout.setType(type);
-        workout.setLevel(type.equals(REGULAR_WORKOUT) ? request.level().trim() : "All levels");
+        workout.setSource("SYSTEM");
+        workout.setRestSeconds(request.restSeconds());
+        workout.setLevel(request.level().trim());
         workout.setActive(true);
         workout.setCreatedBy(users.findByEmail(creatorEmail)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Creator account not found")));
-        if (type.equals(REGULAR_WORKOUT)) {
-            workout.setExercises(request.exerciseCodes().stream().map(exercisesByCode::get).toList());
-        } else {
-            List<WorkoutPlanItem> items = planRequests.stream().map(item -> toPlanItem(item, exercisesByCode, workout)).toList();
-            workout.setPlanItems(items);
-        }
+        workout.setExercises(request.exerciseCodes().stream().map(exercisesByCode::get).toList());
         return toResponse(workouts.save(workout));
+    }
+
+    private void validateWorkoutRequest(CreateWorkoutRequest request) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Workout data is required");
+        }
+        if (request.name() == null || request.name().isBlank() || request.name().length() > 60) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Workout title is required and must be at most 60 characters");
+        }
+        if (request.description() == null || request.description().isBlank() || request.description().length() > 300) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Workout description is required and must be at most 300 characters");
+        }
+        if (request.restSeconds() < 0 || request.restSeconds() > 3600) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rest between sets must be between 0 and 3600 seconds");
+        }
+        if (request.level() == null || !ALLOWED_LEVELS.contains(request.level())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a valid workout level");
+        }
+        if (request.exerciseCodes() == null || request.exerciseCodes().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Add at least one system exercise");
+        }
+        if (request.exerciseCodes().stream().anyMatch(code -> code == null || code.isBlank())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selected exercise codes must be valid");
+        }
     }
 
     private void validatePlanItems(List<WorkoutPlanItemRequest> planItems) {
@@ -148,7 +178,7 @@ public class WorkoutService {
 
     private WorkoutPlanItem toPlanItem(
             WorkoutPlanItemRequest request,
-            Map<String, ExerciseEntry> exercisesByCode,
+            Map<String, Exercise> exercisesByCode,
             WorkoutEntry workout
     ) {
         WorkoutPlanItem item = new WorkoutPlanItem();
@@ -166,26 +196,44 @@ public class WorkoutService {
 
     private WorkoutResponse toResponse(WorkoutEntry workout) {
         List<WorkoutExerciseResponse> workoutExercises = workout.getExercises().stream()
-                .map(exercise -> new WorkoutExerciseResponse(
-                        exercise.getCode(), exercise.getName(), exercise.getLevel(), exercise.getMuscleGroup()
-                )).toList();
+                .map(this::toExerciseResponse)
+                .toList();
         if ("DAILY_TRAINING_PLAN".equals(workout.getType())) {
             workoutExercises = workout.getPlanItems().stream()
                     .map(WorkoutPlanItem::getExercise)
                     .distinct()
-                    .map(exercise -> new WorkoutExerciseResponse(
-                            exercise.getCode(), exercise.getName(), exercise.getLevel(), exercise.getMuscleGroup()
-                    )).toList();
+                    .map(this::toExerciseResponse)
+                    .toList();
         }
         List<WorkoutPlanItemResponse> planItems = workout.getPlanItems().stream()
                 .map(item -> new WorkoutPlanItemResponse(
                         item.getDayOfWeek(), item.getExercise().getCode(), item.getExercise().getName(),
-                        item.getExercise().getMuscleGroup(), item.getBeginnerSets(), item.getBeginnerReps(),
+                        muscleGroupLabel(item.getExercise()), item.getBeginnerSets(), item.getBeginnerReps(),
                         item.getIntermediateSets(), item.getIntermediateReps(), item.getAdvancedSets(), item.getAdvancedReps()
                 )).toList();
         return new WorkoutResponse(workout.getCode(), workout.getName(), workout.getDescription(),
-                workout.getContent(), workout.getType() == null ? REGULAR_WORKOUT : workout.getType(),
-                workout.getLevel(), workout.isActive(),
-                workout.getUpdatedAt(), workoutExercises, planItems);
+                workout.getType() == null ? REGULAR_WORKOUT : workout.getType(),
+                workout.getLevel(), workout.getRestSeconds(), workout.isActive(),
+                workout.getUpdatedAt(), workout.getSource(),
+                workout.getCreatedBy() == null ? null : workout.getCreatedBy().getFullName(),
+                workoutExercises, planItems);
+    }
+
+    private WorkoutExerciseResponse toExerciseResponse(Exercise exercise) {
+        return new WorkoutExerciseResponse(
+                exercise.getCode(), exercise.getName(), exercise.getDifficultyLevel(), muscleGroupLabel(exercise),
+                exercise.getCategory(), exercise.getDefaultSets(), exercise.getDefaultReps(), exercise.getDuration()
+        );
+    }
+
+    /** Ghép tên các muscle group của bài thành nhãn "Chest · Arms" (fallback: category). */
+    private String muscleGroupLabel(Exercise exercise) {
+        String joined = exercise.getMuscleGroups().stream()
+                .map(link -> link.getMuscleGroup().getName())
+                .filter(name -> name != null && !name.isBlank())
+                .distinct()
+                .reduce((first, second) -> first + " · " + second)
+                .orElse(null);
+        return joined != null ? joined : exercise.getCategory();
     }
 }

@@ -235,8 +235,8 @@ export default function Dashboard() {
 
           {authStatus === "authed" ? (
             <>
-              {              dashboardData?.healthMetrics &&
-              (dashboardData.healthMetrics.weight != null || dashboardData.healthMetrics.bmi != null) ? (
+              {dashboardData?.healthMetrics &&
+                (dashboardData.healthMetrics.weight != null || dashboardData.healthMetrics.bmi != null) ? (
                 <>
                   <ul className="dash-metric-list">
                     {dashboardData.healthMetrics.weight != null && (
@@ -323,11 +323,17 @@ export default function Dashboard() {
           </header>
 
           <p className="dash-community-text">
-            Discover workouts shared by the Calisthenics community
+            Discover exercises and workouts shared by the Calisthenics community
           </p>
 
           {dashboardData?.community && (
             <div className="dash-community-stats">
+              <div>
+                <span className="dash-community-number">
+                  {Number(dashboardData.community.exercises || 0).toLocaleString()}
+                </span>
+                <span className="dash-community-label">Exercises</span>
+              </div>
               <div>
                 <span className="dash-community-number">
                   {dashboardData.community.workouts.toLocaleString()}

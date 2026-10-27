@@ -21,6 +21,15 @@ public class MuscleGroup {
     @Column(nullable = false, unique = true, length = 80)
     private String name;
 
+    @Column(name = "dashboard_code", nullable = false, unique = true, length = 40)
+    private String dashboardCode;
+
+    @Column(name = "icon_key", nullable = false, length = 40)
+    private String iconKey;
+
+    @Column(nullable = false, length = 20)
+    private String tone;
+
     @OneToMany(mappedBy = "muscleGroup")
     private List<ExerciseMuscleGroup> exercises = new ArrayList<>();
 }

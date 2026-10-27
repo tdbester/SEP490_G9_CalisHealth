@@ -70,6 +70,10 @@ public class FlywayConfig {
                 .locations("classpath:db/migration")
                 .baselineOnMigrate(false)
                 .validateOnMigrate(true)
+                .outOfOrder(true)
+                // Migration không dùng placeholder ${...}; tắt hẳn để giá trị chứa
+                // '$' (vd. hash BCrypt '$2a$10$...') không bị hiểu nhầm là placeholder.
+                .placeholderReplacement(false)
                 .cleanDisabled(true)
                 .load();
         log.info("Flyway configured: locations=classpath:db/migration");
