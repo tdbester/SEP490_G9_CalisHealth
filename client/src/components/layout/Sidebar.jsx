@@ -37,7 +37,7 @@ function LibraryIcon() {
 
 const NAV_ITEMS = [
   { label: "Dashboard", path: "/",        icon: DashboardIcon },
-  { label: "Library",   path: "/library",  icon: LibraryIcon },
+  { label: "Library",   path: "/library", icon: LibraryIcon },
   { label: "Health & Progress", path: "/tracking", icon: TrackingIcon },
 ];
 
@@ -49,8 +49,9 @@ export default function Sidebar() {
     <aside className="sidebar">
       <nav className="sidebar-nav">
         {NAV_ITEMS.map((item) => {
-          const isActive =
-            item.path === "/" ? pathname === "/" : pathname.startsWith(item.path);
+          const isActive = item.path === "/"
+            ? pathname === "/"
+            : pathname.startsWith(item.path);
           const Icon = item.icon;
 
           return (

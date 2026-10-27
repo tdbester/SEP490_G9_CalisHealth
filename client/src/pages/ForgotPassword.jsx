@@ -35,7 +35,7 @@ export default function ForgotPassword() {
         {sent ? (
           <div className="login-form">
             <div className="login-success">
-              Nếu email tồn tại, chúng tôi đã gửi link đặt lại mật khẩu. Vui lòng kiểm tra hộp thư.
+              If the email exists, we have sent a password reset link. Please check your inbox.
             </div>
             <button className="login-submit" onClick={() => navigate("/login")}>
               <span className="login-submit-text">Back to Login</span>

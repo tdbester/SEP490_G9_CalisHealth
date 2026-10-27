@@ -16,7 +16,7 @@ export default function Register() {
     e.preventDefault();
     setError("");
     if (form.password !== form.confirmPassword) {
-      setError("Mật khẩu xác nhận không khớp");
+      setError("The confirmation password does not match");
       return;
     }
     setLoading(true);
@@ -28,8 +28,8 @@ export default function Register() {
       const msg =
         (data && typeof data === "object"
           ? Object.values(data).flat().join(" • ")
-          : data) || "Đăng ký thất bại.";
-      setError(typeof msg === "string" ? msg : "Đăng ký thất bại.");
+          : data) || "Registration failed.";
+      setError(typeof msg === "string" ? msg : "Registration failed.");
     } finally {
       setLoading(false);
     }
@@ -47,7 +47,7 @@ export default function Register() {
         {success ? (
           <div className="login-form">
             <div className="login-success">
-              Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.
+              Registration successful! Check your email to verify your account.
             </div>
             <button className="login-submit" onClick={() => navigate("/login")}>
               <span className="login-submit-text">Go to Login</span>
