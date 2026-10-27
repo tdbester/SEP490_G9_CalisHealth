@@ -49,20 +49,13 @@ export default function App() {
 
           <Route
             path="/"
-            element={
-              <AdminLayout>
-                <Dashboard />
-              </AdminLayout>
-            }
+            element={memberPage(<Dashboard />)}
           />
           <Route
             path="/dashboard"
-            element={
-              <AdminLayout>
-                <Dashboard />
-              </AdminLayout>
-            }
+            element={memberPage(<Dashboard />)}
           />
+          <Route path="/day-streak" element={memberPage(<DayStreak />)} />
           <Route path="/library" element={memberPage(<Library />)} />
           <Route path="/library/exercises" element={memberPage(<ExerciseListPage />)} />
           <Route path="/library/exercises/:tab" element={memberPage(<ExerciseListPage />)} />

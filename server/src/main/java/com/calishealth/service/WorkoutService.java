@@ -10,6 +10,7 @@ import com.calishealth.models.WorkoutEntry;
 import com.calishealth.models.WorkoutPlanItem;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.WorkoutRepository;
+import com.calishealth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
 public class WorkoutService {
     private final WorkoutRepository workouts;
     private final ExerciseRepository exercises;
+    private final UserRepository users;
     private static final String REGULAR_WORKOUT = "WORKOUT";
     private static final String DAILY_TRAINING_PLAN = "DAILY_TRAINING_PLAN";
     private static final Set<String> ALLOWED_TYPES = Set.of(REGULAR_WORKOUT, DAILY_TRAINING_PLAN);
@@ -50,7 +52,7 @@ public class WorkoutService {
     }
 
     @Transactional
-    public WorkoutResponse create(CreateWorkoutRequest request) {
+    public WorkoutResponse create(CreateWorkoutRequest request, String creatorEmail) {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Workout data is required");
         }
@@ -111,6 +113,8 @@ public class WorkoutService {
         workout.setType(type);
         workout.setLevel(type.equals(REGULAR_WORKOUT) ? request.level().trim() : "All levels");
         workout.setActive(true);
+        workout.setCreatedBy(users.findByEmail(creatorEmail)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Creator account not found")));
         if (type.equals(REGULAR_WORKOUT)) {
             workout.setExercises(request.exerciseCodes().stream().map(exercisesByCode::get).toList());
         } else {
