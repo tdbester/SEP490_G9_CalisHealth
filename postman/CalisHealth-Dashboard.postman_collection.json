@@ -1,0 +1,224 @@
+{
+  "info": {
+    "name": "CalisHealth - Dashboard API",
+    "description": "Runnable Postman checks for the Dashboard endpoint. Set memberEmail and memberPassword before running. Run requests in order: login, authenticated dashboard, response without token, and current-user verification.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "memberEmail",
+      "value": "halevinh1000@gmail.com"
+    },
+    {
+      "key": "memberPassword",
+      "value": "",
+      "type": "secret"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "secret"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Login (save JWT)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{memberEmail}}\",\n  \"password\": \"{{memberPassword}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/auth/login",
+        "description": "Authenticates the member and saves the returned JWT into the collection variable token."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Login returns HTTP 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.test('Login response contains a JWT', function () {",
+              "    pm.expect(body.token).to.be.a('string').and.not.empty;",
+              "  });",
+              "  pm.test('Login response belongs to the requested member', function () {",
+              "    pm.expect(body.email).to.eql(pm.collectionVariables.get('memberEmail'));",
+              "    pm.expect(body.role).to.eql('MEMBER');",
+              "  });",
+              "  pm.collectionVariables.set('token', body.token);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Get Dashboard (authenticated)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "url": "{{baseUrl}}/api/dashboard",
+        "description": "Checks the complete Dashboard response: muscle groups, skills, community, and user-specific health metrics."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Dashboard returns HTTP 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.test('Dashboard has all top-level sections', function () {",
+              "    pm.expect(body).to.have.property('muscleGroups');",
+              "    pm.expect(body).to.have.property('skills');",
+              "    pm.expect(body).to.have.property('community');",
+              "    pm.expect(body).to.have.property('healthMetrics');",
+              "  });",
+              "  pm.test('Muscle groups have the expected contract', function () {",
+              "    pm.expect(body.muscleGroups).to.be.an('array');",
+              "    body.muscleGroups.forEach(function (group) {",
+              "      pm.expect(group.id).to.be.a('string').and.not.empty;",
+              "      pm.expect(group.name).to.be.a('string').and.not.empty;",
+              "      pm.expect(group.count).to.be.a('number').and.at.least(0);",
+              "      pm.expect(group.icon).to.be.a('string').and.not.empty;",
+              "      pm.expect(group.tone).to.be.a('string').and.not.empty;",
+              "    });",
+              "  });",
+              "  pm.test('Skills have the expected contract', function () {",
+              "    pm.expect(body.skills).to.be.an('array');",
+              "    body.skills.forEach(function (skill) {",
+              "      pm.expect(skill.id).to.be.a('string').and.not.empty;",
+              "      pm.expect(skill.name).to.be.a('string').and.not.empty;",
+              "      pm.expect(skill.steps).to.be.a('number').and.at.least(1);",
+              "      pm.expect(skill.level).to.be.a('string').and.not.empty;",
+              "      pm.expect(skill.tone).to.be.a('string').and.not.empty;",
+              "    });",
+              "  });",
+              "  pm.test('Community has numeric statistics', function () {",
+              "    pm.expect(body.community.workouts).to.be.a('number').and.at.least(0);",
+              "    pm.expect(body.community.athletes).to.be.a('number').and.at.least(0);",
+              "  });",
+              "  pm.test('Health metrics are valid when present', function () {",
+              "    const metrics = body.healthMetrics;",
+              "    pm.expect(metrics).to.be.an('object');",
+              "    if (metrics.weight !== undefined) pm.expect(metrics.weight).to.be.a('number').and.above(0);",
+              "    if (metrics.bmi !== undefined) pm.expect(metrics.bmi).to.be.a('number').and.above(0);",
+              "    if (metrics.bmiLabel !== undefined) pm.expect(metrics.bmiLabel).to.be.oneOf(['Underweight', 'Normal', 'Overweight', 'Obesity']);",
+              "    if (metrics.weeklyGoal !== undefined) pm.expect(metrics.weeklyGoal).to.be.within(0, 100);",
+              "  });",
+              "  pm.test('Seeded account exposes health metrics', function () {",
+              "    if (pm.collectionVariables.get('memberEmail') === 'halevinh1000@gmail.com') {",
+              "      pm.expect(body.healthMetrics.weight).to.be.a('number');",
+              "      pm.expect(body.healthMetrics.bmi).to.be.a('number');",
+              "      pm.expect(body.healthMetrics.weeklyGoal).to.be.a('number');",
+              "    }",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Get Dashboard (without token)",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "url": "{{baseUrl}}/api/dashboard",
+        "description": "Checks the public dashboard response without a token. The endpoint returns shared dashboard data and an empty healthMetrics object for anonymous requests."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Dashboard is public without a token', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.test('Anonymous dashboard keeps health metrics empty', function () {",
+              "    pm.expect(body.healthMetrics).to.be.an('object');",
+              "    pm.expect(Object.keys(body.healthMetrics)).to.have.length(0);",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Get Current User (token cross-check)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "url": "{{baseUrl}}/api/auth/me",
+        "description": "Confirms that the JWT used for Dashboard belongs to the configured member account."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Current-user endpoint returns HTTP 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.test('Current user matches collection credentials', function () {",
+              "    pm.expect(body.email).to.eql(pm.collectionVariables.get('memberEmail'));",
+              "    pm.expect(body.role).to.eql('MEMBER');",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

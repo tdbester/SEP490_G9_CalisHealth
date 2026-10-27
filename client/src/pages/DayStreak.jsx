@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
@@ -9,24 +9,62 @@ import EmojiEventsRoundedIcon from "@mui/icons-material/EmojiEventsRounded";
 import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import FlagRoundedIcon from "@mui/icons-material/FlagRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
-import {
-  MONTH_LABELS,
-  REFERENCE_TODAY,
-  WEEKDAY_LABELS,
-  WEEKLY_GOAL,
-  WORKOUT_DAYS,
-  buildMonthGrid,
-  formatStreakRange,
-  getCurrentStreak,
-  getLongestStreak,
-  isStreakActive,
-  parseDayKey,
-} from "../data/dayStreak";
-import { getDayReport } from "../data/dayReport";
+import api from "../api/client";
 import DayReportModal from "../components/DayReportModal";
 import "./DayStreak.css";
 
-const today = parseDayKey(REFERENCE_TODAY);
+const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+const MONTH_LABELS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function buildMonthGrid(year, month, workoutDays, streakDays, todayKey) {
+  const loggedDays = new Set(workoutDays.map((key) => Number(key.slice(-2))));
+  const streakSet = new Set(streakDays);
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const [todayYear, todayMonth, todayDay] = todayKey.split("-").map(Number);
+  const cells = [];
+
+  for (let index = 0; index < firstWeekday; index += 1) {
+    cells.push({ key: `empty-${year}-${month}-${index}`, empty: true });
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const key = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const isCurrentMonth = todayYear === year && todayMonth === month + 1;
+    cells.push({
+      key,
+      year,
+      month,
+      day,
+      empty: false,
+      logged: loggedDays.has(day),
+      streak: streakSet.has(key),
+      isToday: isCurrentMonth && todayDay === day,
+      isUpcoming: isCurrentMonth && todayDay < day,
+    });
+  }
+
+  return cells;
+}
+
+function formatStreakRange(streakDays) {
+  if (streakDays.length === 0) return "No active streak";
+  const format = (key) => {
+    const [, month, day] = key.split("-").map(Number);
+    return `${MONTH_LABELS[month - 1].slice(0, 3)} ${day}`;
+  };
+  return `${format(streakDays[0])} – ${format(streakDays[streakDays.length - 1])}`;
+}
+
+function localDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 /** Một ô ngày trong lịch: trống, đã tập, thuộc chuỗi streak, hoặc ngày nghỉ. */
 function CalendarCell({ cell, onSelect }) {
@@ -46,7 +84,7 @@ function CalendarCell({ cell, onSelect }) {
     .join(" ");
 
   const label = [
-    `October ${cell.day}`,
+    `${MONTH_LABELS[cell.month]} ${cell.day}`,
     cell.logged ? "workout logged" : "rest day",
     cell.streak ? "streak day" : "",
     cell.isToday ? "current active day" : "",
@@ -55,7 +93,7 @@ function CalendarCell({ cell, onSelect }) {
     .join(", ");
 
   return (
-    <button type="button" className={classes} onClick={onSelect} aria-label={label}>
+    <button type="button" className={classes} onClick={onSelect} aria-label={label} disabled={!cell.logged}>
       {cell.streak && <LocalFireDepartmentRoundedIcon className="streak-cell-flame" />}
       <span className="streak-cell-number">{cell.day}</span>
       {cell.logged && !cell.streak && <span className="streak-cell-dot" />}
@@ -100,56 +138,104 @@ function StreakStatCard({ icon, label, value, unit, caption }) {
 
 export default function DayStreak() {
   const navigate = useNavigate();
-  const [viewYear, setViewYear] = useState(today.year);
-  const [viewMonth, setViewMonth] = useState(today.month);
+  const todayKey = localDateKey();
+  const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
+  const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
+  const [streakData, setStreakData] = useState(null);
+  const [streakLoading, setStreakLoading] = useState(true);
+  const [streakError, setStreakError] = useState(false);
   const [reportDayKey, setReportDayKey] = useState(null);
+  const [report, setReport] = useState(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState(false);
+  const reportRequestId = useRef(0);
 
-  const streakDays = useMemo(() => getCurrentStreak(WORKOUT_DAYS), []);
-  const longestStreak = useMemo(() => getLongestStreak(WORKOUT_DAYS), []);
-  const streakActive = useMemo(() => isStreakActive(streakDays), [streakDays]);
+  useEffect(() => {
+    let cancelled = false;
+    setStreakLoading(true);
+    setStreakError(false);
+    setStreakData(null);
+    api.get("/member/day-streak", { params: { year: viewYear, month: viewMonth + 1 } })
+      .then(({ data }) => {
+        if (!cancelled) setStreakData(data);
+      })
+      .catch(() => {
+        if (!cancelled) setStreakError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setStreakLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [viewYear, viewMonth]);
+
+  const streakDays = streakData?.currentStreakDays ?? [];
+  const weeklyGoal = streakData?.weeklyGoal;
   const streakRange = useMemo(() => formatStreakRange(streakDays), [streakDays]);
-
   const grid = useMemo(
-    () => buildMonthGrid(viewYear, viewMonth, WORKOUT_DAYS, streakDays, REFERENCE_TODAY),
-    [viewYear, viewMonth, streakDays],
+    () => buildMonthGrid(
+      viewYear,
+      viewMonth,
+      streakData?.workoutDays ?? [],
+      streakDays,
+      todayKey,
+    ),
+    [viewYear, viewMonth, streakData, streakDays, todayKey],
   );
+  const monthWorkouts = streakData?.workoutDays?.length ?? 0;
+  const monthStreakDays = streakDays.filter((dayKey) =>
+    dayKey.startsWith(`${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-`),
+  ).length;
+  const goalRemaining = Math.max((weeklyGoal?.targetSessions ?? 0) - (weeklyGoal?.sessionsDone ?? 0), 0);
 
-  const monthWorkouts = grid.filter((cell) => cell.logged).length;
-  const monthStreakDays = grid.filter((cell) => cell.streak).length;
-  const goalRemaining = Math.max(
-    WEEKLY_GOAL.targetSessions - WEEKLY_GOAL.sessionsDone,
-    0,
-  );
+  const loadDayReport = useCallback(async (dayKey) => {
+    const requestId = reportRequestId.current + 1;
+    reportRequestId.current = requestId;
+    setReportDayKey(dayKey);
+    setReport(null);
+    setReportError(false);
+    setReportLoading(true);
+    try {
+      const { data } = await api.get("/member/day-report", { params: { date: dayKey } });
+      if (requestId === reportRequestId.current) setReport(data);
+    } catch {
+      if (requestId === reportRequestId.current) setReportError(true);
+    } finally {
+      if (requestId === reportRequestId.current) setReportLoading(false);
+    }
+  }, []);
+
+  const closeReport = useCallback(() => {
+    reportRequestId.current += 1;
+    setReportDayKey(null);
+    setReport(null);
+    setReportError(false);
+    setReportLoading(false);
+  }, []);
 
   const goToPreviousMonth = () => {
-    setViewMonth((month) => {
-      if (month === 0) {
-        setViewYear((year) => year - 1);
-        return 11;
-      }
-      return month - 1;
-    });
+    if (viewMonth === 0) {
+      setViewYear((year) => year - 1);
+      setViewMonth(11);
+    } else {
+      setViewMonth((month) => month - 1);
+    }
   };
 
   const goToNextMonth = () => {
-    setViewMonth((month) => {
-      if (month === 11) {
-        setViewYear((year) => year + 1);
-        return 0;
-      }
-      return month + 1;
-    });
+    if (viewMonth === 11) {
+      setViewYear((year) => year + 1);
+      setViewMonth(0);
+    } else {
+      setViewMonth((month) => month + 1);
+    }
   };
 
   return (
     <div className="day-streak">
-      {/* ── Page header ─────────────────────────────────────────── */}
       <header className="streak-page-head">
-        <button
-          type="button"
-          className="streak-back"
-          onClick={() => navigate(-1)}
-        >
+        <button type="button" className="streak-back" onClick={() => navigate(-1)}>
           <ArrowBackRoundedIcon />
           Back
         </button>
@@ -157,13 +243,11 @@ export default function DayStreak() {
         <div className="streak-page-title">
           <div>
             <h1 className="streak-page-heading">Day Streak</h1>
-            <p className="streak-page-caption">
-              Highlighted days are part of your active streak.
-            </p>
+            <p className="streak-page-caption">Highlighted days are part of your active streak.</p>
           </div>
         </div>
 
-        {streakActive && (
+        {streakData?.active && (
           <span className="streak-active-badge">
             <LocalFireDepartmentRoundedIcon />
             ACTIVE STREAK
@@ -172,27 +256,16 @@ export default function DayStreak() {
       </header>
 
       <div className="streak-layout">
-        {/* ── Calendar ─────────────────────────────────────────── */}
         <section className="streak-panel streak-calendar-panel">
           <header className="streak-calendar-head">
             <h2 className="streak-calendar-title">
               {MONTH_LABELS[viewMonth]} {viewYear}
             </h2>
             <div className="streak-calendar-nav">
-              <button
-                type="button"
-                className="streak-nav-btn"
-                onClick={goToPreviousMonth}
-                aria-label="Previous month"
-              >
+              <button type="button" className="streak-nav-btn" onClick={goToPreviousMonth} aria-label="Previous month">
                 <ChevronLeftRoundedIcon />
               </button>
-              <button
-                type="button"
-                className="streak-nav-btn"
-                onClick={goToNextMonth}
-                aria-label="Next month"
-              >
+              <button type="button" className="streak-nav-btn" onClick={goToNextMonth} aria-label="Next month">
                 <ChevronRightRoundedIcon />
               </button>
             </div>
@@ -206,77 +279,67 @@ export default function DayStreak() {
             ))}
           </div>
 
-          <div className="streak-grid" role="grid" aria-label="Monthly workout streak calendar">
+          <div className="streak-grid" role="grid" aria-label="Monthly workout streak calendar" aria-busy={streakLoading}>
             {grid.map((cell) => (
               <CalendarCell
                 key={cell.key}
                 cell={cell}
-                onSelect={() => {
-                  if (cell.logged) setReportDayKey(cell.key);
-                }}
+                onSelect={() => loadDayReport(cell.key)}
               />
             ))}
           </div>
-
+          {streakLoading && <p role="status">Loading workout history...</p>}
+          {streakError && <p role="alert">Workout history is unavailable. Please try again later.</p>}
           <CalendarLegend />
         </section>
 
-        {/* ── Summary cards ─────────────────────────────────────── */}
         <aside className="streak-summary">
           <StreakStatCard
             icon={<TrendingUpRoundedIcon />}
             label="Current Streak"
-            value={streakDays.length}
+            value={streakData?.currentStreak ?? "-"}
             unit=" days"
-            caption={streakRange}
+            caption={streakData ? streakRange : "Loading"}
           />
           <StreakStatCard
             icon={<EmojiEventsRoundedIcon />}
             label="Longest Streak"
-            value={longestStreak}
+            value={streakData?.longestStreak ?? "-"}
             unit=" days"
             caption="Personal best"
           />
           <StreakStatCard
             icon={<CalendarMonthRoundedIcon />}
             label="Workouts This Month"
-            value={monthWorkouts}
-            caption={`across ${monthStreakDays} days`}
+            value={streakData ? monthWorkouts : "-"}
+            caption={`across ${monthStreakDays} streak days`}
           />
 
           <article className="streak-goal-card">
             <header className="streak-goal-head">
-              <span className="streak-goal-icon">
-                <FlagRoundedIcon />
-              </span>
+              <span className="streak-goal-icon"><FlagRoundedIcon /></span>
               <h3 className="streak-goal-title">Weekly Goal</h3>
-              <span className="streak-goal-percent">{WEEKLY_GOAL.percent}%</span>
+              <span className="streak-goal-percent">{weeklyGoal?.percent ?? 0}%</span>
             </header>
 
             <div
               className="streak-goal-bar"
               role="progressbar"
-              aria-valuenow={WEEKLY_GOAL.percent}
+              aria-valuenow={weeklyGoal?.percent ?? 0}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-label="Weekly goal progress"
             >
-              <div
-                className="streak-goal-fill"
-                style={{ width: `${WEEKLY_GOAL.percent}%` }}
-              />
+              <div className="streak-goal-fill" style={{ width: `${weeklyGoal?.percent ?? 0}%` }} />
             </div>
 
             <p className="streak-goal-note">
-              Keep going — {goalRemaining} more session
-              {goalRemaining === 1 ? "" : "s"} to hit your goal
+              {weeklyGoal
+                ? `Keep going — ${goalRemaining} more session${goalRemaining === 1 ? "" : "s"} to hit your goal`
+                : streakLoading ? "Loading your weekly goal..." : "Weekly goal unavailable"}
             </p>
 
-            <button
-              type="button"
-              className="streak-start-btn"
-              onClick={() => navigate("/tracking")}
-            >
+            <button type="button" className="streak-start-btn" onClick={() => navigate("/tracking")}>
               Start Workout
               <PlayArrowRoundedIcon />
             </button>
@@ -284,12 +347,13 @@ export default function DayStreak() {
         </aside>
       </div>
 
-      {/* ── Day Report popup ───────────────────────────────────── */}
       {reportDayKey && (
         <DayReportModal
           dayKey={reportDayKey}
-          report={getDayReport(reportDayKey)}
-          onClose={() => setReportDayKey(null)}
+          report={report}
+          loading={reportLoading}
+          error={reportError}
+          onClose={closeReport}
         />
       )}
     </div>

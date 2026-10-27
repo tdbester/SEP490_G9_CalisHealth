@@ -13,16 +13,9 @@ import EmojiEventsRoundedIcon from "@mui/icons-material/EmojiEventsRounded";
 import MonitorWeightRoundedIcon from "@mui/icons-material/MonitorWeightRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
-import ShowChartRoundedIcon from "@mui/icons-material/ShowChartRounded";
+import workoutPlanImage from "../image/Daily_Workout_Plan.png";
 import api from "../api/client";
 import OnboardingRedirect from "../components/survey/OnboardingRedirect";
-import {
-  TODAY_PLAN,
-  MUSCLE_GROUPS,
-  SKILLS,
-  HEALTH_METRICS,
-  COMMUNITY_STATS,
-} from "../data/dashboard";
 import "./Dashboard.css";
 
 const MUSCLE_ICONS = {
@@ -93,32 +86,45 @@ function Carousel({ children, ariaLabel }) {
   );
 }
 
-function WorkoutIllustration() {
-  return (
-    <div className="dash-plan-illustration" aria-hidden="true">
-      <svg viewBox="0 0 64 64" fill="none">
-        <path d="M15 47h34M22 43l7-13 9 5 8-11" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="39" cy="18" r="4" fill="currentColor" />
-        <path d="m36 22-8 9-10-3m11 2-1 12m10-10 8 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="m13 21 8 1 3 7" stroke="#F472B6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </div>
-  );
-}
-
 export default function Dashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
+  const [authStatus, setAuthStatus] = useState(() =>
+    localStorage.getItem("token") ? "loading" : "guest",
+  );
+  const [dashboardData, setDashboardData] = useState(null);
+  const [dashboardError, setDashboardError] = useState(false);
 
   useEffect(() => {
-    const cached = localStorage.getItem("token")
-      ? localStorage.getItem("user")
-      : null;
-    if (cached) setUser(JSON.parse(cached));
+    api.get("/dashboard")
+      .then((response) => setDashboardData(response.data))
+      .catch(() => setDashboardError(true));
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const cached = localStorage.getItem("user");
+    if (cached) {
+      try {
+        setUser(JSON.parse(cached));
+      } catch {
+        localStorage.removeItem("user");
+      }
+    }
 
     api.get("/auth/me")
-      .then((res) => setUser(res.data))
-      .catch(() => setUser(null));
+      .then((res) => {
+        setUser(res.data);
+        setAuthStatus("authed");
+      })
+      .catch(() => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setUser(null);
+        setAuthStatus("guest");
+      });
   }, []);
 
   const gotoLibrary = (params) => {
@@ -130,32 +136,22 @@ export default function Dashboard() {
       {user?.role === "MEMBER" && <OnboardingRedirect />}
 
       {/* ── Daily Workout Plan ─────────────────────────────────── */}
-      {user && (
-        <section className="dash-plan">
-          <WorkoutIllustration />
-          <div className="dash-plan-info">
-            <span className="dash-plan-label">Daily Workout Plan</span>
-            <h2 className="dash-plan-title">
-              {TODAY_PLAN.day} · {TODAY_PLAN.focus}
-            </h2>
-            <p className="dash-plan-meta">
-              <span className="dash-plan-duration">{TODAY_PLAN.duration}</span>
-              <span className="dash-plan-sep">•</span>
-              <span>{TODAY_PLAN.status}</span>
-            </p>
+      <section className="dash-plan">
+        <img
+          className="dash-plan-image"
+          src={workoutPlanImage}
+          alt=""
+          aria-hidden="true"
+        />
+        <div className="dash-plan-copy">
+          <span className="dash-plan-eyebrow">DAILY WORKOUT PLAN</span>
+          <h2 className="dash-plan-heading">Your training, planned for today</h2>
+          <p className="dash-plan-description">
+            Build strength with a focused calisthenics routine.
+          </p>
+        </div>
 
-            <ul className="dash-plan-exercises">
-              {TODAY_PLAN.exercises.map((ex) => (
-                <li key={ex.name}>
-                  {ex.name}
-                  <span className="dash-plan-reps">
-                    {ex.sets} × {ex.reps}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
+        {authStatus === "authed" && (
           <button
             type="button"
             className="dash-btn dash-btn-primary"
@@ -164,8 +160,17 @@ export default function Dashboard() {
             Start Workout
             <PlayArrowRoundedIcon />
           </button>
-        </section>
-      )}
+        )}
+        {authStatus === "guest" && (
+          <button
+            type="button"
+            className="dash-btn dash-btn-primary"
+            onClick={() => navigate("/login")}
+          >
+            Log in
+          </button>
+        )}
+      </section>
 
       {/* ── Explore ────────────────────────────────────────────── */}
       <section className="dash-explore">
@@ -179,7 +184,7 @@ export default function Dashboard() {
         {/* Muscle focus */}
         <h3 className="dash-subsection-title">Muscle Focus</h3>
         <Carousel ariaLabel="Muscle groups">
-          {MUSCLE_GROUPS.map((group) => {
+          {(dashboardData?.muscleGroups ?? []).map((group) => {
             const Icon = MUSCLE_ICONS[group.icon] ?? FitnessCenterRoundedIcon;
             return (
               <button
@@ -201,7 +206,7 @@ export default function Dashboard() {
         {/* Skills */}
         <h3 className="dash-subsection-title">Skills</h3>
         <Carousel ariaLabel="Calisthenics skills">
-          {SKILLS.map((skill) => (
+          {(dashboardData?.skills ?? []).map((skill) => (
             <button
               type="button"
               key={skill.id}
@@ -231,53 +236,85 @@ export default function Dashboard() {
             <h3 className="dash-panel-title">Health &amp; Progress</h3>
           </header>
 
-          <ul className="dash-metric-list">
-            <li>
-              <span className="dash-metric-label">Weight</span>
-              <span className="dash-metric-value">{HEALTH_METRICS.weight} kg</span>
-            </li>
-            <li>
-              <span className="dash-metric-label">BMI</span>
-              <span className="dash-metric-value">
-                {HEALTH_METRICS.bmi} ({HEALTH_METRICS.bmiLabel})
-              </span>
-            </li>
-            <li>
-              <span className="dash-metric-label">Weekly goal</span>
-              <span className="dash-metric-value">
-                {HEALTH_METRICS.weeklyGoal}% reached
-              </span>
-            </li>
-          </ul>
-
-          <div className="dash-progress">
-            <div className="dash-progress-bar">
-              <div
-                className="dash-progress-fill"
-                style={{ width: `${HEALTH_METRICS.weeklyGoal}%` }}
-              />
+          {authStatus === "authed" ? (
+            <>
+              {              dashboardData?.healthMetrics &&
+              (dashboardData.healthMetrics.weight != null || dashboardData.healthMetrics.bmi != null) ? (
+                <>
+                  <ul className="dash-metric-list">
+                    {dashboardData.healthMetrics.weight != null && (
+                      <li>
+                        <span className="dash-metric-label">Weight</span>
+                        <span className="dash-metric-value">{dashboardData.healthMetrics.weight} kg</span>
+                      </li>
+                    )}
+                    {dashboardData.healthMetrics.bmi != null && (
+                      <li>
+                        <span className="dash-metric-label">BMI</span>
+                        <span className="dash-metric-value">
+                          {dashboardData.healthMetrics.bmi} ({dashboardData.healthMetrics.bmiLabel})
+                        </span>
+                      </li>
+                    )}
+                    {dashboardData.healthMetrics.weeklyGoal != null && (
+                      <li>
+                        <span className="dash-metric-label">Weekly goal</span>
+                        <span className="dash-metric-value">
+                          {dashboardData.healthMetrics.weeklyGoal}% reached
+                        </span>
+                      </li>
+                    )}
+                  </ul>
+                  {dashboardData.healthMetrics.weeklyGoal != null && (
+                    <div className="dash-progress">
+                      <div className="dash-progress-bar">
+                        <div
+                          className="dash-progress-fill"
+                          style={{ width: `${dashboardData.healthMetrics.weeklyGoal}%` }}
+                        />
+                      </div>
+                      <span className="dash-progress-value">{dashboardData.healthMetrics.weeklyGoal}%</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="dash-auth-prompt">
+                  {dashboardError
+                    ? "Health measurements are currently unavailable."
+                    : dashboardData
+                      ? "No body measurements yet. Add your measurements to see your health progress."
+                      : "Loading your health measurements..."}
+                </p>
+              )}
+              <div className="dash-panel-actions">
+                <button
+                  type="button"
+                  className="dash-btn dash-btn-ghost"
+                  onClick={() => navigate("/tracking")}
+                >
+                  <InsightsRoundedIcon />
+                  View Details
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="dash-auth-gate">
+              <p className="dash-auth-prompt">
+                {authStatus === "loading"
+                  ? "Loading your health and progress..."
+                  : "Log in to view your health metrics and progress."}
+              </p>
+              {authStatus === "guest" && (
+                <button
+                  type="button"
+                  className="dash-btn dash-btn-ghost"
+                  onClick={() => navigate("/login")}
+                >
+                  Log in
+                </button>
+              )}
             </div>
-            <span className="dash-progress-value">{HEALTH_METRICS.weeklyGoal}%</span>
-          </div>
-
-          <div className="dash-panel-actions">
-            <button
-              type="button"
-              className="dash-btn dash-btn-ghost"
-              onClick={() => navigate("/tracking")}
-            >
-              <InsightsRoundedIcon />
-              View Details
-            </button>
-            <button
-              type="button"
-              className="dash-link"
-              onClick={() => navigate("/tracking")}
-            >
-              <ShowChartRoundedIcon />
-              View detailed body metrics chart →
-            </button>
-          </div>
+          )}
         </article>
 
         <article className="dash-panel dash-community">
@@ -288,22 +325,26 @@ export default function Dashboard() {
             <h3 className="dash-panel-title">Community</h3>
           </header>
 
-          <p className="dash-community-text">{COMMUNITY_STATS.headline}</p>
+          <p className="dash-community-text">
+            Discover workouts shared by the Calisthenics community
+          </p>
 
-          <div className="dash-community-stats">
-            <div>
-              <span className="dash-community-number">
-                {COMMUNITY_STATS.workouts.toLocaleString()}
-              </span>
-              <span className="dash-community-label">Workouts</span>
+          {dashboardData?.community && (
+            <div className="dash-community-stats">
+              <div>
+                <span className="dash-community-number">
+                  {dashboardData.community.workouts.toLocaleString()}
+                </span>
+                <span className="dash-community-label">Workouts</span>
+              </div>
+              <div>
+                <span className="dash-community-number">
+                  {dashboardData.community.athletes.toLocaleString()}
+                </span>
+                <span className="dash-community-label">Athletes</span>
+              </div>
             </div>
-            <div>
-              <span className="dash-community-number">
-                {COMMUNITY_STATS.athletes.toLocaleString()}
-              </span>
-              <span className="dash-community-label">Athletes</span>
-            </div>
-          </div>
+          )}
 
           <div className="dash-panel-actions">
             <button
