@@ -1,0 +1,462 @@
+/* SurveyManagement.css — Survey management (Content Manager), Figma: survey-management
+   Cùng tông với các trang member: nền #0F0C1B, card #15102A, viền #2D2550, nhấn tím #8B7CF6 */
+
+.survey-mgmt {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  color: #FFFFFF;
+  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+}
+
+.survey-mgmt h1,
+.survey-mgmt h2,
+.survey-mgmt p {
+  margin: 0;
+}
+
+.sm-card {
+  border-radius: 14px;
+  border: 1px solid #2D2550;
+  background: #15102A;
+}
+
+/* ── Header ───────────────────────────────────────────── */
+.sm-breadcrumb {
+  font-size: 12.5px;
+  color: #9A95B8;
+}
+
+.sm-title {
+  margin-top: 2px !important;
+  font-size: clamp(24px, 3vw, 28px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.sm-subtitle {
+  margin-top: 6px !important;
+  font-size: 14px;
+  color: #9A95B8;
+}
+
+/* ── Search + tabs ────────────────────────────────────── */
+.sm-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+}
+
+.sm-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  max-width: 360px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #2D2550;
+  background: #0F0C1B;
+  color: #9A95B8;
+}
+
+.sm-search:focus-within {
+  border-color: #8B7CF6;
+}
+
+.sm-search svg {
+  width: 18px;
+  height: 18px;
+}
+
+.sm-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #FFFFFF;
+  font: inherit;
+  font-size: 13.5px;
+}
+
+.sm-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sm-tabs button {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #B0ABD0;
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sm-tabs button:hover {
+  color: #FFFFFF;
+}
+
+.sm-tabs button.active {
+  border-color: #5B3CE8;
+  background: #2E1F68;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+/* ── Danh sách bước ───────────────────────────────────── */
+.sm-steps {
+  padding: 20px 20px 16px;
+}
+
+.sm-steps-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.sm-steps-head h2 {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.sm-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #5B3CE8;
+  background: #2E1F68;
+  color: #FFFFFF;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sm-link-btn:hover {
+  background: #3A2783;
+}
+
+.sm-link-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sm-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 84px;
+  padding: 12px 16px 12px 10px;
+  border-radius: 12px;
+  border: 1px solid #2D2550;
+  background: #1A1433;
+  transition: border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.sm-row:hover {
+  border-color: #4B3A9E;
+}
+
+.sm-row.dragging {
+  opacity: 0.45;
+  border-style: dashed;
+}
+
+.sm-handle {
+  display: flex;
+  color: #6F6890;
+  cursor: grab;
+}
+
+.sm-handle.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.sm-handle svg {
+  width: 20px;
+  height: 20px;
+}
+
+.sm-step-no {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 44px;
+  line-height: 1.1;
+}
+
+.sm-step-no small {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #9A95B8;
+}
+
+.sm-step-no strong {
+  font-size: 22px;
+  font-weight: 700;
+  color: #C4B5FD;
+}
+
+.sm-row-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.sm-row-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sm-row-title strong {
+  font-size: 15px;
+}
+
+.sm-row-desc {
+  font-size: 13px;
+  color: #D8CEEC;
+}
+
+.sm-row-meta {
+  font-size: 12px;
+  color: #9A95B8;
+}
+
+.sm-badge {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.sm-badge.active {
+  background: rgba(34, 197, 94, 0.14);
+  color: #4ADE80;
+}
+
+.sm-badge.draft {
+  background: rgba(245, 158, 11, 0.14);
+  color: #FBBF24;
+}
+
+.sm-badge.inactive {
+  background: rgba(148, 163, 184, 0.14);
+  color: #A3A9BF;
+}
+
+.sm-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sm-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #C4B5FD;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sm-action:hover {
+  border-color: #3B2A6B;
+  background: #221A42;
+  color: #FFFFFF;
+}
+
+.sm-action svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sm-menu-wrap {
+  position: relative;
+}
+
+.sm-kebab {
+  width: 32px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: #B0ABD0;
+  cursor: pointer;
+}
+
+.sm-kebab:hover,
+.sm-kebab[aria-expanded="true"] {
+  background: #221A42;
+  color: #FFFFFF;
+}
+
+.sm-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid #3B2A6B;
+  background: #1B1435;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.sm-menu button {
+  padding: 9px 12px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #E5E1FF;
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sm-menu button:hover:not(:disabled) {
+  background: #2A2150;
+}
+
+.sm-menu button.danger {
+  color: #F87171;
+}
+
+.sm-menu button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sm-notice {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.sm-notice.success {
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  background: rgba(34, 197, 94, 0.1);
+  color: #86EFAC;
+}
+
+.sm-notice.error {
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  background: rgba(239, 68, 68, 0.1);
+  color: #FCA5A5;
+}
+
+.sm-notice ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.sm-empty {
+  padding: 32px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #9A95B8;
+}
+
+.sm-footer {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.sm-primary-btn,
+.sm-ghost-btn {
+  height: 40px;
+  padding: 0 22px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sm-primary-btn {
+  border: none;
+  background: #8B7CF6;
+  color: #FFFFFF;
+}
+
+.sm-primary-btn:hover:not(:disabled) {
+  background: #9D90F8;
+}
+
+.sm-primary-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sm-ghost-btn {
+  border: 1px solid #2D2550;
+  background: transparent;
+  color: #D8CEEC;
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+@media (max-width: 900px) {
+  .sm-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sm-search {
+    max-width: none;
+  }
+
+  .sm-row {
+    flex-wrap: wrap;
+  }
+
+  .sm-row-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

@@ -12,11 +12,7 @@ import WorkoutLogModal from "../components/tracking/WorkoutLogModal";
 import trackingApi from "../api/tracking";
 import "./WorkoutHistory.css";
 
-const FILTERS = [
-  { id: "all", label: "All" },
-  { id: "strength", label: "Strength" },
-  { id: "cardio", label: "Cardio" },
-];
+const todayStr = () => dayjs().format("YYYY-MM-DD");
 
 /** Tổng hợp từ danh sách khi backend chưa trả về summary. */
 function summarize(workouts) {
@@ -27,21 +23,11 @@ function summarize(workouts) {
   return { totalWorkouts: workouts.length, totalMinutes, cleanRepRatio: avgAccuracy };
 }
 
-function groupByMonth(workouts) {
-  const groups = [];
-  workouts.forEach((workout) => {
-    const key = dayjs(workout.completedAt).format("YYYY-MM");
-    const last = groups[groups.length - 1];
-    if (last?.key === key) last.items.push(workout);
-    else groups.push({ key, label: dayjs(workout.completedAt).format("MMMM YYYY"), items: [workout] });
-  });
-  return groups;
-}
-
 export default function WorkoutHistory() {
   const dateInputRef = useRef(null);
-  const [filter, setFilter] = useState("all");
-  const [date, setDate] = useState("");
+  // Ngày đang xem; không chọn ngày thì luôn là hôm nay
+  const [date, setDate] = useState(todayStr);
+  const isToday = date === todayStr();
   // { status: "loading" | "ready" | "error", workout } của buổi đang xem; null = popup đóng
   const [selected, setSelected] = useState(null);
   const [apiData, setApiData] = useState(null);
@@ -63,16 +49,13 @@ export default function WorkoutHistory() {
 
   useEffect(() => {
     trackingApi
-      .getWorkoutHistory({
-        category: filter === "all" ? undefined : filter,
-        date: date || undefined,
-      })
+      .getWorkoutHistory({ date })
       .then((res) => {
         setApiData(res);
         setLoadError(false);
       })
       .catch(() => setLoadError(true));
-  }, [filter, date]);
+  }, [date]);
 
   const rawWorkouts = apiData?.workouts ?? [];
   const workouts = useMemo(
@@ -87,12 +70,7 @@ export default function WorkoutHistory() {
 
   const visible = apiData
     ? workouts
-    : workouts.filter(
-        (w) =>
-          (filter === "all" || w.category === filter) &&
-          (!date || dayjs(w.completedAt).format("YYYY-MM-DD") === date),
-      );
-  const groups = groupByMonth(visible);
+    : workouts.filter((w) => dayjs(w.completedAt).format("YYYY-MM-DD") === date);
 
   const stats = [
     { label: "Workouts", value: summary.totalWorkouts, icon: FitnessCenterRoundedIcon, tone: "purple" },
@@ -141,66 +119,58 @@ export default function WorkoutHistory() {
         ))}
       </section>
 
-      {/* ── Filters ────────────────────────────────────────────── */}
+      {/* ── Date filter ────────────────────────────────────────── */}
       <div className="wh-toolbar">
-        <div className="wh-filters" role="tablist" aria-label="Workout type">
-          {FILTERS.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              role="tab"
-              aria-selected={filter === f.id}
-              className={`wh-filter ${filter === f.id ? "active" : ""}`}
-              onClick={() => setFilter(f.id)}
-            >
-              {f.label}
-            </button>
-          ))}
-          {date && (
+        <h2 className="wh-day-title">
+          {isToday ? "Today" : dayjs(date).format("dddd")}
+          <span>{dayjs(date).format("DD MMM YYYY")}</span>
+        </h2>
+
+        <div className="wh-filters">
+          {!isToday && (
             <span className="wh-date-chip">
               {dayjs(date).format("DD MMM YYYY")}
-              <button type="button" aria-label="Clear date filter" onClick={() => setDate("")}>
+              <button type="button" aria-label="Back to today" onClick={() => setDate(todayStr())}>
                 <CloseRoundedIcon />
               </button>
             </span>
           )}
-        </div>
-
-        <div className="wh-date-picker">
-          <button
-            type="button"
-            className={`wh-icon-btn ${date ? "active" : ""}`}
-            aria-label="Filter by date"
-            onClick={openDatePicker}
-          >
-            <CalendarTodayOutlinedIcon />
-          </button>
-          <input
-            ref={dateInputRef}
-            type="date"
-            tabIndex={-1}
-            aria-hidden="true"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
+          <div className="wh-date-picker">
+            <button
+              type="button"
+              className={`wh-icon-btn ${!isToday ? "active" : ""}`}
+              aria-label="Search by date"
+              onClick={openDatePicker}
+            >
+              <CalendarTodayOutlinedIcon />
+            </button>
+            <input
+              ref={dateInputRef}
+              type="date"
+              tabIndex={-1}
+              aria-hidden="true"
+              max={todayStr()}
+              value={date}
+              // Xóa ngày trong picker -> quay về hôm nay
+              onChange={(e) => setDate(e.target.value || todayStr())}
+            />
+          </div>
         </div>
       </div>
 
       {/* ── List ───────────────────────────────────────────────── */}
-      {groups.length === 0 ? (
+      {visible.length === 0 ? (
         <p className="wh-card wh-empty">
           {loadError
             ? "We could not load your workout history. Please try again later."
-            : workouts.length === 0
-              ? "No workouts yet. Completed sessions will show up here."
-              : "No workouts match this filter."}
+            : isToday
+              ? "No workouts today yet. Completed sessions will show up here."
+              : "No workouts on this day."}
         </p>
       ) : (
-        groups.map((group) => (
-          <section key={group.key} className="wh-group">
-            <h2 className="wh-group-title">{group.label}</h2>
-            <ul className="wh-list">
-              {group.items.map((workout) => {
+        <section className="wh-group">
+          <ul className="wh-list">
+            {visible.map((workout) => {
                 const isLatest = workout.id === latestId;
                 return (
                   <li key={workout.id}>
@@ -233,9 +203,8 @@ export default function WorkoutHistory() {
                   </li>
                 );
               })}
-            </ul>
-          </section>
-        ))
+          </ul>
+        </section>
       )}
 
       <WorkoutLogModal workout={selected?.workout ?? null} status={selected?.status} onClose={closeLog} />

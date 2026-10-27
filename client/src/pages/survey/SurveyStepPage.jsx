@@ -124,15 +124,17 @@ export default function SurveyStepPage() {
           </p>
         )}
 
+        {/* key riêng cho 2 nhánh: nếu không React dùng lại thẻ <button> Back (type="button") làm nút Continue
+            (type="submit") khi lùi về bước 1, trình duyệt submit form ngay trong cú click đó -> nhảy lại bước 2 */}
         {isFirst ? (
-          <div className="survey-intro-actions">
+          <div key="intro-actions" className="survey-intro-actions">
             <button type="submit" className="survey-btn survey-btn--gradient" disabled={Boolean(busy)}>
               <span>{continueLabel}</span>
               <ArrowRightLarge />
             </button>
           </div>
         ) : (
-          <div className="survey-actions">
+          <div key="step-actions" className="survey-actions">
             <button
               type="button"
               className="survey-btn survey-btn--ghost"

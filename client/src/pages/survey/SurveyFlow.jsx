@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Navigate, Outlet, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { Outlet, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { surveyApi, surveyErrorMessage } from "../../api/survey";
 import { findStepBySlug, stepSlug, toFormValue } from "../../utils/survey";
 import "./Survey.css";
@@ -122,12 +122,32 @@ export default function SurveyFlow() {
 
 export const useSurveyFlow = () => useOutletContext();
 
-/** /survey -> bước đầu tiên còn thiếu câu trả lời bắt buộc (hoặc bước cuối nếu đã đủ). */
+/**
+ * /survey -> bước đầu tiên còn thiếu câu trả lời bắt buộc (hoặc bước cuối nếu đã đủ).
+ * Các bước trước đó vẫn được ghi vào lịch sử trình duyệt (bước 1 thay cho /survey, rồi lần lượt tới bước đang làm)
+ * để nút Back của trình duyệt lùi từng bước như khi member đi tuần tự, thay vì thoát khỏi survey.
+ */
 export function SurveyEntry() {
+  const navigate = useNavigate();
   const { definition, session } = useSurveyFlow();
-  const steps = definition.steps;
-  const current = steps.find((s) => s.stepCode === session.currentStepCode) ?? steps[steps.length - 1];
-  return current ? <Navigate to={`/survey/${stepSlug(current.stepCode)}`} replace /> : <Navigate to="/" replace />;
+  const redirectedRef = useRef(false);
+
+  useEffect(() => {
+    // StrictMode chạy effect 2 lần ở dev: chỉ ghi lịch sử 1 lần
+    if (redirectedRef.current) return;
+    redirectedRef.current = true;
+    const steps = definition.steps;
+    if (steps.length === 0) {
+      navigate("/", { replace: true });
+      return;
+    }
+    const found = steps.findIndex((s) => s.stepCode === session.currentStepCode);
+    const target = found === -1 ? steps.length - 1 : found;
+    navigate(`/survey/${stepSlug(steps[0].stepCode)}`, { replace: true });
+    for (let i = 1; i <= target; i++) navigate(`/survey/${stepSlug(steps[i].stepCode)}`);
+  }, [definition, session, navigate]);
+
+  return null;
 }
 
 /** Bước theo URL; không cho nhảy qua bước chưa làm. */

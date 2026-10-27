@@ -88,7 +88,9 @@ export default function Login() {
       }
       const returnTo = new URLSearchParams(location.search).get("returnTo");
       const hasReturnTo = returnTo?.startsWith("/") && !returnTo.startsWith("//") && returnTo !== "/login";
-      navigate(hasReturnTo ? returnTo : "/", { replace: true });
+      // Content Manager chưa có dashboard riêng -> mặc định vào Survey management
+      const home = res.data.role === "CONTENT_MANAGER" ? "/content/survey" : "/";
+      navigate(hasReturnTo ? returnTo : home, { replace: true });
     } catch (err) {
       const msg =
         err.response?.data?.error ||

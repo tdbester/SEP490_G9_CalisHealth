@@ -114,29 +114,18 @@
   gap: 12px;
 }
 
-.wh-filter {
-  height: 40px;
-  padding: 0 22px;
-  border-radius: 10px;
-  border: 1px solid #2D2550;
-  background: #15102A;
-  color: #B0ABD0;
-  font-family: inherit;
-  font-size: 13.5px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.wh-filter:hover {
-  color: #FFFFFF;
-  background: #1D1638;
-}
-
-.wh-filter.active {
-  border-color: #5B3CE8;
-  background: #2E1F68;
-  color: #FFFFFF;
+.wh-day-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 18px;
   font-weight: 700;
+}
+
+.wh-day-title span {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: #9A95B8;
 }
 
 .wh-date-chip {

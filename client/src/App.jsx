@@ -14,6 +14,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import SurveyFlow, { SurveyEntry } from "./pages/survey/SurveyFlow";
 import SurveyStepPage from "./pages/survey/SurveyStepPage";
 import SurveyResult from "./pages/survey/SurveyResult";
+import SurveyManagement from "./pages/content/SurveyManagement";
 
 export default function App() {
   return (
@@ -87,6 +88,18 @@ export default function App() {
             </AdminLayout>
           }
         />
+        {/* Content Manager (BE chặn /api/content/** theo role CONTENT_MANAGER) */}
+        <Route
+          path="/content/survey"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <SurveyManagement />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="/day-streak" element={<Navigate to="/" replace />} />
         <Route path="/profile" element={<Navigate to="/" replace />} />
         <Route path="/settings" element={<Navigate to="/" replace />} />

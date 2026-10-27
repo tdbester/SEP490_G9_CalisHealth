@@ -269,7 +269,8 @@ public class SurveyStepManagementService {
         return candidates.stream()
                 .map(q -> new AvailableQuestionResponse(q.getQuestionCode(), q.getQuestionText(), q.getQuestionType(),
                         q.isRequired(), q.getUnit(), json(q.getValidationRules()),
-                        optionCounts.getOrDefault(q.getId(), 0L).intValue(), inThisStep.contains(q.getId())))
+                        optionCounts.getOrDefault(q.getId(), 0L).intValue(), inThisStep.contains(q.getId()),
+                        json(q.getDisplayConfig())))
                 .toList();
     }
 
@@ -753,7 +754,8 @@ public class SurveyStepManagementService {
                     AssessmentQuestion q = link.getQuestion();
                     return new StepQuestionItem(q.getQuestionCode(), q.getQuestionText(), q.getQuestionType(),
                             link.isEffectivelyRequired(), q.isRequired(), q.getUnit(), json(q.getValidationRules()),
-                            link.getSortOrder(), visible(link), json(link.getConditionalRules()));
+                            link.getSortOrder(), visible(link), json(link.getConditionalRules()),
+                            json(q.getDisplayConfig()));
                 })
                 .toList();
         return new StepDetailResponse(summaryOf(survey, step), questions, step.isResult() ? resultConfig(step) : null);

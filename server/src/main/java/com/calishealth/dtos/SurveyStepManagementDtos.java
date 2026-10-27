@@ -127,7 +127,9 @@ public class SurveyStepManagementDtos {
             int sortOrder,
             /** false nếu liên kết hoặc câu hỏi đã bị tắt -> member không thấy. */
             boolean active,
-            JsonNode conditionalRules) {}
+            JsonNode conditionalRules,
+            /** Nhãn ngắn / widget như màn member (vd label "Height"). */
+            JsonNode displayConfig) {}
 
     /**
      * Pop-up "Preview step": đúng những gì member sẽ thấy, kể cả với bước DRAFT/INACTIVE. Không lưu gì.
@@ -159,7 +161,8 @@ public class SurveyStepManagementDtos {
             JsonNode validationRules,
             int optionCount,
             /** true nếu câu đang nằm trong chính bước này. */
-            boolean inCurrentStep) {}
+            boolean inCurrentStep,
+            JsonNode displayConfig) {}
 
     public record ResultConfigResponse(
             StepSummaryResponse step,
