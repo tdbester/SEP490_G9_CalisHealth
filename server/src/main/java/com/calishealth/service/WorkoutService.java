@@ -97,8 +97,9 @@ public class WorkoutService {
         workout.setDescription(request.description().trim());
         workout.setRestSeconds(request.restSeconds());
         workout.setLevel(request.level().trim());
-        workout.setExercises(request.exerciseCodes().stream().map(exercisesByCode::get).toList());
-        return toResponse(workouts.saveAndFlush(workout));
+        workout.getExercises().clear();
+        workout.getExercises().addAll(request.exerciseCodes().stream().map(exercisesByCode::get).toList());
+        return toResponse(workout);
     }
 
     @Transactional

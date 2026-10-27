@@ -81,7 +81,8 @@ public class ExerciseService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Default sets must be between 1 and 20");
         }
         if (value == null || value < 1 || value > 3600) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exercise value must be between 1 and 3600");
+            String field = "REPS".equals(request.category()) ? "Number of reps" : "Hold duration";
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, field + " must be between 1 and 3600");
         }
         if ("REPS".equals(request.category()) && request.duration() != null
                 || "HOLD".equals(request.category()) && request.defaultReps() != null) {

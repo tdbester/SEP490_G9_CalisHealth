@@ -1,10 +1,8 @@
 import axios from "axios";
 
 /**
- * API client riêng cho khu Content Manager.
- * Dùng chung axios instance `api` của app (baseURL localhost:8080/api, tự gắn
- * Bearer token từ localStorage) nhưng KHÔNG bật auto-logout khi 401: cần giữ
- * nguyên form/trang để người dùng đăng nhập lại rồi thử lại.
+ * API client riêng cho khu Content Manager. Không tự đăng xuất khi nhận 401
+ * để giữ nguyên form hiện tại trong lúc xử lý lỗi xác thực.
  */
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
 
@@ -54,7 +52,7 @@ function statusMessage(status) {
     return "Could not reach the server. Check that the backend is running and the API URL is correct.";
   }
   if (status === 401) {
-    return "Your session has expired. Sign in again with a Content Manager account and retry.";
+    return "The server rejected this sign-in token (HTTP 401). Your session is still open; check the backend log for the authentication reason.";
   }
   if (status === 403) {
     return "This account does not have the Content Manager role. Sign in with a Content Manager account.";
@@ -126,7 +124,7 @@ export const contentManagerApi = {
     if (anatomyImage) form.append("anatomyImage", anatomyImage);
     if (!localStorage.getItem("token")) {
       return Promise.reject(
-        new ApiRequestError("Your session has expired. Sign in again with a Content Manager account and retry.", 401),
+        new ApiRequestError("No sign-in token is stored in this browser. Sign in with a Content Manager account and retry.", 401),
       );
     }
     return contentApi

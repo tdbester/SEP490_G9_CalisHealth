@@ -1025,7 +1025,7 @@ export default function ExerciseFormPage() {
       if (!["HEALTH", "SKILL"].includes(exercise.type)) invalid.push("type");
       if (!LEVELS.includes(exercise.level)) invalid.push("level");
       if (selectedMuscles.length === 0) invalid.push("muscles");
-      const exerciseValue = Number(exercise.value);
+      const exerciseValue = exercise.value === "" ? NaN : Number(exercise.value);
       if (!Number.isInteger(exerciseValue) || exerciseValue < 1 || exerciseValue > 3600) invalid.push("value");
       const defaultSets = Number(exercise.defaultSets);
       if (!Number.isInteger(defaultSets) || defaultSets < 1 || defaultSets > 20) invalid.push("defaultSets");

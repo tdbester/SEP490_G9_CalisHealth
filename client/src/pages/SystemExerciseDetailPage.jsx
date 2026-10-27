@@ -121,7 +121,9 @@ export default function SystemExerciseDetailPage() {
       name: entry.name || "",
       type: String(entry.type || "HEALTH").toUpperCase() === "SKILL" ? "SKILL" : "HEALTH",
       description: entry.description || "",
-      category: entry.category || "",
+      category: entry.category || "REPS",
+      value: entry.category === "HOLD" ? (entry.duration ?? "") : (entry.defaultReps ?? ""),
+      defaultSets: entry.defaultSets ?? 3,
       level: entry.level || "Beginner",
       muscleGroup: (entry.muscleGroup || "").split(" · ").filter(Boolean),
       guide: entry.guide || "",
@@ -165,7 +167,9 @@ export default function SystemExerciseDetailPage() {
         name: entry.name || "",
         type: String(entry.type || "HEALTH").toUpperCase() === "SKILL" ? "SKILL" : "HEALTH",
         description: entry.description || "",
-        category: entry.category || "",
+        category: entry.category || "REPS",
+        value: entry.category === "HOLD" ? (entry.duration ?? "") : (entry.defaultReps ?? ""),
+        defaultSets: entry.defaultSets ?? 3,
         level: entry.level || "Beginner",
         muscleGroup: (entry.muscleGroup || "").split(" · ").filter(Boolean),
         guide: entry.guide || "",
@@ -248,13 +252,21 @@ export default function SystemExerciseDetailPage() {
               type: !["HEALTH", "SKILL"].includes(form.type),
               level: !LEVEL_OPTIONS.includes(form.level),
               muscles: form.muscleGroup.length === 0,
+              value: !Number.isInteger(Number(form.value)) || Number(form.value) < 1 || Number(form.value) > 3600,
+              defaultSets: !Number.isInteger(Number(form.defaultSets)) || Number(form.defaultSets) < 1 || Number(form.defaultSets) > 20,
             };
             if (Object.values(invalid).some(Boolean) || videoError || imageError) {
               setSaveError("Please correct the highlighted fields before saving this exercise.");
               return;
             }
             saveMutation.mutate({
-              data: { ...form, muscleGroup: form.muscleGroup.join(" · ") },
+              data: {
+                ...form,
+                defaultSets: Number(form.defaultSets),
+                defaultReps: form.category === "REPS" ? Number(form.value) : null,
+                duration: form.category === "HOLD" ? Number(form.value) : null,
+                muscleGroup: form.muscleGroup.join(" · "),
+              },
               demoVideo: video,
               anatomyImage: image,
             });

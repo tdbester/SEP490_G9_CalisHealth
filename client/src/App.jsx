@@ -14,7 +14,6 @@ import WorkoutDetailPage from "./pages/WorkoutDetailPage";
 import PendingModerationPage from "./pages/PendingModerationPage";
 import ExerciseModerationDetailPage from "./pages/ExerciseModerationDetailPage";
 import ExerciseApprovalHistoryPage from "./pages/ExerciseApprovalHistoryPage";
-import MemberLibraryPage from "./pages/MemberLibraryPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -63,7 +62,7 @@ export default function App() {
             </AdminLayout>
           }
         />
-        <Route path="/library" element={<MemberLibraryPage />} />
+        <Route path="/library" element={<Navigate to="/" replace />} />
         <Route path="/tracking" element={<Navigate to="/" replace />} />
         <Route path="/profile" element={<Navigate to="/" replace />} />
         <Route path="/settings" element={<Navigate to="/" replace />} />
