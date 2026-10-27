@@ -57,21 +57,16 @@ CREATE TABLE IF NOT EXISTS exercises (
     difficulty_level VARCHAR(40)   DEFAULT NULL,
     instructions     TEXT          DEFAULT NULL,
     execution_steps  TEXT          DEFAULT NULL,
-    safety_tips      TEXT          DEFAULT NULL,
-    anatomy_theory   TEXT          DEFAULT NULL,
     video_url        VARCHAR(1000) DEFAULT NULL,
     default_sets     INT           DEFAULT NULL,
     default_reps     INT           DEFAULT NULL,
-    default_rest     INT           DEFAULT NULL,
+    duration         INT           DEFAULT NULL,
     source           VARCHAR(60)   DEFAULT NULL,
     status           VARCHAR(40)   DEFAULT NULL,
     updated_at       DATETIME(6)   NOT NULL,
-    demo_media_id    BIGINT        DEFAULT NULL,
     created_by       BIGINT        DEFAULT NULL,
     PRIMARY KEY (id),
-    KEY idx_exercises_demo_media (demo_media_id),
     KEY idx_exercises_created_by (created_by),
-    CONSTRAINT fk_exercises_demo_media FOREIGN KEY (demo_media_id) REFERENCES media_files (id),
     CONSTRAINT fk_exercises_created_by FOREIGN KEY (created_by) REFERENCES users (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -138,8 +133,9 @@ CREATE TABLE IF NOT EXISTS workout_sessions (
     id                BIGINT       NOT NULL AUTO_INCREMENT,
     member_profile_id BIGINT       NOT NULL,
     -- Cố ý KHÔNG khai báo FK tới workout_entries: bảng đó thuộc module
-    -- Library/Content và chưa có migration nào tạo. Thêm FK ở đây sẽ làm
-    -- V3 fail ngay. Gắn FK sau khi có V4__content_schema.sql.
+    -- Library/Content và được tạo ở V4 (mục 5, WORKOUT TEMPLATES). Thêm FK ở
+    -- đây sẽ làm V3 fail ngay vì workout_entries chưa tồn tại. FK được gắn
+    -- bằng ALTER TABLE ở cuối V4.
     workout_id        BIGINT       DEFAULT NULL,
     session_date      DATE         NOT NULL,
     status            VARCHAR(20)  NOT NULL DEFAULT 'IN_PROGRESS',  -- IN_PROGRESS | COMPLETED | ABANDONED
