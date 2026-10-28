@@ -1,22 +1,62 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/client";
 import "./Login.css";
+import AuthLogo from "../components/AuthLogo";
+import ImeNotice from "../components/ImeNotice";
+import { hasNonAscii } from "../utils/authInput";
+
+const REDIRECT_SECONDS = 8;
 
 export default function ResetPassword() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const token = params.get("token") || "";
+  const [status, setStatus] = useState("verifying");
   const [form, setForm] = useState({ newPassword: "", confirmNewPassword: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [seconds, setSeconds] = useState(REDIRECT_SECONDS);
   const [loading, setLoading] = useState(false);
 
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  useEffect(() => {
+    if (!token) {
+      setStatus("error");
+      setError("The token has expired, please sign up again");
+      return;
+    }
+    api.get(`/auth/verify-reset-token?token=${encodeURIComponent(token)}`)
+      .then(() => setStatus("ready"))
+      .catch(() => {
+        setStatus("error");
+        setError("The token has expired, please sign up again");
+      });
+  }, [token]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (status !== "error" && !success) return undefined;
+    if (seconds <= 0) {
+      navigate("/login", { replace: true });
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setSeconds((value) => value - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [status, success, seconds, navigate, token]);
+
+  const imeWarn = {
+    newPassword: hasNonAscii(form.newPassword),
+    confirmNewPassword: hasNonAscii(form.confirmNewPassword),
+  };
+
+  const set = (key) => (event) => {
+    const value = event.target.value;
+    setForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError("");
+    if (imeWarn.newPassword || imeWarn.confirmNewPassword) return;
     if (form.newPassword !== form.confirmNewPassword) {
       setError("The confirmation password does not match");
       return;
@@ -25,13 +65,16 @@ export default function ResetPassword() {
     try {
       await api.post("/auth/reset-password", { token, ...form });
       setSuccess(true);
+      setSeconds(REDIRECT_SECONDS);
     } catch (err) {
       const data = err.response?.data;
       const msg =
         (data && typeof data === "object"
           ? Object.values(data).flat().join(" • ")
-          : data) || "Could not reset the password.";
-      setError(typeof msg === "string" ? msg : "Could not reset the password.");
+          : data) || "Unable to reset password. Please try again.";
+      setError(typeof msg === "string" ? msg : "Unable to reset password. Please try again.");
+      setStatus("error");
+      setSeconds(REDIRECT_SECONDS);
     } finally {
       setLoading(false);
     }
@@ -40,25 +83,23 @@ export default function ResetPassword() {
   return (
     <div className="login">
       <div className="login-card">
-        <div className="login-logo">
-          <span className="login-logo-text">Calis</span>
-          <span className="logo-gradient-text">Health</span>
-        </div>
-        <h1 className="login-title">Reset password</h1>
+        <AuthLogo />
+        <h1 className="login-title">
+          {status === "verifying" ? "Verifying..." : status === "error" ? "Verification failed" : "Reset Password"}
+        </h1>
 
-        {success ? (
+        {status === "verifying" && <div className="login-form"><div className="login-success">Checking token, please wait...</div></div>}
+        {status === "error" && (
           <div className="login-form">
-            <div className="login-success">Password reset successfully! Please sign in again.</div>
-            <button className="login-submit" onClick={() => navigate("/login")}>
-              <span className="login-submit-text">Sign in</span>
-            </button>
+            <div className="login-error">{error}</div>
+            <div className="login-redirect">Redirecting to the login page in {seconds} seconds.</div>
           </div>
-        ) : (
+        )}
+        {status === "ready" && !success && (
           <form className="login-form" onSubmit={handleSubmit}>
             {error && <div className="login-error">{error}</div>}
-
             <div className="login-field">
-              <label className="login-label">New password</label>
+              <label className="login-label">New Password</label>
               <div className="login-input-wrap">
                 <input
                   className="login-input"
@@ -69,10 +110,10 @@ export default function ResetPassword() {
                   required
                 />
               </div>
+              <ImeNotice warn={imeWarn.newPassword} />
             </div>
-
             <div className="login-field">
-              <label className="login-label">Confirm new password</label>
+              <label className="login-label">Confirm New Password</label>
               <div className="login-input-wrap">
                 <input
                   className="login-input"
@@ -83,12 +124,18 @@ export default function ResetPassword() {
                   required
                 />
               </div>
+              <ImeNotice warn={imeWarn.confirmNewPassword} />
             </div>
-
             <button type="submit" className="login-submit" disabled={loading}>
-              <span className="login-submit-text">{loading ? "Processing..." : "Reset password"}</span>
+              <span className="login-submit-text">{loading ? "Processing..." : "Reset Password"}</span>
             </button>
           </form>
+        )}
+        {success && (
+          <div className="login-form">
+            <div className="login-success">Password reset successfully! Please log in again.</div>
+            <div className="login-redirect">Redirecting to the login page in {seconds} seconds.</div>
+          </div>
         )}
 
         <div className="login-links">
