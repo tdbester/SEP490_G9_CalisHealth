@@ -198,28 +198,27 @@ function FilterSidebar({
           const count = getMuscleCount(mg);
 
           return (
-            <div
+            <button
               key={mg}
+              type="button"
               onClick={() => onToggleMuscle(mg)}
-              className={`flex items-center justify-between py-1.5 px-2 rounded-lg border cursor-pointer transition-all select-none ${
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all ${
                 active
-                  ? "border-[#7656e8] bg-[#281d58] text-white font-medium shadow-sm"
-                  : "border-[#302650] text-[#a49bbf] hover:border-[#5a4a85] hover:bg-[#1a123d] hover:text-white"
+                  ? "bg-[#3b2d68] text-white font-medium border border-[#6351a4]"
+                  : "bg-transparent text-slate-400 hover:bg-[#1f1a3a] hover:text-white"
               }`}
             >
-              <div className="flex items-center gap-2 min-w-0">
+              <span className="flex items-center gap-2 min-w-0">
                 <RadioIcon checked={active} />
                 <span className="text-xs truncate">{mg}</span>
-              </div>
+              </span>
 
               <span
-                className={`text-[11px] ml-2 flex-shrink-0 ${
-                  active ? "text-[#a89bd0] font-semibold" : "text-[#655c88]"
-                }`}
+                className={`text-[11px] ml-2 flex-shrink-0 opacity-60 ${active ? "font-semibold" : ""}`}
               >
                 {count}
               </span>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -513,14 +512,6 @@ export default function ExerciseListPage() {
 
   return (
     <div className="exercise-list-page w-full max-w-7xl mx-auto text-white">
-      {/* Explicit style reset cho button để không bị dính background/border mặc định */}
-      <style>{`
-        .exercise-list-page button {
-          border: none;
-          outline: none;
-        }
-      `}</style>
-
       {/* 1. HEADER TRANG GỌN GÀNG */}
       <header className="exercise-header mb-4">
         <h1 className="exercise-title text-xl md:text-2xl font-bold text-white tracking-tight mb-1">

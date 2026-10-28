@@ -329,7 +329,7 @@ export default function CommunityExerciseListPage() {
         demoVideoUrl: createForm.videoUrl,
       });
       setFormSuccess("Exercise submitted and is pending review.");
-      toast.success("Exercise submitted for review.");
+      toast.success("Exercise created successfully!");
       setTimeout(() => {
         setFormSuccess(null);
         setShowCreateModal(false);

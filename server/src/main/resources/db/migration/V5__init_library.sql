@@ -1,4 +1,4 @@
--- V3: Init Library & Exercise schema for CalisHealth
+-- V5: Init Library & Exercise schema for CalisHealth
 -- Hỗ trợ chức năng Library & Exercise cho Member và Content Manager
 -- Chiến lược cuốn gói: Kế thừa V1 (users, auth_tokens), tạo các bảng phục vụ bài tập, nhóm cơ, video và kế hoạch tập.
 
@@ -87,9 +87,9 @@ CREATE TABLE IF NOT EXISTS exercise_entries (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
--- 5. CONTENT_WORKOUTS
+-- 5. WORKOUT_ENTRIES
 -- ============================================================
-CREATE TABLE IF NOT EXISTS content_workouts (
+CREATE TABLE IF NOT EXISTS workout_entries (
     id          BIGINT NOT NULL AUTO_INCREMENT,
     code        VARCHAR(30) NOT NULL,
     name        VARCHAR(120) NOT NULL,
@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS content_workouts (
     active      BIT(1) NOT NULL DEFAULT 1,
     updated_at  DATETIME(6) NOT NULL,
     PRIMARY KEY (id),
-    UNIQUE KEY uk_content_workouts_code (code)
+    UNIQUE KEY uk_workout_entries_code (code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS workout_exercises (
     display_order INT NOT NULL,
     PRIMARY KEY (workout_id, display_order),
     KEY fk_we_exercise (exercise_id),
-    CONSTRAINT fk_we_workout FOREIGN KEY (workout_id) REFERENCES content_workouts (id) ON DELETE CASCADE,
+    CONSTRAINT fk_we_workout FOREIGN KEY (workout_id) REFERENCES workout_entries (id) ON DELETE CASCADE,
     CONSTRAINT fk_we_exercise FOREIGN KEY (exercise_id) REFERENCES exercise_entries (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS workout_plan_items (
     PRIMARY KEY (id),
     KEY fk_wpi_workout (workout_id),
     KEY fk_wpi_exercise (exercise_id),
-    CONSTRAINT fk_wpi_workout FOREIGN KEY (workout_id) REFERENCES content_workouts (id) ON DELETE CASCADE,
+    CONSTRAINT fk_wpi_workout FOREIGN KEY (workout_id) REFERENCES workout_entries (id) ON DELETE CASCADE,
     CONSTRAINT fk_wpi_exercise FOREIGN KEY (exercise_id) REFERENCES exercise_entries (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -142,13 +142,13 @@ CREATE TABLE IF NOT EXISTS workout_plan_items (
 -- ============================================================
 
 -- Seed Muscle Groups
-INSERT IGNORE INTO muscle_groups (id, name) VALUES
-(1, 'Chest'),
-(2, 'Back'),
-(3, 'Legs'),
-(4, 'Core'),
-(5, 'Arm/Shoulders'),
-(6, 'Full body');
+INSERT IGNORE INTO muscle_groups (name, dashboard_code, icon_key, tone) VALUES
+('Chest', 'chest', 'fitness', 'purple'),
+('Back', 'back', 'accessibility', 'blue'),
+('Legs', 'legs', 'walk', 'green'),
+('Core', 'core', 'adjust', 'orange'),
+('Arm/Shoulders', 'arm-shoulders', 'martial', 'pink'),
+('Full body', 'full-body', 'self', 'cyan');
 
 -- Seed System Exercises for Library (Health & Skills)
 INSERT IGNORE INTO exercise_entries (id, code, name, description, type, category, muscle_group, level, active, guide, demo_video_url, anatomy_image_url, updated_at) VALUES
@@ -180,22 +180,24 @@ INSERT IGNORE INTO exercise_entries (id, code, name, description, type, category
 (206, 'SK-006', 'Advanced tuck front lever', 'Progressive straight-arm static hold extending knees further from the chest.', 'SKILL', 'Skill', 'Back', 'Advanced', 1, 'Straight arms, open hip angle extending knees away from torso.', NULL, NULL, NOW(6));
 
 -- Seed sample workouts
-INSERT IGNORE INTO content_workouts (id, code, name, description, content, type, level, active, updated_at) VALUES
+INSERT IGNORE INTO workout_entries (id, code, name, description, content, type, level, active, updated_at) VALUES
 (1, 'WO-001', 'Upper Body Calisthenics Mastery', 'Intense upper body hypertrophy and strength routine targeting chest, back, and shoulders.', 'Push-ups, Pull-ups, Dips and Pike Push-ups circuit.', 'WORKOUT', 'Intermediate', 1, NOW(6)),
 (2, 'WO-002', 'Foundation Core & Balance', 'Strengthen your core foundation and develop baseline isometric endurance.', 'Plank, Hollow Body, L-Sit prep.', 'WORKOUT', 'Beginner', 1, NOW(6));
 
 -- ============================================================
 -- LIBRARY OVERVIEW AND SYSTEM EXERCISE FILTERS
 -- ============================================================
-ALTER TABLE content_workouts
+ALTER TABLE workout_entries
     ADD COLUMN is_system BOOLEAN NOT NULL DEFAULT TRUE,
     ADD COLUMN author_id BIGINT NULL,
-    ADD KEY idx_content_workouts_system_type (is_system, type),
-    ADD KEY idx_content_workouts_author_system_type (author_id, is_system, type),
-    ADD CONSTRAINT fk_content_workouts_author
+    ADD COLUMN created_by BIGINT NULL,
+    ADD KEY idx_workout_entries_system_type (is_system, type),
+    ADD KEY idx_workout_entries_author_system_type (author_id, is_system, type),
+    ADD KEY idx_workout_entries_created_by_active (created_by, active),
+    ADD CONSTRAINT fk_workout_entries_author
         FOREIGN KEY (author_id) REFERENCES users (id) ON DELETE SET NULL;
 
-ALTER TABLE content_workouts
+ALTER TABLE workout_entries
     ADD COLUMN is_shared_with_community BOOLEAN NOT NULL DEFAULT FALSE,
     ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'ACCEPTED',
     ADD COLUMN save_count INT NOT NULL DEFAULT 0,
@@ -204,6 +206,10 @@ ALTER TABLE content_workouts
     ADD COLUMN created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     ADD KEY idx_workouts_community (is_system, is_shared_with_community, status, created_at),
     ADD KEY idx_workouts_author (author_id, is_system, created_at);
+
+ALTER TABLE workout_entries
+    ADD CONSTRAINT fk_workout_entries_created_by
+        FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE SET NULL;
 
 ALTER TABLE workout_exercises
     ADD COLUMN id BIGINT NOT NULL AUTO_INCREMENT UNIQUE,
@@ -457,12 +463,31 @@ CREATE TABLE IF NOT EXISTS member_saved_exercises (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Local development only: never deploy the shared demo credential to a production database.
--- The account is created only when the database has no users.
-INSERT IGNORE INTO users (email, password, full_name, role, enabled, created_at)
+-- Create the demo account if that email is not already present.
+INSERT INTO users (email, password, full_name, role, enabled, created_at)
 SELECT 'demo@calishealth.com',
        '$2a$10$P3bf6Kza8/UJGv0fKTCgye6IO77E95sO2QY0uvIWfPv88fJu0Cqxe',
        'CalisHealth Demo', 'MEMBER', TRUE, NOW(6)
-WHERE NOT EXISTS (SELECT 1 FROM users);
+WHERE NOT EXISTS (
+    SELECT 1 FROM users WHERE email = 'demo@calishealth.com'
+);
+
+INSERT INTO member_profiles (user_id)
+SELECT u.id
+FROM users u
+WHERE u.email = 'demo@calishealth.com'
+  AND NOT EXISTS (
+      SELECT 1 FROM member_profiles mp WHERE mp.user_id = u.id
+  );
+
+INSERT INTO body_measurements (member_profile_id, weight, height, measured_at)
+SELECT mp.id, 68.50, 172.00, NOW(6)
+FROM member_profiles mp
+JOIN users u ON u.id = mp.user_id
+WHERE u.email = 'demo@calishealth.com'
+  AND NOT EXISTS (
+      SELECT 1 FROM body_measurements bm WHERE bm.member_profile_id = mp.id
+  );
 
 INSERT IGNORE INTO exercise_entries (
     code, name, description, type, category, muscle_group, level, active, guide,
@@ -509,7 +534,7 @@ INSERT IGNORE INTO exercise_entries (
     'HEALTH', 'Strength', 'Shoulders, triceps', 'ADVANCED', 1,
     CONCAT('Face a clear wall and place your hands shoulder-width apart.', CHAR(10), 'Kick into a stable wall handstand with your body braced.', CHAR(10), 'Bend your elbows slowly and lower your head toward a padded surface.', CHAR(10), 'Press through your palms to return to the start.'),
     CONCAT('Face a clear wall and place your hands shoulder-width apart.', CHAR(10), 'Kick into a stable wall handstand with your body braced.', CHAR(10), 'Bend your elbows slowly and lower your head toward a padded surface.', CHAR(10), 'Press through your palms to return to the start.'),
-    NOW(6), NULL, FALSE, 'PENDING', NULL, 3, 5, NULL, TRUE, 'Wall', (SELECT id FROM users ORDER BY id ASC LIMIT 1),
+    NOW(6), NULL, FALSE, 'PENDING', NULL, 3, 5, NULL, TRUE, 'Wall', (SELECT id FROM users WHERE email = 'demo@calishealth.com' LIMIT 1),
     DATE_SUB(NOW(6), INTERVAL 1 DAY), 0
 ),
 (
@@ -520,7 +545,7 @@ INSERT IGNORE INTO exercise_entries (
     CONCAT('Stand with your back against a clear wall.', CHAR(10), 'Walk your feet forward and slide down the wall.', CHAR(10), 'Stop when your knees are comfortably bent.', CHAR(10), 'Hold the position while breathing steadily.'),
     NOW(6), '/media/exercise-demos/demo-wall-sit.mp4', FALSE, 'REJECTED',
     'Reason: Text check: the description contains inappropriate wording. Edit the description and save again.',
-    3, NULL, 60, TRUE, 'Wall', (SELECT id FROM users ORDER BY id ASC LIMIT 1),
+    3, NULL, 60, TRUE, 'Wall', (SELECT id FROM users WHERE email = 'demo@calishealth.com' LIMIT 1),
     DATE_SUB(NOW(6), INTERVAL 8 DAY), 0
 ),
 (
@@ -531,7 +556,7 @@ INSERT IGNORE INTO exercise_entries (
     CONCAT('Place the parallettes on a stable, non-slip surface.', CHAR(10), 'Grip the bars and press down to lift your body.', CHAR(10), 'Keep your shoulders depressed and raise your legs in front.', CHAR(10), 'Hold with control, then lower your feet gently.'),
     NOW(6), NULL, FALSE, 'REJECTED',
     'Reason: Video check: we could not detect a full body in most frames. Re-record in better light with your whole body in frame.',
-    4, NULL, 15, TRUE, 'Parallettes', (SELECT id FROM users ORDER BY id ASC LIMIT 1),
+    4, NULL, 15, TRUE, 'Parallettes', (SELECT id FROM users WHERE email = 'demo@calishealth.com' LIMIT 1),
     DATE_SUB(NOW(6), INTERVAL 11 DAY), 0
 ),
 (
@@ -540,7 +565,7 @@ INSERT IGNORE INTO exercise_entries (
     'HEALTH', 'Strength', 'Shoulders', 'INTERMEDIATE', 1,
     CONCAT('Start in a pike position with hands shoulder-width apart.', CHAR(10), 'Brace your core and keep your hips raised.', CHAR(10), 'Bend your elbows and lower your head toward the floor.', CHAR(10), 'Press through your hands to return to the pike position.'),
     CONCAT('Start in a pike position with hands shoulder-width apart.', CHAR(10), 'Brace your core and keep your hips raised.', CHAR(10), 'Bend your elbows and lower your head toward the floor.', CHAR(10), 'Press through your hands to return to the pike position.'),
-    NOW(6), NULL, FALSE, 'ACCEPTED', NULL, 3, 8, NULL, TRUE, 'Bodyweight', (SELECT id FROM users ORDER BY id ASC LIMIT 1),
+    NOW(6), NULL, FALSE, 'ACCEPTED', NULL, 3, 8, NULL, TRUE, 'Bodyweight', (SELECT id FROM users WHERE email = 'demo@calishealth.com' LIMIT 1),
     DATE_SUB(NOW(6), INTERVAL 9 DAY), 0
 ),
 (
@@ -549,7 +574,7 @@ INSERT IGNORE INTO exercise_entries (
     'HEALTH', 'Strength', 'Back', 'BEGINNER', 1,
     CONCAT('Position yourself under a secure low bar and grip it firmly.', CHAR(10), 'Straighten your body and brace your abdomen.', CHAR(10), 'Pull your chest toward the bar by driving your elbows back.', CHAR(10), 'Lower under control until your arms are extended.'),
     CONCAT('Position yourself under a secure low bar and grip it firmly.', CHAR(10), 'Straighten your body and brace your abdomen.', CHAR(10), 'Pull your chest toward the bar by driving your elbows back.', CHAR(10), 'Lower under control until your arms are extended.'),
-    NOW(6), NULL, FALSE, 'ACCEPTED', NULL, 3, 10, NULL, TRUE, 'Low bar', (SELECT id FROM users ORDER BY id ASC LIMIT 1),
+    NOW(6), NULL, FALSE, 'ACCEPTED', NULL, 3, 10, NULL, TRUE, 'Low bar', (SELECT id FROM users WHERE email = 'demo@calishealth.com' LIMIT 1),
     DATE_SUB(NOW(6), INTERVAL 13 DAY), 0
 ),
 (
@@ -558,7 +583,7 @@ INSERT IGNORE INTO exercise_entries (
     'HEALTH', 'Strength', 'Shoulders', 'ADVANCED', 1,
     CONCAT('Begin in a high plank and turn your hands slightly outward if comfortable.', CHAR(10), 'Lean your shoulders forward beyond your wrists while bracing your core.', CHAR(10), 'Bend your elbows and lower your chest with control.', CHAR(10), 'Press the floor away while maintaining the forward lean.'),
     CONCAT('Begin in a high plank and turn your hands slightly outward if comfortable.', CHAR(10), 'Lean your shoulders forward beyond your wrists while bracing your core.', CHAR(10), 'Bend your elbows and lower your chest with control.', CHAR(10), 'Press the floor away while maintaining the forward lean.'),
-    NOW(6), NULL, FALSE, 'ACCEPTED', NULL, 4, 6, NULL, TRUE, 'Bodyweight', (SELECT id FROM users ORDER BY id ASC LIMIT 1),
+    NOW(6), NULL, FALSE, 'ACCEPTED', NULL, 4, 6, NULL, TRUE, 'Bodyweight', (SELECT id FROM users WHERE email = 'demo@calishealth.com' LIMIT 1),
     DATE_SUB(NOW(6), INTERVAL 18 DAY), 0
 );
 
@@ -583,17 +608,19 @@ INSERT IGNORE INTO exercise_entries (
            'Lower with control while keeping your heels on the floor.', CHAR(10),
            'Drive through your feet to stand tall.'),
     NOW(6), NULL, FALSE, 'ACCEPTED', NULL, 3, 12, NULL, TRUE,
-    'Bodyweight', (SELECT id FROM users ORDER BY id ASC LIMIT 1),
+    'Bodyweight', (SELECT id FROM users WHERE email = 'demo@calishealth.com' LIMIT 1),
     DATE_SUB(NOW(6), INTERVAL 3 DAY), 0
 );
 
-INSERT IGNORE INTO content_workouts (
+INSERT IGNORE INTO workout_entries (
     code, name, description, content, type, level, active, updated_at,
-    is_system, author_id, is_shared_with_community, status, save_count,
+    is_system, author_id, created_by, is_shared_with_community, status, save_count,
     total_sets, estimated_duration, created_at
 )
 SELECT seed.code, seed.name, seed.description, NULL, 'CUSTOM', seed.level, TRUE, NOW(6),
-       FALSE, (SELECT id FROM users ORDER BY id ASC LIMIT 1), seed.is_shared, 'ACCEPTED',
+       FALSE, (SELECT id FROM users WHERE email = 'demo@calishealth.com' LIMIT 1),
+       (SELECT id FROM users WHERE email = 'demo@calishealth.com' LIMIT 1),
+       seed.is_shared, 'ACCEPTED',
        0, seed.total_sets, seed.estimated_duration,
        DATE_SUB(NOW(6), INTERVAL seed.age_days DAY)
 FROM (
@@ -610,12 +637,12 @@ FROM (
            'A personal routine for gentle upper-body and lower-body movement.',
            'BEGINNER', FALSE, 1, 9, 15
 ) seed
-WHERE (SELECT id FROM users ORDER BY id ASC LIMIT 1) IS NOT NULL;
+WHERE (SELECT id FROM users WHERE email = 'demo@calishealth.com' LIMIT 1) IS NOT NULL;
 
 INSERT IGNORE INTO workout_exercises (
     workout_id, exercise_id, display_order, order_index, sets, reps, duration, count_by, rest_seconds
 )
-SELECT (SELECT id FROM content_workouts WHERE code = item.workout_code LIMIT 1),
+SELECT (SELECT id FROM workout_entries WHERE code = item.workout_code LIMIT 1),
        (SELECT id FROM exercise_entries WHERE code = item.exercise_code LIMIT 1),
        item.display_order, item.order_index, item.sets, item.reps, NULL,
        item.count_by, item.rest_seconds
@@ -635,7 +662,7 @@ FROM (
 ) item
 WHERE EXISTS (
     SELECT 1
-    FROM content_workouts w
+    FROM workout_entries w
     JOIN exercise_entries e ON e.code = item.exercise_code
     WHERE w.code = item.workout_code
       AND e.status = 'ACCEPTED'

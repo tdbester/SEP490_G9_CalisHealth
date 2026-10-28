@@ -13,5 +13,6 @@ public record WorkoutListItemDTO(
         int totalExercises,
         int totalSets,
         int estimatedDuration,
+        String muscleGroup,
         boolean isSharedWithCommunity
 ) {}

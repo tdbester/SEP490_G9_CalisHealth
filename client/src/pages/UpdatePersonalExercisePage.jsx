@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
   getApiErrorMessage,
   validatePersonalExercise,
   validateVideoFile,
 } from './libraryFormValidation';
-import { getPersonalExercise, resubmitPersonalExercise } from '../api/library';
+import {
+  getPersonalExercise,
+  resubmitPersonalExercise,
+  updateAcceptedPersonalExercise,
+} from '../api/library';
 
 /* Icons */
 function BarbellIcon({ className = 'h-5 w-5 text-[#9d7aff]' }) {
@@ -38,6 +42,7 @@ function CheckCircleIcon({ className = 'w-3.5 h-3.5' }) {
 export default function UpdatePersonalExercisePage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const fileInputRef = useRef(null);
   const submissionLock = useRef(false);
 
@@ -61,6 +66,34 @@ export default function UpdatePersonalExercisePage() {
   useEffect(() => {
     let active = true;
     setErrorMessage('');
+    const mockExercise = location.state?.exercise;
+    if (mockExercise?.isMock) {
+      const initialGuide = Array.isArray(mockExercise.guideSteps)
+        ? mockExercise.guideSteps
+        : [];
+      const initialState = {
+        title: mockExercise.title || '',
+        description: mockExercise.description || '',
+        level: mockExercise.level || 'Beginner',
+        guide: initialGuide,
+        video: mockExercise.video || null,
+      };
+      setExercise({
+        ...mockExercise,
+        guideSteps: initialGuide,
+        reason: mockExercise.reason,
+      });
+      setTitle(initialState.title);
+      setDescription(initialState.description);
+      setLevel(initialState.level);
+      setGuide(initialState.guide);
+      setVideo(initialState.video);
+      setBaseline(JSON.stringify(initialState));
+      return () => {
+        active = false;
+      };
+    }
+
     getPersonalExercise(id)
       .then((currentExercise) => {
         if (!active) return;
@@ -98,7 +131,7 @@ export default function UpdatePersonalExercisePage() {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, location.state]);
 
   const currentState = JSON.stringify({ title, description, level, guide, video });
   const isDirty = baseline !== '' && (
@@ -113,7 +146,7 @@ export default function UpdatePersonalExercisePage() {
     requireVideo: !video && !uploadedFile,
   });
   const showFieldError = (field) =>
-    hasSubmitted || touchedFields[field] || Boolean(validationErrors[field]);
+    Boolean((hasSubmitted || touchedFields[field]) && validationErrors[field]);
   const markFieldTouched = (field) =>
     setTouchedFields((current) => ({ ...current, [field]: true }));
   const focusFirstInvalidField = (errors) => {
@@ -181,7 +214,11 @@ export default function UpdatePersonalExercisePage() {
 
   const charCount = (str, max) => `${str.length}/${max}`;
 
-  const handleSave = async () => {
+  const handleSave = async (event) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
     if (!isDirty || !exercise || submissionLock.current) return;
     setHasSubmitted(true);
     if (Object.keys(validationErrors).length > 0) {
@@ -194,7 +231,8 @@ export default function UpdatePersonalExercisePage() {
     setSaving(true);
     setErrorMessage('');
     try {
-      const updatedExercise = await resubmitPersonalExercise(id, {
+      const request = {
+        status: "PENDING",
         title: title.trim(),
         description: description.trim(),
         level: level.toUpperCase(),
@@ -204,21 +242,58 @@ export default function UpdatePersonalExercisePage() {
         defaultReps: exercise.defaultReps ?? null,
         defaultDuration: exercise.defaultDuration ?? null,
         keepCurrentVideo: Boolean(video && !uploadedFile),
-      }, uploadedFile);
+      };
+      if (exercise.isMock) {
+        const mockPendingExercise = {
+          ...exercise,
+          ...request,
+          title: request.title,
+          description: request.description,
+          level,
+          guideSteps: request.guideSteps,
+          status: "PENDING",
+          rejectionReason: null,
+          reason: undefined,
+          meta: `${exercise.targetMuscle || "Chest"} · ${request.defaultSets} sets · ${request.defaultDuration != null ? `${request.defaultDuration} sec` : `${request.defaultReps} reps`} · Submitted just now`,
+          scanText: "Waiting for review",
+        };
+        sessionStorage.setItem(
+          "calishealth.mock-resubmitted-exercise",
+          JSON.stringify(mockPendingExercise)
+        );
+        toast.success("Exercise resubmitted for review!");
+        navigate('/library/personal?status=pending');
+        return;
+      }
+
+      const isAcceptedEdit = exercise.status === 'ACCEPTED';
+      const updatedExercise = isAcceptedEdit
+        ? await updateAcceptedPersonalExercise(id, request, uploadedFile)
+        : await resubmitPersonalExercise(id, request, uploadedFile);
       if (updatedExercise.status === 'REJECTED') {
         toast.error(updatedExercise.rejectionReason || "The exercise did not pass the checks.");
         navigate('/library/personal?status=rejected');
+      } else if (updatedExercise.status === 'PENDING') {
+        toast.success("Exercise resubmitted for review!");
+        navigate('/library/personal?status=pending');
       } else if (updatedExercise.status === 'ACCEPTED') {
-        toast.success("Exercise approved and added to your library.");
+        toast.success("Changes saved successfully!");
         navigate('/library/personal?status=accepted');
       } else {
-        toast.success("Exercise resubmitted for review.");
+        toast.success("Exercise resubmitted for review!");
         navigate('/library/personal?status=pending');
       }
     } catch (error) {
-      const message = getApiErrorMessage(error, "Could not resubmit exercise.");
-      toast.error(message);
-      setErrorMessage(message);
+      const responseData = error?.response?.data;
+      const errorMsg = error?.response?.status === 401
+        ? "Phiên đăng nhập hết hạn hoặc bạn không có quyền sửa bài tập này!"
+        : typeof responseData === "string"
+          ? responseData
+          : responseData?.message || getApiErrorMessage(error, "Lưu thất bại");
+      console.error("Edit exercise failed:", error?.response || error);
+      toast.error(errorMsg);
+      setErrorMessage(errorMsg);
+      alert(errorMsg);
     } finally {
       submissionLock.current = false;
       setSaving(false);
@@ -263,7 +338,6 @@ export default function UpdatePersonalExercisePage() {
             maxLength={50}
             onChange={(e) => {
               setTitle(e.target.value);
-              markFieldTouched('title');
             }}
             onBlur={() => {
               markFieldTouched('title');
@@ -286,7 +360,6 @@ export default function UpdatePersonalExercisePage() {
             placeholder="What does this exercise train, and who is it for?"
             onChange={(e) => {
               setDescription(e.target.value);
-              markFieldTouched('description');
             }}
             onBlur={() => {
               markFieldTouched('description');
@@ -309,15 +382,14 @@ export default function UpdatePersonalExercisePage() {
                 role="radio"
                 aria-checked={level === name}
                 tabIndex={0}
+                onBlur={() => markFieldTouched('level')}
                 onClick={() => {
                   setLevel(name);
-                  markFieldTouched('level');
                 }}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
                     setLevel(name);
-                    markFieldTouched('level');
                   }
                 }}
                 className={`rounded-xl p-3.5 flex items-start justify-between cursor-pointer transition-all select-none text-left ${
@@ -355,8 +427,8 @@ export default function UpdatePersonalExercisePage() {
                 value={step}
                 onChange={(e) => {
                   handleGuideChange(idx, e.target.value);
-                  markFieldTouched(`step-${idx}`);
                 }}
+                onBlur={() => markFieldTouched(`step-${idx}`)}
                 maxLength={250}
                 placeholder={idx === 0 ? 'e.g. Start in a plank with hands under shoulders' : 'Next step'}
                 className={`w-full rounded-xl border ${showFieldError(`step-${idx}`) && validationErrors[`step-${idx}`] ? 'border-rose-500 focus:border-rose-500' : 'border-[#493b79] focus:border-[#9d7aff]'} bg-[#0d0922] px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none transition-colors`}
@@ -496,7 +568,7 @@ export default function UpdatePersonalExercisePage() {
           {isDirty ? 'Unsaved changes' : 'No changes yet'}
         </span>
         <div className="flex items-center gap-3">
-          <button type="button" onClick={() => navigate(-1)} className="rounded-xl border border-[#493b79] bg-[#17112f] hover:border-[#8065ff] hover:bg-[#241a46] text-slate-200 hover:text-white text-sm font-semibold px-6 py-2.5 transition-colors cursor-pointer">
+          <button type="button" onClick={() => { toast.info("Action cancelled"); navigate(-1); }} className="rounded-xl border border-[#493b79] bg-[#17112f] hover:border-[#8065ff] hover:bg-[#241a46] text-slate-200 hover:text-white text-sm font-semibold px-6 py-2.5 transition-colors cursor-pointer">
             Cancel
           </button>
           <button

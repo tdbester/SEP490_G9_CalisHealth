@@ -12,6 +12,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.Map;
+
 /**
  * Spring Boot 4 removed Flyway auto-configuration from spring-boot-autoconfigure
  * (verified: spring-boot-autoconfigure-4.1.1.jar contains no Flyway classes).
@@ -71,6 +73,7 @@ public class FlywayConfig {
                 .baselineOnMigrate(false)
                 .validateOnMigrate(true)
                 .cleanDisabled(true)
+                .placeholders(Map.of("'$'", "$"))
                 .load();
         log.info("Flyway configured: locations=classpath:db/migration");
         return fw;

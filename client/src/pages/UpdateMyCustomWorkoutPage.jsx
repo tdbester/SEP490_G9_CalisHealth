@@ -8,6 +8,7 @@ import {
   validateWorkoutName,
 } from "./libraryFormValidation";
 import { getAvailableWorkoutExercises, getMyWorkout, updateMyWorkout } from "../api/library";
+import useUndoDelete from "../hooks/useUndoDelete";
 
 const STORAGE_KEY = "my_custom_workouts";
 const LEVEL_PRIORITY = { Beginner: 1, Intermediate: 2, Advanced: 3 };
@@ -18,17 +19,12 @@ const DEFAULT_EXERCISES = [
   { id: "plank", name: "Plank", level: "Beginner", sets: 3, reps: 30, restSec: 30, countBy: "sec" },
 ];
 
-const ADDABLE_EXERCISES = [
-  { id: "australian-row", name: "Australian row", level: "Beginner", countBy: "reps", reps: 8 },
-  { id: "bodyweight-squat", name: "Bodyweight squat", level: "Beginner", countBy: "reps", reps: 10 },
-  { id: "hollow-body-hold", name: "Hollow body hold", level: "Beginner", countBy: "sec", reps: 30 },
-  { id: "tuck-planche-lean", name: "Tuck planche lean", level: "Advanced", countBy: "sec", reps: 20 },
-];
-
 function createExerciseList(workout) {
   if (Array.isArray(workout?.exercises) && workout.exercises.length > 0) {
     return workout.exercises.map((exercise, index) => ({
+      uniqueKey: `${exercise.id || exercise.code || `exercise-${index}`}_${Date.now()}_${index}`,
       id: exercise.id || exercise.code || `exercise-${index}`,
+      exerciseId: exercise.id || exercise.code || `exercise-${index}`,
       name: exercise.name || exercise.title || "Exercise",
       level: exercise.level || "Beginner",
       sets: exercise.sets ?? 3,
@@ -37,7 +33,11 @@ function createExerciseList(workout) {
       countBy: exercise.countBy === "Duration" ? "sec" : exercise.countBy || "reps",
     }));
   }
-  return DEFAULT_EXERCISES.map((exercise) => ({ ...exercise }));
+  return DEFAULT_EXERCISES.map((exercise, index) => ({
+    ...exercise,
+    uniqueKey: `${exercise.id}_${Date.now()}_${index}`,
+    exerciseId: exercise.id,
+  }));
 }
 
 function readWorkout(id) {
@@ -97,6 +97,7 @@ export default function UpdateMyCustomWorkoutPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const submissionLock = useRef(false);
+  const { requestDelete, confirmationModal } = useUndoDelete();
   const [workout, setWorkout] = useState(null);
   const [availableExercises, setAvailableExercises] = useState([]);
   const [title, setTitle] = useState("");
@@ -149,7 +150,20 @@ export default function UpdateMyCustomWorkoutPage() {
     const sets = Number(exercise.sets);
     return total + (Number.isFinite(sets) ? sets : 0);
   }, 0);
-  const estimatedMinutes = Math.max(1, Math.round(totalSets));
+  const totalDurationSeconds = exercises.reduce((total, exercise) => {
+    const sets = Number(exercise.sets) || 1;
+    const restSeconds = Number(exercise.restSec) || 0;
+    const isDurationExercise = exercise.countBy === "sec"
+      || exercise.countBy === "SECONDS"
+      || exercise.duration != null;
+    const durationSeconds = isDurationExercise
+      ? Number(exercise.duration ?? exercise.reps) || 0
+      : 0;
+    return total + (durationSeconds * sets) + (restSeconds * sets);
+  }, 0);
+  const totalTimeLabel = totalDurationSeconds >= 60
+    ? `${Math.floor(totalDurationSeconds / 60)} min ${totalDurationSeconds % 60} sec`
+    : `${totalDurationSeconds} sec`;
   const level = exercises.reduce(
     (currentLevel, exercise) =>
       LEVEL_PRIORITY[exercise.level] > LEVEL_PRIORITY[currentLevel] ? exercise.level : currentLevel,
@@ -169,7 +183,7 @@ export default function UpdateMyCustomWorkoutPage() {
     ...(descriptionError ? { description: descriptionError } : {}),
   };
   const showFieldError = (field) =>
-    hasSubmitted || touchedFields[field] || Boolean(validationErrors[field]);
+    Boolean((hasSubmitted || touchedFields[field]) && validationErrors[field]);
   const markFieldTouched = (field) =>
     setTouchedFields((current) => ({ ...current, [field]: true }));
   const focusFirstInvalidField = () => {
@@ -203,13 +217,37 @@ export default function UpdateMyCustomWorkoutPage() {
   };
 
   const removeExercise = (index) => {
-    setExercises((current) => current.filter((_, currentIndex) => currentIndex !== index));
+    const exercise = exercises[index];
+    if (!exercise) return;
+    requestDelete({
+      onOptimisticDelete: () => {
+        setExercises((current) => current.filter((_, currentIndex) => currentIndex !== index));
+      },
+      onUndo: () => {
+        setExercises((current) => {
+          if (current.some((item) => item.uniqueKey === exercise.uniqueKey)) {
+            return current;
+          }
+          const restored = [...current];
+          restored.splice(Math.max(0, Math.min(index, restored.length)), 0, exercise);
+          return restored;
+        });
+      },
+      onDelete: async () => {},
+      successMessage: "Exercise removed from workout.",
+    });
   };
 
   const addExercise = (exercise) => {
     setExercises((current) => [
       ...current,
-      { ...exercise, sets: 3, restSec: 45 },
+      {
+        ...exercise,
+        uniqueKey: `${exercise.id}_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        exerciseId: exercise.id,
+        sets: 3,
+        restSec: 45,
+      },
     ]);
     setAddMenuOpen(false);
   };
@@ -250,7 +288,7 @@ export default function UpdateMyCustomWorkoutPage() {
           restSeconds: Number(exercise.restSec),
         })),
       });
-      toast.success("Saved changes successfully!");
+      toast.success("Workout updated successfully!");
       navigate("/library/workouts");
     } catch (error) {
       const message = getApiErrorMessage(error, "Could not save workout.");
@@ -316,7 +354,6 @@ export default function UpdateMyCustomWorkoutPage() {
                   maxLength={60}
                   onChange={(event) => {
                     setTitle(event.target.value);
-                    markFieldTouched("name");
                   }}
                   onBlur={() => {
                     markFieldTouched("name");
@@ -336,7 +373,6 @@ export default function UpdateMyCustomWorkoutPage() {
                   rows={3}
                   onChange={(event) => {
                     setDescription(event.target.value);
-                    markFieldTouched("description");
                   }}
                   onBlur={() => {
                     markFieldTouched("description");
@@ -385,9 +421,7 @@ export default function UpdateMyCustomWorkoutPage() {
                     </button>
                     {addMenuOpen && (
                       <div className="absolute right-0 z-10 mt-2 w-52 rounded-xl border border-[#34285f] bg-[#120d29] p-1 shadow-xl">
-                        {availableExercises.filter(
-                          (exercise) => !exercises.some((item) => item.id === exercise.id)
-                        ).map((exercise) => (
+                        {availableExercises.map((exercise) => (
                           <button
                             key={exercise.id}
                             type="button"
@@ -397,9 +431,6 @@ export default function UpdateMyCustomWorkoutPage() {
                             {exercise.name}
                           </button>
                         ))}
-                        {ADDABLE_EXERCISES.every((exercise) =>
-                          exercises.some((item) => item.id === exercise.id)
-                        ) && <p className="px-3 py-2 text-xs text-slate-400">No more exercises available.</p>}
                       </div>
                     )}
                   </div>
@@ -408,13 +439,13 @@ export default function UpdateMyCustomWorkoutPage() {
                 <div className="mb-2 hidden grid-cols-[minmax(120px,1fr)_56px_70px_58px_28px] gap-2 px-3 text-[10px] text-slate-400 sm:grid">
                   <span>Exercise</span><span>Sets</span><span>Reps / seconds</span><span>Rest</span><span />
                 </div>
-                {exerciseErrors.list && (
+                {hasSubmitted && exerciseErrors.list && (
                   <p id="workout-exercises" tabIndex={-1} className="text-rose-400 text-[11px] mt-1">{exerciseErrors.list}</p>
                 )}
                 <div className="space-y-2">
                   {exercises.map((exercise, index) => (
                     <div
-                      key={`${exercise.id}-${index}`}
+                      key={exercise.uniqueKey}
                       draggable
                       onDragStart={() => setDraggedIndex(index)}
                       onDragOver={(event) => event.preventDefault()}
@@ -442,8 +473,8 @@ export default function UpdateMyCustomWorkoutPage() {
                           value={exercise.sets}
                           onChange={(event) => {
                             updateExercise(index, "sets", event.target.value);
-                            markFieldTouched(`sets-${index}`);
                           }}
+                          onBlur={() => markFieldTouched(`sets-${index}`)}
                           className={`w-full rounded-lg border ${showFieldError(`sets-${index}`) && exerciseErrors[`sets-${index}`] ? "border-rose-500 focus:border-rose-500" : "border-[#643bf6]/70"} bg-[#120d29] px-1 py-2 text-center text-xs text-white focus:outline-none`}
                         />
                         {showFieldError(`sets-${index}`) && exerciseErrors[`sets-${index}`] && <p className="text-rose-400 text-[11px] mt-1">{exerciseErrors[`sets-${index}`]}</p>}
@@ -460,8 +491,8 @@ export default function UpdateMyCustomWorkoutPage() {
                             value={exercise.reps}
                             onChange={(event) => {
                               updateExercise(index, "reps", event.target.value);
-                              markFieldTouched(`reps-${index}`);
                             }}
+                            onBlur={() => markFieldTouched(`reps-${index}`)}
                             className={`w-full rounded-lg border ${showFieldError(`reps-${index}`) && exerciseErrors[`reps-${index}`] ? "border-rose-500 focus:border-rose-500" : "border-[#643bf6]/70"} bg-[#120d29] px-1 py-2 text-center text-xs text-white focus:outline-none`}
                           />
                           <span className="pointer-events-none absolute inset-y-0 right-1 flex items-center text-[9px] text-slate-400">
@@ -474,16 +505,16 @@ export default function UpdateMyCustomWorkoutPage() {
                         <div className="relative">
                           <input
                             type="number"
-                            min="0"
-                            max="600"
-                            step="1"
+                            min="10"
+                            max="120"
+                            step="5"
                             id={`workout-rest-${index}`}
                             aria-label={`${exercise.name} rest seconds`}
                             value={exercise.restSec}
                             onChange={(event) => {
                               updateExercise(index, "restSec", event.target.value);
-                              markFieldTouched(`rest-${index}`);
                             }}
+                            onBlur={() => markFieldTouched(`rest-${index}`)}
                             className={`w-full rounded-lg border ${showFieldError(`rest-${index}`) && exerciseErrors[`rest-${index}`] ? "border-rose-500 focus:border-rose-500" : "border-[#643bf6]/70"} bg-[#120d29] px-1 py-2 pr-3 text-center text-xs text-white focus:outline-none`}
                           />
                           <span className="pointer-events-none absolute inset-y-0 right-1 flex items-center text-[9px] text-slate-400">
@@ -505,6 +536,7 @@ export default function UpdateMyCustomWorkoutPage() {
                   {exercises.length === 0 && (
                     <p className="py-6 text-center text-xs text-slate-400">Add an exercise to this workout.</p>
                   )}
+                  {confirmationModal}
                 </div>
               </section>
             </div>
@@ -513,22 +545,22 @@ export default function UpdateMyCustomWorkoutPage() {
               <h2 className="mb-5 text-sm font-semibold">Summary</h2>
               <div className="space-y-3 text-xs">
                 <div className="flex items-center justify-between border-b border-[#231b46] pb-3">
-                  <span className="text-slate-400">Level</span>
+                  <span className="text-[#8a81ad]">Level</span>
                   <LevelBadge level={level} />
                 </div>
                 <div className="flex items-center justify-between border-b border-[#231b46] pb-3">
-                  <span className="text-slate-400">Exercises</span><strong>{exercises.length}</strong>
+                  <span className="text-[#8a81ad]">Exercises</span><strong className="font-bold text-white">{exercises.length}</strong>
                 </div>
                 <div className="flex items-center justify-between border-b border-[#231b46] pb-3">
-                  <span className="text-slate-400">Total sets</span><strong>{totalSets}</strong>
+                  <span className="text-[#8a81ad]">Total sets</span><strong className="font-bold text-white">{totalSets}</strong>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Estimated time</span>
-                  <strong>About {estimatedMinutes} min</strong>
+                  <span className="text-[#8a81ad]">Total time</span>
+                  <strong className="font-bold text-white">{totalTimeLabel}</strong>
                 </div>
               </div>
               <p className="mt-4 text-[10px] leading-relaxed text-slate-400">
-                Level and time update on their own when you change the exercises.
+                Level and totals update automatically when you change the exercises.
               </p>
             </aside>
           </div>
@@ -541,7 +573,7 @@ export default function UpdateMyCustomWorkoutPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => navigate(-1)}
+                onClick={() => { toast.info("Action cancelled"); navigate(-1); }}
                 className="rounded-lg border border-[#514778] bg-[#120d29] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#201748]"
               >
                 Cancel

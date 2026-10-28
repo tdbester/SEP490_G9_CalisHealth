@@ -7,6 +7,7 @@ public record SystemExerciseDetailResponseDTO(
         String title,
         String description,
         String videoUrl,
+        String anatomyImageUrl,
         List<String> guideSteps,
         String targetMuscle,
         String level,

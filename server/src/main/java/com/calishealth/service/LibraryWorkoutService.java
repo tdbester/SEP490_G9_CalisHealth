@@ -47,6 +47,46 @@ public class LibraryWorkoutService {
         return getWorkoutPage(memberEmail, filter, false);
     }
 
+    @Transactional(readOnly = true)
+    public PageResponseDTO<WorkoutListItemDTO> getSystemWorkouts(
+            String memberEmail,
+            String type,
+            WorkoutFilterRequestDTO filter
+    ) {
+        requireMember(memberEmail);
+        validateFilter(filter);
+        String normalizedType = type == null ? "" : type.trim().toUpperCase(Locale.ROOT);
+        if (!Set.of("HEALTH", "SKILL").contains(normalizedType)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Workout type must be HEALTH or SKILL");
+        }
+
+        Page<WorkoutEntry> result = workouts.findAll(
+                WorkoutSpecification.withSystemFilters(filter, normalizedType),
+                PageRequest.of(filter.getPage(), filter.getSize(),
+                        Sort.by(Sort.Order.asc("name"), Sort.Order.asc("id"))));
+        return new PageResponseDTO<>(
+                result.getContent().stream().map(this::toListItem).toList(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages(),
+                result.hasNext(),
+                result.hasPrevious());
+    }
+
+    @Transactional(readOnly = true)
+    public WorkoutDetailResponseDTO getSystemWorkoutDetail(String memberEmail, Long workoutId) {
+        requireMember(memberEmail);
+        WorkoutEntry workout = workouts.findById(workoutId)
+                .filter(entry -> entry.isSystem()
+                        && entry.isActive()
+                        && "ACCEPTED".equalsIgnoreCase(entry.getStatus())
+                        && Set.of("HEALTH", "SKILL").contains(
+                                entry.getType() == null ? "" : entry.getType().toUpperCase(Locale.ROOT)))
+                .orElseThrow(() -> new ResourceNotFoundException("System workout not found"));
+        return toDetail(workout);
+    }
+
     private PageResponseDTO<WorkoutListItemDTO> getWorkoutPage(
             String memberEmail,
             WorkoutFilterRequestDTO filter,
@@ -101,6 +141,7 @@ public class LibraryWorkoutService {
         workout.setDescription(request.description() == null ? null : request.description().trim());
         workout.setType("CUSTOM");
         workout.setSystem(false);
+        workout.setCreatedBy(member);
         workout.setAuthorId(member.getId());
         workout.setLevel("BEGINNER");
         workout.setSharedWithCommunity(Boolean.TRUE.equals(request.isSharedWithCommunity()));
@@ -152,12 +193,10 @@ public class LibraryWorkoutService {
     }
 
     private Map<Long, ExerciseEntry> getAllowedExercises(Long memberId, List<Long> requestedIds) {
-        if (requestedIds.stream().distinct().count() != requestedIds.size()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "An exercise can only be added once");
-        }
+        List<Long> uniqueRequestedIds = requestedIds.stream().distinct().toList();
         List<ExerciseEntry> found = exercises.findAll(
-                allowedExerciseSpecification(memberId).and((root, query, builder) -> root.get("id").in(requestedIds)));
-        if (found.size() != requestedIds.size()) {
+                allowedExerciseSpecification(memberId).and((root, query, builder) -> root.get("id").in(uniqueRequestedIds)));
+        if (found.size() != uniqueRequestedIds.size()) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "One or more selected exercises are unavailable or are not accepted");
@@ -292,6 +331,11 @@ public class LibraryWorkoutService {
                 workout.getExercises().size(),
                 workout.getTotalSets(),
                 workout.getEstimatedDuration(),
+                workout.getExercises().stream()
+                        .map(ExerciseEntry::getMuscleGroup)
+                        .filter(group -> group != null && !group.isBlank())
+                        .distinct()
+                        .collect(Collectors.joining(", ")),
                 workout.isSharedWithCommunity());
     }
 
@@ -335,14 +379,14 @@ public class LibraryWorkoutService {
             WorkoutItemDTO item = items.get(index);
             String countBy = normalizedCountBy(item);
             if (item.sets() < 1 || item.sets() > 100
-                    || item.restSeconds() < 0 || item.restSeconds() > 600
+                    || item.restSeconds() < 10 || item.restSeconds() > 120
                     || (item.reps() != null && item.reps() < 1)
                     || (item.duration() != null && item.duration() < 1)
                     || ("REPS".equals(countBy) && item.reps() == null)
                     || ("SECONDS".equals(countBy) && item.duration() == null)) {
                 throw new RequestValidationException(
                         "items[" + index + "]",
-                        "Cấu hình bài tập không hợp lệ: số hiệp từ 1 đến 100, số lần/thời lượng tối thiểu 1 và thời gian nghỉ từ 0 đến 600 giây"
+                        "Cấu hình bài tập không hợp lệ: số hiệp từ 1 đến 100, số lần/thời lượng tối thiểu 1 và thời gian nghỉ từ 10 đến 120 giây"
                 );
             }
         }

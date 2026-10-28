@@ -51,4 +51,38 @@ public final class WorkoutSpecification {
             return builder.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
         };
     }
+
+    public static Specification<WorkoutEntry> withSystemFilters(
+            WorkoutFilterRequestDTO filter,
+            String type
+    ) {
+        return (root, query, builder) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+            predicates.add(builder.isTrue(root.get("isSystem")));
+            predicates.add(builder.isTrue(root.get("active")));
+            predicates.add(builder.equal(root.get("status"), "ACCEPTED"));
+            predicates.add(builder.equal(builder.upper(root.get("type")), type));
+
+            if (filter.getLevel() != null && !filter.getLevel().isBlank()
+                    && !"ALL".equalsIgnoreCase(filter.getLevel())) {
+                predicates.add(builder.equal(
+                        builder.upper(root.get("level")),
+                        filter.getLevel().trim().toUpperCase(Locale.ROOT)));
+            }
+            if (filter.getSearch() != null && !filter.getSearch().isBlank()) {
+                String pattern = "%" + filter.getSearch().trim().toLowerCase(Locale.ROOT) + "%";
+                predicates.add(builder.like(builder.lower(root.get("name")), pattern));
+            }
+
+            String length = filter.getLength() == null ? "ANY" : filter.getLength().toUpperCase(Locale.ROOT);
+            switch (length) {
+                case "SHORT" -> predicates.add(builder.lessThan(root.get("estimatedDuration"), 10));
+                case "MEDIUM" -> predicates.add(builder.between(root.get("estimatedDuration"), 10, 20));
+                case "LONG" -> predicates.add(builder.greaterThan(root.get("estimatedDuration"), 20));
+                default -> {
+                }
+            }
+            return builder.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
+    }
 }

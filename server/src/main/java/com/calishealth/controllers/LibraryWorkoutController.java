@@ -32,6 +32,23 @@ public class LibraryWorkoutController {
         return ResponseEntity.ok(workoutService.getCommunityWorkouts(authentication.getName(), filter));
     }
 
+    @GetMapping("/system-workouts")
+    public ResponseEntity<PageResponseDTO<WorkoutListItemDTO>> system(
+            @RequestParam String type,
+            @Valid @ModelAttribute WorkoutFilterRequestDTO filter,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(workoutService.getSystemWorkouts(authentication.getName(), type, filter));
+    }
+
+    @GetMapping("/system-workouts/{id}")
+    public ResponseEntity<WorkoutDetailResponseDTO> systemDetail(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(workoutService.getSystemWorkoutDetail(authentication.getName(), id));
+    }
+
     @GetMapping("/custom-workouts/{id}")
     public ResponseEntity<WorkoutDetailResponseDTO> communityDetail(
             @PathVariable Long id,

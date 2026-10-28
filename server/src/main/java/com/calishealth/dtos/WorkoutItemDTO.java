@@ -14,7 +14,7 @@ public record WorkoutItemDTO(
         @Min(value = 1, message = "Số lần lặp tối thiểu là 1") Integer reps,
         @Min(value = 1, message = "Thời lượng tối thiểu là 1 giây") Integer duration,
         String countBy,
-        @Min(value = 0, message = "Thời gian nghỉ không được nhỏ hơn 0")
-        @Max(value = 600, message = "Thời gian nghỉ không quá 600 giây")
+        @Min(value = 10, message = "Thời gian nghỉ tối thiểu là 10 giây")
+        @Max(value = 120, message = "Thời gian nghỉ tối đa là 120 giây")
         int restSeconds
 ) {}

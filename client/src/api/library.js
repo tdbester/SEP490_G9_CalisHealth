@@ -1,4 +1,4 @@
-import api from "./client";
+import api, { getStoredAuthToken } from "./client";
 
 export const getLibrarySummary = async () => {
   const response = await api.get("/library/summary");
@@ -37,11 +37,25 @@ const toPersonalExerciseFormData = (data, videoFile) => {
   return formData;
 };
 
+const personalExerciseFormConfig = () => {
+  const { token, source } = getStoredAuthToken();
+  console.log("[Personal exercise upload auth]", {
+    tokenPresent: Boolean(token),
+    tokenSource: source,
+    authorizationScheme: token ? "Bearer" : null,
+  });
+  return {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  };
+};
+
 export const createPersonalExercise = async (data, videoFile) => {
   const response = await api.post(
     "/v1/library/personal-exercises",
     toPersonalExerciseFormData(data, videoFile),
-    { headers: { "Content-Type": "multipart/form-data" } }
+    personalExerciseFormConfig()
   );
   return response.data;
 };
@@ -65,7 +79,17 @@ export const resubmitPersonalExercise = async (id, data, videoFile) => {
   const response = await api.put(
     `/v1/library/personal-exercises/${id}/resubmit`,
     toPersonalExerciseFormData(data, videoFile),
-    { headers: { "Content-Type": "multipart/form-data" } }
+    personalExerciseFormConfig()
+  );
+  return response.data;
+};
+
+export const updateAcceptedPersonalExercise = async (id, data, videoFile) => {
+  const config = personalExerciseFormConfig();
+  const response = await api.put(
+    `/v1/library/personal-exercises/${id}/edit`,
+    toPersonalExerciseFormData(data, videoFile),
+    config
   );
   return response.data;
 };
@@ -121,6 +145,16 @@ export const getCommunityWorkouts = async (params = {}) => {
 export const getCommunityWorkout = async (id) => {
   const response = await api.get(`/v1/library/custom-workouts/${id}`);
   return normalizeWorkout(response.data);
+};
+
+export const getSystemWorkouts = async (params = {}) => {
+  const response = await api.get("/v1/library/system-workouts", { params });
+  return { ...response.data, content: response.data.content.map(normalizeWorkout) };
+};
+
+export const getSystemWorkout = async (id) => {
+  const response = await api.get(`/v1/library/system-workouts/${id}`);
+  return response.data;
 };
 
 export const getMyWorkouts = async (params = {}) => {

@@ -24,6 +24,10 @@ export default function CreatePersonalExercisePage() {
   // Form states
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [countType, setCountType] = useState("reps_sets");
+  const [sets, setSets] = useState(3);
+  const [reps, setReps] = useState(12);
+  const [duration, setDuration] = useState(30);
   const [level, setLevel] = useState("Beginner");
   const [guideSteps, setGuideSteps] = useState([
     "Start in a plank with hands under shoulders",
@@ -52,6 +56,10 @@ export default function CreatePersonalExercisePage() {
     title ||
       description ||
       videoFile ||
+      countType !== "reps_sets" ||
+      sets !== 3 ||
+      reps !== 12 ||
+      duration !== 30 ||
       level !== "Beginner" ||
       guideSteps[0] !== "Start in a plank with hands under shoulders" ||
       guideSteps.length !== 2 ||
@@ -59,7 +67,7 @@ export default function CreatePersonalExercisePage() {
   );
 
   const showFieldError = (field) =>
-    hasSubmitted || touchedFields[field] || Boolean(validationErrors[field]);
+    Boolean((hasSubmitted || touchedFields[field]) && validationErrors[field]);
   const markFieldTouched = (field) =>
     setTouchedFields((current) => ({ ...current, [field]: true }));
   const focusFirstInvalidField = (errors) => {
@@ -127,7 +135,7 @@ export default function CreatePersonalExercisePage() {
 
   // Trigger automated scanning and submission
   const handleCreate = async (e) => {
-    if (e && e.preventDefault) {
+    if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
@@ -152,9 +160,13 @@ export default function CreatePersonalExercisePage() {
         level: level.toUpperCase(),
         guideSteps: guideSteps.map((step) => step.trim()).filter(Boolean),
         targetMuscle: "Full body",
-        defaultSets: 3,
-        defaultReps: 10,
-        defaultDuration: null,
+        countType,
+        sets: countType === "reps_sets" ? sets : 1,
+        reps: countType === "reps_sets" ? reps : null,
+        duration: countType === "duration" ? duration : null,
+        defaultSets: countType === "reps_sets" ? sets : 1,
+        defaultReps: countType === "reps_sets" ? reps : null,
+        defaultDuration: countType === "duration" ? duration : null,
         shareWithCommunity: true,
       }, videoFile);
       if (created.status === "REJECTED") {
@@ -166,7 +178,7 @@ export default function CreatePersonalExercisePage() {
       }
       setTextCheckStatus("passed");
       setVideoCheckStatus("passed");
-      toast.success("Exercise submitted for review.");
+      toast.success("Exercise created successfully!");
       setSuccessMessage("Automatic checks passed. Your exercise is waiting for review.");
       setTimeout(() => {
         navigate("/library/personal?status=pending");
@@ -174,9 +186,14 @@ export default function CreatePersonalExercisePage() {
     } catch (err) {
       setTextCheckStatus("failed");
       setVideoCheckStatus("failed");
-      const message = getApiErrorMessage(err, "Could not create exercise. Please try again.");
-      setErrorMessage(message);
-      toast.error(message);
+      const responseData = err?.response?.data;
+      const errorMsg = typeof responseData === "string"
+        ? responseData
+        : responseData?.message || getApiErrorMessage(err, "Lưu thất bại");
+      console.error("Create exercise failed:", err?.response || err);
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg);
+      alert(errorMsg);
     } finally {
       submissionLock.current = false;
       setIsCreating(false);
@@ -245,7 +262,6 @@ export default function CreatePersonalExercisePage() {
             value={title}
             onChange={(e) => {
               setTitle(e.target.value);
-              markFieldTouched("title");
             }}
             onBlur={() => {
               markFieldTouched("title");
@@ -273,7 +289,6 @@ export default function CreatePersonalExercisePage() {
             value={description}
             onChange={(e) => {
               setDescription(e.target.value);
-              markFieldTouched("description");
             }}
             onBlur={() => {
               markFieldTouched("description");
@@ -285,15 +300,84 @@ export default function CreatePersonalExercisePage() {
           {showFieldError("description") && validationErrors.description && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.description}</p>}
         </div>
 
+        {/* Count type and exercise dosage */}
+        <div className="space-y-3">
+          <span className="block text-xs font-medium text-slate-300 mb-1.5">
+            Count type
+          </span>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { value: "reps_sets", label: "Set & Rep" },
+              { value: "duration", label: "Duration" },
+            ].map((option) => {
+              const isSelected = countType === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => setCountType(option.value)}
+                  className={`rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors ${
+                    isSelected
+                      ? "border-[#9b83ff] bg-[#643bf6] text-white"
+                      : "border-[#44366f] bg-[#100b26] text-slate-400 hover:border-[#8068c4]"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+          {countType === "reps_sets" ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="block text-xs font-medium text-slate-300">
+                <span className="mb-1.5 block">Sets</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={sets}
+                  onChange={(event) => setSets(Number(event.target.value))}
+                  className="w-full rounded-xl border border-[#44366f] bg-[#100b26] px-4 py-2.5 text-sm text-white outline-none focus:border-[#9b83ff]"
+                />
+              </label>
+              <label className="block text-xs font-medium text-slate-300">
+                <span className="mb-1.5 block">Reps</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="1000"
+                  value={reps}
+                  onChange={(event) => setReps(Number(event.target.value))}
+                  className="w-full rounded-xl border border-[#44366f] bg-[#100b26] px-4 py-2.5 text-sm text-white outline-none focus:border-[#9b83ff]"
+                />
+              </label>
+            </div>
+          ) : (
+            <label className="block text-xs font-medium text-slate-300">
+              <span className="mb-1.5 block">Duration (seconds)</span>
+              <input
+                type="number"
+                min="1"
+                max="3600"
+                value={duration}
+                onChange={(event) => setDuration(Number(event.target.value))}
+                className="w-full rounded-xl border border-[#44366f] bg-[#100b26] px-4 py-2.5 text-sm text-white outline-none focus:border-[#9b83ff]"
+              />
+            </label>
+          )}
+        </div>
+
         {/* Level */}
         <div>
           <label className="block text-xs text-slate-400 mb-2">Level</label>
           <div id="exercise-level" tabIndex={-1} className={`grid grid-cols-1 md:grid-cols-3 gap-4 rounded-xl ${showFieldError("level") && validationErrors.level ? "ring-1 ring-rose-500" : ""}`}>
             {/* Beginner */}
             <div
+              tabIndex={0}
+              onBlur={() => markFieldTouched("level")}
               onClick={() => {
                 setLevel("Beginner");
-                markFieldTouched("level");
               }}
               className={`rounded-xl p-3.5 flex items-start justify-between cursor-pointer transition-all select-none ${
                 level === "Beginner"
@@ -322,9 +406,10 @@ export default function CreatePersonalExercisePage() {
 
             {/* Intermediate */}
             <div
+              tabIndex={0}
+              onBlur={() => markFieldTouched("level")}
               onClick={() => {
                 setLevel("Intermediate");
-                markFieldTouched("level");
               }}
               className={`rounded-xl p-3.5 flex items-start justify-between cursor-pointer transition-all select-none ${
                 level === "Intermediate"
@@ -355,9 +440,10 @@ export default function CreatePersonalExercisePage() {
 
             {/* Advanced */}
             <div
+              tabIndex={0}
+              onBlur={() => markFieldTouched("level")}
               onClick={() => {
                 setLevel("Advanced");
-                markFieldTouched("level");
               }}
               className={`rounded-xl p-3.5 flex items-start justify-between cursor-pointer transition-all select-none ${
                 level === "Advanced"
@@ -409,8 +495,8 @@ export default function CreatePersonalExercisePage() {
                   value={step}
                   onChange={(e) => {
                     handleStepChange(index, e.target.value);
-                    markFieldTouched(`step-${index}`);
                   }}
+                  onBlur={() => markFieldTouched(`step-${index}`)}
                   maxLength={250}
                   placeholder={
                     index === 0
@@ -639,7 +725,7 @@ export default function CreatePersonalExercisePage() {
         {/* Nút Cancel */}
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => { toast.info("Action cancelled"); navigate(-1); }}
           className="rounded-xl border border-[#2b2257] bg-[#141030] hover:bg-[#1f1847] text-slate-300 hover:text-white text-xs font-semibold px-6 py-2.5 transition-colors cursor-pointer"
         >
           Cancel

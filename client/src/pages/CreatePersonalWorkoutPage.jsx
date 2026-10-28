@@ -8,6 +8,7 @@ import {
   validateWorkoutName,
 } from "./libraryFormValidation";
 import { createMyWorkout, getAvailableWorkoutExercises } from "../api/library";
+import useUndoDelete from "../hooks/useUndoDelete";
 
 function DumbbellIcon({ size = "h-4 w-4" }) {
   return (
@@ -70,8 +71,10 @@ function LevelBadge({ level }) {
 export default function CreatePersonalWorkoutPage() {
   const navigate = useNavigate();
   const submissionLock = useRef(false);
+  const { requestDelete, confirmationModal } = useUndoDelete();
 
   const [availableExercises, setAvailableExercises] = useState([]);
+  const [exercisePage, setExercisePage] = useState(1);
   const [workoutName, setWorkoutName] = useState("");
   const [note, setNote]               = useState("");
   const [search, setSearch]           = useState("");
@@ -92,6 +95,7 @@ export default function CreatePersonalWorkoutPage() {
             title: exercise.title,
             level: String(exercise.level).toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase()),
             muscles: exercise.targetMuscle,
+            defaultSets: exercise.defaultSets,
             defaultReps: exercise.defaultReps,
             defaultDuration: exercise.defaultDuration,
           })));
@@ -108,8 +112,6 @@ export default function CreatePersonalWorkoutPage() {
     };
   }, []);
 
-  const addedIds = useMemo(() => new Set(selected.map((e) => e.id)), [selected]);
-
   const filteredExercises = useMemo(() =>
     availableExercises.filter((ex) => {
       const matchSearch = ex.title.toLowerCase().includes(search.toLowerCase());
@@ -117,6 +119,15 @@ export default function CreatePersonalWorkoutPage() {
       return matchSearch && matchLevel;
     }),
   [availableExercises, search, levelFilter]);
+  const exercisePageSize = 6;
+  const exercisePageCount = Math.max(1, Math.ceil(filteredExercises.length / exercisePageSize));
+  const visibleExercises = filteredExercises.slice(
+    (exercisePage - 1) * exercisePageSize,
+    exercisePage * exercisePageSize
+  );
+  useEffect(() => {
+    if (exercisePage > exercisePageCount) setExercisePage(exercisePageCount);
+  }, [exercisePage, exercisePageCount]);
 
   const totalExercises = selected.length;
   const totalSets      = selected.reduce((sum, e) => sum + Number(e.sets || 0), 0);
@@ -131,7 +142,7 @@ export default function CreatePersonalWorkoutPage() {
   };
   const isDirty = Boolean(workoutName || note || selected.length);
   const showFieldError = (field) =>
-    hasSubmitted || touchedFields[field] || Boolean(validationErrors[field]);
+    Boolean((hasSubmitted || touchedFields[field]) && validationErrors[field]);
   const markFieldTouched = (field) =>
     setTouchedFields((current) => ({ ...current, [field]: true }));
   const focusFirstInvalidField = () => {
@@ -159,14 +170,32 @@ export default function CreatePersonalWorkoutPage() {
   const handleAdd = (ex) =>
     setSelected((prev) => [...prev, {
       ...ex,
-      sets: 3,
-      reps: ex.defaultDuration || ex.defaultReps || 8,
-      countBy: ex.defaultDuration ? "Duration" : "Reps",
+      uniqueKey: `${ex.id}_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      exerciseId: ex.id,
+      sets: ex.defaultSets ?? 3,
+      reps: ex.defaultDuration != null ? ex.defaultDuration : ex.defaultReps ?? 8,
+      countBy: ex.defaultDuration != null ? "Duration" : "Reps",
       restSec: 60,
     }]);
 
-  const handleRemove = (id) =>
-    setSelected((prev) => prev.filter((e) => e.id !== id));
+  const handleRemove = (exercise) => {
+    const itemIndex = selected.findIndex((item) => item.uniqueKey === exercise.uniqueKey);
+    requestDelete({
+      onOptimisticDelete: () => {
+        setSelected((current) => current.filter((item) => item.uniqueKey !== exercise.uniqueKey));
+      },
+      onUndo: () => {
+        setSelected((current) => {
+          if (current.some((item) => item.uniqueKey === exercise.uniqueKey)) return current;
+          const restored = [...current];
+          restored.splice(Math.max(0, Math.min(itemIndex, restored.length)), 0, exercise);
+          return restored;
+        });
+      },
+      onDelete: async () => {},
+      successMessage: "Exercise removed from workout.",
+    });
+  };
 
   const moveUp = (idx) => {
     if (idx === 0) return;
@@ -228,7 +257,7 @@ export default function CreatePersonalWorkoutPage() {
     }
 
     setErrorMessage("");
-    toast.success("Created successfully!");
+    toast.success("Workout created successfully!");
     navigate("/library/workouts");
   };
 
@@ -253,7 +282,6 @@ export default function CreatePersonalWorkoutPage() {
             type="text" maxLength={60} value={workoutName}
             onChange={(e) => {
               setWorkoutName(e.target.value);
-              markFieldTouched("name");
             }}
             onBlur={() => {
               markFieldTouched("name");
@@ -273,7 +301,6 @@ export default function CreatePersonalWorkoutPage() {
             maxLength={200} rows={3} value={note}
             onChange={(e) => {
               setNote(e.target.value);
-              markFieldTouched("description");
             }}
             onBlur={() => {
               markFieldTouched("description");
@@ -310,12 +337,18 @@ export default function CreatePersonalWorkoutPage() {
               </span>
               <input
                 type="text" placeholder="Search by title" value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setExercisePage(1);
+                }}
                 className="w-full rounded-xl border border-[#231b46] bg-[#0d0922] py-2.5 pl-9 pr-3 text-xs text-slate-300 placeholder-slate-500 focus:border-[#7c3aed] focus:outline-none"
               />
             </div>
             <select
-              value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)}
+              value={levelFilter} onChange={(e) => {
+                setLevelFilter(e.target.value);
+                setExercisePage(1);
+              }}
               className="rounded-xl border border-[#231b46] bg-[#0d0922] py-2.5 px-3 text-xs text-slate-300 focus:outline-none cursor-pointer"
             >
               <option>All levels</option>
@@ -325,9 +358,7 @@ export default function CreatePersonalWorkoutPage() {
             </select>
           </div>
           <div className="space-y-2.5">
-            {filteredExercises.map((ex) => {
-              const isAdded = addedIds.has(ex.id);
-              return (
+            {visibleExercises.map((ex) => (
                 <div key={ex.id} className="flex items-center justify-between gap-3 rounded-xl border border-[#231b46] bg-[#0d0922] p-3.5">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#181238]">
@@ -341,24 +372,53 @@ export default function CreatePersonalWorkoutPage() {
                       <p className="text-[11px] text-slate-400 mt-0.5">{ex.muscles}</p>
                     </div>
                   </div>
-                  {isAdded ? (
-                    <button type="button" disabled
-                      className="shrink-0 rounded-xl border border-emerald-700/60 bg-emerald-950/60 px-4 py-1.5 text-xs font-medium text-emerald-400 cursor-not-allowed">
-                      Added
-                    </button>
-                  ) : (
-                    <button type="button" onClick={() => handleAdd(ex)}
-                      className="shrink-0 rounded-xl border border-[#2b2257] bg-[#161133] px-4 py-1.5 text-xs font-medium text-slate-200 hover:bg-[#20174a] transition-colors">
-                      + Add
-                    </button>
-                  )}
+                  <button type="button" onClick={() => handleAdd(ex)}
+                    className="shrink-0 rounded-xl border border-[#2b2257] bg-[#161133] px-4 py-1.5 text-xs font-medium text-slate-200 hover:bg-[#20174a] transition-colors">
+                    + Add
+                  </button>
                 </div>
-              );
-            })}
+            ))}
             {filteredExercises.length === 0 && (
               <p className="py-8 text-center text-xs text-slate-500">No exercises found.</p>
             )}
           </div>
+          {filteredExercises.length > 0 && (
+            <div className="flex items-center justify-between border-t border-[#231b46] pt-3">
+              <button
+                type="button"
+                onClick={() => setExercisePage((page) => Math.max(1, page - 1))}
+                disabled={exercisePage === 1}
+                className="rounded-lg border border-[#2b2257] bg-[#161133] px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <div className="flex items-center gap-1.5">
+                {Array.from({ length: exercisePageCount }, (_, index) => index + 1).map((page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => setExercisePage(page)}
+                    aria-current={page === exercisePage ? "page" : undefined}
+                    className={`h-8 min-w-8 rounded-lg px-2 text-xs ${
+                      page === exercisePage
+                        ? "bg-[#643bf6] font-semibold text-white"
+                        : "border border-[#2b2257] bg-[#161133] text-slate-300 hover:text-white"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setExercisePage((page) => Math.min(exercisePageCount, page + 1))}
+                disabled={exercisePage === exercisePageCount}
+                className="rounded-lg border border-[#2b2257] bg-[#161133] px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
 
         {/* RIGHT: Workout exercises */}
@@ -377,13 +437,13 @@ export default function CreatePersonalWorkoutPage() {
               <p className="mt-1 text-[11px] text-slate-500">Click "+ Add" on the left to build your workout.</p>
             </div>
           )}
-          {exerciseErrors.list && (
+          {hasSubmitted && exerciseErrors.list && (
             <p id="workout-exercises" tabIndex={-1} className="text-rose-400 text-[11px] mt-1">{exerciseErrors.list}</p>
           )}
 
           <div className="space-y-3">
             {selected.map((ex, idx) => (
-              <div key={ex.id} className="rounded-xl border border-[#231b46] bg-[#0d0922] p-4 space-y-3">
+              <div key={ex.uniqueKey} className="rounded-xl border border-[#231b46] bg-[#0d0922] p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <div className="h-6 w-6 shrink-0 rounded-full bg-[#201748] flex items-center justify-center text-[11px] font-bold text-[#a855f7]">
                     {idx + 1}
@@ -399,49 +459,46 @@ export default function CreatePersonalWorkoutPage() {
                     className="h-8 w-8 shrink-0 rounded-lg border border-[#2b2257] bg-[#1a113b] flex items-center justify-center text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                     <ChevronDownIcon />
                   </button>
-                  <button type="button" onClick={() => handleRemove(ex.id)}
+                  <button type="button" onClick={() => handleRemove(ex)}
                     aria-label="Remove exercise"
                     className="h-8 w-8 shrink-0 rounded-lg border border-rose-900/50 bg-rose-950/40 flex items-center justify-center text-rose-400 hover:bg-rose-900/60 transition-colors">
                     <XIcon />
                   </button>
                 </div>
-                <div className="grid grid-cols-4 gap-2.5">
-                  <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">Sets</label>
-                    <input id={`workout-sets-${idx}`} type="number" min="1" max="100" step="1" value={ex.sets}
-                      onChange={(e) => {
-                        updateField(idx, "sets", e.target.value);
-                        markFieldTouched(`sets-${idx}`);
-                      }}
-                      className={`w-full rounded-lg border ${showFieldError(`sets-${idx}`) && exerciseErrors[`sets-${idx}`] ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#080518] p-2 text-center text-xs text-white focus:outline-none`} />
-                    {showFieldError(`sets-${idx}`) && exerciseErrors[`sets-${idx}`] && <p className="text-rose-400 text-[11px] mt-1">{exerciseErrors[`sets-${idx}`]}</p>}
-                  </div>
-                  <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">Reps</label>
-                    <input id={`workout-reps-${idx}`} type="number" min="1" max="2147483647" step="1" value={ex.reps}
-                      onChange={(e) => {
-                        updateField(idx, "reps", e.target.value);
-                        markFieldTouched(`reps-${idx}`);
-                      }}
-                      className={`w-full rounded-lg border ${showFieldError(`reps-${idx}`) && exerciseErrors[`reps-${idx}`] ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#080518] p-2 text-center text-xs text-white focus:outline-none`} />
-                    {showFieldError(`reps-${idx}`) && exerciseErrors[`reps-${idx}`] && <p className="text-rose-400 text-[11px] mt-1">{exerciseErrors[`reps-${idx}`]}</p>}
-                  </div>
-                  <div>
+                <div className={`grid gap-2.5 ${ex.countBy === "Duration" ? "grid-cols-2" : "grid-cols-3"}`}>
+                  <div className="col-span-full">
                     <label className="block text-[10px] text-slate-400 mb-1">Count by</label>
-                    <select value={ex.countBy}
-                      onChange={(e) => updateField(idx, "countBy", e.target.value)}
-                      className="w-full rounded-lg border border-[#231b46] bg-[#080518] p-2 text-xs text-white focus:outline-none focus:border-[#7c3aed] cursor-pointer">
-                      <option value="Reps">Reps</option>
-                      <option value="Duration">Duration</option>
-                    </select>
+                    <p className="rounded-lg border border-[#231b46] bg-[#080518] p-2 text-center text-xs text-white">
+                      {ex.countBy === "Duration" ? `Duration (${ex.reps} seconds)` : "Sets & Reps"}
+                    </p>
                   </div>
+                  {ex.countBy === "Reps" ? (
+                    <>
+                      <div>
+                        <label className="block text-[10px] text-slate-400 mb-1">Sets</label>
+                        <input id={`workout-sets-${idx}`} type="number" value={ex.sets} readOnly
+                          className="w-full cursor-not-allowed rounded-lg border border-[#231b46] bg-[#080518] p-2 text-center text-xs text-slate-300 focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-slate-400 mb-1">Reps</label>
+                        <input id={`workout-reps-${idx}`} type="number" value={ex.reps} readOnly
+                          className="w-full cursor-not-allowed rounded-lg border border-[#231b46] bg-[#080518] p-2 text-center text-xs text-slate-300 focus:outline-none" />
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <label className="block text-[10px] text-slate-400 mb-1">Duration (seconds)</label>
+                      <input id={`workout-reps-${idx}`} type="number" value={ex.reps} readOnly
+                        className="w-full cursor-not-allowed rounded-lg border border-[#231b46] bg-[#080518] p-2 text-center text-xs text-slate-300 focus:outline-none" />
+                    </div>
+                  )}
                   <div>
                     <label className="block text-[10px] text-slate-400 mb-1">Rest (sec)</label>
-                    <input id={`workout-rest-${idx}`} type="number" min="0" max="600" step="1" value={ex.restSec}
+                    <input id={`workout-rest-${idx}`} type="number" min="10" max="120" step="5" value={ex.restSec}
                       onChange={(e) => {
                         updateField(idx, "restSec", e.target.value);
-                        markFieldTouched(`rest-${idx}`);
                       }}
+                      onBlur={() => markFieldTouched(`rest-${idx}`)}
                       className={`w-full rounded-lg border ${showFieldError(`rest-${idx}`) && exerciseErrors[`rest-${idx}`] ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#080518] p-2 text-center text-xs text-white focus:outline-none`} />
                     {showFieldError(`rest-${idx}`) && exerciseErrors[`rest-${idx}`] && <p className="text-rose-400 text-[11px] mt-1">{exerciseErrors[`rest-${idx}`]}</p>}
                   </div>
@@ -468,7 +525,7 @@ export default function CreatePersonalWorkoutPage() {
           {totalExercises} {totalExercises === 1 ? "exercise" : "exercises"} in this workout
         </span>
         <div className="flex items-center gap-3">
-          <button type="button" onClick={() => navigate(-1)}
+          <button type="button" onClick={() => { toast.info("Action cancelled"); navigate(-1); }}
             className="rounded-xl border border-[#2b2257] bg-[#141030] px-6 py-2.5 text-xs font-semibold text-slate-300 hover:bg-[#1f1847] transition-colors">
             Cancel
           </button>
@@ -479,6 +536,7 @@ export default function CreatePersonalWorkoutPage() {
           </button>
         </div>
       </div>
+      {confirmationModal}
     </div>
   );
 }

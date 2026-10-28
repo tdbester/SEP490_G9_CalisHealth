@@ -33,7 +33,8 @@ public class DashboardService {
                        COUNT(DISTINCT e.id) AS exercise_count
                 FROM muscle_groups mg
                 LEFT JOIN exercise_muscle_groups emg ON emg.muscle_group_id = mg.id
-                LEFT JOIN exercises e ON e.id = emg.exercise_id AND e.status = 'ACTIVE'
+                LEFT JOIN exercises e ON e.id = emg.exercise_id
+                    AND e.status IN ('ACTIVE', 'ACCEPTED')
                 GROUP BY mg.id, mg.dashboard_code, mg.name, mg.icon_key, mg.tone
                 ORDER BY mg.id
                 """,
@@ -56,7 +57,7 @@ public class DashboardService {
                        COUNT(DISTINCT pr.prerequisite_exercise_id) + 1 AS step_count
                 FROM exercises e
                 LEFT JOIN progression_rules pr ON pr.exercise_id = e.id AND pr.status = 'ACTIVE'
-                WHERE e.type = 'SKILL' AND e.status = 'ACTIVE'
+                WHERE e.type = 'SKILL' AND e.status IN ('ACTIVE', 'ACCEPTED')
                 GROUP BY e.id, e.name, e.difficulty_level
                 ORDER BY e.id
                 """,
@@ -109,21 +110,19 @@ public class DashboardService {
                 (rs, rowNum) -> new MeasurementRow(rs.getBigDecimal("weight"), rs.getBigDecimal("height")),
                 email
         );
-        if (rows.isEmpty()) {
-            return result;
-        }
-
-        MeasurementRow measurement = rows.get(0);
-        if (measurement.weight() != null) {
-            result.put("weight", measurement.weight());
-        }
-        if (measurement.weight() != null && measurement.height() != null) {
-            BigDecimal heightMeters = measurement.height().compareTo(BigDecimal.valueOf(3)) > 0
-                    ? measurement.height().movePointLeft(2) : measurement.height();
-            if (heightMeters.signum() > 0) {
-                double bmi = measurement.weight().doubleValue() / Math.pow(heightMeters.doubleValue(), 2);
-                result.put("bmi", Math.round(bmi * 10.0) / 10.0);
-                result.put("bmiLabel", bmi < 18.5 ? "Underweight" : bmi < 25 ? "Normal" : bmi < 30 ? "Overweight" : "Obesity");
+        if (!rows.isEmpty()) {
+            MeasurementRow measurement = rows.get(0);
+            if (measurement.weight() != null) {
+                result.put("weight", measurement.weight());
+            }
+            if (measurement.weight() != null && measurement.height() != null) {
+                BigDecimal heightMeters = measurement.height().compareTo(BigDecimal.valueOf(3)) > 0
+                        ? measurement.height().movePointLeft(2) : measurement.height();
+                if (heightMeters.signum() > 0) {
+                    double bmi = measurement.weight().doubleValue() / Math.pow(heightMeters.doubleValue(), 2);
+                    result.put("bmi", Math.round(bmi * 10.0) / 10.0);
+                    result.put("bmiLabel", bmi < 18.5 ? "Underweight" : bmi < 25 ? "Normal" : bmi < 30 ? "Overweight" : "Obesity");
+                }
             }
         }
 

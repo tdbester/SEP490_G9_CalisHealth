@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Navigate } from "react-router-dom";
-import { getLibraryOverview } from "../api/library";
+import { getLibraryOverview, getPersonalExerciseCounts } from "../api/library";
+import { mockSystemWorkouts } from "./WorkoutSystemListPage";
 import "./Library.css";
 
 // Icons
@@ -59,28 +60,55 @@ export default function Library() {
   const fetchData = async () => {
     setLoading(true);
     setError(null);
+    const [overviewResult, personalCountsResult] = await Promise.allSettled([
+      getLibraryOverview(),
+      getPersonalExerciseCounts(),
+    ]);
+
+    const overview = overviewResult.status === "fulfilled" ? overviewResult.value : null;
+    const personalCounts = personalCountsResult.status === "fulfilled"
+      ? personalCountsResult.value
+      : null;
+    const mockHealthWorkoutsCount = mockSystemWorkouts.filter((workout) => workout.type === "health").length;
+    const mockSkillWorkoutsCount = mockSystemWorkouts.filter((workout) => workout.type === "skills").length;
+    let hasMockPendingExercise = false;
     try {
-      const data = await getLibraryOverview();
-      if (data) {
-        setCounts({
-          exercise: {
-            healthCount: data.healthExercisesCount ?? 0,
-            skillCount: data.skillExercisesCount ?? 0,
-            memberCount: data.memberExercisesCount ?? 0,
-          },
-          workout: {
-            healthCount: data.healthWorkoutsCount ?? 0,
-            skillCount: data.skillWorkoutsCount ?? 0,
-            customCount: data.customWorkoutsCount ?? 0,
-          },
-        });
-      }
-    } catch (err) {
-      console.error("Failed to load library summary:", err);
-      setError("Unable to load latest library statistics. Showing cached or default view.");
-    } finally {
-      setLoading(false);
+      const mockPendingExercise = sessionStorage.getItem("calishealth.mock-resubmitted-exercise");
+      hasMockPendingExercise = Boolean(mockPendingExercise && JSON.parse(mockPendingExercise));
+    } catch (storageError) {
+      console.warn("Unable to read mock exercise submission:", storageError);
     }
+
+    if (overviewResult.status === "rejected") {
+      console.error("Failed to load library summary:", overviewResult.reason);
+      setError("Unable to load latest library statistics. Showing cached or default view.");
+    }
+
+    if (personalCountsResult.status === "rejected") {
+      console.error("Failed to load personal exercise counts:", personalCountsResult.reason);
+    }
+
+    const pendingCount = Number(personalCounts?.pendingCount || 0) + Number(hasMockPendingExercise);
+    const rejectedCount = Number(personalCounts?.rejectedCount || 0);
+    const acceptedCount = Number(personalCounts?.acceptedCount || 0);
+    const fallbackRejectedMockCount = rejectedCount === 0 && !hasMockPendingExercise ? 1 : 0;
+    const totalPersonalExercises = personalCounts
+      ? pendingCount + rejectedCount + acceptedCount + fallbackRejectedMockCount
+      : Number(overview?.memberExercisesCount || 0) + Number(hasMockPendingExercise) + fallbackRejectedMockCount;
+
+    setCounts({
+      exercise: {
+        healthCount: Number(overview?.healthExercisesCount || 0),
+        skillCount: Number(overview?.skillExercisesCount || 0),
+        memberCount: totalPersonalExercises,
+      },
+      workout: {
+        healthCount: Number(overview?.healthWorkoutsCount || 0) || mockHealthWorkoutsCount,
+        skillCount: Number(overview?.skillWorkoutsCount || 0) || mockSkillWorkoutsCount,
+        customCount: Number(overview?.customWorkoutsCount || 0),
+      },
+    });
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -253,9 +281,7 @@ export default function Library() {
               <button
                 type="button"
                 className="card-view-btn"
-                onClick={() =>
-                  handleNavigate("/library/workouts?type=health&source=system")
-                }
+                onClick={() => handleNavigate("/library/workouts/system?type=health")}
               >
                 <span>View list</span>
                 <ArrowRightIcon />
@@ -287,9 +313,7 @@ export default function Library() {
               <button
                 type="button"
                 className="card-view-btn"
-                onClick={() =>
-                  handleNavigate("/library/workouts?type=skill&source=system")
-                }
+                onClick={() => handleNavigate("/library/workouts/system?type=skills")}
               >
                 <span>View list</span>
                 <ArrowRightIcon />

@@ -63,9 +63,7 @@ public class PersonalExerciseService {
             exercise.setRejectionReason(result.isPassed() ? null : result.rejectionReason());
             exercise.setMuscleGroup(request.targetMuscle().trim());
             exercise.setLevel(request.level());
-            exercise.setDefaultSets(request.defaultSets());
-            exercise.setDefaultReps(request.defaultReps());
-            exercise.setDefaultDuration(request.defaultDuration());
+            applyCountConfiguration(exercise, request);
             exercise.setGuideSteps(String.join("\n", request.guideSteps()));
             exercise.setGuide(exercise.getGuideSteps());
             exercise.setVideoUrl(videoUrl);
@@ -163,9 +161,7 @@ public class PersonalExerciseService {
             exercise.setDescription(request.description() == null ? "" : request.description().trim());
             exercise.setLevel(request.level());
             exercise.setMuscleGroup(request.targetMuscle().trim());
-            exercise.setDefaultSets(request.defaultSets());
-            exercise.setDefaultReps(request.defaultReps());
-            exercise.setDefaultDuration(request.defaultDuration());
+            applyCountConfiguration(exercise, request);
             exercise.setGuideSteps(String.join("\n", request.guideSteps()));
             exercise.setGuide(exercise.getGuideSteps());
             if (replacementVideoUrl != null) {
@@ -176,7 +172,67 @@ public class PersonalExerciseService {
                 exercise.setShareWithCommunity(request.shareWithCommunity());
             }
             exercise.setStatus(rejectionReason == null
-                    ? ExerciseEntry.EntryStatus.ACCEPTED
+                    ? ExerciseEntry.EntryStatus.PENDING
+                    : ExerciseEntry.EntryStatus.REJECTED);
+            exercise.setRejectionReason(rejectionReason);
+            ExerciseEntry saved = exercises.save(exercise);
+            if (replacementVideoUrl != null && previousVideoUrl != null) {
+                deleteVideoAfterCommit(previousVideoUrl);
+            }
+            return toResponse(saved);
+        } catch (RuntimeException exception) {
+            videoStorage.delete(replacementVideoUrl);
+            throw exception;
+        }
+    }
+
+    @Transactional
+    public PersonalExerciseResponseDTO updateAcceptedPersonalExercise(
+            String memberEmail,
+            Long exerciseId,
+            CreatePersonalExerciseRequestDTO request,
+            MultipartFile videoFile
+    ) {
+        User member = requireMember(memberEmail);
+        ExerciseEntry exercise = exercises.findByIdAndAuthor_IdAndIsSystemFalse(exerciseId, member.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Personal exercise not found"));
+        if (exercise.getStatus() != ExerciseEntry.EntryStatus.ACCEPTED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only accepted exercises can be edited here");
+        }
+
+        String textReason = moderation.checkText(request.title(), request.description(), request.guideSteps());
+        boolean hasNewVideo = videoFile != null && !videoFile.isEmpty();
+        if (hasNewVideo) {
+            videoStorage.validateVideoFile(videoFile, true);
+        }
+        String videoReason = hasNewVideo ? moderation.checkVideo(videoFile) : null;
+        String rejectionReason = Stream.of(textReason, videoReason)
+                .filter(value -> value != null && !value.isBlank())
+                .reduce((left, right) -> left + " " + right)
+                .orElse(null);
+        String replacementVideoUrl = null;
+        if (hasNewVideo && videoReason == null) {
+            replacementVideoUrl = videoStorage.store(videoFile);
+        }
+
+        String previousVideoUrl = exercise.getVideoUrl();
+        try {
+            exercise.setName(request.title().trim());
+            exercise.setDescription(request.description() == null ? "" : request.description().trim());
+            exercise.setLevel(request.level());
+            exercise.setMuscleGroup(request.targetMuscle().trim());
+            applyCountConfiguration(exercise, request);
+            exercise.setGuideSteps(String.join("\n", request.guideSteps()));
+            exercise.setGuide(exercise.getGuideSteps());
+            if (replacementVideoUrl != null) {
+                exercise.setVideoUrl(replacementVideoUrl);
+                exercise.setDemoVideoUrl(replacementVideoUrl);
+            }
+            if (request.shareWithCommunity() != null) {
+                exercise.setShareWithCommunity(request.shareWithCommunity());
+            }
+            exercise.setStatus(rejectionReason == null
+                    ? ExerciseEntry.EntryStatus.PENDING
                     : ExerciseEntry.EntryStatus.REJECTED);
             exercise.setRejectionReason(rejectionReason);
             ExerciseEntry saved = exercises.save(exercise);
@@ -199,6 +255,37 @@ public class PersonalExerciseService {
         if (exercise.getVideoUrl() != null) {
             deleteVideoAfterCommit(exercise.getVideoUrl());
         }
+    }
+
+    private void applyCountConfiguration(
+            ExerciseEntry exercise,
+            CreatePersonalExerciseRequestDTO request
+    ) {
+        String countType = request.countType();
+        if (countType == null) {
+            countType = request.defaultDuration() != null && request.defaultReps() == null
+                    ? "duration"
+                    : "reps_sets";
+        }
+        if ("reps_sets".equals(countType)) {
+            Integer sets = request.sets() != null ? request.sets() : request.defaultSets();
+            Integer reps = request.reps() != null ? request.reps() : request.defaultReps();
+            if (sets == null || reps == null || sets < 1 || sets > 20 || reps < 1 || reps > 1000) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sets and reps must be valid");
+            }
+            exercise.setDefaultSets(sets);
+            exercise.setDefaultReps(reps);
+            exercise.setDefaultDuration(null);
+            return;
+        }
+
+        Integer duration = request.duration() != null ? request.duration() : request.defaultDuration();
+        if (duration == null || duration < 1 || duration > 3600) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Duration must be between 1 and 3600 seconds");
+        }
+        exercise.setDefaultSets(1);
+        exercise.setDefaultReps(null);
+        exercise.setDefaultDuration(duration);
     }
 
     private User requireMember(String email) {

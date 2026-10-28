@@ -70,6 +70,17 @@ public class PersonalExerciseController {
                 authentication.getName(), id, request, videoFile));
     }
 
+    @PutMapping(path = "/{id}/edit", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<PersonalExerciseResponseDTO> editAccepted(
+            @PathVariable Long id,
+            @Valid @RequestPart("data") CreatePersonalExerciseRequestDTO request,
+            @RequestPart(value = "videoFile", required = false) MultipartFile videoFile,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(personalExercises.updateAcceptedPersonalExercise(
+                authentication.getName(), id, request, videoFile));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id, Authentication authentication) {
         personalExercises.deletePersonalExercise(authentication.getName(), id);

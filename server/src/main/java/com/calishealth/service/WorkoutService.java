@@ -77,10 +77,6 @@ public class WorkoutService {
                 && (request.exerciseCodes() == null || request.exerciseCodes().isEmpty())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Add at least one system exercise");
         }
-        if (type.equals(REGULAR_WORKOUT)
-                && request.exerciseCodes().stream().distinct().count() != request.exerciseCodes().size()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "An exercise can only be added once");
-        }
         List<WorkoutPlanItemRequest> planRequests = request.planItems() == null ? List.of() : request.planItems();
         if (type.equals(DAILY_TRAINING_PLAN) && planRequests.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Add at least one exercise to the 7-day plan");
@@ -96,9 +92,10 @@ public class WorkoutService {
         List<String> requestedCodes = type.equals(REGULAR_WORKOUT)
                 ? request.exerciseCodes()
                 : planRequests.stream().map(WorkoutPlanItemRequest::exerciseCode).distinct().toList();
-        Map<String, ExerciseEntry> exercisesByCode = exercises.findAllByCodeIn(requestedCodes).stream()
+        List<String> lookupCodes = requestedCodes.stream().distinct().toList();
+        Map<String, ExerciseEntry> exercisesByCode = exercises.findAllByCodeIn(lookupCodes).stream()
                 .collect(Collectors.toMap(ExerciseEntry::getCode, exercise -> exercise));
-        if (exercisesByCode.size() != requestedCodes.size()) {
+        if (exercisesByCode.size() != lookupCodes.size()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "One or more selected exercises no longer exist");
         }
         if (exercisesByCode.values().stream().anyMatch(exercise -> !exercise.isActive())) {
@@ -113,8 +110,10 @@ public class WorkoutService {
         workout.setType(type);
         workout.setLevel(type.equals(REGULAR_WORKOUT) ? request.level().trim() : "All levels");
         workout.setActive(true);
-        workout.setCreatedBy(users.findByEmail(creatorEmail)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Creator account not found")));
+        var creator = users.findByEmail(creatorEmail)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Creator account not found"));
+        workout.setCreatedBy(creator);
+        workout.setAuthorId(creator.getId());
         if (type.equals(REGULAR_WORKOUT)) {
             workout.setExercises(request.exerciseCodes().stream().map(exercisesByCode::get).toList());
         } else {

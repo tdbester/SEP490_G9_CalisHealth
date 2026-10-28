@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getExerciseDetail, getSystemExerciseDetail } from "../api/library";
+import { mockSystemWorkouts } from "./WorkoutSystemListPage";
 
 // Default detailed guide data matching Figma mockup 100%
 const EXERCISE_CATALOG = {
@@ -317,28 +318,63 @@ function formatTime(seconds) {
 }
 
 export default function ExerciseDetailPage() {
-  const { id } = useParams();
+  const { id, exerciseId } = useParams();
+  const currentExerciseId = exerciseId || id;
   const navigate = useNavigate();
   const location = useLocation();
   const isMemberExercise =
     location.pathname.startsWith("/library/community/") ||
     location.pathname.startsWith("/library/member/");
-  const isSystemExercise = location.pathname.startsWith("/library/exercise/");
+  const isSystemExercise = location.pathname.startsWith("/library/exercise/")
+    || location.pathname.startsWith("/library/exercises/system/");
+  const isMockSystemExercise = isSystemExercise
+    && new URLSearchParams(location.search).get("mock") === "true";
   const memberAuthor = location.state?.author || "Linh Tran";
   const memberPostedTime = location.state?.postedTime || "3 days ago";
 
   // Normalize slug / ID to find matching catalog item
-  const slug = (id || "diamond-push-up").toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  const catalogItem =
+  const slug = (currentExerciseId || "diamond-push-up").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const mockWorkoutExercise = isMockSystemExercise
+    ? mockSystemWorkouts.flatMap((workout) => workout.exercises)
+        .find((item) => String(item.id) === currentExerciseId)
+    : null;
+  const routedExercise = location.state?.exercise || mockWorkoutExercise;
+  const catalogItem = routedExercise
+    ? {
+        ...routedExercise,
+        id: currentExerciseId,
+        name: routedExercise.name || routedExercise.title || "Exercise",
+        targetMuscle: routedExercise.targetMuscle || routedExercise.muscleGroup || "",
+        duration: Number.parseInt(routedExercise.duration, 10) || 84,
+        steps: (routedExercise.instructions || routedExercise.guideSteps || []).map((instruction, index) => ({
+          step: index + 1,
+          title: `Step ${index + 1}`,
+          content: typeof instruction === "string" ? instruction : instruction.content,
+        })),
+      }
+    :
     EXERCISE_CATALOG[slug] ||
     Object.values(EXERCISE_CATALOG).find(
-      (item) => String(item.id) === id || item.name.toLowerCase() === slug.replace(/-/g, " ")
+      (item) => String(item.id) === currentExerciseId || item.name.toLowerCase() === slug.replace(/-/g, " ")
     ) ||
     EXERCISE_CATALOG["diamond-push-up"];
 
   const [exercise, setExercise] = useState(catalogItem);
+  const [anatomyImageFailed, setAnatomyImageFailed] = useState(false);
   const displayedMemberAuthor = exercise.authorName || memberAuthor;
   const displayedMemberPostedTime = exercise.postedTimeAgo || memberPostedTime;
+  const anatomyImageUrl =
+    exercise?.anatomyImageUrl || exercise?.muscleImage || exercise?.image || "";
+  const muscleGroups = [
+    ...new Set(
+      (Array.isArray(exercise?.muscleGroups)
+        ? exercise.muscleGroups
+        : String(exercise?.targetMuscle || exercise?.muscleGroup || "").split(/[,·]/)
+      )
+        .map((muscle) => String(muscle).trim())
+        .filter(Boolean),
+    ),
+  ];
 
   // Video player state
   const [videoDuration, setVideoDuration] = useState(null);
@@ -349,6 +385,13 @@ export default function ExerciseDetailPage() {
   const playerRef = useRef(null);
   const videoRef = useRef(null);
 
+  useEffect(() => {
+    setExercise(catalogItem);
+    setCurrentTime(catalogItem.initialTime ?? 25);
+    setVideoDuration(null);
+    setIsPlaying(false);
+  }, [currentExerciseId, isMockSystemExercise, routedExercise]);
+
   // Sync document title to match mockup window header: CalisHealth - [Exercise name]
   useEffect(() => {
     document.title = `CalisHealth - ${exercise.name}`;
@@ -357,15 +400,19 @@ export default function ExerciseDetailPage() {
     };
   }, [exercise.name]);
 
+  useEffect(() => {
+    setAnatomyImageFailed(false);
+  }, [anatomyImageUrl]);
+
   // Fetch from API if exists, or fall back seamlessly
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
-      if (!id) return;
+      if (!currentExerciseId || isMockSystemExercise) return;
       try {
         const data = isSystemExercise
-          ? await getSystemExerciseDetail(id)
-          : await getExerciseDetail(id);
+          ? await getSystemExerciseDetail(currentExerciseId)
+          : await getExerciseDetail(currentExerciseId);
         if (data && isMounted) {
           setExercise((prev) => ({
             ...prev,
@@ -373,10 +420,12 @@ export default function ExerciseDetailPage() {
               ? {
                   ...data,
                   name: data.title || prev.name,
-                  steps: (data.guideSteps || []).map((content, index) => ({
+                  videoUrl: data.videoUrl || data.demoVideoUrl || prev.videoUrl,
+                  targetMuscle: data.targetMuscle || data.muscleGroup || prev.targetMuscle,
+                  steps: (data.guideSteps?.length ? data.guideSteps : prev.steps || []).map((content, index) => ({
                     step: index + 1,
-                    title: `Step ${index + 1}`,
-                    content,
+                    title: typeof content === "string" ? `Step ${index + 1}` : content.title,
+                    content: typeof content === "string" ? content : content.content,
                   })),
                 }
               : {
@@ -392,6 +441,7 @@ export default function ExerciseDetailPage() {
             name: data.title || data.name || prev.name,
             level: data.level || prev.level,
             description: data.description || prev.description,
+            tips: data.tips || prev.tips,
           }));
         }
       } catch (error) {
@@ -402,7 +452,7 @@ export default function ExerciseDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [id, isSystemExercise]);
+  }, [currentExerciseId, isMockSystemExercise, isSystemExercise]);
 
   // Simulated player timer
   useEffect(() => {
@@ -464,6 +514,12 @@ export default function ExerciseDetailPage() {
   };
 
   const progressPercent = Math.min(100, Math.max(0, (currentTime / totalDuration) * 100));
+  const searchParams = new URLSearchParams(location.search);
+  const workoutId = searchParams.get("workoutId");
+  const workoutType = searchParams.get("type") || "health";
+  const workoutBackPath = location.state?.backPath || (workoutId
+    ? `/library/workouts/system/${workoutId}?type=${workoutType}${isMockSystemExercise ? "&mock=true" : ""}`
+    : null);
 
   // Badge level color tokens
   const lvl = exercise.level?.toLowerCase();
@@ -502,7 +558,7 @@ export default function ExerciseDetailPage() {
         {/* Nút quay lại: < Back to list (dạng text link tối giản, không nền, không viền) */}
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate(workoutBackPath || -1)}
           className="bg-transparent border-0 p-0 text-xs text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer mb-3 group outline-none"
           aria-label="Back to exercise list"
         >
@@ -518,7 +574,7 @@ export default function ExerciseDetailPage() {
               clipRule="evenodd"
             />
           </svg>
-          <span>Back to list</span>
+          <span>{workoutBackPath ? "Back to workout" : "Back to list"}</span>
         </button>
 
         {/* Hàng tiêu đề bài tập & Badge level đầm rõ */}
@@ -560,7 +616,25 @@ export default function ExerciseDetailPage() {
           {!isMemberExercise && (!isSystemExercise || exercise.hasExerciseTree) && (
             <button
               type="button"
-              onClick={() => navigate(`/explore?path=${exercise.movementGroup.toLowerCase()}`)}
+              onClick={() => {
+                const params = new URLSearchParams({
+                  path: exercise.movementGroup.toLowerCase(),
+                  exerciseId: String(exercise.id),
+                  exerciseName: exercise.name,
+                });
+                navigate(
+                  { pathname: "/explore", search: params.toString() },
+                  {
+                    state: {
+                      exercise: {
+                        id: exercise.id,
+                        name: exercise.name,
+                        movementGroup: exercise.movementGroup,
+                      },
+                    },
+                  },
+                );
+              }}
               className="exercise-tree-btn shrink-0 px-7 py-3 text-sm font-semibold text-white transition-colors"
             >
               Exercise tree
@@ -741,7 +815,68 @@ export default function ExerciseDetailPage() {
             </div>
           </section>
 
-          {/* KHỐI 2 - DESCRIPTION (NẰM NGAY DƯỚI VIDEO) */}
+          <section className="rounded-2xl border border-[#382b68] bg-[#171133] p-5 mt-4 shadow-xl">
+            <h2 className="text-sm font-bold text-[#c4b5fd] mb-4">Muscle Anatomy</h2>
+            <div className="flex min-h-48 items-center justify-center overflow-hidden rounded-xl border border-[#2d2254] bg-[#100b26] p-3">
+              {anatomyImageUrl && !anatomyImageFailed ? (
+                <img
+                  src={anatomyImageUrl}
+                  alt={`Muscle anatomy for ${exercise?.name || "this exercise"}`}
+                  onError={() => setAnatomyImageFailed(true)}
+                  className="max-h-64 w-full rounded-xl object-contain"
+                />
+              ) : (
+                <svg
+                  viewBox="0 0 360 240"
+                  role="img"
+                  aria-label="Anatomy illustration placeholder"
+                  className="max-h-64 w-full"
+                >
+                  <defs>
+                    <linearGradient id="anatomy-body" x1="0" x2="1" y1="0" y2="1">
+                      <stop offset="0%" stopColor="#a78bfa" />
+                      <stop offset="100%" stopColor="#5b32e8" />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="180" cy="39" r="20" fill="#c4b5fd" />
+                  <path
+                    d="M151 68 Q180 55 209 68 L224 128 L208 139 L216 210 L190 210 L180 151 L170 210 L144 210 L152 139 L136 128 Z"
+                    fill="url(#anatomy-body)"
+                  />
+                  <path d="M143 76 L112 132 L122 139 L156 105 M217 76 L248 132 L238 139 L204 105"
+                    fill="none" stroke="#8b5cf6" strokeWidth="17" strokeLinecap="round" />
+                  <path d="M151 137 L132 211 M209 137 L228 211"
+                    fill="none" stroke="#7c5ce0" strokeWidth="17" strokeLinecap="round" />
+                  <path d="M157 83 Q180 72 203 83 L198 112 Q180 122 162 112 Z"
+                    fill="#ec4899" fillOpacity=".85" />
+                  <path d="M162 119 Q180 127 198 119 L195 143 Q180 151 165 143 Z"
+                    fill="#f472b6" fillOpacity=".8" />
+                  <text x="180" y="231" textAnchor="middle" fill="#c4b5fd" fontSize="12">
+                    Anatomy illustration
+                  </text>
+                </svg>
+              )}
+            </div>
+            <div className="mt-4">
+              <h3 className="text-xs font-bold text-white mb-2">Muscle Group</h3>
+              {muscleGroups.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {muscleGroups.map((muscle) => (
+                    <span
+                      key={muscle}
+                      className="rounded-full border border-violet-700/70 bg-violet-950/50 px-3 py-1 text-xs font-medium text-violet-200"
+                    >
+                      {muscle}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400">Muscle group information is not available.</p>
+              )}
+            </div>
+          </section>
+
+          {/* KHỐI 3 - DESCRIPTION */}
           <section className="rounded-2xl border border-[#231b46] bg-[#120d29] p-5 mt-4 shadow-xl">
             <h2 className="text-sm font-semibold text-white mb-2">Description</h2>
             <p className="text-xs text-slate-300 leading-relaxed">
@@ -784,6 +919,12 @@ export default function ExerciseDetailPage() {
               })}
             </div>
           </section>
+          {exercise.tips && (
+            <section className="mt-4 rounded-2xl border border-amber-900/60 bg-amber-950/20 p-5">
+              <h2 className="text-sm font-semibold text-amber-200">Tips &amp; safety</h2>
+              <p className="mt-2 text-xs leading-relaxed text-slate-300">{exercise.tips}</p>
+            </section>
+          )}
         </div>
       </div>
     </div>

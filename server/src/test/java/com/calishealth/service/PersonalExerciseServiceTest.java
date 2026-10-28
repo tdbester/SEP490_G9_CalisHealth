@@ -80,7 +80,7 @@ class PersonalExerciseServiceTest {
     }
 
     @Test
-    void resubmitsWithCurrentVideoWithoutRunningVideoCheck() {
+    void resubmitsWithCurrentVideoAndSendsExerciseToPendingReview() {
         User member = new User();
         member.setId(7L);
         ExerciseEntry rejected = new ExerciseEntry();
@@ -110,13 +110,60 @@ class PersonalExerciseServiceTest {
                         null,
                         60,
                         true,
-                        true),
+                        true,
+                        null,
+                        null,
+                        null,
+                        null),
                 null);
 
-        assertThat(response.status()).isEqualTo("ACCEPTED");
+        assertThat(response.status()).isEqualTo("PENDING");
         assertThat(response.rejectionReason()).isNull();
         assertThat(response.videoUrl()).isEqualTo("/media/exercise-demos/current.mp4");
         verify(exercises).save(rejected);
+    }
+
+    @Test
+    void editsAcceptedExerciseAndSendsItBackToPendingReview() {
+        User member = new User();
+        member.setId(7L);
+        ExerciseEntry accepted = new ExerciseEntry();
+        accepted.setId(31L);
+        accepted.setAuthor(member);
+        accepted.setSystem(false);
+        accepted.setName("Wall sit challenge");
+        accepted.setDescription("A wall sit exercise.");
+        accepted.setType(ExerciseEntry.EntryType.HEALTH);
+        accepted.setLevel(ExerciseEntry.EntryLevel.BEGINNER);
+        accepted.setMuscleGroup("Legs");
+        accepted.setStatus(ExerciseEntry.EntryStatus.ACCEPTED);
+        accepted.setVideoUrl("/media/exercise-demos/current.mp4");
+        when(exercises.findByIdAndAuthor_IdAndIsSystemFalse(31L, 7L)).thenReturn(Optional.of(accepted));
+
+        var response = service.updateAcceptedPersonalExercise(
+                "member@example.com",
+                31L,
+                new CreatePersonalExerciseRequestDTO(
+                        "Wall sit challenge",
+                        "A wall sit exercise.",
+                        ExerciseEntry.EntryLevel.BEGINNER,
+                        List.of("Brace your core", "Hold the squat"),
+                        "Legs",
+                        1,
+                        null,
+                        60,
+                        true,
+                        true,
+                        null,
+                        null,
+                        null,
+                        null),
+                null);
+
+        assertThat(response.status()).isEqualTo("PENDING");
+        assertThat(response.rejectionReason()).isNull();
+        assertThat(response.videoUrl()).isEqualTo("/media/exercise-demos/current.mp4");
+        verify(exercises).save(accepted);
     }
 
     @Test
@@ -144,7 +191,11 @@ class PersonalExerciseServiceTest {
                         null,
                         60,
                         false,
-                        false),
+                        false,
+                        null,
+                        null,
+                        null,
+                        null),
                 null);
 
         assertThat(response.status()).isEqualTo("REJECTED");
@@ -162,6 +213,10 @@ class PersonalExerciseServiceTest {
                 10,
                 null,
                 false,
+                null,
+                null,
+                null,
+                null,
                 null);
     }
 

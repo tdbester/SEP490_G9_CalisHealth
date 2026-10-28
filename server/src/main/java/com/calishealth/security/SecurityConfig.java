@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -30,13 +29,13 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(c -> c.disable())
-                .cors(Customizer.withDefaults())
-                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        http.csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/change-password", "/api/auth/me").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/dashboard").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/dashboard").authenticated()
                         .requestMatchers(
                             "/api/auth/**",
                             "/swagger-ui.html",
@@ -52,7 +51,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/library/exercises/**").hasRole("MEMBER")
                         .requestMatchers("/api/v1/library/exercise-tree/**").hasRole("MEMBER")
                         .requestMatchers("/api/v1/library/member-exercises/**").hasRole("MEMBER")
-                        .requestMatchers("/api/v1/library/personal-exercises/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/personal-exercises/**").authenticated()
                         .requestMatchers("/api/v1/library/custom-workouts/**").hasRole("MEMBER")
                         .requestMatchers("/api/v1/library/my-workouts/**").hasRole("MEMBER")
                         .requestMatchers("/api/v1/library/workout-exercises/**").hasRole("MEMBER")
@@ -60,8 +59,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/library/**").permitAll()
                         .requestMatchers("/api/exercises/**").permitAll()
                         .anyRequest().authenticated())
-                .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
+        http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
@@ -72,12 +71,13 @@ public class SecurityConfig {
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
-        cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        cfg.setAllowedHeaders(List.of("*"));
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept"));
+        configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
-        src.registerCorsConfiguration("/**", cfg);
+        src.registerCorsConfiguration("/**", configuration);
         return src;
     }
 }

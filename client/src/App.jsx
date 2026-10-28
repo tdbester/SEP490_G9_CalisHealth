@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -17,6 +18,8 @@ import CustomWorkoutDetailPage from "./pages/CustomWorkoutDetailPage";
 import CreatePersonalWorkoutPage from "./pages/CreatePersonalWorkoutPage";
 import MyCustomWorkoutListPage from "./pages/MyCustomWorkoutListPage";
 import UpdateMyCustomWorkoutPage from "./pages/UpdateMyCustomWorkoutPage";
+import WorkoutSystemListPage from "./pages/WorkoutSystemListPage";
+import SystemWorkoutDetailPage from "./pages/SystemWorkoutDetailPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -25,6 +28,23 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ResetPassword from "./pages/ResetPassword";
 
 export default function App() {
+  const [startupComplete, setStartupComplete] = useState(false);
+
+  useEffect(() => {
+    ["token", "accessToken", "jwt", "user"].forEach((key) => {
+      localStorage.removeItem(key);
+    });
+    setStartupComplete(true);
+  }, []);
+
+  if (!startupComplete) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#100923", color: "#fff" }}>
+        Loading…
+      </div>
+    );
+  }
+
   const memberPage = (page) => (
     <ProtectedRoute>
       <AdminLayout>{page}</AdminLayout>
@@ -35,9 +55,10 @@ export default function App() {
     <>
       <ToastContainer
         position="top-right"
-        autoClose={3000}
+        newestOnTop
         theme="dark"
-        toastStyle={{ backgroundColor: "#090616" }}
+        toastClassName="!rounded-xl !border !border-[#3c3063] !bg-[#1a1438] !text-slate-200 !shadow-2xl"
+        className="!top-0 !right-0 !z-[9999]"
       />
       <BrowserRouter>
         <Routes>
@@ -72,6 +93,11 @@ export default function App() {
           <Route path="/library/personal-exercises/new" element={memberPage(<CreatePersonalExercisePage />)} />
           <Route path="/library/personal-exercises/:id/edit" element={memberPage(<UpdatePersonalExercisePage />)} />
           <Route path="/library/workouts" element={memberPage(<MyCustomWorkoutListPage />)} />
+          <Route path="/library/workouts/system" element={memberPage(<WorkoutSystemListPage />)} />
+          <Route path="/library/workouts/system/:workoutId" element={memberPage(<SystemWorkoutDetailPage />)} />
+          <Route path="/library/workouts/health" element={memberPage(<WorkoutSystemListPage />)} />
+          <Route path="/library/workouts/skill" element={memberPage(<WorkoutSystemListPage />)} />
+          <Route path="/library/system-workouts/:id" element={memberPage(<SystemWorkoutDetailPage />)} />
           <Route path="/library/workouts/new" element={memberPage(<CreatePersonalWorkoutPage />)} />
           <Route path="/library/workouts/:id/edit" element={memberPage(<UpdateMyCustomWorkoutPage />)} />
           <Route path="/library/custom" element={memberPage(<CustomWorkoutListPage />)} />

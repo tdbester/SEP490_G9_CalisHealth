@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import LibraryDetailPlaceholder from "./LibraryDetailPlaceholder";
 import { deleteMyWorkout, getMyWorkouts } from "../api/library";
+import useUndoDelete from "../hooks/useUndoDelete";
 
 const STORAGE_KEY = "my_custom_workouts";
 const INITIALIZED_KEY = `${STORAGE_KEY}_initialized`;
@@ -152,6 +153,7 @@ function loadWorkouts() {
 
 export default function MyCustomWorkoutListPage() {
   const navigate = useNavigate();
+  const { requestDelete, confirmationModal } = useUndoDelete();
   const [searchParams] = useSearchParams();
   const [workouts, setWorkouts] = useState([]);
   const [query, setQuery] = useState("");
@@ -209,16 +211,26 @@ export default function MyCustomWorkoutListPage() {
     setCurrentPage((page) => Math.min(page, Math.max(totalPages, 1)));
   }, [totalPages]);
 
-  const handleDelete = async (id) => {
-    try {
-      await deleteMyWorkout(id);
-      setWorkouts((current) => current.filter((workout) => String(workout.id) !== String(id)));
-      setErrorMessage("");
-      toast.success("Deleted successfully!");
-    } catch (error) {
-      toast.error("Failed to delete item.");
-      setErrorMessage(error.response?.data?.message || "Could not delete workout.");
-    }
+  const handleDelete = (workout) => {
+    const itemIndex = workouts.findIndex((item) => String(item.id) === String(workout.id));
+    requestDelete({
+      onOptimisticDelete: () => {
+        setWorkouts((current) => current.filter((item) => String(item.id) !== String(workout.id)));
+      },
+      onUndo: () => {
+        setWorkouts((current) => {
+          if (current.some((item) => String(item.id) === String(workout.id))) return current;
+          const restored = [...current];
+          restored.splice(Math.max(0, Math.min(itemIndex, restored.length)), 0, workout);
+          return restored;
+        });
+      },
+      onDelete: async () => {
+        await deleteMyWorkout(workout.id);
+        setErrorMessage("");
+      },
+      successMessage: "Deleted successfully",
+    });
   };
 
   if (searchParams.get("source") === "system") {
@@ -356,7 +368,7 @@ export default function MyCustomWorkoutListPage() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => handleDelete(workout.id)}
+                  onClick={() => handleDelete(workout)}
                   className="rounded-lg border border-rose-700/80 bg-rose-950/50 px-4 py-2 text-xs font-semibold text-rose-200 transition-colors hover:bg-rose-900/70"
                 >
                   Delete
@@ -378,6 +390,7 @@ export default function MyCustomWorkoutListPage() {
           </p>
         )}
       </div>
+      {confirmationModal}
       {totalPages > 1 && (
         <div className="mt-5 flex items-center justify-between border-t border-[#1f193f] pt-4">
           <p className="text-xs text-slate-400">

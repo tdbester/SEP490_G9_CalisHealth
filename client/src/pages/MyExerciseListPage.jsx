@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
 import {
   deletePersonalExercise,
   getPersonalExerciseCounts,
   getPersonalExercises,
 } from "../api/library";
+import useUndoDelete from "../hooks/useUndoDelete";
 
 /* -------------------- ICONS -------------------- */
 function BarbellIcon({ className = "h-5 w-5 text-[#9d7aff]" }) {
@@ -101,6 +101,24 @@ const INITIAL_PENDING = [
 ];
 const INITIAL_REJECTED = [
   {
+    id: 999,
+    slug: "test-rejected-push-up",
+    title: "Test Rejected Push-up",
+    level: "Intermediate",
+    targetMuscle: "Chest",
+    defaultSets: 3,
+    defaultReps: 10,
+    defaultDuration: null,
+    meta: "Chest · 3 sets · 10 reps · Submitted 10:00:00 27/10/2026",
+    reason: "Video demo không rõ động tác, vui lòng quay lại.",
+    description: "Mock exercise for testing the rejected edit and resubmit flow.",
+    guideSteps: ["Start in a push-up position", "Lower your chest with control", "Push back to the starting position"],
+    video: { name: "test-rejected-push-up.mp4", size: "Mock video" },
+    videoUrl: "mock://test-rejected-push-up.mp4",
+    status: "REJECTED",
+    isMock: true,
+  },
+  {
     id: "rej-1",
     slug: "wall-sit-challenge",
     title: "Wall sit challenge",
@@ -125,6 +143,17 @@ const INITIAL_REJECTED = [
     status: "rejected",
   },
 ];
+const MOCK_PENDING_STORAGE_KEY = "calishealth.mock-resubmitted-exercise";
+
+const getMockPendingExercise = () => {
+  try {
+    const storedExercise = sessionStorage.getItem(MOCK_PENDING_STORAGE_KEY);
+    return storedExercise ? JSON.parse(storedExercise) : null;
+  } catch (error) {
+    console.warn("Could not read temporary mock exercise state:", error);
+    return null;
+  }
+};
 const INITIAL_ACCEPTED = [
   {
     id: "acc-1",
@@ -162,24 +191,54 @@ const INITIAL_ACCEPTED = [
 
 /* -------------------- CARD COMPONENT -------------------- */
 function ExerciseCard({ item, activeTab, onCancelPending, onDeleteRejected, onDeleteAccepted, navigate }) {
+  const openDetail = () => navigate(`/library/community/${item.slug || item.id}`);
+  const handleCardKeyDown = (event) => {
+    if (activeTab === "accepted" && (event.key === "Enter" || event.key === " ")) {
+      event.preventDefault();
+      openDetail();
+    }
+  };
+
   return (
-    <div className="rounded-2xl border border-[#33285f] bg-[#15102e] hover:border-[#6046a6] hover:shadow-lg hover:shadow-purple-950/20 transition-all shadow-sm">
-      <div className="flex items-center gap-4 p-5 pb-4">
-        <div className="h-12 w-12 rounded-xl bg-[#2a2057] border border-[#5b4696] flex items-center justify-center flex-shrink-0">
-          <BarbellIcon className="h-7 w-7 text-[#c4b5fd]" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-lg font-semibold text-white tracking-tight">{item.title}</h3>
-            <LevelBadge level={item.level} />
+    <div
+      onClick={activeTab === "accepted" ? openDetail : undefined}
+      onKeyDown={handleCardKeyDown}
+      role={activeTab === "accepted" ? "link" : undefined}
+      tabIndex={activeTab === "accepted" ? 0 : undefined}
+      className={`rounded-2xl border border-[#33285f] bg-[#15102e] hover:border-[#6046a6] hover:shadow-lg hover:shadow-purple-950/20 transition-all shadow-sm ${
+        activeTab === "accepted" ? "cursor-pointer hover:border-[#523d8c]" : ""
+      }`}
+    >
+      <div className="flex items-start gap-4 p-5">
+        <div className="flex min-w-0 flex-1 items-start gap-4">
+          <div className="h-12 w-12 rounded-xl bg-[#2a2057] border border-[#5b4696] flex items-center justify-center flex-shrink-0">
+            <BarbellIcon className="h-7 w-7 text-[#c4b5fd]" />
           </div>
-          <p className="text-sm text-slate-200 mt-1">{item.meta}</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-lg font-semibold text-white tracking-tight">{item.title}</h3>
+              <LevelBadge level={item.level} />
+            </div>
+            <p className="text-sm text-slate-200 mt-1">{item.meta}</p>
+            {activeTab === "pending" && item.scanText && (
+              <p className="text-[13px] text-slate-200 italic mt-3">{item.scanText}</p>
+            )}
+          </div>
         </div>
-        <div className="flex-shrink-0">
+        <div className="flex flex-shrink-0 flex-col items-end justify-start gap-2">
           {activeTab === "pending" && (
-            <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold text-amber-200 bg-amber-950/70 border border-amber-600/70">
-              <GearIcon className="w-4 h-4" /> Pending
-            </span>
+            <>
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950/50 text-amber-400 border border-amber-800/60 text-xs font-semibold">
+                <GearIcon className="w-4 h-4" /> Pending
+              </span>
+              <button
+                type="button"
+                onClick={() => onCancelPending(item)}
+                className="mt-6 px-4 py-1.5 rounded-xl border border-[#44366f] bg-[#1a1435] text-xs font-medium text-slate-300 hover:border-rose-500 hover:text-rose-400 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+            </>
           )}
           {activeTab === "rejected" && (
             <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold text-rose-200 bg-rose-950/70 border border-rose-600/70">
@@ -193,41 +252,35 @@ function ExerciseCard({ item, activeTab, onCancelPending, onDeleteRejected, onDe
           )}
         </div>
       </div>
-      {activeTab === "pending" && item.scanText && (
-        <p className="text-[13px] text-slate-200 italic px-5 pb-4">{item.scanText}</p>
-      )}
       {activeTab === "rejected" && item.reason && (
         <div className="mx-5 mb-4 rounded-xl border border-rose-900/50 bg-[#21101a] p-4">
           <p className="text-[13px] text-rose-100/90 leading-relaxed">{item.reason}</p>
         </div>
       )}
-      <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-[#29204d]">
-        {activeTab === "pending" && (
-          <button type="button" onClick={() => onCancelPending(item.id)} className="rounded-xl border border-[#59477f] bg-[#201a3b] hover:bg-[#30245b] text-slate-100 text-sm font-semibold px-6 py-2.5 transition-colors active:scale-95">
-            Cancel
-          </button>
-        )}
+      {activeTab !== "pending" && (
+        <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-[#29204d]">
         {activeTab === "rejected" && (
           <>
-            <button type="button" onClick={() => onDeleteRejected(item.id)} className="rounded-xl border border-[#59477f] bg-[#201a3b] hover:bg-[#30245b] text-slate-100 text-sm font-semibold px-5 py-2.5 transition-colors active:scale-95">
+            <button type="button" onClick={(event) => { event.stopPropagation(); onDeleteRejected(item); }} className="rounded-xl border border-[#59477f] bg-[#201a3b] hover:bg-[#30245b] text-slate-100 text-sm font-semibold px-5 py-2.5 transition-colors active:scale-95">
               Delete
             </button>
-            <button type="button" onClick={() => navigate(`/library/personal/${item.id}/edit`, { state: { exercise: item } })} className="rounded-xl border border-[#8065ff] bg-[#643bf6] hover:bg-[#7554ff] text-white text-sm font-semibold px-5 py-2.5 transition-colors active:scale-95">
+            <button type="button" onClick={(event) => { event.stopPropagation(); navigate(`/library/personal/${item.id}/edit`, { state: { exercise: item } }); }} className="rounded-xl border border-[#8065ff] bg-[#643bf6] hover:bg-[#7554ff] text-white text-sm font-semibold px-5 py-2.5 transition-colors active:scale-95">
               Edit &amp; resubmit
             </button>
           </>
         )}
         {activeTab === "accepted" && (
           <>
-            <button type="button" onClick={() => onDeleteAccepted(item.id)} className="rounded-xl border border-[#59477f] bg-[#201a3b] hover:bg-[#30245b] text-slate-100 text-sm font-semibold px-5 py-2.5 transition-colors active:scale-95">
+            <button type="button" onClick={(event) => { event.stopPropagation(); onDeleteAccepted(item); }} className="rounded-xl border border-[#59477f] bg-[#201a3b] hover:bg-[#30245b] text-slate-100 text-sm font-semibold px-5 py-2.5 transition-colors active:scale-95">
               Delete
             </button>
-            <button type="button" onClick={() => navigate(`/library/community/${item.slug || item.id}`)} className="rounded-xl border border-[#8065ff] bg-[#261b50] hover:bg-[#35266a] text-white text-sm font-semibold px-5 py-2.5 transition-colors active:scale-95">
-              View
+            <button type="button" onClick={(event) => { event.stopPropagation(); navigate(`/library/personal/${item.id}/edit`, { state: { exercise: item } }); }} className="rounded-xl border border-[#8065ff] bg-[#643bf6] hover:bg-[#7554ff] text-white text-sm font-semibold px-5 py-2.5 transition-colors active:scale-95">
+              Edit
             </button>
           </>
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -236,6 +289,7 @@ function ExerciseCard({ item, activeTab, onCancelPending, onDeleteRejected, onDe
 export default function MyExerciseListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { requestDelete, confirmationModal } = useUndoDelete();
 
   useEffect(() => { document.title = "CalisHealth - Library"; return () => { document.title = "CalisHealth"; }; }, []);
 
@@ -304,15 +358,33 @@ export default function MyExerciseListPage() {
               : undefined,
           };
         });
-        setExercises(items);
-        setTotalElements(pageData?.totalElements || 0);
-        setTotalPages(pageData?.totalPages || 0);
+        const mockPending = getMockPendingExercise();
+        const hasMockPending = Boolean(mockPending && !items.some((item) => item.id === mockPending.id));
+        const hasRejectedMock = (counts?.rejectedCount || 0) === 0 && !mockPending;
+        const showRejectedMock = activeTab === "rejected"
+          && items.length === 0
+          && hasRejectedMock
+          && !searchInput.trim()
+          && selectedLevel === "All levels"
+          && currentPage === 1;
+        const visibleItems = activeTab === "pending" && mockPending
+          ? [mockPending, ...items.filter((item) => item.id !== mockPending.id)]
+          : showRejectedMock
+              ? INITIAL_REJECTED.filter((item) => item.isMock)
+              : items;
+        const totalElementsWithMock = (pageData?.totalElements || 0)
+          + (showRejectedMock || (activeTab === "pending" && hasMockPending) ? 1 : 0);
+        setExercises(visibleItems);
+        setTotalElements(totalElementsWithMock);
+        setTotalPages(showRejectedMock || (activeTab === "pending" && hasMockPending && !pageData?.totalPages)
+          ? 1
+          : pageData?.totalPages || 0);
         if (pageData?.totalPages > 0 && currentPage > pageData.totalPages) {
           setCurrentPage(pageData.totalPages);
         }
         setStatusCounts({
-          pending: counts?.pendingCount || 0,
-          rejected: counts?.rejectedCount || 0,
+          pending: (counts?.pendingCount || 0) + (hasMockPending ? 1 : 0),
+          rejected: (counts?.rejectedCount || 0) + (hasRejectedMock ? 1 : 0),
           accepted: counts?.acceptedCount || 0,
         });
       })
@@ -335,14 +407,31 @@ export default function MyExerciseListPage() {
   }, [activeTab, currentPage, searchInput, selectedLevel, refreshKey]);
 
   const handleTabSwitch = (tab) => { setActiveTab(tab); setSearchParams({ status: tab }); setSearchInput(""); setSelectedLevel("All levels"); setCurrentPage(1); };
-  const handleDeleteExercise = async (id) => {
-    try {
-      await deletePersonalExercise(id);
-      setRefreshKey((value) => value + 1);
-      toast.success("Deleted successfully!");
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to delete item.");
-    }
+  const handleDeleteExercise = (item) => {
+    const itemIndex = exercises.findIndex((exercise) => String(exercise.id) === String(item.id));
+    const status = (item.status || activeTab).toLowerCase();
+    requestDelete({
+      onOptimisticDelete: () => {
+        setExercises((current) => current.filter((exercise) => String(exercise.id) !== String(item.id)));
+        setStatusCounts((current) => ({ ...current, [status]: Math.max(0, current[status] - 1) }));
+        setTotalElements((current) => Math.max(0, current - 1));
+      },
+      onUndo: () => {
+        setExercises((current) => {
+          if (current.some((exercise) => String(exercise.id) === String(item.id))) return current;
+          const restored = [...current];
+          restored.splice(Math.max(0, Math.min(itemIndex, restored.length)), 0, item);
+          return restored;
+        });
+        setStatusCounts((current) => ({ ...current, [status]: current[status] + 1 }));
+        setTotalElements((current) => current + 1);
+      },
+      onDelete: async () => {
+        await deletePersonalExercise(item.id);
+        setRefreshKey((value) => value + 1);
+      },
+      successMessage: "Deleted successfully",
+    });
   };
   const handleCancelPending = handleDeleteExercise;
   const handleDeleteRejected = handleDeleteExercise;
@@ -469,6 +558,7 @@ export default function MyExerciseListPage() {
           </div>
         </div>
       )}
+      {confirmationModal}
     </div>
   );
 }

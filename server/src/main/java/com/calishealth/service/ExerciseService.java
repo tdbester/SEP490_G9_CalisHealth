@@ -152,6 +152,7 @@ public class ExerciseService {
                 exercise.getName(),
                 exercise.getDescription(),
                 exercise.getDemoVideoUrl(),
+                exercise.getAnatomyImageUrl(),
                 guideSteps,
                 exercise.getMuscleGroup(),
                 exercise.getLevel() == null ? null : levelLabel(exercise.getLevel()),

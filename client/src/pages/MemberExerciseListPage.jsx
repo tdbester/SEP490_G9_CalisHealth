@@ -205,7 +205,7 @@ export default function MemberExerciseListPage() {
         description: "",
       });
       fetchList();
-      toast.success("Created successfully!");
+      toast.success("Exercise created successfully!");
     } catch (err) {
       console.error("Failed to create exercise:", err);
       toast.error("Failed to create. Please try again.");

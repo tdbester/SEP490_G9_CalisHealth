@@ -25,7 +25,11 @@ class LibraryRequestValidationTest {
                 10,
                 null,
                 true,
-                false
+                false,
+                null,
+                null,
+                null,
+                null
         );
 
         Set<String> violations = validator.validate(request).stream()
@@ -44,7 +48,7 @@ class LibraryRequestValidationTest {
                 "  ",
                 "n".repeat(201),
                 false,
-                List.of(new WorkoutItemDTO(1L, 0, 101, 0, null, "REPS", 601))
+                List.of(new WorkoutItemDTO(1L, 0, 101, 0, null, "REPS", 121))
         );
 
         Set<String> violations = validator.validate(request).stream()
@@ -55,7 +59,7 @@ class LibraryRequestValidationTest {
         assertTrue(violations.contains("description:Ghi chú không quá 200 ký tự"));
         assertTrue(violations.contains("items[0].sets:Số hiệp tối đa là 100"));
         assertTrue(violations.contains("items[0].reps:Số lần lặp tối thiểu là 1"));
-        assertTrue(violations.contains("items[0].restSeconds:Thời gian nghỉ không quá 600 giây"));
+        assertTrue(violations.contains("items[0].restSeconds:Thời gian nghỉ tối đa là 120 giây"));
     }
 
     @Test

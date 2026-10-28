@@ -14,6 +14,15 @@ export default {
           soft: "#EDE9FE",
         },
       },
+      keyframes: {
+        "bounce-short": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-4px)" },
+        },
+      },
+      animation: {
+        "bounce-short": "bounce-short 0.5s ease-out 1",
+      },
     },
   },
   plugins: [],

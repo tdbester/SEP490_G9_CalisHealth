@@ -235,8 +235,10 @@ export default function Dashboard() {
 
           {authStatus === "authed" ? (
             <>
-              {              dashboardData?.healthMetrics &&
-              (dashboardData.healthMetrics.weight != null || dashboardData.healthMetrics.bmi != null) ? (
+              {dashboardData?.healthMetrics &&
+              (dashboardData.healthMetrics.weight != null
+                || dashboardData.healthMetrics.bmi != null
+                || dashboardData.healthMetrics.weeklyGoal != null) ? (
                 <>
                   <ul className="dash-metric-list">
                     {dashboardData.healthMetrics.weight != null && (
