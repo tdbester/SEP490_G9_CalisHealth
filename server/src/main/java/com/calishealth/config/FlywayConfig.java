@@ -12,6 +12,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.Map;
+
 /**
  * Spring Boot 4 removed Flyway auto-configuration from spring-boot-autoconfigure
  * (verified: spring-boot-autoconfigure-4.1.1.jar contains no Flyway classes).
@@ -65,12 +67,17 @@ public class FlywayConfig {
         // baselineOnMigrate(false): on an empty DB, V1 just runs normally.
         // baselineOnMigrate(true) + baselineVersion("0") makes Flyway record a
         // baseline at version 0 and then still apply V1 -> "Table already exists".
+        // V4__dashboard_domain_data.sql escape '$' trong bcrypt hash bằng cách viết
+        // ${'$'} (tránh bị Spring/Flyway đọc nhầm placeholder). Flyway mặc định KHÔNG
+        // có giá trị cho key này -> "No value provided for placeholder: ${'$'}" và
+        // V4 fail lúc migrate. Khai báo '$' làm giá trị thay thế để ${'$'} -> '$'.
         Flyway fw = Flyway.configure()
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")
                 .baselineOnMigrate(false)
                 .validateOnMigrate(true)
                 .cleanDisabled(true)
+                .placeholders(Map.of("'$'", "$"))
                 .load();
         log.info("Flyway configured: locations=classpath:db/migration");
         return fw;

@@ -28,6 +28,12 @@ public class AuthController {
     }
 
     @GetMapping("/verify")
+    public ResponseEntity<?> checkVerificationToken(@RequestParam String token) {
+        auth.checkEmailVerificationToken(token);
+        return msg("Link xác thực hợp lệ.");
+    }
+
+    @PostMapping("/verify")
     public ResponseEntity<?> verify(@RequestParam String token) {
         auth.verifyEmail(token);
         return msg("Xác thực email thành công! Bạn có thể đăng nhập.");
@@ -42,6 +48,12 @@ public class AuthController {
     public ResponseEntity<?> forgot(@Valid @RequestBody ForgotRequest r) {
         auth.forgotPassword(r);
         return msg("Nếu email tồn tại, chúng tôi đã gửi link đặt lại mật khẩu.");
+    }
+
+    @GetMapping("/verify-reset-token")
+    public ResponseEntity<?> verifyResetToken(@RequestParam String token) {
+        auth.verifyResetToken(token);
+        return msg("Token đặt lại mật khẩu hợp lệ.");
     }
 
     @PostMapping("/reset-password")

@@ -14,13 +14,13 @@
       #090518 100%
     );
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-  padding: 24px;
+  padding: 32px 24px;
   box-sizing: border-box;
 }
 
 .login-card {
   width: 100%;
-  max-width: 800px;
+  max-width: 560px;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -31,7 +31,7 @@
 .login-logo {
   display: flex;
   align-items: center;
-  margin-bottom: 100px;
+  margin-bottom: 40px;
 }
 
 .login-logo-icon {
@@ -81,11 +81,33 @@
 }
 
 /* Title */
+.login-back {
+  align-self: flex-start;
+  width: 100%;
+  max-width: 440px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1.8px;
+  border: 0;
+  padding: 0;
+  margin: 0 auto 28px;
+  background: transparent;
+  color: #B6A5D5;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.login-back:hover {
+  color: #FFFFFF;
+}
+
 .login-title {
-  font-size: 50px;
+  font-size: 24px;
   font-weight: 700;
   color: #FFFFFF;
-  margin: 0 0 80px 0;
+  margin: 0 0 36px 0;
   text-align: center;
   line-height: 1.1;
 }
@@ -93,10 +115,10 @@
 /* Form */
 .login-form {
   width: 100%;
-  max-width: 628px;
+  max-width: 440px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 20px;
 }
 
 .login-field {
@@ -116,7 +138,7 @@
 .login-input-wrap {
   position: relative;
   width: 100%;
-  height: 86px;
+  height: 60px;
   background-color: #170F28;
   border: 2px solid #2B1B48;
   border-radius: 4px;
@@ -132,8 +154,8 @@
 }
 
 .login-input-icon {
-  width: 28px;
-  height: 28px;
+  width: 12px;
+  height: 15px;
   flex-shrink: 0;
   margin-right: 26px;
   color: #A99BD0;
@@ -142,10 +164,13 @@
 .login-input {
   flex: 1;
   height: 100%;
+  position: relative;
+  top: -0.5px;
+  left: -20.5px;
   background: transparent;
   border: none;
   outline: none;
-  font-size: 22px;
+  font-size: 13.5px;
   font-family: inherit;
   color: #F7F2FC;
   font-weight: 400;
@@ -154,14 +179,28 @@
 .login-input::placeholder {
   color: #785F8F;
   font-weight: 400;
+  font-size: 12px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.login-input:-webkit-autofill,
+.login-input:-webkit-autofill:hover,
+.login-input:-webkit-autofill:focus,
+.login-input:-webkit-autofill:active {
+  -webkit-text-fill-color: #F7F2FC;
+  caret-color: #F7F2FC;
+  -webkit-box-shadow: 0 0 0 1000px #170F28 inset;
+  transition: background-color 99999s ease-out 0s;
 }
 
 .login-toggle-pw {
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 4px;
-  color: #F2EDF8;
+  padding: 4px 0 4px 4px;
+  margin-left: 8px;
+  color: #B8ABC9;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -169,15 +208,15 @@
 }
 
 .login-toggle-pw svg {
-  width: 33px;
-  height: 26px;
+  width: 15px;
+  height: 12px;
 }
 
 /* Login button */
 .login-submit {
   width: 100%;
-  height: 91px;
-  margin-top: 8px;
+  height: 60px;
+  margin-top: 4px;
   border: none;
   border-radius: 6px;
   background: linear-gradient(
@@ -187,8 +226,8 @@
     #477EF0 100%
   );
   color: #FFFFFF;
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 400;
   font-family: inherit;
   cursor: pointer;
   display: flex;
@@ -217,6 +256,25 @@
   text-align: center;
 }
 
+.login-hint {
+  margin-top: -6px;
+  font-size: 13px;
+  line-height: 1.3;
+  color: #A99BC4;
+}
+
+.login-hint--warn {
+  color: #FCA5A5;
+}
+
+.login-hint--idle {
+  display: none;
+}
+
+.login-field:focus-within .login-hint--idle {
+  display: block;
+}
+
 .login-success {
   background: rgba(34, 197, 94, 0.15);
   border: 1px solid rgba(34, 197, 94, 0.4);
@@ -239,9 +297,9 @@
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  max-width: 628px;
-  margin-top: 37px;
-  font-size: 17px;
+  max-width: 440px;
+  margin-top: 24px;
+  font-size: 12px;
   font-weight: 400;
 }
 
@@ -264,26 +322,51 @@
 }
 
 /* Responsive */
+@media (max-height: 800px) {
+  .login-card {
+    padding-top: 0;
+  }
+  .login-back {
+    margin-bottom: 18px;
+  }
+  .login-logo {
+    margin-bottom: 24px;
+  }
+  .login-title {
+    margin-bottom: 24px;
+  }
+  .login-form {
+    gap: 14px;
+  }
+  .login-field {
+    gap: 10px;
+  }
+  .login-input-wrap,
+  .login-submit {
+    height: 54px;
+  }
+  .login-links {
+    margin-top: 18px;
+  }
+}
+
 @media (max-width: 720px) {
   .login {
     padding: 16px;
   }
-  .login-title {
-    font-size: 36px;
-    margin-bottom: 50px;
+  .login-back {
+    max-width: 440px;
   }
-  .login-brand {
-    margin-bottom: 60px;
+  .login-title {
+    font-size: 24px;
   }
   .login-input-wrap {
-    height: 70px;
     padding: 0 20px;
   }
   .login-input {
     font-size: 18px;
   }
   .login-submit {
-    height: 70px;
     font-size: 18px;
   }
   .login-links {

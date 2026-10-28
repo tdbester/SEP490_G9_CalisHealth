@@ -56,9 +56,9 @@ public class AuthService {
     @Transactional
     public void register(RegisterRequest r) {
         String email = r.email().trim().toLowerCase();
-        if (users.existsByEmail(email))
+        User u = users.findByEmail(email).orElseGet(User::new);
+        if (u.getId() != null && u.isEnabled())
             throw err(HttpStatus.BAD_REQUEST, "Email đã được đăng ký");
-        User u = new User();
         u.setEmail(email);
         u.setFullName(r.fullName().trim());
         u.setPassword(encoder.encode(r.password()));
@@ -70,7 +70,13 @@ public class AuthService {
                         + frontendUrl + "/verify-email?token=" + t.getToken());
     }
 
-    // 2. Xác thực email
+    // Chỉ kiểm tra link khi trang được mở; email scanners thường tự truy cập GET.
+    @Transactional(readOnly = true)
+    public void checkEmailVerificationToken(String token) {
+        validToken(token, TokenType.VERIFY_EMAIL);
+    }
+
+    // 2. Xác thực email sau thao tác xác nhận rõ ràng của người dùng
     @Transactional
     public void verifyEmail(String token) {
         AuthToken t = validToken(token, TokenType.VERIFY_EMAIL);
@@ -78,6 +84,12 @@ public class AuthService {
         u.setEnabled(true);
         users.save(u);
         tokens.delete(t);
+    }
+
+    // Kiểm tra token reset trước khi hiển thị màn hình đổi mật khẩu
+    @Transactional(readOnly = true)
+    public void verifyResetToken(String token) {
+        validToken(token, TokenType.RESET_PASSWORD);
     }
 
     // 3. Đăng nhập
@@ -91,14 +103,19 @@ public class AuthService {
         return new AuthResponse(jwt.generate(u.getEmail()), u.getEmail(), u.getFullName(), u.getRole().name());
     }
 
-    // 4. Quên mật khẩu -> gửi link reset (luôn trả cùng 1 thông báo để không lộ email nào tồn tại)
+    // 4. Quên mật khẩu -> chỉ gửi link reset cho tài khoản đã xác thực email
     @Transactional
     public void forgotPassword(ForgotRequest r) {
         users.findByEmail(r.email().trim().toLowerCase()).ifPresent(u -> {
+            if (!u.isEnabled()) {
+                throw err(HttpStatus.FORBIDDEN,
+                        "Email chưa được xác thực. Vui lòng xác thực email trước khi dùng chức năng quên mật khẩu.");
+            }
+
             AuthToken t = createToken(u, TokenType.RESET_PASSWORD, 30);
             mail.send(u.getEmail(), "[CLH] Đặt lại mật khẩu",
                     "Nhấn vào link sau để đặt lại mật khẩu (hiệu lực 30 phút):\n"
-                            + frontendUrl + "/reset-password?token=" + t.getToken());
+                            + frontendUrl + "/verify-reset-password?token=" + t.getToken());
         });
     }
 
@@ -106,6 +123,10 @@ public class AuthService {
     public void resetPassword(ResetRequest r) {
         AuthToken t = validToken(r.token(), TokenType.RESET_PASSWORD);
         User u = t.getUser();
+        if (!u.isEnabled()) {
+            tokens.delete(t);
+            throw err(HttpStatus.FORBIDDEN, "Tài khoản chưa xác thực email. Vui lòng xác thực email trước khi đặt lại mật khẩu.");
+        }
         u.setPassword(encoder.encode(r.newPassword()));
         users.save(u);
         tokens.delete(t);

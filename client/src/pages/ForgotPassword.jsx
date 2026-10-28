@@ -2,22 +2,30 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import "./Login.css";
+import AuthLogo from "../components/AuthLogo";
+import ImeNotice from "../components/ImeNotice";
+import { hasNonAscii } from "../utils/authInput";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const imeWarn = hasNonAscii(email);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    if (imeWarn) return;
     setLoading(true);
     try {
       await api.post("/auth/forgot-password", { email });
       setSent(true);
-    } catch {
-      // Always show success to prevent email enumeration
-      setSent(true);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data?.error;
+      setError(typeof msg === "string" ? msg : "Không thể gửi email đặt lại mật khẩu.");
     } finally {
       setLoading(false);
     }
@@ -26,10 +34,7 @@ export default function ForgotPassword() {
   return (
     <div className="login">
       <div className="login-card">
-        <div className="login-logo">
-          <span className="login-logo-text">Calis</span>
-          <span className="logo-gradient-text">Health</span>
-        </div>
+        <AuthLogo />
         <h1 className="login-title">Forgot Password</h1>
 
         {sent ? (
@@ -48,9 +53,11 @@ export default function ForgotPassword() {
               <div className="login-input-wrap">
                 <input className="login-input" type="email" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
+              <ImeNotice warn={imeWarn} />
             </div>
+            {error && <div className="login-error">{error}</div>}
             <button type="submit" className="login-submit" disabled={loading}>
-              <span className="login-submit-text">{loading ? "Sending..." : "Send Reset Link"}</span>
+              <span className="login-submit-text">{loading ? "Sending..." : "Send"}</span>
             </button>
           </form>
         )}

@@ -1,22 +1,62 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/client";
 import "./Login.css";
+import AuthLogo from "../components/AuthLogo";
+import ImeNotice from "../components/ImeNotice";
+import { hasNonAscii } from "../utils/authInput";
+
+const REDIRECT_SECONDS = 8;
 
 export default function ResetPassword() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const token = params.get("token") || "";
+  const [status, setStatus] = useState("verifying");
   const [form, setForm] = useState({ newPassword: "", confirmNewPassword: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [seconds, setSeconds] = useState(REDIRECT_SECONDS);
   const [loading, setLoading] = useState(false);
 
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  useEffect(() => {
+    if (!token) {
+      setStatus("error");
+      setError("token đã hết hạn, vui lòng đăng kí lại");
+      return;
+    }
+    api.get(`/auth/verify-reset-token?token=${encodeURIComponent(token)}`)
+      .then(() => setStatus("ready"))
+      .catch(() => {
+        setStatus("error");
+        setError("token đã hết hạn, vui lòng đăng kí lại");
+      });
+  }, [token]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (status !== "error" && !success) return undefined;
+    if (seconds <= 0) {
+      navigate("/login", { replace: true });
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setSeconds((value) => value - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [status, success, seconds, navigate, token]);
+
+  const imeWarn = {
+    newPassword: hasNonAscii(form.newPassword),
+    confirmNewPassword: hasNonAscii(form.confirmNewPassword),
+  };
+
+  const set = (key) => (event) => {
+    const value = event.target.value;
+    setForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError("");
+    if (imeWarn.newPassword || imeWarn.confirmNewPassword) return;
     if (form.newPassword !== form.confirmNewPassword) {
       setError("Mật khẩu xác nhận không khớp");
       return;
@@ -25,13 +65,11 @@ export default function ResetPassword() {
     try {
       await api.post("/auth/reset-password", { token, ...form });
       setSuccess(true);
+      setSeconds(REDIRECT_SECONDS);
     } catch (err) {
-      const data = err.response?.data;
-      const msg =
-        (data && typeof data === "object"
-          ? Object.values(data).flat().join(" • ")
-          : data) || "Đặt lại mật khẩu thất bại.";
-      setError(typeof msg === "string" ? msg : "Đặt lại mật khẩu thất bại.");
+      setError("token đã hết hạn, vui lòng đăng kí lại");
+      setStatus("error");
+      setSeconds(REDIRECT_SECONDS);
     } finally {
       setLoading(false);
     }
@@ -40,60 +78,42 @@ export default function ResetPassword() {
   return (
     <div className="login">
       <div className="login-card">
-        <div className="login-logo">
-          <span className="login-logo-text">Calis</span>
-          <span className="logo-gradient-text">Health</span>
-        </div>
-        <h1 className="login-title">Đặt lại mật khẩu</h1>
+        <AuthLogo />
+        <h1 className="login-title">
+          {status === "verifying" ? "Đang xác thực..." : status === "error" ? "Xác thực thất bại" : "Đặt lại mật khẩu"}
+        </h1>
 
-        {success ? (
+        {status === "verifying" && <div className="login-form"><div className="login-success">Đang kiểm tra token, vui lòng chờ...</div></div>}
+        {status === "error" && (
           <div className="login-form">
-            <div className="login-success">Đặt lại mật khẩu thành công! Hãy đăng nhập lại.</div>
-            <button className="login-submit" onClick={() => navigate("/login")}>
-              <span className="login-submit-text">Đăng nhập</span>
-            </button>
+            <div className="login-error">{error}</div>
+            <div className="login-redirect">Tự động chuyển về trang đăng nhập sau {seconds} giây.</div>
           </div>
-        ) : (
+        )}
+        {status === "ready" && !success && (
           <form className="login-form" onSubmit={handleSubmit}>
             {error && <div className="login-error">{error}</div>}
-
             <div className="login-field">
               <label className="login-label">Mật khẩu mới</label>
-              <div className="login-input-wrap">
-                <input
-                  className="login-input"
-                  type="password"
-                  placeholder="Min 8 chars, upper, lower, digit, special"
-                  value={form.newPassword}
-                  onChange={set("newPassword")}
-                  required
-                />
-              </div>
+              <div className="login-input-wrap"><input className="login-input" type="password" value={form.newPassword} onChange={set("newPassword")} required /></div>
+              <ImeNotice warn={imeWarn.newPassword} />
             </div>
-
             <div className="login-field">
               <label className="login-label">Xác nhận mật khẩu mới</label>
-              <div className="login-input-wrap">
-                <input
-                  className="login-input"
-                  type="password"
-                  placeholder="Re-enter new password"
-                  value={form.confirmNewPassword}
-                  onChange={set("confirmNewPassword")}
-                  required
-                />
-              </div>
+              <div className="login-input-wrap"><input className="login-input" type="password" value={form.confirmNewPassword} onChange={set("confirmNewPassword")} required /></div>
+              <ImeNotice warn={imeWarn.confirmNewPassword} />
             </div>
-
             <button type="submit" className="login-submit" disabled={loading}>
               <span className="login-submit-text">{loading ? "Đang xử lý..." : "Đặt lại mật khẩu"}</span>
             </button>
           </form>
         )}
-
-        <div className="login-links">
-          <button className="login-link" onClick={() => navigate("/login")}>Về trang đăng nhập</button>
-        </div>
+        {success && (
+          <div className="login-form">
+            <div className="login-success">Đặt lại mật khẩu thành công! Hãy đăng nhập lại.</div>
+            <div className="login-redirect">Tự động chuyển đến màn hình reset password sau {seconds} giây.</div>
+          </div>
+        )}
       </div>
     </div>
   );
