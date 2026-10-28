@@ -583,7 +583,8 @@
 
 .dash-community-stats {
   display: flex;
-  gap: 32px;
+  flex-wrap: wrap;
+  gap: 20px 32px;
 }
 
 .dash-community-stats > div {

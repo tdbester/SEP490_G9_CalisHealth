@@ -41,9 +41,9 @@ function SurveyIcon({ isActive }) {
 }
 
 const NAV_ITEMS = [
-  { label: "Dashboard", path: "/dashboard", icon: DashboardIcon },
-  { label: "Library", path: "/library", icon: LibraryIcon },
-  { label: "Tracking",  path: "/tracking",  icon: TrackingIcon },
+  { label: "Dashboard", path: "/",        icon: DashboardIcon },
+  { label: "Library",   path: "/library", icon: LibraryIcon },
+  { label: "Health & Progress", path: "/tracking", icon: TrackingIcon },
 ];
 
 // Figma content_manager_dashboard: Dashboard, Survey, Library (Progression rules / Level criteria chưa có màn)
@@ -70,7 +70,9 @@ export default function Sidebar() {
     <aside className="sidebar">
       <nav className="sidebar-nav">
         {items.map((item) => {
-          const isActive = pathname.startsWith(item.path);
+          const isActive = item.path === "/"
+            ? pathname === "/"
+            : pathname.startsWith(item.path);
           const Icon = item.icon;
 
           return (

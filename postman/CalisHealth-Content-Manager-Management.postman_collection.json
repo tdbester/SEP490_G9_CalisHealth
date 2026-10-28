@@ -1,0 +1,220 @@
+{
+  "info": {
+    "name": "CalisHealth - Content Manager Exercise & Workout Management",
+    "description": "End-to-end Postman checks for Content Manager exercise/workout screens. Configure cmEmail/cmPassword. For detail/update/status requests, set systemExerciseCode and workoutCode to existing editable records; pendingExerciseCode must be a CUSTOM exercise awaiting review. Requests are grouped by screen and mutation workflows. Run the exercise create request before the workout create request; the created codes are saved automatically. Cleanup requests delete only the records created by this collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "cmEmail", "value": "" },
+    { "key": "cmPassword", "value": "", "type": "secret" },
+    { "key": "token", "value": "", "type": "secret" },
+    { "key": "systemExerciseCode", "value": "" },
+    { "key": "pendingExerciseCode", "value": "" },
+    { "key": "workoutCode", "value": "" },
+    { "key": "createdExerciseCode", "value": "" },
+    { "key": "createdWorkoutCode", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "0. Authentication & access",
+      "item": [
+        {
+          "name": "Login as Content Manager (save JWT)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{cmEmail}}\",\n  \"password\": \"{{cmPassword}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Login succeeds', function () { pm.response.to.have.status(200); });",
+            "if (pm.response.code === 200) {",
+            "  const body = pm.response.json();",
+            "  pm.test('Authenticated identity is Content Manager', function () { pm.expect(body.role).to.eql('CONTENT_MANAGER'); });",
+            "  pm.test('Login returns a token', function () { pm.expect(body.token).to.be.a('string').and.not.empty; });",
+            "  pm.collectionVariables.set('token', body.token);",
+            "}"
+          ] } }]
+        },
+        {
+          "name": "Verify current account role",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/auth/me" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Current user is returned', function () { pm.response.to.have.status(200); });",
+            "if (pm.response.code === 200) pm.test('Role is Content Manager', function () { pm.expect(pm.response.json().role).to.eql('CONTENT_MANAGER'); });"
+          ] } }]
+        },
+        {
+          "name": "Exercise management rejects missing token",
+          "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/api/content/exercises" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Unauthenticated request is rejected', function () { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "1. Exercise list & detail",
+      "item": [
+        {
+          "name": "List exercises (exercise management screen)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/exercises" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Exercise list returns 200', function () { pm.response.to.have.status(200); });",
+            "if (pm.response.code === 200) {",
+            " const rows = pm.response.json();",
+            " pm.test('Exercise list is an array', function () { pm.expect(rows).to.be.an('array'); });",
+            " const item = rows.find(x => x.code === pm.collectionVariables.get('systemExerciseCode'));",
+            " if (item) pm.test('Exercise list rows include management fields', function () { pm.expect(item).to.have.property('code'); pm.expect(item).to.have.property('name'); pm.expect(item).to.have.property('active'); pm.expect(item).to.have.property('source'); });",
+            "}"
+          ] } }]
+        },
+        {
+          "name": "Get system exercise detail (set systemExerciseCode)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/exercises/{{systemExerciseCode}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Exercise detail returns 200', function () { pm.response.to.have.status(200); });",
+            "if (pm.response.code === 200) { const body = pm.response.json(); pm.test('Detail matches requested code and has screen fields', function () { pm.expect(body.code).to.eql(pm.collectionVariables.get('systemExerciseCode')); pm.expect(body).to.have.property('muscleGroup'); pm.expect(body).to.have.property('guide'); pm.expect(body).to.have.property('category'); pm.expect(body).to.have.property('active'); }); }"
+          ] } }]
+        },
+        {
+          "name": "Get unknown exercise detail (not found state)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/exercises/POSTMAN-NOT-FOUND" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Unknown exercise returns 404', function () { pm.response.to.have.status(404); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "2. Exercise create, edit & delete",
+      "item": [
+        {
+          "name": "Create system exercise (multipart form)",
+          "request": {
+            "method": "POST",
+            "body": { "mode": "formdata", "formdata": [
+              { "key": "data", "type": "text", "contentType": "application/json", "value": "{\"name\":\"Postman CM Exercise {{$timestamp}}\",\"type\":\"HEALTH\",\"description\":\"Created by the Content Manager Postman collection.\",\"category\":\"REPS\",\"muscleGroup\":\"Chest\",\"level\":\"Beginner\",\"guide\":\"Assume the starting position\\nPerform one controlled repetition\",\"defaultSets\":3,\"defaultReps\":10,\"duration\":null}" },
+              { "key": "demoVideo", "type": "file", "src": "", "disabled": true },
+              { "key": "anatomyImage", "type": "file", "src": "", "disabled": true }
+            ] },
+            "url": "{{baseUrl}}/api/content/exercises"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Exercise is created', function () { pm.response.to.have.status(201); });",
+            "if (pm.response.code === 201) { const body = pm.response.json(); pm.collectionVariables.set('createdExerciseCode', body.code); pm.test('Created exercise is active system content', function () { pm.expect(body.code).to.be.a('string').and.not.empty; pm.expect(body.source).to.eql('SYSTEM'); pm.expect(body.active).to.eql(true); }); }"
+          ] } }]
+        },
+        {
+          "name": "Update created system exercise",
+          "request": {
+            "method": "PUT",
+            "body": { "mode": "formdata", "formdata": [{ "key": "data", "type": "text", "contentType": "application/json", "value": "{\"name\":\"Postman CM Exercise Updated {{$timestamp}}\",\"type\":\"HEALTH\",\"description\":\"Updated by the Content Manager Postman collection.\",\"category\":\"REPS\",\"muscleGroup\":\"Chest · Arms\",\"level\":\"Intermediate\",\"guide\":\"Set up\nPerform with control\",\"defaultSets\":4,\"defaultReps\":12,\"duration\":null}" }] },
+            "url": "{{baseUrl}}/api/content/exercises/{{createdExerciseCode}}"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Exercise update succeeds', function () { pm.response.to.have.status(200); });",
+            "if (pm.response.code === 200) pm.test('Updated values are persisted', function () { const body = pm.response.json(); pm.expect(body.name).to.include('Updated'); pm.expect(body.defaultSets).to.eql(4); pm.expect(body.level).to.eql('Intermediate'); });"
+          ] } }]
+        },
+        {
+          "name": "Delete created exercise (run after workout cleanup)",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/content/exercises/{{createdExerciseCode}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Created exercise is deleted', function () { pm.response.to.have.status(204); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "3. Exercise moderation queue & history",
+      "item": [
+        {
+          "name": "List pending exercises (pending moderation screen)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/exercises/pending-moderation" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Pending moderation list returns 200', function () { pm.response.to.have.status(200); });",
+            "if (pm.response.code === 200) pm.test('Pending moderation is an array of inactive custom exercises', function () { const rows = pm.response.json(); pm.expect(rows).to.be.an('array'); rows.forEach(x => { pm.expect(x.source).to.eql('CUSTOM'); pm.expect(x.active).to.eql(false); }); });"
+          ] } }]
+        },
+        {
+          "name": "Get pending exercise detail (set pendingExerciseCode)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/exercises/{{pendingExerciseCode}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Pending exercise detail returns 200', function () { pm.response.to.have.status(200); });", "if (pm.response.code === 200) pm.test('Detail is custom and pending', function () { const body = pm.response.json(); pm.expect(body.code).to.eql(pm.collectionVariables.get('pendingExerciseCode')); pm.expect(body.source).to.eql('CUSTOM'); pm.expect(body.active).to.eql(false); });"] } }]
+        },
+        {
+          "name": "Approve pending exercise (set pendingExerciseCode)",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"active\": true\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/content/exercises/{{pendingExerciseCode}}/status" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Approval succeeds', function () { pm.response.to.have.status(200); });", "if (pm.response.code === 200) pm.test('Exercise is now active', function () { pm.expect(pm.response.json().active).to.eql(true); });"] } }]
+        },
+        {
+          "name": "Reject pending exercise (set another pendingExerciseCode)",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"active\": false\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/content/exercises/{{pendingExerciseCode}}/status" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Rejection succeeds', function () { pm.response.to.have.status(200); });", "if (pm.response.code === 200) pm.test('Exercise is now inactive', function () { pm.expect(pm.response.json().active).to.eql(false); });"] } }]
+        },
+        {
+          "name": "List approval history",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/exercises/approval-history" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Approval history returns 200', function () { pm.response.to.have.status(200); });",
+            "if (pm.response.code === 200) pm.test('History has expected review fields', function () { const rows = pm.response.json(); pm.expect(rows).to.be.an('array'); if (rows.length) { pm.expect(rows[0]).to.have.property('decision'); pm.expect(rows[0]).to.have.property('reviewedAt'); pm.expect(rows[0].decision).to.be.oneOf(['APPROVED', 'REJECTED']); } });"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "4. Workout list & detail",
+      "item": [
+        {
+          "name": "List workouts",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/workouts" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Workout list returns 200', function () { pm.response.to.have.status(200); });",
+            "if (pm.response.code === 200) pm.test('Workout list rows include management fields', function () { const rows = pm.response.json(); pm.expect(rows).to.be.an('array'); const item = rows.find(x => x.code === pm.collectionVariables.get('workoutCode')); if (item) { pm.expect(item).to.have.property('name'); pm.expect(item).to.have.property('active'); pm.expect(item.exercises).to.be.an('array'); } });"
+          ] } }]
+        },
+        {
+          "name": "Get workout detail (set workoutCode)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/workouts/{{workoutCode}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Workout detail returns 200', function () { pm.response.to.have.status(200); });", "if (pm.response.code === 200) pm.test('Workout detail has plan and exercise data', function () { const body = pm.response.json(); pm.expect(body.code).to.eql(pm.collectionVariables.get('workoutCode')); pm.expect(body.exercises).to.be.an('array'); pm.expect(body).to.have.property('restSeconds'); });"] } }]
+        },
+        {
+          "name": "Unknown workout detail (not found state)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/workouts/POSTMAN-NOT-FOUND" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Unknown workout returns 404', function () { pm.response.to.have.status(404); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "5. Workout create, edit, status & delete",
+      "item": [
+        {
+          "name": "Create workout using created exercise",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman CM Workout {{$timestamp}}\",\n  \"description\": \"Temporary workout created by the Content Manager collection.\",\n  \"restSeconds\": 60,\n  \"level\": \"Beginner\",\n  \"exerciseCodes\": [\"{{createdExerciseCode}}\"]\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/content/workouts" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Workout is created', function () { pm.response.to.have.status(201); });", "if (pm.response.code === 201) { const body = pm.response.json(); pm.collectionVariables.set('createdWorkoutCode', body.code); pm.test('Workout has generated code and selected exercise', function () { pm.expect(body.code).to.be.a('string').and.not.empty; pm.expect(body.exercises).to.have.length(1); pm.expect(body.exercises[0].code).to.eql(pm.collectionVariables.get('createdExerciseCode')); }); }"] } }]
+        },
+        {
+          "name": "Update created workout",
+          "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman CM Workout Updated {{$timestamp}}\",\n  \"description\": \"Updated temporary workout.\",\n  \"restSeconds\": 90,\n  \"level\": \"Intermediate\",\n  \"exerciseCodes\": [\"{{createdExerciseCode}}\"]\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/content/workouts/{{createdWorkoutCode}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Workout update succeeds', function () { pm.response.to.have.status(200); });", "if (pm.response.code === 200) pm.test('Updated workout values are persisted', function () { const body = pm.response.json(); pm.expect(body.name).to.include('Updated'); pm.expect(body.restSeconds).to.eql(90); pm.expect(body.level).to.eql('Intermediate'); });"] } }]
+        },
+        {
+          "name": "Set created workout inactive",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"active\": false\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/content/workouts/{{createdWorkoutCode}}/status" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Workout status update succeeds', function () { pm.response.to.have.status(200); });", "if (pm.response.code === 200) pm.test('Workout is inactive', function () { pm.expect(pm.response.json().active).to.eql(false); });"] } }]
+        },
+        {
+          "name": "Set created workout active",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"active\": true\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/content/workouts/{{createdWorkoutCode}}/status" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Workout can be reactivated', function () { pm.response.to.have.status(200); });", "if (pm.response.code === 200) pm.test('Workout is active', function () { pm.expect(pm.response.json().active).to.eql(true); });"] } }]
+        },
+        {
+          "name": "Delete created workout (cleanup)",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/content/workouts/{{createdWorkoutCode}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Created workout is deleted', function () { pm.response.to.have.status(204); });"] } }]
+        }
+      ]
+    }
+  ]
+}

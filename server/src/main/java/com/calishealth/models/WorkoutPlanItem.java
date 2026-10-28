@@ -21,7 +21,7 @@ public class WorkoutPlanItem {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "exercise_id", nullable = false)
-    private ExerciseEntry exercise;
+    private Exercise exercise;
 
     @Column(name = "day_of_week", nullable = false)
     private int dayOfWeek;

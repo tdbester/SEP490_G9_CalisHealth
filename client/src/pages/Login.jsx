@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useLocation, useNavigate, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { markOnboardingPrompted, needsOnboarding } from "../api/survey";
 import "./Login.css";
@@ -58,11 +58,40 @@ function Logo() {
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [existingRole, setExistingRole] = useState(null);
   const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    if (!localStorage.getItem("token")) return;
+
+    let cancelled = false;
+    api.get("/auth/me").then(({ data }) => {
+      if (cancelled) return;
+      setExistingRole(data.role);
+      localStorage.setItem(
+        "user",
+        JSON.stringify({ email: data.email, fullName: data.fullName, role: data.role }),
+      );
+    }).catch(() => {
+      if (!cancelled) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  if (existingRole === "CONTENT_MANAGER") {
+    return <Navigate to="/content/dashboard" replace />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -77,7 +106,11 @@ export default function Login() {
       localStorage.setItem("token", res.data.token);
       localStorage.setItem(
         "user",
-        JSON.stringify({ email: res.data.email, fullName: res.data.fullName, role: res.data.role })
+        JSON.stringify({
+          email: res.data.email,
+          fullName: res.data.fullName,
+          role: res.data.role,
+        }),
       );
       // Member chưa hoàn thành / chưa bỏ qua khảo sát onboarding -> vào survey trước,
       // kể cả khi có returnTo (vd vào "/" lúc chưa đăng nhập bị chuyển sang /login?returnTo=/)
@@ -87,21 +120,26 @@ export default function Login() {
         return;
       }
       const returnTo = new URLSearchParams(location.search).get("returnTo");
-      const hasReturnTo = returnTo?.startsWith("/") && !returnTo.startsWith("//") && returnTo !== "/login";
-      // Content Manager chưa có dashboard riêng -> mặc định vào Survey management
-      const home = res.data.role === "CONTENT_MANAGER" ? "/content/survey" : "/";
-      navigate(hasReturnTo ? returnTo : home, { replace: true });
+      const isSafeReturnTo =
+        returnTo?.startsWith("/") && !returnTo.startsWith("//") && returnTo !== "/login";
+      const destination =
+        res.data.role === "CONTENT_MANAGER"
+          ? "/content/dashboard"
+          : isSafeReturnTo
+            ? returnTo
+            : "/";
+      navigate(destination, { replace: true });
     } catch (err) {
       const msg =
         err.response?.data?.error ||
         err.response?.data?.message ||
         err.response?.data?.detail ||
         (err.response?.status === 401
-          ? "Email hoặc mật khẩu không đúng."
+          ? "Incorrect email or password."
           : err.response?.status === 403
-            ? "Tài khoản chưa được xác minh hoặc không được phép đăng nhập."
-            : "Không thể đăng nhập. Vui lòng thử lại.");
-      setError(typeof msg === "string" ? msg : "Không thể đăng nhập. Vui lòng thử lại.");
+            ? "This account has not been verified or is not allowed to sign in."
+            : "Could not sign in. Please try again.");
+      setError(typeof msg === "string" ? msg : "Could not sign in. Please try again.");
     } finally {
       setLoading(false);
     }
