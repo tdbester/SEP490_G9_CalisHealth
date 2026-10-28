@@ -14,6 +14,10 @@ import WorkoutDetailPage from "./pages/WorkoutDetailPage";
 import PendingModerationPage from "./pages/PendingModerationPage";
 import ExerciseModerationDetailPage from "./pages/ExerciseModerationDetailPage";
 import ExerciseApprovalHistoryPage from "./pages/ExerciseApprovalHistoryPage";
+import LevelBenchmarkCriteriaPage, {
+  LevelBenchmarkDetailPage,
+  LevelBenchmarkFormPage,
+} from "./pages/LevelBenchmarkCriteriaPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -40,7 +44,11 @@ export default function App() {
           <Route path="surveys" element={<ContentManagerSectionPage section="surveys" />} />
           <Route path="exercises" element={<ExerciseListPage />} />
           <Route path="progression-rules" element={<ContentManagerSectionPage section="progressionRules" />} />
-          <Route path="level-criteria" element={<ContentManagerSectionPage section="levelCriteria" />} />
+          <Route path="level-criteria" element={<LevelBenchmarkCriteriaPage />} />
+          <Route path="level-criteria/create" element={<LevelBenchmarkFormPage />} />
+          <Route path="level-criteria/edit" element={<LevelBenchmarkFormPage />} />
+          <Route path="level-criteria/:id/edit" element={<LevelBenchmarkFormPage />} />
+          <Route path="level-criteria/:id" element={<LevelBenchmarkDetailPage />} />
           <Route path="exercises/pending-moderation" element={<PendingModerationPage />} />
           <Route path="exercises/approval-history" element={<ExerciseApprovalHistoryPage />} />
           <Route path="exercises/moderation/:code" element={<ExerciseModerationDetailPage />} />

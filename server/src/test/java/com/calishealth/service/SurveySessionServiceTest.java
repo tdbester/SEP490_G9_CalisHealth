@@ -52,7 +52,7 @@ class SurveySessionServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new SurveySessionService(sessions, answers, questions, users, surveys, loader, SurveyFixtures.registry());
+        service = new SurveySessionService(sessions, answers, questions, users, surveys, loader, SurveyFixtures.registry(), mock(LevelBenchmarkService.class));
 
         User user = user(1L, EMAIL);
         Survey survey = new Survey();

@@ -193,7 +193,7 @@ export default function ContentManagerDashboard() {
           tone={CARD_TONES[2]}
         />
         <ManagementCard
-          title="Level criteria"
+          title="Level benchmark criteria"
           description="Set measurable requirements for Beginner, Intermediate, and Advanced."
           to={CONTENT_PATHS.levelCriteria}
           action="Manage criteria"

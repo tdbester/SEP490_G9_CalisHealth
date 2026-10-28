@@ -57,6 +57,7 @@ public class SurveySessionService {
     private final SurveyService surveys;
     private final SurveyDefinitionLoader loader;
     private final QuestionTypeRegistry registry;
+    private final LevelBenchmarkService levelBenchmarks;
 
     public record StartResult(SessionResponse session, boolean created) {}
 
@@ -254,11 +255,26 @@ public class SurveySessionService {
                     "The survey cannot be completed yet.", errors);
         }
 
+        assignBenchmarkLevelIfPresent(session, values);
         LocalDateTime now = LocalDateTime.now();
         session.setStatus(SurveySession.Status.COMPLETED);
         session.setCompletedAt(now);
         session.setUpdatedAt(now);
         return view(session, definition, values);
+    }
+
+    private void assignBenchmarkLevelIfPresent(SurveySession session, Map<String, JsonNode> values) {
+        boolean hasLevelTest = session.getSurvey().getSurveyCode().toUpperCase(java.util.Locale.ROOT).contains("ONBOARD");
+        if (!hasLevelTest) return;
+        JsonNode pushUp = values.get("PUSH_UP_MAX_REPS");
+        JsonNode squat = values.get("SQUAT_MAX_REPS");
+        JsonNode plank = values.get("PLANK_MAX_SECONDS");
+        if (pushUp == null || squat == null || plank == null
+                || !pushUp.canConvertToInt() || !squat.canConvertToInt() || !plank.canConvertToInt()) {
+            return;
+        }
+        levelBenchmarks.assignLevelFromOnboarding(
+                session.getUser().getId(), pushUp.intValue(), squat.intValue(), plank.intValue());
     }
 
     /** Bỏ qua: giữ nguyên câu trả lời đã lưu. */
