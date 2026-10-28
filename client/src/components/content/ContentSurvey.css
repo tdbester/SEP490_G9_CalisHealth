@@ -203,12 +203,22 @@
 
 .cs-question {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
   padding: 12px 12px 12px 8px;
   border-radius: 12px;
   border: 1px solid #2D2550;
   background: #1A1433;
+}
+
+.cs-question.expanded {
+  border-color: #8B7CF6;
+  box-shadow: inset 4px 0 0 #8B7CF6;
+}
+
+.cs-question-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .cs-question.dragging {
@@ -233,6 +243,31 @@
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cs-question-info strong {
+  overflow-wrap: anywhere;
+}
+
+.cs-new-tag {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(74, 222, 128, 0.12);
+  color: #4ADE80;
+  font-size: 11.5px;
+}
+
+.cs-questions-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
 }
 
 .cs-question-info strong {
@@ -276,6 +311,125 @@
 .cs-icon-btn svg {
   width: 18px;
   height: 18px;
+}
+
+.cs-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: transparent;
+  color: #9A95B8;
+}
+
+.cs-icon-btn--edit:hover,
+.cs-icon-btn--edit[aria-expanded="true"] {
+  background: rgba(139, 124, 246, 0.14);
+  color: #C4B5FD;
+}
+
+/* ── Editor 1 câu hỏi (kiểu Google Form) ─────────────── */
+.cs-qe {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 12px 0 0 32px;
+  padding-top: 14px;
+  border-top: 1px solid #2D2550;
+}
+
+.cs-qe-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 12px;
+}
+
+.cs-select {
+  appearance: none;
+  padding-right: 34px;
+  background-image: linear-gradient(45deg, transparent 50%, #9A95B8 50%),
+    linear-gradient(135deg, #9A95B8 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+.cs-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cs-select option {
+  background: #15102A;
+}
+
+.cs-qe-hint {
+  margin-top: -6px !important;
+  font-size: 12.5px;
+}
+
+.cs-qe-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cs-qe-options li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cs-qe-options .cs-input {
+  min-height: 40px;
+  padding: 8px 12px;
+}
+
+.cs-qe-marker {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #6F6890;
+}
+
+.cs-qe-marker.is-box {
+  border-radius: 4px;
+}
+
+.cs-qe-add {
+  align-self: flex-start;
+}
+
+.cs-qe-narrow {
+  max-width: 220px;
+}
+
+.cs-qe-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: #D8CEEC;
+  cursor: pointer;
+}
+
+.cs-qe-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: #8B7CF6;
+}
+
+.cs-qe-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cs-qe-footer .cs-ghost-btn {
+  min-height: 36px;
+  padding: 0 16px;
 }
 
 /* Switch "Required" */
@@ -616,8 +770,16 @@
 }
 
 @media (max-width: 600px) {
-  .cs-question {
+  .cs-question-row {
     flex-wrap: wrap;
+  }
+
+  .cs-qe {
+    margin-left: 0;
+  }
+
+  .cs-qe-top {
+    grid-template-columns: 1fr;
   }
 
   .cs-number-grid {

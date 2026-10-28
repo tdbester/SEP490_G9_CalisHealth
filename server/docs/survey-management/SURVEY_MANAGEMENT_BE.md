@@ -15,9 +15,9 @@ Thiết kế backend cho màn **Survey management**, nơi Content Manager quản
 |---|---|---|---|
 | F1 | Danh sách bước, tìm theo tên, lọc theo tab trạng thái, đếm số bước mỗi tab | `GET /steps?search=&status=` | 200 |
 | F2 | Xem chi tiết 1 bước (dữ liệu cho pop-up Update step) | `GET /steps/{stepId}` | 200 |
-| F3 | **Create step** | `POST /steps` | 201 |
-| F4 | **Edit** (pop-up Update step → **Save changes**): tên, mô tả, trạng thái, câu hỏi (thứ tự, Required, thêm, gỡ) | `PUT /steps/{stepId}` | 200 |
-| F4a | Pop-up Update step → **Add question**: câu hỏi có thể thêm | `GET /steps/{stepId}/available-questions?search=` | 200 |
+| F3 | **Create step** (kèm câu hỏi tạo luôn trong pop-up) | `POST /steps` | 201 |
+| F4 | **Edit** (pop-up Update step → **Save changes**): tên, mô tả, trạng thái, câu hỏi (thứ tự, Required, thêm, gỡ, tạo mới, sửa nội dung) | `PUT /steps/{stepId}` | 200 |
+| F4a | Pop-up Create / Update step → **Add existing**: câu hỏi có sẵn có thể thêm | `GET /steps/{stepId}/available-questions?search=` (Update) · `GET /steps/available-questions?search=` (Create) | 200 |
 | F5 | **Preview**: bước như member sẽ thấy, có số "Step n of m" | `GET /steps/{stepId}/preview` | 200 |
 | F5a | Pop-up Preview → **Continue**: kiểm tra thử câu trả lời, không lưu gì | `POST /steps/{stepId}/preview/check` | 200 |
 | F6 | **⋮**: Activate / Deactivate | `PUT /steps/{stepId}/status` | 200 |
@@ -70,7 +70,7 @@ Thiết kế backend cho màn **Survey management**, nơi Content Manager quản
 ### F2 – Chi tiết bước
 
 `GET /steps/{stepId}` trả `{ step: <StepSummary>, questions: [...], resultConfig }`.
-`questions` liệt kê cả câu hỏi đang tắt (`active: false`) để Content Manager thấy đủ. Mỗi phần tử gồm `questionCode, questionText, questionType, required, sortOrder, active, conditionalRules`.
+`questions` liệt kê cả câu hỏi đang tắt (`active: false`) để Content Manager thấy đủ. Mỗi phần tử gồm `questionCode, questionText, questionType, required, sortOrder, active, conditionalRules`, cùng các field cho editor câu hỏi: `description`, `options` (lựa chọn ACTIVE theo thứ tự), `answered` (đã có member trả lời ở bất kỳ survey nào) và `typeLocked` (không đổi được loại câu hỏi, vì đã có câu trả lời hoặc rule chấm level đang dùng câu này).
 
 ### F3 – Create step
 
@@ -84,6 +84,7 @@ POST /steps
 - Bước mới luôn ở trạng thái **DRAFT**, nên member chưa thấy.
 - Vị trí: bước QUESTIONS được chèn **ngay trước bước RESULT**. Bước RESULT luôn đứng cuối và có sẵn cấu hình mặc định.
 - Tên bước không được trùng trong cùng survey (không phân biệt hoa thường).
+- `questions` (tùy chọn): giống hệt field `questions` của F4, kể cả câu hỏi tạo mới. Bước và câu hỏi được lưu trong **1 request**. Câu hỏi nào lỗi thì không lưu gì, kể cả bước. Bước RESULT không được có câu hỏi.
 
 ### F4 – Edit (pop-up Update step → Save changes)
 
@@ -111,7 +112,28 @@ PUT /steps/{stepId}
 | `stepName` | Bắt buộc, tối đa 255 ký tự, không trùng tên bước khác trong survey. `stepCode` **không đổi được**, vì phiên khảo sát tham chiếu bước bằng mã này. |
 | `description` | Tối đa **150** ký tự (bộ đếm "57 / 150" trên màn). Chuỗi trắng được lưu thành null. |
 | `status` | Tab Active / Draft / Inactive. Luật giống F6: không quay về DRAFT sau khi đã publish; bước ACTIVE phải có ít nhất 1 câu hỏi ACTIVE. |
-| `questions` | Danh sách **cuối cùng** của bước, theo đúng thứ tự kéo thả (tối đa 50). Mỗi câu gồm `questionCode` và trạng thái nút `required`. |
+| `questions` | Danh sách **cuối cùng** của bước, theo đúng thứ tự kéo thả (tối đa 50). Mỗi câu gồm `questionCode`, trạng thái nút `required` và `content` (tùy chọn, xem bên dưới). |
+
+**Tạo / sửa câu hỏi ngay trong pop-up (editor kiểu Google Form):**
+
+```json
+{ "questionCode": null, "required": true,
+  "content": { "questionText": "Max pull-ups", "description": "In one set", "questionType": "NUMBER",
+               "unit": "reps", "validationRules": { "min": 0, "max": 60, "integerOnly": true }, "options": [] } }
+
+{ "questionCode": "TRAINING_SKILLS", "required": true,
+  "content": { "questionText": "Which skills do you want to learn?", "questionType": "MULTIPLE_SELECT",
+               "validationRules": { "maxSelections": 3 },
+               "options": [ { "optionCode": "HANDSTAND", "label": "Handstand" }, { "optionCode": null, "label": "Front lever" } ] } }
+```
+
+- `questionCode = null` là **câu hỏi mới**, bắt buộc có `content`. Mã câu hỏi được sinh từ nội dung giống cách sinh `stepCode` (ví dụ `MAX_PULL_UPS`). `required` cũng trở thành giá trị mặc định của câu hỏi trong ngân hàng.
+- Câu có sẵn: không gửi `content` thì nội dung giữ nguyên. Có gửi `content` thì nội dung câu hỏi **trong ngân hàng** được cập nhật, nên mọi survey version dùng câu này đều thấy nội dung mới.
+- `questionType`: `NUMBER`, `SINGLE_SELECT`, `MULTIPLE_SELECT`, `BOOLEAN`, `TEXT`, `TEXTAREA`. `validationRules` được kiểm tra bằng đúng handler của loại đó, cùng luật với lúc member trả lời (ví dụ `min` > `max`, rule không hỗ trợ, câu chọn không có lựa chọn nào đều bị từ chối). `unit` chỉ lưu cho `NUMBER`. `options` chỉ dùng cho 2 loại câu chọn và theo đúng thứ tự hiển thị.
+- **Lựa chọn:** `optionCode = null` là lựa chọn mới, mã sinh từ `label`. Lựa chọn có trong DB mà không có trong danh sách gửi lên thì bị gỡ: nếu câu hỏi đã có member trả lời thì chỉ **ẩn** (INACTIVE) để câu trả lời cũ vẫn đọc được, nếu chưa có thì xóa.
+- **Không đổi được loại câu hỏi** khi câu đã có member trả lời (ở bất kỳ survey nào) hoặc rule chấm level đang dùng câu đó (`typeLocked` ở F2).
+- Màn member hiển thị `display_config.label` thay cho `questionText`. Vì vậy khi đổi `questionText` của câu có `label`, BE đổi luôn `label` để member thấy đúng chữ vừa nhập.
+- Lỗi nội dung được gom chung vào `400 INVALID_STEP_QUESTIONS`, `message` có dạng "Question 2: …": `QUESTION_CONTENT_REQUIRED`, `UNSUPPORTED_QUESTION_TYPE`, `QUESTION_TYPE_LOCKED`, `DUPLICATE_OPTION`, `OPTION_NOT_FOUND`, `INVALID_QUESTION_CONFIG`.
 
 Cách BE xử lý `questions`:
 
@@ -125,9 +147,9 @@ Cách BE xử lý `questions`:
 - **Kiểm tra cấu hình:** BE kiểm tra lại cấu hình survey. Ví dụ: gỡ `GOAL_TYPE` trong khi `HEALTH_GOAL` có điều kiện dựa trên câu này, hoặc kéo `HEALTH_GOAL` lên trước `GOAL_TYPE`, sẽ nhận `409 SURVEY_CONFIG_CONFLICT`.
 - Bước RESULT không dùng endpoint này: `400 RESULT_STEP_NOT_EDITABLE`, cần dùng F10.
 
-### F4a – Add question
+### F4a – Add existing
 
-`GET /steps/{stepId}/available-questions?search=height` trả danh sách:
+`GET /steps/{stepId}/available-questions?search=height` trả danh sách. Trong pop-up Create step, bước chưa tồn tại nên gọi `GET /steps/available-questions?search=`. Endpoint này trả các câu chưa dùng ở bước nào của survey. Mỗi câu có thêm `description`, `options`, `answered`, `typeLocked` để sửa được ngay sau khi thêm.
 
 ```json
 [{ "questionCode": "HEIGHT", "questionText": "What is your height?", "questionType": "NUMBER",
@@ -138,7 +160,7 @@ Cách BE xử lý `questions`:
 - Danh sách gồm câu hỏi ACTIVE trong ngân hàng, **trừ câu đang dùng ở bước khác** của survey.
 - `inCurrentStep = true` nghĩa là câu đang nằm trong bước này. FE dùng cờ này để disable nút thêm.
 - `search` lọc theo mã hoặc nội dung câu hỏi, tối đa 100 ký tự.
-- Tạo câu hỏi **mới** vào ngân hàng chưa nằm trong phạm vi này (xem mục 7).
+- Tạo câu hỏi **mới** thì dùng `content` trong F3 / F4, không qua endpoint này.
 
 ### F5 – Preview
 
@@ -330,13 +352,13 @@ DB đã có survey này thì chạy khối **RESET** (đang comment) ở cuối 
 
 ## 7. Ngoài phạm vi màn này
 
-Pop-up Update step đã quản lý được **câu hỏi trong bước**: thêm từ ngân hàng câu hỏi, gỡ, sắp xếp, bật/tắt Required.
+Pop-up Create / Update step đã quản lý được **câu hỏi trong bước**: tạo câu mới, sửa nội dung, loại, rules và lựa chọn ngay trong pop-up, thêm câu có sẵn từ ngân hàng, gỡ, sắp xếp, bật/tắt Required.
 
 Các phần sau cần màn riêng nên chưa làm:
-- Tạo hoặc sửa **câu hỏi mới** trong ngân hàng (nội dung, loại, rules, lựa chọn).
-- Sửa **điều kiện hiển thị**.
+- Sửa **điều kiện hiển thị** (`conditional_rules`) và **display_config** (widget, icon).
+- Xóa hẳn câu hỏi khỏi ngân hàng. Câu chỉ bị gỡ khỏi bước.
 
-Câu hỏi hiện có được nạp qua file seed.
+Bộ câu hỏi ban đầu vẫn được nạp qua file seed.
 
 ## 8. Chấm level sau onboarding (member) – `V6__level_assessment_rules.sql`
 

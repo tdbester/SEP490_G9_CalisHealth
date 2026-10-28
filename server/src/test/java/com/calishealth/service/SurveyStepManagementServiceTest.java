@@ -1,7 +1,14 @@
 package com.calishealth.service;
 
 import com.calishealth.dtos.SurveyDtos.AnswerItem;
+import com.calishealth.dtos.SurveyDtos.OptionResponse;
 import com.calishealth.dtos.SurveyDtos.ResultConfig;
+import com.calishealth.dtos.SurveyStepManagementDtos.OptionInput;
+import com.calishealth.dtos.SurveyStepManagementDtos.QuestionContentInput;
+import com.calishealth.models.AssessmentOption;
+import com.calishealth.service.survey.SurveyJson;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 import com.calishealth.dtos.SurveyStepManagementDtos.AvailableQuestionResponse;
 import com.calishealth.dtos.SurveyStepManagementDtos.PreviewCheckRequest;
 import com.calishealth.dtos.SurveyStepManagementDtos.PreviewCheckResponse;
@@ -10,6 +17,8 @@ import com.calishealth.dtos.SurveyStepManagementDtos.StepQuestionInput;
 import com.calishealth.dtos.SurveyStepManagementDtos.StepQuestionItem;
 import com.calishealth.exception.SurveyException.ErrorItem;
 import com.calishealth.repository.AssessmentQuestionRepository;
+import com.calishealth.repository.LevelRuleCriterionRepository;
+import com.calishealth.service.survey.StepQuestionWriter;
 import com.calishealth.service.survey.SurveyFixtures;
 import com.calishealth.dtos.SurveyStepManagementDtos.ChangeStepStatusRequest;
 import com.calishealth.dtos.SurveyStepManagementDtos.CreateStepRequest;
@@ -73,11 +82,13 @@ class SurveyStepManagementServiceTest {
     private final UserRepository users = mock(UserRepository.class);
     private final SurveyDefinitionLoader loader = mock(SurveyDefinitionLoader.class);
     private final AssessmentQuestionRepository questions = mock(AssessmentQuestionRepository.class);
+    private final LevelRuleCriterionRepository levelCriteria = mock(LevelRuleCriterionRepository.class);
 
     /** "Bảng" survey_steps / survey_step_questions / assessment_questions trong bộ nhớ. */
     private final List<SurveyStep> stepStore = new ArrayList<>();
     private final List<SurveyStepQuestion> linkStore = new ArrayList<>();
     private final Map<String, AssessmentQuestion> bank = new LinkedHashMap<>();
+    private final List<AssessmentOption> optionStore = new ArrayList<>();
 
     private SurveyStepManagementService service;
     private Survey survey;
@@ -88,7 +99,8 @@ class SurveyStepManagementServiceTest {
     @BeforeEach
     void setUp() {
         service = new SurveyStepManagementService(surveys, steps, stepQuestions, questions, options, answers,
-                fitnessLevels, users, loader, SurveyFixtures.registry());
+                fitnessLevels, users, loader, SurveyFixtures.registry(),
+                new StepQuestionWriter(questions, options, answers, levelCriteria, SurveyFixtures.registry()));
 
         survey = new Survey();
         survey.setId(1L);
@@ -138,6 +150,42 @@ class SurveyStepManagementServiceTest {
         });
         lenient().when(questions.findByStatusOrderByQuestionCodeAsc(ConfigStatus.ACTIVE))
                 .thenAnswer(i -> bank.values().stream().filter(q -> q.getStatus() == ConfigStatus.ACTIVE).toList());
+        lenient().when(questions.existsByQuestionCode(any())).thenAnswer(i -> bank.containsKey(i.<String>getArgument(0)));
+        lenient().when(questions.save(any())).thenAnswer(i -> {
+            AssessmentQuestion saved = i.getArgument(0);
+            if (saved.getId() == null) {
+                saved.setId(500L + bank.size());
+            }
+            bank.put(saved.getQuestionCode(), saved);
+            return saved;
+        });
+        lenient().when(options.findByQuestionIdInOrderBySortOrderAsc(anyCollection())).thenAnswer(i -> {
+            Collection<Long> ids = i.getArgument(0);
+            return optionStore.stream().filter(o -> ids.contains(o.getQuestion().getId()))
+                    .sorted(Comparator.comparingInt(AssessmentOption::getSortOrder)).toList();
+        });
+        lenient().when(options.save(any())).thenAnswer(i -> {
+            AssessmentOption saved = i.getArgument(0);
+            if (!optionStore.contains(saved)) {
+                optionStore.add(saved);
+            }
+            return saved;
+        });
+        lenient().doAnswer(i -> optionStore.remove((AssessmentOption) i.getArgument(0))).when(options).delete(any());
+    }
+
+    private AssessmentOption option(AssessmentQuestion question, String code, int order) {
+        AssessmentOption option = new AssessmentOption();
+        option.setQuestion(question);
+        option.setOptionCode(code);
+        option.setOptionLabel(code);
+        option.setSortOrder(order);
+        optionStore.add(option);
+        return option;
+    }
+
+    private static QuestionContentInput content(String text, String type, JsonNode rules, OptionInput... choices) {
+        return new QuestionContentInput(text, null, type, null, rules, List.of(choices));
     }
 
     private SurveyStep step(Long id, String code, String name, SurveyStep.Type type, SurveyStep.Status status, int order) {
@@ -499,6 +547,110 @@ class SurveyStepManagementServiceTest {
                         AvailableQuestionResponse::inCurrentStep)
                 .containsExactly(tuple("AGE", true), tuple("GENDER", true), tuple("HEIGHT", false));
         assertThat(service.availableQuestions(CODE, null, 11L, "heig")).hasSize(1);
+    }
+
+    // ---------- Câu hỏi tạo/sửa ngay trong bước (editor kiểu Google Form) ----------
+
+    @Test
+    void newQuestionIsCreatedInTheBankAndLinked() {
+        ObjectNode rules = SurveyJson.nodes().objectNode().put("min", 0).put("max", 60).put("integerOnly", true);
+
+        StepDetailResponse response = service.update(EMAIL, CODE, null, 11L, edit(SurveyStep.Status.ACTIVE,
+                new StepQuestionInput("AGE", true),
+                new StepQuestionInput(null, true, new QuestionContentInput("Max pull-ups", "In one set", "NUMBER",
+                        "reps", rules, null))));
+
+        AssessmentQuestion created = bank.get("MAX_PULL_UPS");
+        assertThat(created).isNotNull();
+        assertThat(created.isRequired()).isTrue();
+        assertThat(created.getUnit()).isEqualTo("reps");
+        assertThat(SurveyJson.parse(created.getValidationRules()).get("max").intValue()).isEqualTo(60);
+        assertThat(response.questions()).extracting(StepQuestionItem::questionCode)
+                .containsExactly("AGE", "MAX_PULL_UPS");
+    }
+
+    @Test
+    void createStepSavesItsQuestionsInOneGo() {
+        StepDetailResponse response = service.create(EMAIL, CODE, null, new CreateStepRequest("Mobility", null, null,
+                null, List.of(new StepQuestionInput(null, false, content("Which areas feel stiff?", "MULTIPLE_SELECT",
+                        null, new OptionInput(null, "Hips"), new OptionInput(null, "Shoulders"))))));
+
+        assertThat(response.step().status()).isEqualTo("DRAFT");
+        assertThat(response.questions()).singleElement().satisfies(q -> {
+            assertThat(q.questionCode()).isEqualTo("WHICH_AREAS_FEEL_STIFF");
+            assertThat(q.options()).extracting(OptionResponse::optionCode).containsExactly("HIPS", "SHOULDERS");
+        });
+    }
+
+    @Test
+    void invalidNewQuestionsAreRejectedWithoutSavingAnything() {
+        ObjectNode badRange = SurveyJson.nodes().objectNode().put("min", 10).put("max", 1);
+
+        assertThatThrownBy(() -> service.create(EMAIL, CODE, null, new CreateStepRequest("Mobility", null, null, null,
+                List.of(new StepQuestionInput(null, true, content("Pick one", "SINGLE_SELECT", null)),
+                        new StepQuestionInput(null, true, content("Reps", "NUMBER", badRange)),
+                        new StepQuestionInput(null, true, content("Rate", "SLIDER", null)),
+                        new StepQuestionInput(null, true)))))
+                .isInstanceOfSatisfying(SurveyException.class, e -> {
+                    assertThat(e.getCode()).isEqualTo("INVALID_STEP_QUESTIONS");
+                    assertThat(e.getErrors()).extracting(ErrorItem::code).containsExactly(
+                            "INVALID_QUESTION_CONFIG", "INVALID_QUESTION_CONFIG", "UNSUPPORTED_QUESTION_TYPE",
+                            "QUESTION_CONTENT_REQUIRED");
+                });
+        assertThat(stepStore).extracting(SurveyStep::getStepName).doesNotContain("Mobility");
+        verify(questions, never()).save(any());
+    }
+
+    @Test
+    void answeredQuestionKeepsItsTypeAndOnlyHidesRemovedOptions() {
+        AssessmentQuestion gender = bank.get("GENDER");
+        option(gender, "MALE", 1);
+        AssessmentOption female = option(gender, "FEMALE", 2);
+        when(answers.findQuestionIdsWithAnswers(anyCollection())).thenReturn(List.of(102L));
+
+        assertError(() -> service.update(EMAIL, CODE, null, 11L, edit(SurveyStep.Status.ACTIVE,
+                        new StepQuestionInput("GENDER", true, content("Gender", "TEXT", null)))),
+                HttpStatus.BAD_REQUEST, "INVALID_STEP_QUESTIONS");
+
+        StepDetailResponse response = service.update(EMAIL, CODE, null, 11L, edit(SurveyStep.Status.ACTIVE,
+                new StepQuestionInput("GENDER", true, content("Your gender", "SINGLE_SELECT", null,
+                        new OptionInput("MALE", "Male"), new OptionInput(null, "Other")))));
+
+        assertThat(female.getStatus()).as("answered option is hidden, not deleted").isEqualTo(ConfigStatus.INACTIVE);
+        assertThat(optionStore).contains(female);
+        assertThat(response.questions().get(0).options()).extracting(OptionResponse::label)
+                .containsExactly("Male", "Other");
+        assertThat(response.questions().get(0).typeLocked()).isTrue();
+    }
+
+    @Test
+    void questionsUsedByLevelRulesKeepTheirType() {
+        when(levelCriteria.findAllQuestionCodes()).thenReturn(List.of("AGE"));
+
+        assertError(() -> service.update(EMAIL, CODE, null, 11L, edit(SurveyStep.Status.ACTIVE,
+                        new StepQuestionInput("AGE", true, content("Age", "TEXT", null)))),
+                HttpStatus.BAD_REQUEST, "INVALID_STEP_QUESTIONS");
+    }
+
+    @Test
+    void editingTheTextAlsoUpdatesTheLabelMembersSee() {
+        AssessmentQuestion age = bank.get("AGE");
+        age.setDisplayConfig("{\"label\":\"Age\",\"icon\":\"cake\"}");
+
+        service.update(EMAIL, CODE, null, 11L, edit(SurveyStep.Status.ACTIVE,
+                new StepQuestionInput("AGE", true, content("Your age", "NUMBER", null))));
+
+        JsonNode display = SurveyJson.parse(age.getDisplayConfig());
+        assertThat(display.get("label").stringValue()).isEqualTo("Your age");
+        assertThat(display.get("icon").stringValue()).isEqualTo("cake");
+    }
+
+    @Test
+    void availableQuestionsForANewStepSkipEveryLinkedQuestion() {
+        question(103L, "HEIGHT", "NUMBER");
+
+        assertThat(service.availableQuestions(CODE, null, null, null))
+                .extracting(AvailableQuestionResponse::questionCode).containsExactly("HEIGHT");
     }
 
     // ---------- Step code ----------

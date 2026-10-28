@@ -40,6 +40,8 @@ import com.calishealth.repository.SurveyStepQuestionRepository;
 import com.calishealth.repository.SurveyStepRepository;
 import com.calishealth.repository.UserRepository;
 import com.calishealth.service.survey.SurveyDefinitionLoader;
+import com.calishealth.service.survey.StepQuestionWriter;
+import com.calishealth.service.survey.SurveyCodes;
 import com.calishealth.service.survey.SurveyJson;
 import com.calishealth.service.survey.definition.QuestionDefinition;
 import com.calishealth.service.survey.definition.StepDefinition;
@@ -55,7 +57,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
 
-import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -88,8 +89,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class SurveyStepManagementService {
-    /** Chừa chỗ cho hậu tố "_NN" khi stepCode sinh ra bị trùng. */
-    private static final int GENERATED_CODE_BASE_LENGTH = 56;
     private static final int MAX_SEARCH_LENGTH = 100;
 
     private final SurveyRepository surveys;
@@ -102,6 +101,7 @@ public class SurveyStepManagementService {
     private final UserRepository users;
     private final SurveyDefinitionLoader loader;
     private final QuestionTypeRegistry registry;
+    private final StepQuestionWriter questionWriter;
 
     // ---------- Đọc ----------
 
@@ -244,9 +244,14 @@ public class SurveyStepManagementService {
                     "search must be at most " + MAX_SEARCH_LENGTH + " characters");
         }
         Survey survey = resolve(surveyCode, version);
-        SurveyStep step = stepOf(survey, stepId);
-        if (step.isResult()) {
-            throw SurveyException.badRequest("RESULT_STEP_NOT_EDITABLE", "The result step cannot contain questions");
+        // stepId null: pop-up Create step, bước chưa tồn tại
+        Long currentStepId = null;
+        if (stepId != null) {
+            SurveyStep step = stepOf(survey, stepId);
+            if (step.isResult()) {
+                throw SurveyException.badRequest("RESULT_STEP_NOT_EDITABLE", "The result step cannot contain questions");
+            }
+            currentStepId = step.getId();
         }
         Set<Long> usedElsewhere = new HashSet<>();
         Set<Long> inThisStep = new HashSet<>();
@@ -254,23 +259,23 @@ public class SurveyStepManagementService {
             if (!link.isActive()) {
                 continue;
             }
-            (link.getStep().getId().equals(step.getId()) ? inThisStep : usedElsewhere).add(link.getQuestion().getId());
+            (link.getStep().getId().equals(currentStepId) ? inThisStep : usedElsewhere).add(link.getQuestion().getId());
         }
 
         List<AssessmentQuestion> candidates = questions.findByStatusOrderByQuestionCodeAsc(ConfigStatus.ACTIVE).stream()
                 .filter(q -> !usedElsewhere.contains(q.getId()))
                 .filter(q -> matches(q, search))
                 .toList();
-        Map<Long, Long> optionCounts = candidates.isEmpty() ? Map.of()
-                : options.findByQuestionIdInOrderBySortOrderAsc(candidates.stream().map(AssessmentQuestion::getId).toList())
-                .stream()
-                .filter(o -> o.getStatus() == ConfigStatus.ACTIVE)
-                .collect(Collectors.groupingBy(o -> o.getQuestion().getId(), Collectors.counting()));
+        Map<Long, List<OptionResponse>> optionsByQuestion = questionWriter.activeOptions(candidates);
+        StepQuestionWriter.Locks locks = questionWriter.locks(candidates);
         return candidates.stream()
-                .map(q -> new AvailableQuestionResponse(q.getQuestionCode(), q.getQuestionText(), q.getQuestionType(),
-                        q.isRequired(), q.getUnit(), json(q.getValidationRules()),
-                        optionCounts.getOrDefault(q.getId(), 0L).intValue(), inThisStep.contains(q.getId()),
-                        json(q.getDisplayConfig())))
+                .map(q -> {
+                    List<OptionResponse> active = optionsByQuestion.getOrDefault(q.getId(), List.of());
+                    return new AvailableQuestionResponse(q.getQuestionCode(), q.getQuestionText(), q.getQuestionType(),
+                            q.isRequired(), q.getUnit(), json(q.getValidationRules()), active.size(),
+                            inThisStep.contains(q.getId()), json(q.getDisplayConfig()), q.getDescription(), active,
+                            locks.answered(q), locks.typeLocked(q));
+                })
                 .toList();
     }
 
@@ -292,7 +297,10 @@ public class SurveyStepManagementService {
 
     // ---------- Ghi ----------
 
-    /** Bước mới luôn ở DRAFT; bước QUESTIONS được chèn ngay trước bước RESULT, bước RESULT được đặt cuối. */
+    /**
+     * Bước mới luôn ở DRAFT; bước QUESTIONS được chèn ngay trước bước RESULT, bước RESULT được đặt cuối.
+     * Câu hỏi gửi kèm (tạo mới hoặc lấy từ ngân hàng) được lưu cùng lúc, cùng luật như Update step.
+     */
     @Transactional
     public StepDetailResponse create(String email, String surveyCode, Integer version, CreateStepRequest request) {
         Survey survey = lockEditable(surveyCode, version);
@@ -334,8 +342,20 @@ public class SurveyStepManagementService {
                 ? newOrder.indexOf(resultStep.get())
                 : newOrder.size();
         newOrder.add(index, step);
+
+        List<StepQuestionInput> questionInputs = request.questions() == null ? List.of() : request.questions();
+        if (type == SurveyStep.Type.RESULT && !questionInputs.isEmpty()) {
+            throw SurveyException.badRequest("RESULT_STEP_NOT_EDITABLE", "The result step cannot contain questions");
+        }
+        // kiểm tra câu hỏi trước khi ghi bất cứ thứ gì
+        ResolvedQuestions resolved = questionInputs.isEmpty() ? null
+                : resolveQuestions(step, questionInputs, stepQuestions.findAllBySurveyId(survey.getId()), Map.of());
+
         applyOrder(newOrder);
         steps.save(step);
+        if (resolved != null) {
+            saveQuestions(survey, step, questionInputs, resolved, Map.of());
+        }
         steps.flush();
         return detail(survey, step);
     }
@@ -371,19 +391,106 @@ public class SurveyStepManagementService {
         Map<Long, SurveyStepQuestion> currentByQuestion = surveyLinks.stream()
                 .filter(l -> l.getStep().getId().equals(step.getId()))
                 .collect(Collectors.toMap(l -> l.getQuestion().getId(), Function.identity()));
-        List<AssessmentQuestion> chosen = resolveQuestions(step, request.questions(), surveyLinks, currentByQuestion);
+        ResolvedQuestions resolved = resolveQuestions(step, request.questions(), surveyLinks, currentByQuestion);
 
-        long visibleAfter = chosen.stream().filter(q -> q.getStatus() == ConfigStatus.ACTIVE).count();
+        // câu mới (null) luôn ACTIVE
+        long visibleAfter = resolved.questions().stream()
+                .filter(q -> q == null || q.getStatus() == ConfigStatus.ACTIVE)
+                .count();
         requireAllowedStatus(step, request.status(), visibleAfter > 0);
 
         List<String> before = loader.findProblems(survey);
+        saveQuestions(survey, step, request.questions(), resolved, currentByQuestion);
 
-        // Câu được giữ/thêm theo đúng thứ tự gửi lên
+        step.setStepName(name);
+        step.setDescription(blankToNull(request.description()));
+        step.setStatus(request.status());
+        touch(step, actor(email));
+        requireNoNewProblems(survey, before);
+        return detail(survey, step);
+    }
+
+    /** questions: câu trong ngân hàng theo đúng thứ tự gửi lên, null ở vị trí câu hỏi mới. */
+    private record ResolvedQuestions(List<AssessmentQuestion> questions, StepQuestionWriter.Locks locks) {}
+
+    /**
+     * Kiểm tra danh sách câu hỏi gửi lên (cả nội dung câu tạo mới / sửa); gom mọi lỗi để pop-up hiện 1 lần.
+     * Không ghi gì.
+     */
+    private ResolvedQuestions resolveQuestions(SurveyStep step, List<StepQuestionInput> inputs,
+            List<SurveyStepQuestion> surveyLinks, Map<Long, SurveyStepQuestion> currentByQuestion) {
+        Set<String> codes = inputs.stream()
+                .map(StepQuestionInput::questionCode)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<String, AssessmentQuestion> bank = codes.isEmpty() ? Map.of()
+                : questions.findByQuestionCodeIn(codes).stream()
+                .collect(Collectors.toMap(AssessmentQuestion::getQuestionCode, Function.identity()));
+        Map<Long, String> otherStepOf = new HashMap<>();
+        for (SurveyStepQuestion link : surveyLinks) {
+            if (link.isActive() && !link.getStep().getId().equals(step.getId())) {
+                otherStepOf.put(link.getQuestion().getId(), link.getStep().getStepCode());
+            }
+        }
+        StepQuestionWriter.Locks locks = questionWriter.locks(bank.values());
+
+        List<ErrorItem> errors = new ArrayList<>();
+        List<AssessmentQuestion> chosen = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (int i = 0; i < inputs.size(); i++) {
+            StepQuestionInput input = inputs.get(i);
+            String code = input.questionCode();
+            if (code == null) {
+                if (input.content() == null) {
+                    errors.add(new ErrorItem(step.getStepCode(), null, "QUESTION_CONTENT_REQUIRED",
+                            "Question " + (i + 1) + ": a new question needs its content"));
+                } else {
+                    errors.addAll(questionWriter.check(step.getStepCode(), i + 1, null, input.content(), locks));
+                }
+                chosen.add(null);
+                continue;
+            }
+            AssessmentQuestion question = bank.get(code);
+            if (!seen.add(code)) {
+                errors.add(new ErrorItem(step.getStepCode(), code, "DUPLICATE_QUESTION",
+                        "Question appears more than once in this step"));
+            } else if (question == null) {
+                errors.add(new ErrorItem(step.getStepCode(), code, "QUESTION_NOT_FOUND", "Question does not exist"));
+            } else if (otherStepOf.containsKey(question.getId())) {
+                errors.add(new ErrorItem(step.getStepCode(), code, "QUESTION_IN_OTHER_STEP",
+                        "Question is already used in step " + otherStepOf.get(question.getId())));
+            } else if (question.getStatus() != ConfigStatus.ACTIVE && !currentByQuestion.containsKey(question.getId())) {
+                errors.add(new ErrorItem(step.getStepCode(), code, "QUESTION_INACTIVE",
+                        "Inactive questions cannot be added"));
+            } else if (input.content() != null) {
+                errors.addAll(questionWriter.check(step.getStepCode(), i + 1, question, input.content(), locks));
+            }
+            chosen.add(question);
+        }
+        if (!errors.isEmpty()) {
+            throw new SurveyException(HttpStatus.BAD_REQUEST, "INVALID_STEP_QUESTIONS",
+                    "Some questions cannot be used in this step; nothing was saved", errors);
+        }
+        return new ResolvedQuestions(chosen, locks);
+    }
+
+    /**
+     * Ghi câu hỏi đã qua resolveQuestions(): tạo/sửa nội dung trong ngân hàng, liên kết vào bước theo đúng thứ tự
+     * gửi lên. Câu bị gỡ đã có câu trả lời -> tắt liên kết (giữ dữ liệu), chưa có -> xóa liên kết.
+     */
+    private void saveQuestions(Survey survey, SurveyStep step, List<StepQuestionInput> inputs,
+            ResolvedQuestions resolved, Map<Long, SurveyStepQuestion> currentByQuestion) {
         int order = 1;
         Set<Long> keptIds = new HashSet<>();
-        for (int i = 0; i < chosen.size(); i++) {
-            AssessmentQuestion question = chosen.get(i);
-            boolean required = request.questions().get(i).required();
+        Set<String> reservedCodes = new HashSet<>();
+        for (int i = 0; i < inputs.size(); i++) {
+            StepQuestionInput input = inputs.get(i);
+            AssessmentQuestion question = resolved.questions().get(i);
+            if (input.content() != null) {
+                question = questionWriter.write(question, input.content(), input.required(), resolved.locks(),
+                        reservedCodes);
+            }
+            boolean required = input.required();
             SurveyStepQuestion link = currentByQuestion.get(question.getId());
             if (link == null) {
                 link = new SurveyStepQuestion();
@@ -397,7 +504,6 @@ public class SurveyStepManagementService {
             keptIds.add(question.getId());
         }
 
-        // Câu bị gỡ: đã có câu trả lời -> tắt (giữ dữ liệu), chưa có -> xóa liên kết
         List<SurveyStepQuestion> removed = currentByQuestion.values().stream()
                 .filter(l -> !keptIds.contains(l.getQuestion().getId()))
                 .sorted(Comparator.comparingInt(SurveyStepQuestion::getSortOrder))
@@ -413,55 +519,6 @@ public class SurveyStepManagementService {
                 stepQuestions.delete(link);
             }
         }
-
-        step.setStepName(name);
-        step.setDescription(blankToNull(request.description()));
-        step.setStatus(request.status());
-        touch(step, actor(email));
-        requireNoNewProblems(survey, before);
-        return detail(survey, step);
-    }
-
-    /** Kiểm tra danh sách câu hỏi gửi lên; gom mọi lỗi để pop-up hiện 1 lần. Trả về câu hỏi theo đúng thứ tự. */
-    private List<AssessmentQuestion> resolveQuestions(SurveyStep step, List<StepQuestionInput> inputs,
-            List<SurveyStepQuestion> surveyLinks, Map<Long, SurveyStepQuestion> currentByQuestion) {
-        Map<String, AssessmentQuestion> bank = questions.findByQuestionCodeIn(
-                        inputs.stream().map(StepQuestionInput::questionCode).collect(Collectors.toSet()))
-                .stream()
-                .collect(Collectors.toMap(AssessmentQuestion::getQuestionCode, Function.identity()));
-        Map<Long, String> otherStepOf = new HashMap<>();
-        for (SurveyStepQuestion link : surveyLinks) {
-            if (link.isActive() && !link.getStep().getId().equals(step.getId())) {
-                otherStepOf.put(link.getQuestion().getId(), link.getStep().getStepCode());
-            }
-        }
-
-        List<ErrorItem> errors = new ArrayList<>();
-        List<AssessmentQuestion> chosen = new ArrayList<>();
-        Set<String> seen = new HashSet<>();
-        for (StepQuestionInput input : inputs) {
-            String code = input.questionCode();
-            AssessmentQuestion question = bank.get(code);
-            if (!seen.add(code)) {
-                errors.add(new ErrorItem(step.getStepCode(), code, "DUPLICATE_QUESTION",
-                        "Question appears more than once in this step"));
-            } else if (question == null) {
-                errors.add(new ErrorItem(step.getStepCode(), code, "QUESTION_NOT_FOUND", "Question does not exist"));
-            } else if (otherStepOf.containsKey(question.getId())) {
-                errors.add(new ErrorItem(step.getStepCode(), code, "QUESTION_IN_OTHER_STEP",
-                        "Question is already used in step " + otherStepOf.get(question.getId())));
-            } else if (question.getStatus() != ConfigStatus.ACTIVE && !currentByQuestion.containsKey(question.getId())) {
-                errors.add(new ErrorItem(step.getStepCode(), code, "QUESTION_INACTIVE",
-                        "Inactive questions cannot be added"));
-            } else {
-                chosen.add(question);
-            }
-        }
-        if (!errors.isEmpty()) {
-            throw new SurveyException(HttpStatus.BAD_REQUEST, "INVALID_STEP_QUESTIONS",
-                    "Some questions cannot be used in this step; nothing was saved", errors);
-        }
-        return chosen;
     }
 
     /** Luật chuyển trạng thái dùng chung cho "Update step" và menu "⋮". */
@@ -584,24 +641,7 @@ public class SurveyStepManagementService {
 
     /** "Body information" -> BODY_INFORMATION; bỏ dấu tiếng Việt; trùng thì thêm _2, _3... */
     static String generateStepCode(String stepName, Set<String> takenCodes) {
-        String base = Normalizer.normalize(stepName, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "")
-                .replace('đ', 'd')
-                .replace('Đ', 'D')
-                .toUpperCase(Locale.ROOT)
-                .replaceAll("[^A-Z0-9]+", "_")
-                .replaceAll("^_+|_+$", "");
-        if (base.length() < 2 || !Character.isLetter(base.charAt(0))) {
-            base = base.isEmpty() ? "STEP" : "STEP_" + base;
-        }
-        if (base.length() > GENERATED_CODE_BASE_LENGTH) {
-            base = base.substring(0, GENERATED_CODE_BASE_LENGTH).replaceAll("_+$", "");
-        }
-        String code = base;
-        for (int suffix = 2; takenCodes.contains(code); suffix++) {
-            code = base + "_" + suffix;
-        }
-        return code;
+        return SurveyCodes.generate(stepName, "STEP", takenCodes::contains);
     }
 
     // ---------- Helpers ----------
@@ -747,7 +787,11 @@ public class SurveyStepManagementService {
     }
 
     private StepDetailResponse detail(Survey survey, SurveyStep step) {
-        List<StepQuestionItem> questions = stepQuestions.findAllByStepId(step.getId()).stream()
+        List<SurveyStepQuestion> links = stepQuestions.findAllByStepId(step.getId());
+        List<AssessmentQuestion> linked = links.stream().map(SurveyStepQuestion::getQuestion).toList();
+        StepQuestionWriter.Locks locks = questionWriter.locks(linked);
+        Map<Long, List<OptionResponse>> optionsByQuestion = questionWriter.activeOptions(linked);
+        List<StepQuestionItem> questions = links.stream()
                 .sorted(Comparator.comparing((SurveyStepQuestion l) -> !visible(l))
                         .thenComparingInt(SurveyStepQuestion::getSortOrder))
                 .map(link -> {
@@ -755,7 +799,9 @@ public class SurveyStepManagementService {
                     return new StepQuestionItem(q.getQuestionCode(), q.getQuestionText(), q.getQuestionType(),
                             link.isEffectivelyRequired(), q.isRequired(), q.getUnit(), json(q.getValidationRules()),
                             link.getSortOrder(), visible(link), json(link.getConditionalRules()),
-                            json(q.getDisplayConfig()));
+                            json(q.getDisplayConfig()), q.getDescription(),
+                            optionsByQuestion.getOrDefault(q.getId(), List.of()), locks.answered(q),
+                            locks.typeLocked(q));
                 })
                 .toList();
         return new StepDetailResponse(summaryOf(survey, step), questions, step.isResult() ? resultConfig(step) : null);

@@ -16,15 +16,20 @@ export const contentSurveyApi = {
   /** F2. Dữ liệu cho popup Update step. */
   getStep: (stepId) => api.get(`${base()}/${stepId}`).then(data),
 
-  /** F3. Bước mới luôn ở DRAFT, chèn trước bước Result. */
-  createStep: ({ stepName, description }) => api.post(base(), { stepName, description }).then(data),
+  /** F3. Bước mới luôn ở DRAFT, chèn trước bước Result; questions (tùy chọn) được lưu cùng lúc. */
+  createStep: ({ stepName, description, questions }) =>
+    api.post(base(), { stepName, description, questions }).then(data),
 
   /** F4. Lưu toàn bộ popup Update step: { revision, stepName, description, status, questions }. */
   updateStep: (stepId, body) => api.put(`${base()}/${stepId}`, body).then(data),
 
-  /** F4a. Câu hỏi trong ngân hàng có thể thêm vào bước. */
+  /** F4a. Câu hỏi trong ngân hàng có thể thêm vào bước; stepId null = bước đang tạo. */
   availableQuestions: (stepId, search) =>
-    api.get(`${base()}/${stepId}/available-questions`, { params: { search: search || undefined } }).then(data),
+    api
+      .get(stepId == null ? `${base()}/available-questions` : `${base()}/${stepId}/available-questions`, {
+        params: { search: search || undefined },
+      })
+      .then(data),
 
   /** F5. Bước như member thấy. */
   preview: (stepId) => api.get(`${base()}/${stepId}/preview`).then(data),

@@ -1,6 +1,7 @@
 package com.calishealth.dtos;
 
 import com.calishealth.dtos.SurveyDtos.AnswerItem;
+import com.calishealth.dtos.SurveyDtos.OptionResponse;
 import com.calishealth.dtos.SurveyDtos.QuestionResponse;
 import com.calishealth.dtos.SurveyDtos.ResultConfig;
 import com.calishealth.exception.SurveyException.ErrorItem;
@@ -23,6 +24,7 @@ public class SurveyStepManagementDtos {
     /**
      * stepCode bỏ trống -> sinh từ stepName (vd "Body information" -> BODY_INFORMATION).
      * stepType bỏ trống -> QUESTIONS; RESULT chỉ tạo được khi survey chưa có bước RESULT.
+     * questions (tùy chọn, chỉ bước QUESTIONS): câu hỏi tạo/thêm luôn cùng bước, cùng luật như Update step.
      */
     public record CreateStepRequest(
             @NotBlank(message = "stepName is required")
@@ -31,7 +33,14 @@ public class SurveyStepManagementDtos {
             @Pattern(regexp = "^[A-Z][A-Z0-9_]{1,63}$",
                     message = "stepCode must be 2-64 characters: uppercase letters, digits and '_', starting with a letter")
             String stepCode,
-            SurveyStep.Type stepType) {}
+            SurveyStep.Type stepType,
+            @Size(max = 50, message = "a step can have at most 50 questions")
+            List<@NotNull(message = "questions must not contain null") @Valid StepQuestionInput> questions) {
+
+        public CreateStepRequest(String stepName, String description, String stepCode, SurveyStep.Type stepType) {
+            this(stepName, description, stepCode, stepType, null);
+        }
+    }
 
     /**
      * Pop-up "Update step" - "Save changes" lưu tất cả trong 1 transaction.
@@ -49,11 +58,44 @@ public class SurveyStepManagementDtos {
             @Size(max = 50, message = "a step can have at most 50 questions")
             List<@NotNull(message = "questions must not contain null") @Valid StepQuestionInput> questions) {}
 
-    /** required: nút "Required" của câu hỏi trong bước này. */
+    /**
+     * 1 câu hỏi của bước.
+     * questionCode: câu có sẵn trong ngân hàng; null = câu hỏi MỚI (bắt buộc có content, mã tự sinh).
+     * required: nút "Required" của câu hỏi trong bước này.
+     * content: null = giữ nguyên nội dung câu hỏi; có = tạo mới / sửa nội dung câu hỏi trong ngân hàng.
+     */
     public record StepQuestionInput(
-            @NotBlank(message = "questionCode is required")
             @Size(max = 64, message = "questionCode must be at most 64 characters") String questionCode,
-            @NotNull(message = "required is required") Boolean required) {}
+            @NotNull(message = "required is required") Boolean required,
+            @Valid QuestionContentInput content) {
+
+        public StepQuestionInput(String questionCode, Boolean required) {
+            this(questionCode, required, null);
+        }
+    }
+
+    /**
+     * Nội dung câu hỏi (editor kiểu Google Form). questionType: NUMBER | SINGLE_SELECT | MULTIPLE_SELECT | BOOLEAN
+     * | TEXT | TEXTAREA. validationRules theo loại (vd NUMBER: min, max, integerOnly, maxDecimals), kiểm tra bằng
+     * đúng handler của loại đó. unit chỉ dùng cho NUMBER. options chỉ dùng cho SINGLE_SELECT / MULTIPLE_SELECT,
+     * theo thứ tự hiển thị.
+     */
+    public record QuestionContentInput(
+            @NotBlank(message = "questionText is required")
+            @Size(max = 500, message = "questionText must be at most 500 characters") String questionText,
+            @Size(max = 1000, message = "question description must be at most 1000 characters") String description,
+            @NotBlank(message = "questionType is required")
+            @Size(max = 32, message = "questionType must be at most 32 characters") String questionType,
+            @Size(max = 32, message = "unit must be at most 32 characters") String unit,
+            JsonNode validationRules,
+            @Size(max = 50, message = "a question can have at most 50 options")
+            List<@NotNull(message = "options must not contain null") @Valid OptionInput> options) {}
+
+    /** optionCode: lựa chọn đã có của câu hỏi; null = lựa chọn mới (mã tự sinh từ label). */
+    public record OptionInput(
+            @Size(max = 64, message = "optionCode must be at most 64 characters") String optionCode,
+            @NotBlank(message = "option label is required")
+            @Size(max = 255, message = "option label must be at most 255 characters") String label) {}
 
     /** Nút "Continue" trong Preview: kiểm tra thử câu trả lời bằng đúng luật của member, không lưu gì. */
     public record PreviewCheckRequest(
@@ -129,7 +171,14 @@ public class SurveyStepManagementDtos {
             boolean active,
             JsonNode conditionalRules,
             /** Nhãn ngắn / widget như màn member (vd label "Height"). */
-            JsonNode displayConfig) {}
+            JsonNode displayConfig,
+            String description,
+            /** Lựa chọn ACTIVE theo thứ tự (SINGLE_SELECT / MULTIPLE_SELECT). */
+            List<OptionResponse> options,
+            /** Đã có member trả lời: lựa chọn bị gỡ chỉ bị ẩn, câu trả lời cũ giữ nguyên. */
+            boolean answered,
+            /** Không đổi được loại câu hỏi: đã có câu trả lời hoặc rule chấm level đang dùng. */
+            boolean typeLocked) {}
 
     /**
      * Pop-up "Preview step": đúng những gì member sẽ thấy, kể cả với bước DRAFT/INACTIVE. Không lưu gì.
@@ -162,7 +211,11 @@ public class SurveyStepManagementDtos {
             int optionCount,
             /** true nếu câu đang nằm trong chính bước này. */
             boolean inCurrentStep,
-            JsonNode displayConfig) {}
+            JsonNode displayConfig,
+            String description,
+            List<OptionResponse> options,
+            boolean answered,
+            boolean typeLocked) {}
 
     public record ResultConfigResponse(
             StepSummaryResponse step,

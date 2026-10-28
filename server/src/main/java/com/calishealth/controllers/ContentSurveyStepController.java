@@ -119,7 +119,16 @@ public class ContentSurveyStepController {
         return steps.previewCheck(surveyCode, version, stepId, r);
     }
 
-    /** Nút "Add question" trong pop-up Update step: câu hỏi có thể thêm vào bước này. */
+    /** Nút "Add existing" trong pop-up Create step (bước chưa tồn tại): câu hỏi chưa dùng ở bước nào của survey. */
+    @GetMapping("/available-questions")
+    public List<AvailableQuestionResponse> availableQuestionsForNewStep(
+            @PathVariable String surveyCode,
+            @RequestParam(required = false) Integer version,
+            @RequestParam(required = false) String search) {
+        return steps.availableQuestions(surveyCode, version, null, search);
+    }
+
+    /** Nút "Add existing" trong pop-up Update step: câu hỏi có thể thêm vào bước này. */
     @GetMapping("/{stepId}/available-questions")
     public List<AvailableQuestionResponse> availableQuestions(
             @PathVariable String surveyCode,

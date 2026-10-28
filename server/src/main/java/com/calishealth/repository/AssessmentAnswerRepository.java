@@ -27,4 +27,8 @@ public interface AssessmentAnswerRepository extends JpaRepository<AssessmentAnsw
             """)
     List<Long> findAnsweredQuestionIds(@Param("surveyId") Long surveyId,
             @Param("questionIds") Collection<Long> questionIds);
+
+    /** Trong các câu hỏi này, câu nào đã có member trả lời ở BẤT KỲ survey nào (câu hỏi dùng chung giữa các version). */
+    @Query("select distinct a.question.id from AssessmentAnswer a where a.question.id in :questionIds")
+    List<Long> findQuestionIdsWithAnswers(@Param("questionIds") Collection<Long> questionIds);
 }

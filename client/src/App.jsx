@@ -66,8 +66,9 @@ export default function App() {
         <Route path="/content" element={<ContentManagerLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<ContentManagerDashboard />} />
-          {/* Màn Survey management thật nằm ở /content/survey (bên dưới) */}
-          <Route path="surveys" element={<Navigate to="/content/survey" replace />} />
+          <Route path="surveys" element={<SurveyManagement />} />
+          {/* URL cũ của màn Survey management */}
+          <Route path="survey" element={<Navigate to="/content/surveys" replace />} />
           <Route path="exercises" element={<ExerciseListPage />} />
           <Route path="progression-rules" element={<ContentManagerSectionPage section="progressionRules" />} />
           <Route path="level-criteria" element={<ContentManagerSectionPage section="levelCriteria" />} />
@@ -117,18 +118,6 @@ export default function App() {
             </AdminLayout>
           }
         />
-        {/* Content Manager (BE chặn /api/content/** theo role CONTENT_MANAGER) */}
-        <Route
-          path="/content/survey"
-          element={
-            <ProtectedRoute>
-              <AdminLayout>
-                <SurveyManagement />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-
         <Route path="/day-streak" element={<Navigate to="/" replace />} />
         <Route path="/profile" element={<Navigate to="/" replace />} />
         <Route path="/settings" element={<Navigate to="/" replace />} />

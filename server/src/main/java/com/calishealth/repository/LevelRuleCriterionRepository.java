@@ -20,4 +20,8 @@ public interface LevelRuleCriterionRepository extends JpaRepository<LevelRuleCri
             order by c.sortOrder, b.sortOrder
             """)
     List<LevelRuleBand> findBandsByRuleSetId(@Param("ruleSetId") Long ruleSetId);
+
+    /** Mã câu hỏi mà các bộ luật chấm level đang đọc (không đổi được loại câu hỏi). */
+    @Query("select distinct c.questionCode from LevelRuleCriterion c")
+    List<String> findAllQuestionCodes();
 }
