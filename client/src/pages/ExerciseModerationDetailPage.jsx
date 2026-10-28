@@ -2,12 +2,12 @@ import { useState } from "react";
 import { Link as RouterLink, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Alert, Box, Button, Card, CardContent, CircularProgress, Dialog, DialogActions,
-  DialogContent, DialogContentText, DialogTitle, Divider, Grid, Stack, Typography,
+  DialogContent, DialogContentText, DialogTitle, Divider, Grid, Stack, TextField, Typography,
 } from "@mui/material";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import { contentManagerApi, mediaUrl } from "../api/contentManager";
 import { useApiMutation, useApiQuery } from "../hooks";
-import { CONTENT_PATHS, ContentPageHeader, DarkPill } from "../components/ContentShared";
+import { CONTENT_PATHS, ContentPageHeader, DarkPill, formatDateTime } from "../components/ContentShared";
 import { CM } from "../theme-content";
 import { GuideSteps } from "./SystemExerciseDetailPage";
 
@@ -49,6 +49,13 @@ export default function ExerciseModerationDetailPage() {
   } : null);
   const [actionError, setActionError] = useState("");
   const [confirmAction, setConfirmAction] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [reasonOpen, setReasonOpen] = useState(false);
+
+  const handleReject = () => {
+    setRejectionReason("");
+    setConfirmAction("reject");
+  };
 
   const approve = useApiMutation(() => contentManagerApi.updateExerciseStatus(code, true), {
     onSuccess: () => navigate(CONTENT_PATHS.pendingExerciseModeration, { state: { successMessage: `“${entry?.name || "Exercise"}” approved successfully.` } }),
@@ -82,14 +89,14 @@ export default function ExerciseModerationDetailPage() {
         description={`Exercise / skill details · ${entry.code}`}
         action={<Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
           {!isHistoryView && <>
-            <Button variant="outlined" color="error" disabled={busy} onClick={() => setConfirmAction("reject")}>{reject.isPending ? "Rejecting…" : "Reject"}</Button>
+            <Button variant="outlined" color="error" disabled={busy} onClick={handleReject}>{reject.isPending ? "Rejecting…" : "Reject"}</Button>
             <Button variant="contained" disabled={busy} onClick={() => setConfirmAction("approve")}>{approve.isPending ? "Approving…" : "Approve"}</Button>
           </>}
           <Button component={RouterLink} to={isHistoryView ? CONTENT_PATHS.exerciseApprovalHistory : CONTENT_PATHS.pendingExerciseModeration} variant="outlined" startIcon={<ArrowBackRoundedIcon />}>{isHistoryView ? "Back to approval history" : "Back to pending"}</Button>
         </Stack>}
       />
 
-      {isHistoryView && <Box sx={{ mt: 1.5 }}><DarkPill tone={historyRow.decision === "APPROVED" ? "success" : "danger"}>{historyRow.decision === "APPROVED" ? "Approved" : "Rejected"}</DarkPill></Box>}
+      {isHistoryView && <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1.5 }}><DarkPill tone={historyRow.decision === "APPROVED" ? "success" : "danger"}>{historyRow.decision === "APPROVED" ? "Approved" : "Rejected"}</DarkPill>{historyRow.decision === "REJECTED" && <Button size="small" color="error" variant="text" onClick={() => setReasonOpen(true)} sx={{ py: 0.25, px: 1, fontSize: 11.5 }}>View reason</Button>}</Stack>}
       {isHistoryOnly && <Alert severity="info" sx={{ mt: 2 }}>This exercise was deleted before its status could be updated. The details below are the information retained in the moderation history.</Alert>}
       {actionError && <Alert severity="error" sx={{ mt: 2 }}>{actionError}</Alert>}
       <Card sx={{ mt: 2.5 }}>
@@ -130,17 +137,44 @@ export default function ExerciseModerationDetailPage() {
         </CardContent>
       </Card>
 
+      <Dialog open={reasonOpen} onClose={() => setReasonOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ pb: 1 }}>Rejection details</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2}>
+            <Box>
+              <Typography variant="caption" sx={{ color: CM.textDim, textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>Exercise</Typography>
+              <Typography variant="body1" fontWeight={700} sx={{ mt: 0.5, color: "#fff" }}>{entry.name}</Typography>
+              <Typography variant="caption" sx={{ color: CM.textMuted }}>{entry.code}</Typography>
+            </Box>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5 }}>
+              <Box><Typography variant="caption" sx={{ color: CM.textDim }}>Decision</Typography><Typography variant="body2" sx={{ mt: 0.25, color: "#fff" }}>Rejected</Typography></Box>
+              <Box><Typography variant="caption" sx={{ color: CM.textDim }}>Reviewed</Typography><Typography variant="body2" sx={{ mt: 0.25, color: "#fff" }}>{formatDateTime(historyRow?.reviewedAt)}</Typography></Box>
+            </Box>
+            <Box>
+              <Typography variant="caption" sx={{ color: CM.textDim, textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>Reason</Typography>
+              <Box sx={{ mt: 0.75, p: 1.5, borderRadius: 1.5, border: `1px solid ${CM.border}`, bgcolor: "rgba(19,10,39,0.6)" }}>
+                <Typography variant="body2" sx={{ color: "#fff", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{historyRow?.rejectionReason || "No rejection reason was recorded."}</Typography>
+              </Box>
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions><Button onClick={() => setReasonOpen(false)}>Close</Button></DialogActions>
+      </Dialog>
+
       <Dialog open={Boolean(confirmAction)} onClose={() => setConfirmAction(null)} maxWidth="xs" fullWidth>
         <DialogTitle>{confirmAction === "approve" ? "Approve exercise?" : "Reject exercise?"}</DialogTitle>
-        <DialogContent><DialogContentText>{confirmAction === "approve" ? `Approve “${entry.name}” and add it to the active exercise list?` : `Reject “${entry.name}”? You will have 10 seconds to undo before its status is changed to rejected.`}</DialogContentText></DialogContent>
+        <DialogContent>
+          <DialogContentText>{confirmAction === "approve" ? `Approve “${entry.name}” and add it to the active exercise list?` : `Reject “${entry.name}”? You will have 10 seconds to undo before its status is changed to rejected.`}</DialogContentText>
+          {confirmAction === "reject" && <TextField autoFocus required fullWidth multiline minRows={3} margin="dense" label="Rejection reason" placeholder="Explain why this exercise is rejected" value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)} error={!rejectionReason.trim()} helperText={!rejectionReason.trim() ? "A rejection reason is required." : ""} />}
+        </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmAction(null)}>Cancel</Button>
-          <Button color={confirmAction === "reject" ? "error" : "primary"} variant="contained" onClick={() => {
+          <Button color={confirmAction === "reject" ? "error" : "primary"} variant="contained" disabled={confirmAction === "reject" && !rejectionReason.trim()} onClick={() => {
             const action = confirmAction;
             setConfirmAction(null);
             setActionError("");
             if (action === "approve") { approve.mutate(); return; }
-            navigate(CONTENT_PATHS.pendingExerciseModeration, { state: { pendingReject: entry } });
+            navigate(CONTENT_PATHS.pendingExerciseModeration, { state: { pendingReject: { ...entry, rejectionReason: rejectionReason.trim() } } });
           }}>{confirmAction === "reject" ? "Reject" : "Approve"}</Button>
         </DialogActions>
       </Dialog>

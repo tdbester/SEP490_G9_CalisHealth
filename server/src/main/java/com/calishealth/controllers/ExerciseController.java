@@ -93,6 +93,6 @@ public class ExerciseController {
             @PathVariable String code,
             @RequestBody ExerciseStatusRequest request
     ) {
-        return exercises.updateStatus(code, request.active());
+        return exercises.updateStatus(code, request.active(), request.rejectionReason());
     }
 }

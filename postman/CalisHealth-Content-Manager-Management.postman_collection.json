@@ -149,16 +149,21 @@
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Approval succeeds', function () { pm.response.to.have.status(200); });", "if (pm.response.code === 200) pm.test('Exercise is now active', function () { pm.expect(pm.response.json().active).to.eql(true); });"] } }]
         },
         {
-          "name": "Reject pending exercise (set another pendingExerciseCode)",
+          "name": "Reject pending exercise and send reason (set another pendingExerciseCode)",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"active\": false,\n  \"rejectionReason\": \"Unsafe execution form\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/content/exercises/{{pendingExerciseCode}}/status" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Rejection with reason succeeds', function () { pm.response.to.have.status(200); });", "if (pm.response.code === 200) { const body = pm.response.json(); pm.test('Exercise is now inactive', function () { pm.expect(body.active).to.eql(false); }); pm.collectionVariables.set('rejectionReason', 'Unsafe execution form'); }"] } }]
+        },
+        {
+          "name": "Reject without reason is rejected",
           "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"active\": false\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/content/exercises/{{pendingExerciseCode}}/status" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Rejection succeeds', function () { pm.response.to.have.status(200); });", "if (pm.response.code === 200) pm.test('Exercise is now inactive', function () { pm.expect(pm.response.json().active).to.eql(false); });"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Rejection without reason returns 400', function () { pm.response.to.have.status(400); });"] } }]
         },
         {
           "name": "List approval history",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/content/exercises/approval-history" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
             "pm.test('Approval history returns 200', function () { pm.response.to.have.status(200); });",
-            "if (pm.response.code === 200) pm.test('History has expected review fields', function () { const rows = pm.response.json(); pm.expect(rows).to.be.an('array'); if (rows.length) { pm.expect(rows[0]).to.have.property('decision'); pm.expect(rows[0]).to.have.property('reviewedAt'); pm.expect(rows[0].decision).to.be.oneOf(['APPROVED', 'REJECTED']); } });"
+            "if (pm.response.code === 200) pm.test('History has expected review fields', function () { const rows = pm.response.json(); pm.expect(rows).to.be.an('array'); if (rows.length) { pm.expect(rows[0]).to.have.property('decision'); pm.expect(rows[0]).to.have.property('reviewedAt'); pm.expect(rows[0]).to.have.property('rejectionReason'); pm.expect(rows[0].decision).to.be.oneOf(['APPROVED', 'REJECTED']); const rejected = rows.find(x => x.decision === 'REJECTED' && x.rejectionReason); if (rejected) pm.expect(rejected.rejectionReason).to.eql('Unsafe execution form'); } });"
           ] } }]
         }
       ]
