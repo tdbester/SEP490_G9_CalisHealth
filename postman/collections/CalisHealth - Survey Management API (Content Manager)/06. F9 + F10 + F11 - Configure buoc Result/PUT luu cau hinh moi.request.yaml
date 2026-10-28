@@ -1,0 +1,28 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{resultStepId}}/result-config"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "stepName": "Result and recommended plan",
+      "description": "Classify the member's level and build the recommended plan.",
+      "config": {
+        "showLevelBreakdown": false,
+        "showPlanPreview": true,
+        "planDurationWeeks": 6,
+        "sessionsPerWeek": 4,
+        "minutesPerSession": 45,
+        "fallbackFitnessLevelId": {{fallbackLevelId}}
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      const c = pm.response.json().config;
+      pm.test('config da luu', () => { pm.expect(c.planDurationWeeks).to.eql(6); pm.expect(c.sessionsPerWeek).to.eql(4); pm.expect(c.showLevelBreakdown).to.eql(false); });
+    language: text/javascript
+order: 2000

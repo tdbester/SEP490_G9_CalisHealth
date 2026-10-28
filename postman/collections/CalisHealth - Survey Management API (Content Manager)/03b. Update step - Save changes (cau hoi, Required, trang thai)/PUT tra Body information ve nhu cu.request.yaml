@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: "{{editBody}}"
+scripts:
+  - type: beforeRequest
+    code: |-
+      const o = JSON.parse(pm.collectionVariables.get('bodyOriginal'));
+      pm.collectionVariables.set('editBody', JSON.stringify({ revision: Number(pm.collectionVariables.get('bodyRevision')), stepName: o.stepName, description: o.description, status: o.status, questions: o.questions }));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      const o = JSON.parse(pm.collectionVariables.get('bodyOriginal'));
+      const active = j.questions.filter(q => q.active);
+      pm.test('cau hoi va Required ve nhu ban dau', () => pm.expect(active.map(q => ({ questionCode: q.questionCode, required: q.required }))).to.eql(o.questions));
+      pm.collectionVariables.set('bodyRevision', j.step.revision);
+    language: text/javascript
+order: 9000

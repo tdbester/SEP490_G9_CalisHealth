@@ -1,0 +1,59 @@
+/* BarChart.css — biểu đồ cột gradient hồng → tím xanh */
+
+.bar-chart {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #2D2550;
+}
+
+.bar-chart-col {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.bar-chart-value {
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #B0ABD0;
+  white-space: nowrap;
+}
+
+.bar-chart-track {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.bar-chart-bar {
+  max-width: 100%;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, #E0569B 0%, #6C63FF 100%);
+  transition: filter 0.15s ease, height 0.3s ease;
+}
+
+.bar-chart-bar:hover {
+  filter: brightness(1.15);
+}
+
+.bar-chart-label {
+  position: absolute;
+  top: calc(100% + 8px);
+  font-size: 12px;
+  color: #9A95B8;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .bar-chart-value {
+    font-size: 10.5px;
+  }
+
+  .bar-chart-label {
+    font-size: 10.5px;
+  }
+}

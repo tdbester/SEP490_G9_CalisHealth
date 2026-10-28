@@ -17,4 +17,12 @@ public interface SurveyStepQuestionRepository extends JpaRepository<SurveyStepQu
             order by s.sortOrder, l.sortOrder
             """)
     List<SurveyStepQuestion> findAllBySurveyId(@Param("surveyId") Long surveyId);
+
+    @Query("""
+            select l from SurveyStepQuestion l
+            join fetch l.question
+            where l.step.id = :stepId
+            order by l.sortOrder
+            """)
+    List<SurveyStepQuestion> findAllByStepId(@Param("stepId") Long stepId);
 }

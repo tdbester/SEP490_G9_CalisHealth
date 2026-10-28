@@ -1,0 +1,30 @@
+$kind: http-request
+name: "PUT Save changes: dao thu tu, tat Required WEIGHT, go GENDER"
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: "{{editBody}}"
+scripts:
+  - type: beforeRequest
+    code: |-
+      const o = JSON.parse(pm.collectionVariables.get('bodyOriginal'));
+      const questions = o.questions.filter(q => q.questionCode !== 'GENDER').reverse()
+        .map(q => ({ questionCode: q.questionCode, required: q.questionCode === 'WEIGHT' ? false : q.required }));
+      pm.collectionVariables.set('expectedCodes', JSON.stringify(questions.map(q => q.questionCode)));
+      pm.collectionVariables.set('editBody', JSON.stringify({ revision: Number(pm.collectionVariables.get('bodyRevision')), stepName: o.stepName, description: o.description, status: 'ACTIVE', questions }));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      const active = j.questions.filter(q => q.active);
+      pm.test('thu tu dung nhu da gui', () => pm.expect(active.map(q => q.questionCode)).to.eql(JSON.parse(pm.collectionVariables.get('expectedCodes'))));
+      pm.test('WEIGHT khong con bat buoc', () => pm.expect(active.find(q => q.questionCode === 'WEIGHT').required).to.eql(false));
+      pm.test('GENDER khong con hien voi member', () => pm.expect(active.map(q => q.questionCode)).to.not.include('GENDER'));
+      pm.test('revision tang 1', () => pm.expect(j.step.revision).to.eql(Number(pm.collectionVariables.get('bodyRevision')) + 1));
+      pm.collectionVariables.set('bodyRevision', j.step.revision);
+    language: text/javascript
+order: 3000

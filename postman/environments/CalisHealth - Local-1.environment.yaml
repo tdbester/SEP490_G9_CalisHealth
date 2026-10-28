@@ -1,0 +1,30 @@
+name: CalisHealth - Local
+values:
+  - key: baseUrl
+    value: 'http://localhost:8080'
+  - key: surveyCode
+    value: CALISHEALTH_ONBOARDING
+  - key: userEmail
+    value: survey.a@example.com
+  - key: userPassword
+    value: ''
+  - key: otherUserEmail
+    value: survey.b@example.com
+  - key: otherUserPassword
+    value: ''
+  - key: token
+    value: ''
+  - key: otherToken
+    value: ''
+  - key: cmEmail
+    value: content.manager@example.com
+  - key: cmPassword
+    value: ''
+  - key: cmToken
+    value: ''
+  - key: surveyVersion
+    value: '1'
+  - key: sessionId
+    value: ''
+  - key: skipSessionId
+    value: ''

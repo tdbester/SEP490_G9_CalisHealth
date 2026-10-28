@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: "{{editBody}}"
+scripts:
+  - type: beforeRequest
+    code: |-
+      const o = JSON.parse(pm.collectionVariables.get('bodyOriginal'));
+      pm.collectionVariables.set('editBody', JSON.stringify({ stepName: o.stepName, description: 'x'.repeat(151), status: 'ACTIVE', questions: o.questions }));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 400', () => pm.response.to.have.status(400));
+      const j = pm.response.json();
+      pm.test('loi o description va revision', () => { pm.expect(j.code).to.eql('INVALID_REQUEST'); pm.expect(j.errors).to.have.property('description'); pm.expect(j.errors).to.have.property('revision'); });
+    language: text/javascript
+order: 8000
