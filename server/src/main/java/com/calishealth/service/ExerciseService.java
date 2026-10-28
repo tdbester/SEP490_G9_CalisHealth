@@ -248,7 +248,10 @@ public class ExerciseService {
     }
 
     @Transactional
-    public ExerciseResponse updateStatus(String code, boolean active) {
+    public ExerciseResponse updateStatus(String code, boolean active, String rejectionReason) {
+        if (!active && (rejectionReason == null || rejectionReason.isBlank())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A rejection reason is required");
+        }
         Exercise exercise = exercises.findByCode(code)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Exercise or skill not found"));
         exercise.setActive(active);
@@ -262,7 +265,7 @@ public class ExerciseService {
                     exercise.getCategory(), exercise.getExecutionSteps(), exercise.getVideoUrl(),
                     exercise.getAnatomyImageUrl(),
                     exercise.getCreatedBy() == null ? null : exercise.getCreatedBy().getFullName(),
-                    active ? "APPROVED" : "REJECTED");
+                    active ? "APPROVED" : "REJECTED", active ? null : rejectionReason.trim());
         }
         return response;
     }

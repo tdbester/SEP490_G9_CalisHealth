@@ -7,12 +7,12 @@ import jakarta.validation.constraints.NotBlank;
 
 public class AuthDtos {
     public record RegisterRequest(
-            @NotBlank(message = "Vui lòng nhập họ tên") String fullName,
+            @NotBlank(message = "Please enter your full name") String fullName,
             @ValidEmail String email,
-            @NotBlank(message = "Vui lòng nhập mật khẩu") @StrongPassword String password,
-            @NotBlank(message = "Vui lòng xác nhận mật khẩu") String confirmPassword) {
+            @NotBlank(message = "Please enter a password") @StrongPassword String password,
+            @NotBlank(message = "Please confirm your password") String confirmPassword) {
 
-        @AssertTrue(message = "Mật khẩu xác nhận không khớp")
+        @AssertTrue(message = "The confirmation password does not match")
         public boolean isPasswordConfirmed() {
             return password != null && password.equals(confirmPassword);
         }
@@ -20,16 +20,16 @@ public class AuthDtos {
 
     public record LoginRequest(
             @ValidEmail String email,
-            @NotBlank(message = "Vui lòng nhập mật khẩu") String password) {}
+            @NotBlank(message = "Please enter a password") String password) {}
 
     public record ForgotRequest(@ValidEmail String email) {}
 
     public record ResetRequest(
             @NotBlank String token,
-            @NotBlank(message = "Vui lòng nhập mật khẩu mới") @StrongPassword String newPassword,
-            @NotBlank(message = "Vui lòng xác nhận mật khẩu mới") String confirmNewPassword) {
+            @NotBlank(message = "Please enter a new password") @StrongPassword String newPassword,
+            @NotBlank(message = "Please confirm your new password") String confirmNewPassword) {
 
-        @AssertTrue(message = "Mật khẩu xác nhận không khớp")
+        @AssertTrue(message = "The confirmation password does not match")
         public boolean isNewPasswordConfirmed() {
             return newPassword != null && newPassword.equals(confirmNewPassword);
         }
@@ -37,10 +37,10 @@ public class AuthDtos {
 
     public record ChangePasswordRequest(
             String oldPassword,
-            @NotBlank(message = "Vui lòng nhập mật khẩu mới") @StrongPassword String newPassword,
-            @NotBlank(message = "Vui lòng xác nhận mật khẩu mới") String confirmNewPassword) {
+            @NotBlank(message = "Please enter a new password") @StrongPassword String newPassword,
+            @NotBlank(message = "Please confirm your new password") String confirmNewPassword) {
 
-        @AssertTrue(message = "Mật khẩu xác nhận không khớp")
+        @AssertTrue(message = "The confirmation password does not match")
         public boolean isNewPasswordConfirmed() {
             return newPassword != null && newPassword.equals(confirmNewPassword);
         }

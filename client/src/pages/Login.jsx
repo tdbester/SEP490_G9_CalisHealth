@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import "./Login.css";
+import AuthLogo from "../components/AuthLogo";
+import ImeNotice from "../components/ImeNotice";
+import { hasNonAscii } from "../utils/authInput";
 
 function MailIcon() {
   return (
@@ -39,21 +42,6 @@ function EyeOffIcon() {
   );
 }
 
-function Logo() {
-  return (
-    <svg width="25" height="37" viewBox="0 0 12 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M5.6316 0C6.7146 4.332 11.0466 6.498 11.0466 11.913C11.0466 13.3491 10.4761 14.7265 9.46058 15.742C8.44507 16.7575 7.06775 17.328 5.6316 17.328C4.19545 17.328 2.81812 16.7575 1.80262 15.742C0.787106 14.7265 0.216599 13.3491 0.216599 11.913C0.216599 9.747 1.2996 8.664 2.3826 7.581C2.3826 9.747 3.4656 10.83 4.5486 10.83C4.5486 6.498 3.4656 4.332 5.6316 0Z" fill="url(#paint0_linear_89_80)" />
-      <path d="M0.758101 12.996H3.4656L4.8735 10.2885L6.9312 15.7035L8.3391 12.996H10.5051" strokeWidth="1.5162" strokeLinecap="round" strokeLinejoin="round" stroke="white" />
-      <defs>
-        <linearGradient id="paint0_linear_89_80" x1="2.3826" y1="-2.22058e-07" x2="14.1558" y2="12.2638" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#B44CFF" />
-          <stop offset="1" stopColor="#FF77A8" />
-        </linearGradient>
-      </defs>
-    </svg>
-  );
-}
-
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -85,8 +73,15 @@ export default function Login() {
 
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [imeWarn, setImeWarn] = useState({ email: false, password: false });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Inputs are uncontrolled (browser autofill), so read both values from the form.
+  const handleChange = (e) => {
+    const { email, password } = e.currentTarget.form.elements;
+    setImeWarn({ email: hasNonAscii(email.value), password: hasNonAscii(password.value) });
+  };
 
   if (existingRole === "CONTENT_MANAGER") {
     return <Navigate to="/content/dashboard" replace />;
@@ -95,11 +90,22 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    const formData = new FormData(e.currentTarget);
+    const loginEmail = String(formData.get("email") || "");
+    const loginPassword = String(formData.get("password") || "");
+
+    const warn = { email: hasNonAscii(loginEmail), password: hasNonAscii(loginPassword) };
+    if (warn.email || warn.password) {
+      setImeWarn(warn);
+      return;
+    }
     setLoading(true);
+
     try {
       const res = await api.post("/auth/login", {
-        email: email.trim().toLowerCase(),
-        password,
+        email: loginEmail.trim().toLowerCase(),
+        password: loginPassword,
       });
       // res.data = { token, email, fullName, role }
       localStorage.setItem("token", res.data.token);
@@ -140,17 +146,14 @@ export default function Login() {
   return (
     <div className="login">
       <div className="login-card">
-        <div className="login-logo">
-          <div className="login-logo-icon">
-            <Logo />
-          </div>
-          <span className="login-logo-text">Calis</span>
-          <span className="logo-gradient-text">Health</span>
-        </div>
+        <button type="button" className="login-back" onClick={() => navigate("/")}>
+          &larr; Home
+        </button>
+        <AuthLogo />
 
         <h1 className="login-title">Login</h1>
 
-        <form className="login-form" onSubmit={handleSubmit}>
+        <form className="login-form" onSubmit={handleSubmit} autoComplete="on">
           {error && <div className="login-error">{error}</div>}
 
           <div className="login-field">
@@ -159,15 +162,17 @@ export default function Login() {
               <MailIcon />
               <input
                 id="login-email"
+                name="email"
                 className="login-input"
                 type="email"
                 placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                defaultValue=""
+                onChange={handleChange}
                 autoComplete="email"
                 required
               />
             </div>
+            <ImeNotice warn={imeWarn.email} />
           </div>
 
           <div className="login-field">
@@ -176,11 +181,12 @@ export default function Login() {
               <LockIcon />
               <input
                 id="login-password"
+                name="password"
                 className="login-input"
                 type={showPassword ? "text" : "password"}
                 placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                defaultValue=""
+                onChange={handleChange}
                 autoComplete="current-password"
                 required
               />
@@ -193,6 +199,7 @@ export default function Login() {
                 {showPassword ? <EyeOffIcon /> : <EyeOpenIcon />}
               </button>
             </div>
+            <ImeNotice warn={imeWarn.password} />
           </div>
 
           <button type="submit" className="login-submit" disabled={loading}>

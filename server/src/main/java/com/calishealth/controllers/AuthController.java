@@ -24,13 +24,19 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest r) {
         auth.register(r);
-        return msg("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
+        return msg("Registration successful! Please check your email to verify your account.");
     }
 
     @GetMapping("/verify")
+    public ResponseEntity<?> checkVerificationToken(@RequestParam String token) {
+        auth.checkEmailVerificationToken(token);
+        return msg("Verification link is valid.");
+    }
+
+    @PostMapping("/verify")
     public ResponseEntity<?> verify(@RequestParam String token) {
         auth.verifyEmail(token);
-        return msg("Xác thực email thành công! Bạn có thể đăng nhập.");
+        return msg("Email verified successfully! You can now log in.");
     }
 
     @PostMapping("/login")
@@ -41,19 +47,25 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgot(@Valid @RequestBody ForgotRequest r) {
         auth.forgotPassword(r);
-        return msg("Nếu email tồn tại, chúng tôi đã gửi link đặt lại mật khẩu.");
+        return msg("If the email exists, we have sent a password reset link.");
+    }
+
+    @GetMapping("/verify-reset-token")
+    public ResponseEntity<?> verifyResetToken(@RequestParam String token) {
+        auth.verifyResetToken(token);
+        return msg("Password reset token is valid.");
     }
 
     @PostMapping("/reset-password")
     public ResponseEntity<?> reset(@Valid @RequestBody ResetRequest r) {
         auth.resetPassword(r);
-        return msg("Đặt lại mật khẩu thành công! Hãy đăng nhập lại.");
+        return msg("Password reset successfully! Please log in again.");
     }
 
     @PostMapping("/change-password")
     public ResponseEntity<?> change(Authentication a, @Valid @RequestBody ChangePasswordRequest r) {
         auth.changePassword((String) a.getPrincipal(), r);
-        return msg("Đổi mật khẩu thành công!");
+        return msg("Password changed successfully!");
     }
 
     @GetMapping("/me")

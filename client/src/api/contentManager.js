@@ -146,9 +146,9 @@ export const contentManagerApi = {
       .catch((error) => { throw requestError(error); });
   },
 
-  updateExerciseStatus: (code, active) =>
+  updateExerciseStatus: (code, active, rejectionReason = null) =>
     contentApi
-      .patch(`/content/exercises/${encodeURIComponent(code)}/status`, { active })
+      .patch(`/content/exercises/${encodeURIComponent(code)}/status`, { active, rejectionReason })
       .then((r) => r.data)
       .catch((error) => { throw requestError(error); }),
 

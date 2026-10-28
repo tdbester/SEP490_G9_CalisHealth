@@ -32,7 +32,7 @@ public class GlobalExceptionHandler {
                 errors.putIfAbsent(f.getField(), f.getDefaultMessage()));
 
         String message = errors.isEmpty()
-                ? "Dữ liệu không hợp lệ"
+                ? "Invalid data"
                 : errors.values().stream().distinct().collect(Collectors.joining("; "));
 
         Map<String, Object> body = new LinkedHashMap<>();
