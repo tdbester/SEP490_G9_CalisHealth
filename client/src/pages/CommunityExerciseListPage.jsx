@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { createMemberExercise, getMemberExerciseList } from "../api/library";
+import { getLevelBadgeStyle } from "../utils/levelBadge";
 
 // Mock data matching mockup 100%
 const INITIAL_COMMUNITY_EXERCISES = [
@@ -515,9 +516,6 @@ export default function CommunityExerciseListPage() {
           </div>
         ) : (
           filteredExercises.map((item) => {
-            const isBeginner = item.level === "Beginner";
-            const isAdvanced = item.level === "Advanced";
-
             return (
               <div
                 key={item.id}
@@ -538,15 +536,9 @@ export default function CommunityExerciseListPage() {
                         {item.title}
                       </h3>
                       <span
-                        className={`px-3 py-0.5 text-[11px] font-medium rounded-full border capitalize ${
-                          isBeginner
-                            ? "border-emerald-800/80 bg-emerald-950/40 text-emerald-400"
-                            : isAdvanced
-                            ? "border-rose-800/80 bg-rose-950/40 text-rose-400"
-                            : "border-amber-800/80 bg-amber-950/40 text-amber-400"
-                        }`}
+                        className={`px-3 py-0.5 text-[11px] font-medium rounded-full border capitalize ${getLevelBadgeStyle(item.level || item.difficultyLevel)}`}
                       >
-                        {item.level}
+                        {item.level || item.difficultyLevel || "Intermediate"}
                       </span>
                     </div>
 

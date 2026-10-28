@@ -4,7 +4,7 @@ import com.calishealth.dtos.CreatePersonalExerciseRequestDTO;
 import com.calishealth.dtos.PageResponseDTO;
 import com.calishealth.dtos.PersonalExerciseResponseDTO;
 import com.calishealth.dtos.SubmissionCountsDTO;
-import com.calishealth.models.ExerciseEntry;
+import com.calishealth.models.Exercise;
 import com.calishealth.service.PersonalExerciseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,9 +35,9 @@ public class PersonalExerciseController {
 
     @GetMapping
     public ResponseEntity<PageResponseDTO<PersonalExerciseResponseDTO>> list(
-            @RequestParam(defaultValue = "PENDING") ExerciseEntry.EntryStatus status,
+            @RequestParam(defaultValue = "PENDING") Exercise.EntryStatus status,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) ExerciseEntry.EntryLevel level,
+            @RequestParam(required = false) Exercise.EntryLevel level,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "6") int size,
             Authentication authentication

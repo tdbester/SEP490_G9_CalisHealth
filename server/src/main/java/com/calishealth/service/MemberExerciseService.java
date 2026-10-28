@@ -4,7 +4,7 @@ import com.calishealth.dtos.MemberExerciseFilterRequestDTO;
 import com.calishealth.dtos.MemberExerciseDetailResponseDTO;
 import com.calishealth.dtos.MemberExerciseItemResponseDTO;
 import com.calishealth.dtos.PageResponseDTO;
-import com.calishealth.models.ExerciseEntry;
+import com.calishealth.models.Exercise;
 import com.calishealth.models.MemberSavedExercise;
 import com.calishealth.models.User;
 import com.calishealth.repository.ExerciseRepository;
@@ -39,9 +39,9 @@ public class MemberExerciseService {
     public MemberExerciseDetailResponseDTO getMemberExerciseDetail(Long exerciseId, String memberEmail) {
         User member = users.findByEmail(memberEmail)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated member not found"));
-        ExerciseEntry exercise = exercises.findById(exerciseId)
+        Exercise exercise = exercises.findById(exerciseId)
                 .filter(item -> !item.isSystem())
-                .filter(item -> item.getStatus() == ExerciseEntry.EntryStatus.ACCEPTED)
+                .filter(item -> "ACCEPTED".equals(item.getStatus()))
                 .filter(item -> item.isShareWithCommunity()
                         || (item.getAuthor() != null && member.getId().equals(item.getAuthor().getId())))
                 .orElseThrow(() -> new ResourceNotFoundException("Community exercise not found"));
@@ -63,7 +63,7 @@ public class MemberExerciseService {
                 exercise.getName(),
                 exercise.getDescription(),
                 levelLabel(exercise.getLevel()),
-                exercise.getMuscleGroup(),
+                muscleGroupLabel(exercise),
                 exercise.getDefaultSets(),
                 exercise.getDefaultReps(),
                 exercise.getDefaultDuration(),
@@ -74,7 +74,19 @@ public class MemberExerciseService {
                 timeAgo(exercise.getCreatedAt()),
                 exercise.getSaveCount() == null ? 0 : exercise.getSaveCount(),
                 isSaved,
-                exercise.getStatus().name());
+                exercise.getStatus());
+    }
+
+    private String muscleGroupLabel(Exercise exercise) {
+        if (exercise.getMuscleGroup() != null && !exercise.getMuscleGroup().isBlank()) {
+            return exercise.getMuscleGroup();
+        }
+        return exercise.getMuscleGroups().stream()
+                .map(link -> link.getMuscleGroup() == null ? null : link.getMuscleGroup().getName())
+                .filter(name -> name != null && !name.isBlank())
+                .distinct()
+                .reduce((first, second) -> first + ", " + second)
+                .orElse(null);
     }
 
     @Transactional(readOnly = true)
@@ -104,11 +116,11 @@ public class MemberExerciseService {
             case "OLDEST" -> Sort.by(Sort.Order.asc("createdAt"));
             default -> Sort.by(Sort.Order.desc("createdAt"));
         };
-        Page<ExerciseEntry> result = exercises.findAll(
+        Page<Exercise> result = exercises.findAll(
                 MemberExerciseSpecification.withFilters(filter, member.getId()),
                 PageRequest.of(filter.getPage(), filter.getSize(), sort));
 
-        List<Long> ids = result.getContent().stream().map(ExerciseEntry::getId).toList();
+        List<Long> ids = result.getContent().stream().map(Exercise::getId).toList();
         Set<Long> savedIds = new HashSet<>();
         if (!ids.isEmpty()) {
             savedExercises.findAllByMemberIdAndExerciseIdIn(member.getId(), ids)
@@ -131,7 +143,7 @@ public class MemberExerciseService {
                         timeAgo(exercise.getCreatedAt()),
                         exercise.getSaveCount() == null ? 0 : exercise.getSaveCount(),
                         savedIds.contains(exercise.getId()),
-                        exercise.getStatus().name()))
+                        exercise.getStatus()))
                 .toList();
 
         return new PageResponseDTO<>(
@@ -144,9 +156,9 @@ public class MemberExerciseService {
                 result.hasPrevious());
     }
 
-    private String levelLabel(ExerciseEntry.EntryLevel level) {
-        if (level == null) return null;
-        String normalized = level.name().toLowerCase(Locale.ROOT);
+    private String levelLabel(String level) {
+        if (level == null || level.isBlank()) return null;
+        String normalized = level.toLowerCase(Locale.ROOT);
         return Character.toUpperCase(normalized.charAt(0)) + normalized.substring(1);
     }
 

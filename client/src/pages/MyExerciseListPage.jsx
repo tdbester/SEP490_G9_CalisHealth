@@ -6,6 +6,7 @@ import {
   getPersonalExercises,
 } from "../api/library";
 import useUndoDelete from "../hooks/useUndoDelete";
+import { getLevelBadgeStyle } from "../utils/levelBadge";
 
 /* -------------------- ICONS -------------------- */
 function BarbellIcon({ className = "h-5 w-5 text-[#9d7aff]" }) {
@@ -58,14 +59,9 @@ function XCircleIcon({ className = "w-3.5 h-3.5" }) {
 
 /* -------------------- LEVEL BADGE -------------------- */
 function LevelBadge({ level }) {
-  const map = {
-    Beginner: "border-emerald-600/70 bg-emerald-950/70 text-emerald-300",
-    Intermediate: "border-amber-600/70 bg-amber-950/70 text-amber-300",
-    Advanced: "border-rose-600/70 bg-rose-950/70 text-rose-300",
-  };
-  const cls = map[level] || map["Intermediate"];
+  const displayLevel = level || "Intermediate";
   return (
-    <span className={`px-3 py-1 text-xs font-bold rounded-full border capitalize ${cls}`}>{level}</span>
+    <span className={`px-3 py-1 text-xs font-bold rounded-full border capitalize ${getLevelBadgeStyle(displayLevel)}`}>{displayLevel}</span>
   );
 }
 

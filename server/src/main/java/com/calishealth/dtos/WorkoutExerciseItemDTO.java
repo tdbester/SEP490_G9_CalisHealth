@@ -4,6 +4,7 @@ public record WorkoutExerciseItemDTO(
         Long id,
         Long exerciseId,
         String exerciseTitle,
+        boolean isSystem,
         String targetMuscle,
         String level,
         int orderIndex,

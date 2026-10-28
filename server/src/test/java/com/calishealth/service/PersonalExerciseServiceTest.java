@@ -1,7 +1,7 @@
 package com.calishealth.service;
 
 import com.calishealth.dtos.CreatePersonalExerciseRequestDTO;
-import com.calishealth.models.ExerciseEntry;
+import com.calishealth.models.Exercise;
 import com.calishealth.models.User;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.UserRepository;
@@ -41,8 +41,8 @@ class PersonalExerciseServiceTest {
         member.setId(7L);
         member.setEmail("member@example.com");
         when(users.findByEmail("member@example.com")).thenReturn(Optional.of(member));
-        when(exercises.save(any(ExerciseEntry.class))).thenAnswer(invocation -> {
-            ExerciseEntry saved = invocation.getArgument(0);
+        when(exercises.save(any(Exercise.class))).thenAnswer(invocation -> {
+            Exercise saved = invocation.getArgument(0);
             saved.setId(31L);
             saved.setCreatedAt(LocalDateTime.now());
             saved.setUpdatedAt(LocalDateTime.now());
@@ -61,9 +61,9 @@ class PersonalExerciseServiceTest {
         assertThat(response.guideSteps()).containsExactly("Brace your core", "Lower with control");
         assertThat(response.videoUrl()).startsWith("/media/exercise-demos/");
 
-        var captor = org.mockito.ArgumentCaptor.forClass(ExerciseEntry.class);
+        var captor = org.mockito.ArgumentCaptor.forClass(Exercise.class);
         verify(exercises).save(captor.capture());
-        ExerciseEntry saved = captor.getValue();
+        Exercise saved = captor.getValue();
         assertThat(saved.isSystem()).isFalse();
         assertThat(saved.getAuthor().getId()).isEqualTo(7L);
         assertThat(saved.isShareWithCommunity()).isFalse();
@@ -83,19 +83,19 @@ class PersonalExerciseServiceTest {
     void resubmitsWithCurrentVideoAndSendsExerciseToPendingReview() {
         User member = new User();
         member.setId(7L);
-        ExerciseEntry rejected = new ExerciseEntry();
+        Exercise rejected = new Exercise();
         rejected.setId(31L);
         rejected.setAuthor(member);
         rejected.setSystem(false);
         rejected.setName("Wall sit challenge");
         rejected.setDescription("A wall sit exercise.");
-        rejected.setType(ExerciseEntry.EntryType.HEALTH);
-        rejected.setLevel(ExerciseEntry.EntryLevel.BEGINNER);
+        rejected.setType(Exercise.EntryType.HEALTH);
+        rejected.setLevel(Exercise.EntryLevel.BEGINNER);
         rejected.setMuscleGroup("Legs");
-        rejected.setStatus(ExerciseEntry.EntryStatus.REJECTED);
+        rejected.setStatus(Exercise.EntryStatus.REJECTED);
         rejected.setRejectionReason("Previous reason");
         rejected.setVideoUrl("/media/exercise-demos/current.mp4");
-        when(exercises.findByIdAndAuthor_IdAndIsSystemFalse(31L, 7L)).thenReturn(Optional.of(rejected));
+        when(exercises.findByIdAndAuthor_IdAndSystemFalse(31L, 7L)).thenReturn(Optional.of(rejected));
 
         var response = service.resubmitPersonalExercise(
                 "member@example.com",
@@ -103,7 +103,7 @@ class PersonalExerciseServiceTest {
                 new CreatePersonalExerciseRequestDTO(
                         "Wall sit challenge",
                         "A wall sit exercise.",
-                        ExerciseEntry.EntryLevel.BEGINNER,
+                        Exercise.EntryLevel.BEGINNER,
                         List.of("Brace your core", "Hold the squat"),
                         "Legs",
                         3,
@@ -127,18 +127,18 @@ class PersonalExerciseServiceTest {
     void editsAcceptedExerciseAndSendsItBackToPendingReview() {
         User member = new User();
         member.setId(7L);
-        ExerciseEntry accepted = new ExerciseEntry();
+        Exercise accepted = new Exercise();
         accepted.setId(31L);
         accepted.setAuthor(member);
         accepted.setSystem(false);
         accepted.setName("Wall sit challenge");
         accepted.setDescription("A wall sit exercise.");
-        accepted.setType(ExerciseEntry.EntryType.HEALTH);
-        accepted.setLevel(ExerciseEntry.EntryLevel.BEGINNER);
+        accepted.setType(Exercise.EntryType.HEALTH);
+        accepted.setLevel(Exercise.EntryLevel.BEGINNER);
         accepted.setMuscleGroup("Legs");
-        accepted.setStatus(ExerciseEntry.EntryStatus.ACCEPTED);
+        accepted.setStatus(Exercise.EntryStatus.ACCEPTED);
         accepted.setVideoUrl("/media/exercise-demos/current.mp4");
-        when(exercises.findByIdAndAuthor_IdAndIsSystemFalse(31L, 7L)).thenReturn(Optional.of(accepted));
+        when(exercises.findByIdAndAuthor_IdAndSystemFalse(31L, 7L)).thenReturn(Optional.of(accepted));
 
         var response = service.updateAcceptedPersonalExercise(
                 "member@example.com",
@@ -146,7 +146,7 @@ class PersonalExerciseServiceTest {
                 new CreatePersonalExerciseRequestDTO(
                         "Wall sit challenge",
                         "A wall sit exercise.",
-                        ExerciseEntry.EntryLevel.BEGINNER,
+                        Exercise.EntryLevel.BEGINNER,
                         List.of("Brace your core", "Hold the squat"),
                         "Legs",
                         1,
@@ -170,13 +170,13 @@ class PersonalExerciseServiceTest {
     void rejectsResubmissionWithoutCurrentOrNewVideo() {
         User member = new User();
         member.setId(7L);
-        ExerciseEntry rejected = new ExerciseEntry();
+        Exercise rejected = new Exercise();
         rejected.setId(31L);
         rejected.setAuthor(member);
         rejected.setSystem(false);
-        rejected.setType(ExerciseEntry.EntryType.HEALTH);
-        rejected.setStatus(ExerciseEntry.EntryStatus.REJECTED);
-        when(exercises.findByIdAndAuthor_IdAndIsSystemFalse(31L, 7L)).thenReturn(Optional.of(rejected));
+        rejected.setType(Exercise.EntryType.HEALTH);
+        rejected.setStatus(Exercise.EntryStatus.REJECTED);
+        when(exercises.findByIdAndAuthor_IdAndSystemFalse(31L, 7L)).thenReturn(Optional.of(rejected));
 
         var response = service.resubmitPersonalExercise(
                 "member@example.com",
@@ -184,7 +184,7 @@ class PersonalExerciseServiceTest {
                 new CreatePersonalExerciseRequestDTO(
                         "Wall sit",
                         "A wall sit exercise.",
-                        ExerciseEntry.EntryLevel.BEGINNER,
+                        Exercise.EntryLevel.BEGINNER,
                         List.of("Brace your core"),
                         "Legs",
                         3,
@@ -206,7 +206,7 @@ class PersonalExerciseServiceTest {
         return new CreatePersonalExerciseRequestDTO(
                 title,
                 "A controlled bodyweight movement.",
-                ExerciseEntry.EntryLevel.BEGINNER,
+                Exercise.EntryLevel.BEGINNER,
                 List.of("Brace your core", "Lower with control"),
                 "Chest",
                 3,

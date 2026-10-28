@@ -28,6 +28,7 @@ export default function CreatePersonalExercisePage() {
   const [sets, setSets] = useState(3);
   const [reps, setReps] = useState(12);
   const [duration, setDuration] = useState(30);
+  const [targetMuscle, setTargetMuscle] = useState("Full Body");
   const [level, setLevel] = useState("Beginner");
   const [guideSteps, setGuideSteps] = useState([
     "Start in a plank with hands under shoulders",
@@ -60,6 +61,7 @@ export default function CreatePersonalExercisePage() {
       sets !== 3 ||
       reps !== 12 ||
       duration !== 30 ||
+      targetMuscle !== "Full Body" ||
       level !== "Beginner" ||
       guideSteps[0] !== "Start in a plank with hands under shoulders" ||
       guideSteps.length !== 2 ||
@@ -159,7 +161,7 @@ export default function CreatePersonalExercisePage() {
         description: description.trim(),
         level: level.toUpperCase(),
         guideSteps: guideSteps.map((step) => step.trim()).filter(Boolean),
-        targetMuscle: "Full body",
+        targetMuscle,
         countType,
         sets: countType === "reps_sets" ? sets : 1,
         reps: countType === "reps_sets" ? reps : null,
@@ -298,6 +300,24 @@ export default function CreatePersonalExercisePage() {
             className={`w-full rounded-xl border ${showFieldError("description") && validationErrors.description ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#0c0820] p-4 text-xs text-white placeholder-slate-500 h-28 resize-none focus:outline-none transition-colors leading-relaxed`}
           />
           {showFieldError("description") && validationErrors.description && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.description}</p>}
+        </div>
+
+        <div>
+          <label htmlFor="exercise-muscle-group" className="mb-1.5 block text-xs font-semibold text-slate-300">
+            Muscle group
+          </label>
+          <select
+            id="exercise-muscle-group"
+            value={targetMuscle}
+            onChange={(event) => setTargetMuscle(event.target.value)}
+            className="w-full rounded-xl border border-[#231b46] bg-[#0c0820] px-4 py-2.5 text-xs text-white outline-none transition-colors focus:border-[#7c3aed]"
+          >
+            {["Chest", "Back", "Shoulders", "Arms", "Core", "Legs", "Full Body"].map((muscleGroup) => (
+              <option key={muscleGroup} value={muscleGroup} className="bg-[#0c0820]">
+                {muscleGroup}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Count type and exercise dosage */}

@@ -28,9 +28,6 @@ public class WorkoutEntry {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(columnDefinition = "TEXT")
-    private String content;
-
     @Column(length = 40)
     private String type = "WORKOUT";
 
@@ -43,6 +40,12 @@ public class WorkoutEntry {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id", insertable = false, updatable = false)
     private User author;
+
+    @Column(nullable = false, length = 20)
+    private String source = "SYSTEM";
+
+    @Column(name = "rest_seconds", nullable = false)
+    private int restSeconds = 60;
 
     @Column(nullable = false, length = 30)
     private String level;
@@ -76,7 +79,7 @@ public class WorkoutEntry {
             inverseJoinColumns = @JoinColumn(name = "exercise_id")
     )
     @OrderColumn(name = "display_order")
-    private List<ExerciseEntry> exercises = new ArrayList<>();
+    private List<Exercise> exercises = new ArrayList<>();
 
     @OneToMany(mappedBy = "workout", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("dayOfWeek ASC, id ASC")

@@ -4,7 +4,7 @@ import com.calishealth.dtos.CreateUpdateWorkoutRequestDTO;
 import com.calishealth.dtos.WorkoutFilterRequestDTO;
 import com.calishealth.dtos.WorkoutItemDTO;
 import com.calishealth.exception.ResourceNotFoundException;
-import com.calishealth.models.ExerciseEntry;
+import com.calishealth.models.Exercise;
 import com.calishealth.models.User;
 import com.calishealth.models.WorkoutEntry;
 import com.calishealth.repository.ExerciseRepository;
@@ -44,12 +44,12 @@ class LibraryWorkoutServiceTest {
         member.setEmail("member@example.test");
         when(users.findByEmail(member.getEmail())).thenReturn(Optional.of(member));
 
-        ExerciseEntry beginner = new ExerciseEntry();
+        Exercise beginner = new Exercise();
         beginner.setId(10L);
-        beginner.setLevel(ExerciseEntry.EntryLevel.BEGINNER);
-        ExerciseEntry advanced = new ExerciseEntry();
+        beginner.setLevel(Exercise.EntryLevel.BEGINNER);
+        Exercise advanced = new Exercise();
         advanced.setId(20L);
-        advanced.setLevel(ExerciseEntry.EntryLevel.ADVANCED);
+        advanced.setLevel(Exercise.EntryLevel.ADVANCED);
         when(exercises.findAll(any(org.springframework.data.jpa.domain.Specification.class)))
                 .thenReturn(List.of(beginner, advanced));
         when(workouts.saveAndFlush(any(WorkoutEntry.class)))
@@ -88,9 +88,9 @@ class LibraryWorkoutServiceTest {
         member.setEmail("member@example.test");
         when(users.findByEmail(member.getEmail())).thenReturn(Optional.of(member));
 
-        ExerciseEntry exercise = new ExerciseEntry();
+        Exercise exercise = new Exercise();
         exercise.setId(10L);
-        exercise.setLevel(ExerciseEntry.EntryLevel.BEGINNER);
+        exercise.setLevel(Exercise.EntryLevel.BEGINNER);
         when(exercises.findAll(any(org.springframework.data.jpa.domain.Specification.class)))
                 .thenReturn(List.of(exercise));
         when(workouts.saveAndFlush(any(WorkoutEntry.class)))
@@ -148,7 +148,7 @@ class LibraryWorkoutServiceTest {
         workout.setLevel("BEGINNER");
         workout.setTotalSets(9);
         workout.setEstimatedDuration(12);
-        ExerciseEntry exercise = new ExerciseEntry();
+        Exercise exercise = new Exercise();
         exercise.setMuscleGroup("Chest");
         workout.setExercises(List.of(exercise));
         when(workouts.findAll(

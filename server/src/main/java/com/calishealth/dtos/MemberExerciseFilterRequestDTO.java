@@ -1,6 +1,6 @@
 package com.calishealth.dtos;
 
-import com.calishealth.models.ExerciseEntry;
+import com.calishealth.models.Exercise;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
@@ -15,9 +15,9 @@ public class MemberExerciseFilterRequestDTO {
 
     private String search;
 
-    private ExerciseEntry.EntryLevel level;
+    private Exercise.EntryLevel level;
 
-    private ExerciseEntry.EntryStatus status;
+    private Exercise.EntryStatus status;
 
     @Pattern(regexp = "NEWEST|MOST_SAVED|OLDEST", message = "sortBy must be NEWEST, OLDEST or MOST_SAVED")
     private String sortBy = "NEWEST";

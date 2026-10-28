@@ -5,7 +5,7 @@ import com.calishealth.dtos.PageResponseDTO;
 import com.calishealth.dtos.PersonalExerciseResponseDTO;
 import com.calishealth.dtos.SubmissionCountsDTO;
 import com.calishealth.exception.ResourceNotFoundException;
-import com.calishealth.models.ExerciseEntry;
+import com.calishealth.models.Exercise;
 import com.calishealth.models.User;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.UserRepository;
@@ -50,16 +50,19 @@ public class PersonalExerciseService {
             ContentModerationService.ModerationResult result = moderation.combine(textReason, videoReason);
             String videoUrl = videoReason == null ? videoStorage.store(videoFile) : null;
         try {
-            ExerciseEntry exercise = new ExerciseEntry();
+            Exercise exercise = new Exercise();
             exercise.setCode("PER-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase(Locale.ROOT));
             exercise.setName(request.title().trim());
             exercise.setDescription(request.description() == null ? "" : request.description().trim());
-            exercise.setType(ExerciseEntry.EntryType.HEALTH);
+            exercise.setType(Exercise.EntryType.HEALTH);
             exercise.setSystem(false);
             exercise.setAuthor(member);
+            exercise.setCreatedBy(member);
+            exercise.setSource(ExerciseService.SOURCE_CUSTOM);
             exercise.setStatus(result.isPassed()
-                    ? ExerciseEntry.EntryStatus.PENDING
-                    : ExerciseEntry.EntryStatus.REJECTED);
+                    ? Exercise.EntryStatus.PENDING
+                    : Exercise.EntryStatus.REJECTED);
+            exercise.setActive(false);
             exercise.setRejectionReason(result.isPassed() ? null : result.rejectionReason());
             exercise.setMuscleGroup(request.targetMuscle().trim());
             exercise.setLevel(request.level());
@@ -80,9 +83,9 @@ public class PersonalExerciseService {
     @Transactional(readOnly = true)
     public PageResponseDTO<PersonalExerciseResponseDTO> getMemberSubmissions(
             String memberEmail,
-            ExerciseEntry.EntryStatus status,
+            Exercise.EntryStatus status,
             String search,
-            ExerciseEntry.EntryLevel level,
+            Exercise.EntryLevel level,
             int page,
             int size
     ) {
@@ -91,7 +94,7 @@ public class PersonalExerciseService {
         if (status == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Submission status is required");
         }
-        Page<ExerciseEntry> result = exercises.findAll(
+        Page<Exercise> result = exercises.findAll(
                 PersonalExerciseSpecification.withFilters(member.getId(), status, search, level),
                 PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))));
         return new PageResponseDTO<>(
@@ -108,15 +111,15 @@ public class PersonalExerciseService {
     public SubmissionCountsDTO getSubmissionCounts(String memberEmail) {
         Long memberId = requireMember(memberEmail).getId();
         return new SubmissionCountsDTO(
-                exercises.countByAuthor_IdAndIsSystemFalseAndStatus(memberId, ExerciseEntry.EntryStatus.PENDING),
-                exercises.countByAuthor_IdAndIsSystemFalseAndStatus(memberId, ExerciseEntry.EntryStatus.REJECTED),
-                exercises.countByAuthor_IdAndIsSystemFalseAndStatus(memberId, ExerciseEntry.EntryStatus.ACCEPTED));
+                exercises.countByAuthor_IdAndSystemFalseAndStatus(memberId, Exercise.EntryStatus.PENDING.name()),
+                exercises.countByAuthor_IdAndSystemFalseAndStatus(memberId, Exercise.EntryStatus.REJECTED.name()),
+                exercises.countByAuthor_IdAndSystemFalseAndStatus(memberId, Exercise.EntryStatus.ACCEPTED.name()));
     }
 
     @Transactional(readOnly = true)
     public PersonalExerciseResponseDTO getPersonalExercise(String memberEmail, Long exerciseId) {
         User member = requireMember(memberEmail);
-        ExerciseEntry exercise = exercises.findByIdAndAuthor_IdAndIsSystemFalse(exerciseId, member.getId())
+        Exercise exercise = exercises.findByIdAndAuthor_IdAndSystemFalse(exerciseId, member.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Personal exercise not found"));
         return toResponse(exercise);
     }
@@ -129,9 +132,9 @@ public class PersonalExerciseService {
             MultipartFile videoFile
     ) {
         User member = requireMember(memberEmail);
-        ExerciseEntry exercise = exercises.findByIdAndAuthor_IdAndIsSystemFalse(exerciseId, member.getId())
+        Exercise exercise = exercises.findByIdAndAuthor_IdAndSystemFalse(exerciseId, member.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Personal exercise not found"));
-        if (exercise.getStatus() != ExerciseEntry.EntryStatus.REJECTED) {
+        if (!"REJECTED".equals(exercise.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Only rejected exercises can be resubmitted");
         }
 
@@ -172,10 +175,11 @@ public class PersonalExerciseService {
                 exercise.setShareWithCommunity(request.shareWithCommunity());
             }
             exercise.setStatus(rejectionReason == null
-                    ? ExerciseEntry.EntryStatus.PENDING
-                    : ExerciseEntry.EntryStatus.REJECTED);
+                    ? Exercise.EntryStatus.PENDING
+                    : Exercise.EntryStatus.REJECTED);
+            exercise.setActive(false);
             exercise.setRejectionReason(rejectionReason);
-            ExerciseEntry saved = exercises.save(exercise);
+            Exercise saved = exercises.save(exercise);
             if (replacementVideoUrl != null && previousVideoUrl != null) {
                 deleteVideoAfterCommit(previousVideoUrl);
             }
@@ -194,9 +198,9 @@ public class PersonalExerciseService {
             MultipartFile videoFile
     ) {
         User member = requireMember(memberEmail);
-        ExerciseEntry exercise = exercises.findByIdAndAuthor_IdAndIsSystemFalse(exerciseId, member.getId())
+        Exercise exercise = exercises.findByIdAndAuthor_IdAndSystemFalse(exerciseId, member.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Personal exercise not found"));
-        if (exercise.getStatus() != ExerciseEntry.EntryStatus.ACCEPTED) {
+        if (!"ACCEPTED".equals(exercise.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Only accepted exercises can be edited here");
         }
 
@@ -232,10 +236,11 @@ public class PersonalExerciseService {
                 exercise.setShareWithCommunity(request.shareWithCommunity());
             }
             exercise.setStatus(rejectionReason == null
-                    ? ExerciseEntry.EntryStatus.PENDING
-                    : ExerciseEntry.EntryStatus.REJECTED);
+                    ? Exercise.EntryStatus.PENDING
+                    : Exercise.EntryStatus.REJECTED);
+            exercise.setActive(false);
             exercise.setRejectionReason(rejectionReason);
-            ExerciseEntry saved = exercises.save(exercise);
+            Exercise saved = exercises.save(exercise);
             if (replacementVideoUrl != null && previousVideoUrl != null) {
                 deleteVideoAfterCommit(previousVideoUrl);
             }
@@ -249,7 +254,7 @@ public class PersonalExerciseService {
     @Transactional
     public void deletePersonalExercise(String memberEmail, Long exerciseId) {
         User member = requireMember(memberEmail);
-        ExerciseEntry exercise = exercises.findByIdAndAuthor_IdAndIsSystemFalse(exerciseId, member.getId())
+        Exercise exercise = exercises.findByIdAndAuthor_IdAndSystemFalse(exerciseId, member.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Personal exercise not found"));
         exercises.delete(exercise);
         if (exercise.getVideoUrl() != null) {
@@ -258,7 +263,7 @@ public class PersonalExerciseService {
     }
 
     private void applyCountConfiguration(
-            ExerciseEntry exercise,
+            Exercise exercise,
             CreatePersonalExerciseRequestDTO request
     ) {
         String countType = request.countType();
@@ -300,7 +305,7 @@ public class PersonalExerciseService {
         }
     }
 
-    private PersonalExerciseResponseDTO toResponse(ExerciseEntry exercise) {
+    private PersonalExerciseResponseDTO toResponse(Exercise exercise) {
         List<String> steps = exercise.getGuideSteps() == null || exercise.getGuideSteps().isBlank()
                 ? List.of()
                 : exercise.getGuideSteps().lines().map(String::trim).filter(step -> !step.isBlank()).toList();
@@ -311,7 +316,7 @@ public class PersonalExerciseService {
                 exercise.getLevel() == null ? null : levelLabel(exercise.getLevel()),
                 steps,
                 exercise.getVideoUrl(),
-                exercise.getStatus().name(),
+                exercise.getStatus(),
                 exercise.getRejectionReason(),
                 exercise.getMuscleGroup(),
                 exercise.getDefaultSets(),
@@ -321,8 +326,8 @@ public class PersonalExerciseService {
                 exercise.getUpdatedAt());
     }
 
-    private String levelLabel(ExerciseEntry.EntryLevel level) {
-        String value = level.name().toLowerCase(Locale.ROOT);
+    private String levelLabel(String level) {
+        String value = level.toLowerCase(Locale.ROOT);
         return Character.toUpperCase(value.charAt(0)) + value.substring(1);
     }
 

@@ -4,6 +4,7 @@ import java.util.List;
 
 public record SystemExerciseDetailResponseDTO(
         Long id,
+        String code,
         String title,
         String description,
         String videoUrl,

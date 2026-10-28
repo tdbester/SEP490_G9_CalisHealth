@@ -9,6 +9,7 @@ import {
 } from "./libraryFormValidation";
 import { getAvailableWorkoutExercises, getMyWorkout, updateMyWorkout } from "../api/library";
 import useUndoDelete from "../hooks/useUndoDelete";
+import { getLevelBadgeStyle } from "../utils/levelBadge";
 
 const STORAGE_KEY = "my_custom_workouts";
 const LEVEL_PRIORITY = { Beginner: 1, Intermediate: 2, Advanced: 3 };
@@ -81,14 +82,10 @@ function RemoveIcon() {
 }
 
 function LevelBadge({ level }) {
-  const styles = {
-    Beginner: "border-emerald-700/70 bg-emerald-950/50 text-emerald-400",
-    Intermediate: "border-amber-700/70 bg-amber-950/50 text-amber-400",
-    Advanced: "border-rose-700/70 bg-rose-950/50 text-rose-400",
-  };
+  const displayLevel = level || "Beginner";
   return (
-    <span className={`rounded-full border px-3 py-1 text-[11px] ${styles[level] || styles.Beginner}`}>
-      {level}
+    <span className={`rounded-full px-3 py-1 text-[11px] capitalize ${getLevelBadgeStyle(displayLevel)}`}>
+      {displayLevel}
     </span>
   );
 }

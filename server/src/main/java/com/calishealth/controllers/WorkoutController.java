@@ -1,6 +1,7 @@
 package com.calishealth.controllers;
 
 import com.calishealth.dtos.ExerciseDtos.CreateWorkoutRequest;
+import com.calishealth.dtos.ExerciseDtos.ExerciseStatusRequest;
 import com.calishealth.dtos.ExerciseDtos.WorkoutResponse;
 import com.calishealth.service.WorkoutService;
 import lombok.RequiredArgsConstructor;
@@ -30,5 +31,24 @@ public class WorkoutController {
     @ResponseStatus(HttpStatus.CREATED)
     public WorkoutResponse create(@RequestBody CreateWorkoutRequest request, Authentication authentication) {
         return workouts.create(request, authentication.getName());
+    }
+
+    @PutMapping("/{code}")
+    public WorkoutResponse update(@PathVariable String code, @RequestBody CreateWorkoutRequest request) {
+        return workouts.update(code, request);
+    }
+
+    @DeleteMapping("/{code}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable String code) {
+        workouts.deleteByCode(code);
+    }
+
+    @PatchMapping("/{code}/status")
+    public WorkoutResponse updateStatus(
+            @PathVariable String code,
+            @RequestBody ExerciseStatusRequest request
+    ) {
+        return workouts.updateStatus(code, request.active());
     }
 }

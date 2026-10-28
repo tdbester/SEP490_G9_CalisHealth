@@ -119,7 +119,11 @@ const normalizeWorkout = (workout) => ({
   savesCount: Number(workout.saveCount || 0),
   exercisesCount: Number(workout.totalExercises || 0),
   setsCount: Number(workout.totalSets || 0),
-  duration: `About ${Number(workout.estimatedDuration || 0)} min`,
+  duration: `About ${(
+    Number.isFinite(Number(workout.estimatedDuration))
+      ? Number(workout.estimatedDuration)
+      : 0
+  )} min`,
   createdLabel: workout.createdAt ? `Created ${timeAgo(workout.createdAt)}` : "",
   isShared: Boolean(workout.isSharedWithCommunity),
   exercises: Array.isArray(workout.exercises)
@@ -128,6 +132,7 @@ const normalizeWorkout = (workout) => ({
         exerciseId: exercise.exerciseId,
         name: exercise.exerciseTitle,
         title: exercise.exerciseTitle,
+        isSystem: Boolean(exercise.isSystem),
         level: displayLevel(exercise.level),
         sets: exercise.sets,
         reps: exercise.reps ?? exercise.duration ?? 8,

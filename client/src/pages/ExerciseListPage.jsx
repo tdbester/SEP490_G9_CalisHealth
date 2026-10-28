@@ -1,624 +1,493 @@
-import { useState, useEffect, useCallback } from "react";
-import { useSearchParams, useNavigate, useParams } from "react-router-dom";
-import { getExercises } from "../api/library";
-import "./ExerciseListPage.css";
+﻿import { useMemo, useState } from "react";
+import { Link as RouterLink } from "react-router-dom";
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CircularProgress,
+  IconButton,
+  InputAdornment,
+  Menu,
+  MenuItem,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TablePagination,
+  TableRow,
+  TextField,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
+import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
+import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import StarRoundedIcon from "@mui/icons-material/StarRounded";
+import { contentManagerApi } from "../api/contentManager";
+import { useApiMutation, useApiQuery } from "../hooks";
+import ContentListToolbar from "../components/ContentListToolbar";
+import {
+  CONTENT_PATHS,
+  ContentPageHeader,
+  DarkPill,
+  SummaryCard,
+  formatDate,
+} from "../components/ContentShared";
+import { CM } from "../theme-content";
+import { getLevelBadgeStyle } from "../utils/levelBadge";
 
-// SVG Icons matching Figma design
-function HeartIcon({ className = "h-3.5 w-3.5" }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-    </svg>
-  );
-}
-
-function StarIcon({ className = "h-3.5 w-3.5" }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-    </svg>
-  );
-}
-
-function SearchIcon({ className = "w-4 h-4" }) {
-  return (
-    <svg className={className} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-      <path
-        fillRule="evenodd"
-        d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
-
-function ChevronDownIcon({ className = "w-4 h-4" }) {
-  return (
-    <svg className={className} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-      <path
-        fillRule="evenodd"
-        d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
-
-function ChevronLeftIcon({ className = "w-3.5 h-3.5" }) {
-  return (
-    <svg className={className} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-      <path
-        fillRule="evenodd"
-        d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
-
-function ChevronRightIcon({ className = "w-3.5 h-3.5" }) {
-  return (
-    <svg className={className} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-      <path
-        fillRule="evenodd"
-        d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
-
-// Icon quả tạ thanh ngang (Horizontal barbell)
-function DumbbellIcon({ className = "h-6 w-6 text-[#9d7aff]" }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M6 7v10" />
-      <path d="M18 7v10" />
-      <path d="M3 10v4" />
-      <path d="M21 10v4" />
-      <line x1="3" y1="12" x2="21" y2="12" />
-    </svg>
-  );
-}
-
-// Icon Radio button chuẩn Mockup
-function RadioIcon({ checked }) {
-  if (checked) {
-    return (
-      <div className="w-3.5 h-3.5 rounded-full border-2 border-[#a855f7] flex items-center justify-center flex-shrink-0">
-        <div className="w-1.5 h-1.5 rounded-full bg-[#c084fc]" />
-      </div>
-    );
-  }
-  return (
-    <div className="w-3.5 h-3.5 rounded-full border-[1.5px] border-[#75699c] flex-shrink-0" />
-  );
-}
-
-// Danh sách nhóm cơ chuẩn Mockup
-const MUSCLE_GROUPS = [
-  "All",
-  "Full body",
-  "Chest",
-  "Back",
-  "Arms",
-  "Core",
-  "Legs",
+const BREADCRUMB = [
+  { label: "Content manager", to: CONTENT_PATHS.dashboard },
+  { label: "Exercise & Workout Management", to: CONTENT_PATHS.exercises },
+  { label: "Exercise list" },
 ];
 
-const LEVEL_OPTIONS = ["All levels", "Beginner", "Intermediate", "Advanced"];
-
-// Dữ liệu mẫu chuẩn 100% Mockup Figma cho Tab Health (6 bài)
-export const HEALTH_FALLBACK_EXERCISES = [
-  { id: 101, name: "Jumping jacks", muscleGroup: "Full body", sets: 3, repsOrDuration: "30 sec", level: "Beginner", details: "Full body • 3 sets • 30 sec", description: "Classic rhythmic cardiovascular warm-up drill activating the entire kinetic chain." },
-  { id: 102, name: "Mountain climbers", muscleGroup: "Core", sets: 3, repsOrDuration: "30 sec", level: "Intermediate", details: "Core, cardio • 3 sets • 30 sec", description: "Dynamic quadruped sprint drill challenging anti-extension core stability and hip flexors." },
-  { id: 103, name: "Burpees", muscleGroup: "Full body", sets: 3, repsOrDuration: "10 reps", level: "Advanced", details: "Full body • 3 sets • 10 reps", description: "Full-body metabolic conditioning exercise combining a squat, plank, push-up, and explosive vertical jump." },
-  { id: 104, name: "Push-up", muscleGroup: "Chest", sets: 3, repsOrDuration: "8–12 reps", level: "Beginner", details: "Chest, triceps • 3 sets • 8–12 reps", description: "Fundamental horizontal pushing exercise strengthening pectorals, anterior deltoids, and triceps." },
-  { id: 105, name: "Pull-up", muscleGroup: "Back", sets: 3, repsOrDuration: "5–8 reps", level: "Intermediate", details: "Back, biceps • 3 sets • 5–8 reps", description: "King of upper body vertical pulling drills engaging latissimus dorsi, rhomboids, and biceps." },
-  { id: 106, name: "Pistol squat", muscleGroup: "Legs", sets: 3, repsOrDuration: "5 reps", level: "Advanced", details: "Legs, glutes • 3 sets • 5 reps", description: "Single-leg deep squat requiring maximum ankle dorsiflexion, balance, and quad power." },
-];
-
-// Dữ liệu mẫu chuẩn 100% Mockup Figma cho Tab Skills (6 bài)
-export const SKILL_FALLBACK_EXERCISES = [
-  { id: 201, name: "Wall handstand hold", muscleGroup: "Arms", sets: 4, repsOrDuration: "30 sec", level: "Beginner", details: "Shoulders, core • 4 sets • 30 sec • Handstand", description: "Balance drill on hands demanding wrist mobility, shoulder flexion, and overhead stability." },
-  { id: 202, name: "Handstand push-up", muscleGroup: "Arms", sets: 3, repsOrDuration: "5 reps", level: "Advanced", details: "Shoulders, triceps • 3 sets • 5 reps • Handstand", description: "Elite vertical pressing calisthenic skill lifting 100% of body mass overhead." },
-  { id: 203, name: "Explosive pull-up", muscleGroup: "Back", sets: 4, repsOrDuration: "5 reps", level: "Intermediate", details: "Back, arms • 4 sets • 5 reps • Muscle-up", description: "Explosive pulling variation building the height and power required for muscle-up transitions." },
-  { id: 204, name: "Straight bar dip", muscleGroup: "Chest", sets: 3, repsOrDuration: "8 reps", level: "Intermediate", details: "Chest, triceps • 3 sets • 8 reps • Muscle-up", description: "Bar dip drill developing pressing strength above the bar for the final phase of a muscle-up." },
-  { id: 205, name: "Tuck front lever", muscleGroup: "Back", sets: 4, repsOrDuration: "10 sec", level: "Intermediate", details: "Back, core • 4 sets • 10 sec • Front lever", description: "Horizontal straight-arm isometric pull engaging extreme latissimus activation." },
-  { id: 206, name: "Advanced tuck front lever", muscleGroup: "Back", sets: 4, repsOrDuration: "8 sec", level: "Advanced", details: "Back, core • 4 sets • 8 sec • Front lever", description: "Progressive straight-arm static hold extending knees further from the chest." },
-];
-
-// SUB-COMPONENT 1: ExerciseCard (Dùng chung 1:1 cho cả Health và Skills)
-function ExerciseCard({ item, onClick }) {
-  const lvl = item.level?.toLowerCase();
-  const isBeginner = lvl === "beginner";
-  const isAdvanced = lvl === "advanced";
-
-  const detailText = item.details || [
-    item.muscleGroup || "Full body",
-    item.sets != null ? `${item.sets} sets` : null,
-    item.repsOrDuration,
-    item.equipment || item.exerciseType,
-  ].filter(Boolean).join(" • ");
-
+function TypeChip({ type }) {
+  const normalized = String(type || "").trim().toLowerCase();
+  const isSkill = normalized === "skill";
+  const label = isSkill ? "Skill" : normalized === "health" ? "Health" : "—";
   return (
-    <div
-      className="exercise-row-card group flex items-center justify-between rounded-xl border border-[#22184c] bg-[#130d2e] hover:border-[#382672] py-2 px-3 cursor-pointer transition-all"
-      onClick={() => onClick(item)}
+    <DarkPill
+      tone={isSkill ? "primary" : "neutral"}
+      icon={isSkill ? <StarRoundedIcon /> : undefined}
+      sx={{ width: 76, justifyContent: "center" }}
     >
-      {/* Cụm bên trái: Icon quả tạ trong khung phình to (h-10 w-10, icon h-6 w-6 text-[#9d7aff]) */}
-      <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-3">
-        <div className="h-9 w-9 rounded-lg bg-[#201748] flex items-center justify-center flex-shrink-0">
-          <DumbbellIcon className="h-7 w-7 text-[#9d7aff]" />
-        </div>
-        <div className="flex flex-col min-w-0">
-          <h3 className="text-xs font-semibold text-white truncate group-hover:text-purple-300 transition-colors">
-            {item.name}
-          </h3>
-          <p className="text-[10px] text-slate-400 truncate mt-0.5">
-            {detailText}
-          </p>
-        </div>
-      </div>
-
-      {/* Cụm bên phải: Badge cấp độ phình to dạng viên thuốc lớn (min-w-[105px] px-5 py-1.5 text-xs) - KHÔNG CÓ MŨI TÊN */}
-      <div className="flex items-center flex-shrink-0">
-        <span
-          className={`min-w-[96px] text-center px-4 py-1.5 rounded-full text-xs font-bold tracking-wide capitalize ${
-            isBeginner
-              ? "border border-emerald-800/80 bg-emerald-950/50 text-emerald-400"
-              : isAdvanced
-              ? "border border-rose-800/80 bg-rose-950/50 text-rose-400"
-              : "border border-amber-800/80 bg-amber-950/50 text-amber-400"
-          }`}
-        >
-          {item.level || "Beginner"}
-        </span>
-      </div>
-    </div>
+      {label}
+    </DarkPill>
   );
 }
 
-// SUB-COMPONENT 2: FilterSidebar (Box bộ lọc bên trái dùng chung)
-function FilterSidebar({
-  selectedMuscles,
-  onToggleMuscle,
-  isAllActive,
-  getMuscleCount,
-}) {
+function SourceChip({ source }) {
+  const isCustom = String(source || "").toLowerCase() === "custom";
   return (
-    <aside className="w-full md:w-48 flex-shrink-0 rounded-2xl border border-[#22184c] bg-[#130d2e] p-3">
-      <h2 className="text-[10.5px] font-bold tracking-wider text-[#8a82af] uppercase mb-2 px-1">
-        MUSCLE GROUP
-      </h2>
-
-      <div className="flex flex-col gap-1">
-        {MUSCLE_GROUPS.map((mg) => {
-          const active = mg === "All" ? isAllActive : !isAllActive && selectedMuscles.includes(mg);
-          const count = getMuscleCount(mg);
-
-          return (
-            <button
-              key={mg}
-              type="button"
-              onClick={() => onToggleMuscle(mg)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all ${
-                active
-                  ? "bg-[#3b2d68] text-white font-medium border border-[#6351a4]"
-                  : "bg-transparent text-slate-400 hover:bg-[#1f1a3a] hover:text-white"
-              }`}
-            >
-              <span className="flex items-center gap-2 min-w-0">
-                <RadioIcon checked={active} />
-                <span className="text-xs truncate">{mg}</span>
-              </span>
-
-              <span
-                className={`text-[11px] ml-2 flex-shrink-0 opacity-60 ${active ? "font-semibold" : ""}`}
-              >
-                {count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </aside>
+    <DarkPill tone={isCustom ? "warning" : "neutral"}>
+      {isCustom ? "Custom" : "System"}
+    </DarkPill>
   );
 }
 
-// SUB-COMPONENT 3: SearchFilterBar (Hàng search & dropdown level dùng chung)
-function SearchFilterBar({
-  searchInput,
-  onSearchChange,
-  selectedLevel,
-  onLevelChange,
-}) {
+function LevelChip({ level }) {
+  const displayLevel = level || "Intermediate";
   return (
-    <div className="flex items-center gap-4 mb-4 w-full">
-      {/* Ô tìm kiếm bung rộng chiếm toàn bộ khoảng trống bên trái (flex-1) */}
-      <div className="flex-1 relative flex items-center">
-        <div className="absolute left-3.5 pointer-events-none flex items-center justify-center">
-          <SearchIcon className="w-4 h-4 text-[#655c88]" />
-        </div>
-        <input
-          type="text"
-          className="w-full rounded-xl bg-[#130d2e] border border-[#22184c] pl-10 pr-4 py-2.5 text-xs md:text-sm text-white placeholder-[#655c88] outline-none focus:border-[#6340f1] transition-all"
-          placeholder="Search exercises"
-          value={searchInput}
-          onChange={onSearchChange}
-        />
-      </div>
-
-      {/* Dropdown "All levels" nằm cố định bên phải (w-56 flex-shrink-0) */}
-      <div className="w-56 flex-shrink-0 relative flex items-center">
-        <select
-          className="w-full appearance-none rounded-xl bg-[#130d2e] border border-[#22184c] px-4 py-2.5 pr-10 text-xs md:text-sm font-medium text-white outline-none focus:border-[#6340f1] cursor-pointer transition-all"
-          value={selectedLevel}
-          onChange={onLevelChange}
-        >
-          {LEVEL_OPTIONS.map((lvl) => (
-            <option key={lvl} value={lvl} className="bg-[#130d2e] text-white">
-              {lvl}
-            </option>
-          ))}
-        </select>
-        <div className="absolute right-3.5 pointer-events-none flex items-center justify-center">
-          <ChevronDownIcon className="w-4 h-4 text-[#8a82af]" />
-        </div>
-      </div>
-    </div>
+    <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${getLevelBadgeStyle(displayLevel)}`}>
+      {displayLevel}
+    </span>
   );
 }
 
-// SUB-COMPONENT 4: PaginationBar (Phân trang căn giữa dùng chung)
-function PaginationBar({ currentPage, totalPages, onPageChange }) {
-  const firstPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
-  const visiblePages = Array.from(
-    { length: Math.min(5, totalPages) },
-    (_, index) => firstPage + index
-  );
-
+function StatusDot({ active }) {
   return (
-    <div className="mt-4 flex items-center justify-center gap-2">
-      <button
-        type="button"
-        className="h-7 w-7 rounded-md border border-[#22184c] bg-[#130d2e] text-[#8a82af] hover:text-white flex items-center justify-center text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-        disabled={currentPage <= 1}
-        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-        aria-label="Previous page"
-      >
-        <ChevronLeftIcon className="w-3.5 h-3.5" />
-      </button>
-
-      {visiblePages.map((num) => {
-        const isActive = currentPage === num;
-        return (
-          <button
-            key={num}
-            type="button"
-            className={`h-7 w-7 rounded-md text-xs transition-all cursor-pointer ${
-              isActive
-                ? "bg-[#6340f1] text-white font-bold shadow-sm"
-                : "border border-[#22184c] bg-[#130d2e] text-[#8a82af] hover:text-white hover:border-[#382672]"
-            }`}
-            onClick={() => onPageChange(num)}
-          >
-            {num}
-          </button>
-        );
-      })}
-
-      <button
-        type="button"
-        className="h-7 w-7 rounded-md border border-[#22184c] bg-[#130d2e] text-[#8a82af] hover:text-white flex items-center justify-center text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-        disabled={currentPage >= totalPages}
-        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-        aria-label="Next page"
-      >
-        <ChevronRightIcon className="w-3.5 h-3.5" />
-      </button>
-    </div>
-  );
-}
-
-// COMPONENT CHÍNH: ExerciseListPage (Hỗ trợ 100% template đồng bộ cho Health & Skills)
-export default function ExerciseListPage() {
-  const { tab } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-
-  // Xác định tab hiện tại từ path param (:tab) hoặc query param (?type=)
-  const isSkillFromParam = (val) =>
-    val && (val.toLowerCase() === "skill" || val.toLowerCase() === "skills");
-
-  const queryType = searchParams.get("type");
-  const initialTab = isSkillFromParam(tab) || isSkillFromParam(queryType) ? "skill" : "health";
-
-  const [activeTab, setActiveTab] = useState(initialTab);
-
-  // Debounced Search: searchInput hiển thị tức thì, debouncedSearch gọi API sau 300ms
-  const [searchInput, setSearchInput] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  const [selectedLevel, setSelectedLevel] = useState("All levels");
-
-  // Multi-select Muscle Groups
-  const [selectedMuscles, setSelectedMuscles] = useState(["All"]);
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 6;
-
-  const [loading, setLoading] = useState(true);
-  const [exercises, setExercises] = useState([]);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalElements, setTotalElements] = useState(0);
-
-  // Đồng bộ activeTab khi route path hoặc query thay đổi
-  useEffect(() => {
-    const isSkill = isSkillFromParam(tab) || isSkillFromParam(searchParams.get("type"));
-    setActiveTab(isSkill ? "skill" : "health");
-  }, [tab, searchParams]);
-
-  // Debounce handler (300ms)
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchInput);
-      setCurrentPage(1);
-    }, 300);
-
-    return () => clearTimeout(handler);
-  }, [searchInput]);
-
-  // Fetch Exercises from API hoặc load Fallback chuẩn Mockup
-  const fetchList = useCallback(async () => {
-    setLoading(true);
-    try {
-      const isAll = selectedMuscles.includes("All") || selectedMuscles.length === 0;
-      const mappedMuscles = selectedMuscles.map((m) =>
-        m === "Arms" ? "Arm/Shoulders,Arms,Shoulders" : m
-      );
-      const musclesQuery = isAll ? undefined : mappedMuscles.join(",");
-
-      const data = await getExercises({
-        type: activeTab === "skill" ? "SKILL" : "HEALTH",
-        level: selectedLevel === "All levels" ? undefined : selectedLevel.toUpperCase(),
-        targetMuscle: musclesQuery,
-        search: debouncedSearch.trim() || undefined,
-        page: currentPage - 1,
-        size: pageSize,
-      });
-
-      const content = Array.isArray(data?.content) ? data.content : [];
-      setExercises(content.map((item) => ({
-        ...item,
-        name: item.title,
-        muscleGroup: item.targetMuscle,
-        sets: item.sets,
-        repsOrDuration: item.duration != null
-          ? `${item.duration} sec`
-          : item.reps != null
-            ? `${item.reps} reps`
-            : null,
-      })));
-      setTotalPages(data?.totalPages ?? 0);
-      setTotalElements(data?.totalElements ?? 0);
-    } catch (err) {
-      console.error("Failed to fetch exercises:", err);
-      setExercises([]);
-      setTotalPages(0);
-      setTotalElements(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [activeTab, selectedLevel, selectedMuscles, debouncedSearch, currentPage]);
-
-  useEffect(() => {
-    fetchList();
-  }, [fetchList]);
-
-  // Event handlers
-  const handleTabSwitch = (newTab) => {
-    setActiveTab(newTab);
-    setCurrentPage(1);
-    setSelectedMuscles(["All"]);
-    if (tab) {
-      navigate(`/library/exercises/${newTab === "skill" ? "skill" : "health"}`);
-    } else {
-      setSearchParams({ type: newTab === "skill" ? "skills" : "health" });
-    }
-  };
-
-  const handleSearchChange = (e) => {
-    setSearchInput(e.target.value);
-  };
-
-  const handleLevelChange = (e) => {
-    setSelectedLevel(e.target.value);
-    setCurrentPage(1);
-  };
-
-  const handleMuscleToggle = (mg) => {
-    if (mg === "All") {
-      setSelectedMuscles(["All"]);
-      setCurrentPage(1);
-      return;
-    }
-
-    setSelectedMuscles((prev) => {
-      const withoutAll = prev.filter((item) => item !== "All");
-      let updated;
-      if (withoutAll.includes(mg)) {
-        updated = withoutAll.filter((item) => item !== mg);
-      } else {
-        updated = [...withoutAll, mg];
-      }
-
-      if (updated.length === 0) {
-        return ["All"];
-      }
-      return updated;
-    });
-    setCurrentPage(1);
-  };
-
-  const handleClearFilters = () => {
-    setSearchInput("");
-    setDebouncedSearch("");
-    setSelectedLevel("All levels");
-    setSelectedMuscles(["All"]);
-    setCurrentPage(1);
-  };
-
-  const handleCardClick = (item) => {
-    navigate(`/library/exercise/${item.id}`);
-  };
-
-  // Subtitle linh hoạt theo Tab
-  const subtitle =
-    activeTab === "skill"
-      ? "Browse calisthenics skills and the exercises that build up to them."
-      : "Browse exercises that support your health goals.";
-
-  const isAllActive = selectedMuscles.includes("All") || selectedMuscles.length === 0;
-
-  // Badge count cho từng nhóm cơ khớp 100% Mockup screenshot
-  const getMuscleBadgeCount = useCallback(
-    (mg) => {
-      const healthCounts = {
-        All: 6,
-        "Full body": 2,
-        Chest: 1,
-        Back: 1,
-        Arms: 2,
-        Core: 1,
-        Legs: 1,
-      };
-      const skillCounts = {
-        All: 6,
-        "Full body": 1,
-        Chest: 1,
-        Back: 3,
-        Arms: 2,
-        Core: 2,
-        Legs: 1,
-      };
-      const map = activeTab === "skill" ? skillCounts : healthCounts;
-      return map[mg] ?? 0;
-    },
-    [activeTab]
-  );
-
-  const displayedTotalCount = totalElements;
-
-  return (
-    <div className="exercise-list-page w-full max-w-7xl mx-auto text-white">
-      {/* 1. HEADER TRANG GỌN GÀNG */}
-      <header className="exercise-header mb-4">
-        <h1 className="exercise-title text-xl md:text-2xl font-bold text-white tracking-tight mb-1">
-          Exercise for health &amp; skill list
-        </h1>
-        <p className="exercise-description text-xs md:text-sm text-[#8a82af]">{subtitle}</p>
-      </header>
-
-      {/* 2. CỤM TAB "HEALTH" & "SKILLS" (Đồng bộ 1:1, tab active nền tím #5b32e8) */}
-      <div className="inline-flex bg-[#130d2e] border border-[#22184c] rounded-xl p-1 gap-1 mb-4" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "health"}
-          className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all cursor-pointer ${
-            activeTab === "health"
-              ? "bg-[#5b32e8] text-white shadow-md shadow-purple-900/30"
-              : "text-[#8a82af] hover:text-white bg-transparent"
-          }`}
-          onClick={() => handleTabSwitch("health")}
-        >
-          <HeartIcon className="h-3.5 w-3.5 text-white" />
-          <span>Health</span>
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "skill"}
-          className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all cursor-pointer ${
-            activeTab === "skill"
-              ? "bg-[#5b32e8] text-white shadow-md shadow-purple-900/30"
-              : "text-[#8a82af] hover:text-white bg-transparent"
-          }`}
-          onClick={() => handleTabSwitch("skill")}
-        >
-          <StarIcon className="h-3.5 w-3.5" />
-          <span>Skills</span>
-        </button>
-      </div>
-
-      {/* 3. THANH TÌM KIẾM VÀ DROPDOWN CẤP ĐỘ (HÀNG NGANG) */}
-      <SearchFilterBar
-        searchInput={searchInput}
-        onSearchChange={handleSearchChange}
-        selectedLevel={selectedLevel}
-        onLevelChange={handleLevelChange}
+    <Stack direction="row" spacing={0.75} alignItems="center">
+      <Box
+        sx={{
+          width: 7,
+          height: 7,
+          borderRadius: "50%",
+          bgcolor: active ? CM.green : CM.pink,
+          boxShadow: `0 0 9px ${active ? CM.green : CM.pink}`,
+        }}
       />
-      {/* 4. BỐ CỤC CHÍNH 2 CỘT ĐỒNG BỘ 1:1 CHO CẢ HEALTH VÀ SKILLS */}
-      <div className="flex flex-col md:flex-row items-start gap-4 w-full">
-        {/* CỘT TRÁI - KHỐI MUSCLE GROUP */}
-        <FilterSidebar
-          selectedMuscles={selectedMuscles}
-          onToggleMuscle={handleMuscleToggle}
-          isAllActive={isAllActive}
-          getMuscleCount={getMuscleBadgeCount}
+      <Typography variant="caption" sx={{ color: active ? CM.green : CM.pink, fontWeight: 600 }}>
+        {active ? "Active" : "Inactive"}
+      </Typography>
+    </Stack>
+  );
+}
+
+export default function ExerciseListPage() {
+  const { data, isLoading, error, isFetching, refetch, setData } = useApiQuery(() =>
+    contentManagerApi.exercises(),
+  );
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("all");
+  const [type, setType] = useState("all");
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [menu, setMenu] = useState({ anchor: null, entry: null });
+
+  const statusMutation = useApiMutation(
+    ({ code, active }) => contentManagerApi.updateExerciseStatus(code, active),
+    {
+      onSuccess: (updated) => {
+        setData((current) => Array.isArray(current)
+          ? current.map((entry) => entry.code === updated.code ? updated : entry)
+          : current);
+        refetch();
+      },
+    },
+  );
+  const deleteMutation = useApiMutation(
+    (code) => contentManagerApi.deleteExercise(code),
+    { onSuccess: () => refetch() },
+  );
+
+  const entries = useMemo(() => {
+    if (!Array.isArray(data)) return [];
+    return data.filter(
+      (entry) =>
+        String(entry.source || "").toUpperCase() !== "CUSTOM" || entry.active,
+    );
+  }, [data]);
+  const activeCount = entries.filter((entry) => entry.active).length;
+  const inactiveCount = entries.length - activeCount;
+
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return entries.filter((entry) => {
+      const matchesSearch =
+        !term ||
+        entry.name?.toLowerCase().includes(term) ||
+        entry.code?.toLowerCase().includes(term);
+      const matchesStatus =
+        status === "all" || (status === "active" ? entry.active : !entry.active);
+      const isCustom =
+        String(entry.source || "").toLowerCase() === "custom" ||
+        String(entry.type || "").toLowerCase() === "custom";
+      const matchesType =
+        type === "all" ||
+        (type === "custom" ? isCustom : String(entry.type).toLowerCase() === type);
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  }, [entries, search, status, type]);
+
+  const pageEntries = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+  const resetPage = (setter) => (event) => {
+    setter(event.target.value);
+    setPage(0);
+  };
+
+  const closeMenu = () => setMenu({ anchor: null, entry: null });
+
+  return (
+    <Box sx={{ maxWidth: 1280, mx: "auto", px: { xs: 2, sm: 3 }, py: { xs: 2.5, sm: 3 } }}>
+      <ContentPageHeader
+        breadcrumb={BREADCRUMB}
+        title="Exercise & workout management"
+        description="Manage system exercises and skills, and moderate exercises submitted by users."
+        action={
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+            <Button
+              component={RouterLink}
+              to={CONTENT_PATHS.pendingExerciseModeration}
+              variant="outlined"
+              size="medium"
+              sx={{ minHeight: 40, whiteSpace: "nowrap" }}
+            >
+              Pending exercise moderation
+            </Button>
+            <Button
+              component={RouterLink}
+              to={`${CONTENT_PATHS.create}?type=exercise`}
+              variant="contained"
+              size="medium"
+              startIcon={<AddRoundedIcon />}
+              sx={{ minHeight: 40, whiteSpace: "nowrap" }}
+            >
+              Create content
+            </Button>
+          </Stack>
+        }
+      />
+
+      <Box
+        component="section"
+        aria-label="Exercise summary"
+        sx={{
+          mt: 2.5,
+          display: "grid",
+          gap: 1.5,
+          gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" },
+        }}
+      >
+        <SummaryCard label="All exercises" count={entries.length} detail="exercises" />
+        <SummaryCard
+          label="Active"
+          tone="success"
+          count={activeCount}
+          detail="exercises"
         />
+        <SummaryCard
+          label="Inactive"
+          tone="error"
+          count={inactiveCount}
+          detail="exercises"
+        />
+      </Box>
 
-        {/* CỘT PHẢI - DANH SÁCH BÀI TẬP */}
-        <main className="flex-1 w-full min-w-0">
-          <div className="text-xs font-medium text-[#8a82af] mb-1.5 px-1">
-            {displayedTotalCount} exercises
-          </div>
-
-          <div className="space-y-1.5">
-            {loading ? (
-              Array.from({ length: 4 }).map((_, idx) => (
-                <div
-                  key={idx}
-                  className="h-14 rounded-2xl border border-[#22184c] bg-[#130d2e] animate-pulse"
-                />
-              ))
-            ) : exercises.length === 0 ? (
-              <div className="text-center py-8 px-4 rounded-2xl border border-dashed border-[#22184c] bg-[#130d2e] text-[#8a82af]">
-                <div className="w-10 h-10 mx-auto mb-2 text-purple-400 flex items-center justify-center">
-                  <DumbbellIcon className="h-6 w-6 text-[#9d7aff]" />
-                </div>
-                <h3 className="text-base font-bold text-white mb-1">No exercises found</h3>
-                <p className="text-xs text-[#8a82af] mb-3">
-                  Try adjusting your search keywords, filter, or difficulty level.
-                </p>
-                <button
-                  type="button"
-                  className="bg-[#5b32e8] hover:bg-[#4d28d0] text-white text-xs font-semibold px-3.5 py-1.5 rounded-xl transition-all cursor-pointer"
-                  onClick={handleClearFilters}
-                >
-                  Clear all filters
-                </button>
-              </div>
-            ) : (
-              exercises.map((item) => (
-                <ExerciseCard
-                  key={item.id || item.code}
-                  item={item}
-                  onClick={handleCardClick}
-                />
-              ))
-            )}
-          </div>
-
-          {/* Cụm phân trang căn giữa ở đáy */}
-          <PaginationBar
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
+      <Card sx={{ mt: 2 }}>
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={1.5}
+          alignItems={{ xs: "stretch", md: "center" }}
+          sx={{ p: 1.5, borderBottom: `1px solid ${CM.border}` }}
+        >
+          <ContentListToolbar active="exercises" />
+          <TextField
+            size="small"
+            fullWidth
+            value={search}
+            onChange={resetPage(setSearch)}
+            placeholder="Search exercise or skill"
+            inputProps={{ "aria-label": "Search exercise or skill" }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchRoundedIcon fontSize="small" color="disabled" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ flex: 1, minWidth: 200 }}
           />
-        </main>
-      </div>
-    </div>
+          <TextField
+            select
+            size="small"
+            value={status}
+            onChange={resetPage(setStatus)}
+            SelectProps={{ SelectDisplayProps: { "aria-label": "Filter by status" } }}
+            sx={{ minWidth: 130 }}
+          >
+            <MenuItem value="all">All status</MenuItem>
+            <MenuItem value="active">Active</MenuItem>
+            <MenuItem value="inactive">Inactive</MenuItem>
+          </TextField>
+          <TextField
+            select
+            size="small"
+            value={type}
+            onChange={resetPage(setType)}
+            SelectProps={{ SelectDisplayProps: { "aria-label": "Filter by type" } }}
+            sx={{ minWidth: 120 }}
+          >
+            <MenuItem value="all">All types</MenuItem>
+            <MenuItem value="health">Health</MenuItem>
+            <MenuItem value="skill">Skill</MenuItem>
+            <MenuItem value="custom">Custom</MenuItem>
+          </TextField>
+          <Tooltip title="Refresh">
+            <span>
+              <IconButton
+                onClick={() => refetch()}
+                disabled={isFetching}
+                aria-label="Refresh exercise list"
+                sx={{ border: 1, borderColor: "divider", borderRadius: 2 }}
+              >
+                {isFetching ? <CircularProgress size={18} /> : <RefreshRoundedIcon fontSize="small" />}
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Stack>
+        {(statusMutation.error || deleteMutation.error) && (
+          <Alert severity="error" sx={{ m: 2 }} onClose={() => { statusMutation.reset(); deleteMutation.reset(); }}>
+            {deleteMutation.error
+              ? `Could not delete the exercise. ${deleteMutation.error.message}`
+              : `Could not update the status. ${statusMutation.error.message}`}
+          </Alert>
+        )}
+
+        {isLoading ? (
+          <Box sx={{ py: 8, display: "grid", placeItems: "center" }}>
+            <Stack spacing={1.5} alignItems="center">
+              <CircularProgress size={24} />
+              <Typography variant="body2" color="text.secondary">
+                Loading exercises…
+              </Typography>
+            </Stack>
+          </Box>
+        ) : error ? (
+          <Box sx={{ py: 6, textAlign: "center", px: 2 }}>
+            <Alert
+              severity="error"
+              sx={{ mb: 2, textAlign: "left" }}
+              action={
+                <Button color="inherit" size="small" onClick={() => refetch()}>
+                  Try again
+                </Button>
+              }
+            >
+              Could not load the exercise list. {error.message}
+            </Alert>
+          </Box>
+        ) : (
+          <>
+            <TableContainer>
+              <Table size="small" sx={{ minWidth: 940, "& th, & td": { textAlign: "center" } }}>
+                <TableHead>
+                  <TableRow sx={{ "& th": { bgcolor: "rgba(19,10,39,0.85)", color: CM.textMuted, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, whiteSpace: "nowrap" } }}>
+                    <TableCell align="center">Exercise / Skill</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Source</TableCell>
+                    <TableCell>Muscle group</TableCell>
+                    <TableCell>Level</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Updated</TableCell>
+                    <TableCell align="center">Action</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {pageEntries.map((entry) => {
+                    const isUpdating =
+                      statusMutation.isPending && menu.entry?.code === entry.code;
+                    return (
+                      <TableRow key={entry.code} hover>
+                        <TableCell align="center" sx={{ width: 280 }}>
+                          <Stack direction="row" spacing={1.25} alignItems="center" justifyContent="flex-start" sx={{ width: "100%", textAlign: "left" }}>
+                            <Box
+                              sx={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: 1.5,
+                                display: "grid",
+                                placeItems: "center",
+                                flexShrink: 0,
+                                bgcolor:
+                                  String(entry.type).toLowerCase() === "skill"
+                                    ? "rgba(139,92,246,0.22)"
+                                    : "rgba(168,155,208,0.14)",
+                                color:
+                                  String(entry.type).toLowerCase() === "skill" ? CM.violetBright : CM.textMuted,
+                              }}
+                            >
+                              {String(entry.type).toLowerCase() === "skill" ? (
+                                <StarRoundedIcon sx={{ fontSize: 16 }} />
+                              ) : (
+                                <FitnessIconSmall />
+                              )}
+                            </Box>
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography variant="body2" fontWeight={600} noWrap sx={{ color: "#fff" }}>
+                                {entry.name}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: CM.textDim }}>
+                                {entry.code}
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        </TableCell>
+                        <TableCell>
+                          <TypeChip type={entry.type} />
+                        </TableCell>
+                        <TableCell>
+                          <SourceChip source={entry.source} />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="caption" sx={{ color: CM.textMuted }}>
+                            {entry.muscleGroup || "—"}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <LevelChip level={entry.level} />
+                        </TableCell>
+                        <TableCell>
+                          <StatusDot active={entry.active} />
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: "nowrap" }}>
+                          <Typography variant="caption" sx={{ color: CM.textDim }}>
+                            {formatDate(entry.updatedAt)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Stack direction="row" spacing={0.5} justifyContent="center">
+                            <Button
+                              component={RouterLink}
+                              to={`${CONTENT_PATHS.exercises}/${encodeURIComponent(entry.code)}`}
+                              size="small"
+                              variant="outlined"
+                              sx={{ py: 0.25, px: 1.25, fontSize: 11.5, minWidth: 0, borderRadius: "8px" }}
+                            >
+                              View
+                            </Button>
+                            <IconButton
+                              size="small"
+                              aria-label={`More actions for ${entry.name}`}
+                              aria-expanded={Boolean(menu.anchor) && menu.entry?.code === entry.code}
+                              onClick={(event) => setMenu({ anchor: event.currentTarget, entry })}
+                            >
+                              <MoreVertRoundedIcon fontSize="small" />
+                            </IconButton>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {pageEntries.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} sx={{ py: 6, textAlign: "center" }}>
+                        <Typography variant="body2" color="text.secondary">
+                          {entries.length
+                            ? "No exercises match these filters."
+                            : "No exercises or skills yet. Create your first entry to get started."}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <TablePagination
+              component="div"
+              count={filtered.length}
+              page={Math.min(page, Math.max(0, Math.ceil(filtered.length / rowsPerPage) - 1))}
+              onPageChange={(_, nextPage) => setPage(nextPage)}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={(event) => {
+                setRowsPerPage(parseInt(event.target.value, 10));
+                setPage(0);
+              }}
+              rowsPerPageOptions={[10, 20, 50]}
+              labelDisplayedRows={({ from, to, count }) => `Showing ${from}-${to} of ${count}`}
+            />
+          </>
+        )}
+      </Card>
+
+      <Menu anchorEl={menu.anchor} open={Boolean(menu.anchor)} onClose={closeMenu}>
+        <MenuItem
+          component={RouterLink}
+          to={menu.entry ? `${CONTENT_PATHS.exercises}/${encodeURIComponent(menu.entry.code)}` : "#"}
+          onClick={closeMenu}
+        >
+          View details
+        </MenuItem>
+        <MenuItem
+          disabled={statusMutation.isPending}
+          onClick={() => {
+            const entry = menu.entry;
+            closeMenu();
+            if (entry) statusMutation.mutate({ code: entry.code, active: !entry.active });
+          }}
+        >
+          {menu.entry?.active ? "Set inactive" : "Set active"}
+        </MenuItem>
+        <MenuItem
+          disabled={deleteMutation.isPending}
+          sx={{ color: "error.main" }}
+          onClick={() => {
+            const entry = menu.entry;
+            closeMenu();
+            if (entry && window.confirm(`Delete "${entry.name}"? This cannot be undone.`)) {
+              deleteMutation.mutate(entry.code);
+            }
+          }}
+        >
+          <DeleteOutlineRoundedIcon fontSize="small" sx={{ mr: 1 }} />
+          Delete
+        </MenuItem>
+      </Menu>
+    </Box>
+  );
+}
+
+function FitnessIconSmall() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+      <path d="M3 9v6m3-9v12m12-12v12m3-9v6M6 12h12" />
+    </svg>
   );
 }

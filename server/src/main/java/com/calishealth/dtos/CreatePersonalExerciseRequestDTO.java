@@ -1,6 +1,6 @@
 package com.calishealth.dtos;
 
-import com.calishealth.models.ExerciseEntry;
+import com.calishealth.models.Exercise;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -18,7 +18,7 @@ public record CreatePersonalExerciseRequestDTO(
         @Size(max = 300, message = "Mô tả không quá 300 ký tự")
         String description,
         @NotNull(message = "Vui lòng chọn cấp độ bài tập")
-        ExerciseEntry.EntryLevel level,
+        Exercise.EntryLevel level,
         @NotEmpty(message = "Phải có ít nhất 1 bước hướng dẫn")
         List<@NotBlank(message = "Bước hướng dẫn không được để trống") @Size(max = 250) String> guideSteps,
         @NotBlank @Size(max = 120) String targetMuscle,

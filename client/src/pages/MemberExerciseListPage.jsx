@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { getMemberExercises, createMemberExercise } from "../api/library";
+import { getLevelBadgeStyle } from "../utils/levelBadge";
 import "./MemberExerciseListPage.css";
 
 // SVG Icons
@@ -337,12 +338,7 @@ export default function MemberExerciseListPage() {
           </div>
         ) : (
           exercises.map((item) => {
-            const levelClass =
-              item.level?.toLowerCase() === "beginner"
-                ? "beginner"
-                : item.level?.toLowerCase() === "advanced"
-                ? "advanced"
-                : "intermediate";
+            const level = item.level || item.difficultyLevel || "Intermediate";
 
             const detailText =
               item.details ||
@@ -378,8 +374,8 @@ export default function MemberExerciseListPage() {
 
                 {/* Right: Chip Level đồng đều 110px + Arrow */}
                 <div className="row-right">
-                  <span className={`level-badge ${levelClass}`}>
-                    {item.level || "Intermediate"}
+                  <span className={`level-badge ${getLevelBadgeStyle(level)}`}>
+                    {level}
                   </span>
                   <div className="row-arrow-icon">
                     <ChevronRightIcon />
@@ -567,15 +563,9 @@ export default function MemberExerciseListPage() {
                 </h2>
                 <div style={{ display: "flex", gap: 8, marginTop: 6, alignItems: "center" }}>
                   <span
-                    className={`level-badge ${
-                      selectedExercise.level?.toLowerCase() === "beginner"
-                        ? "beginner"
-                        : selectedExercise.level?.toLowerCase() === "advanced"
-                        ? "advanced"
-                        : "intermediate"
-                    }`}
+                    className={`level-badge ${getLevelBadgeStyle(selectedExercise.level || selectedExercise.difficultyLevel)}`}
                   >
-                    {selectedExercise.level}
+                    {selectedExercise.level || selectedExercise.difficultyLevel || "Intermediate"}
                   </span>
                   <span className="member-badge-pill">Custom Added</span>
                 </div>

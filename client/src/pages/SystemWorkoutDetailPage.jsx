@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { getSystemWorkout } from "../api/library";
 import { mockSystemWorkouts } from "./WorkoutSystemListPage";
+import { getLevelBadgeStyle } from "../utils/levelBadge";
 
 export default function SystemWorkoutDetailPage() {
   const { id, workoutId } = useParams();
@@ -26,7 +27,7 @@ export default function SystemWorkoutDetailPage() {
           level: sample.level,
           totalExercises: sample.exerciseCount,
           totalSets: sample.totalSets,
-          estimatedDuration: Number(sample.totalTime.match(/\d+/)?.[0] || 0),
+          estimatedDuration: Number(String(sample.totalTime || "").match(/\d+/)?.[0] || 0),
           exercises: sample.exercises || [],
         });
       } else {
@@ -98,7 +99,7 @@ export default function SystemWorkoutDetailPage() {
           <section className="space-y-4 rounded-2xl border border-[#302653] bg-[#120d29] p-6">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-bold">{workout.title}</h1>
-              <span className="rounded-full border border-violet-800 bg-violet-950/50 px-3 py-1 text-xs text-violet-200">
+              <span className={`rounded-full px-3 py-1 text-xs capitalize ${getLevelBadgeStyle(workout.level)}`}>
                 {workout.level}
               </span>
             </div>
@@ -132,7 +133,7 @@ export default function SystemWorkoutDetailPage() {
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="font-semibold">{index + 1}. {name}</h3>
-                  <span className="rounded-full border border-[#493b79] bg-[#201748] px-3 py-1 text-xs text-violet-200">{level}</span>
+                  <span className={`rounded-full px-3 py-1 text-xs capitalize ${getLevelBadgeStyle(level)}`}>{level}</span>
                 </div>
                 <p className="mt-2 text-sm text-slate-400">{muscleGroup}</p>
                 <p className="mt-3 text-sm text-slate-200">

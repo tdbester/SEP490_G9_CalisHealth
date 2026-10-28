@@ -1,24 +1,49 @@
 package com.calishealth.repository;
 
-import com.calishealth.models.ExerciseEntry;
+import com.calishealth.models.Exercise;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface ExerciseRepository extends JpaRepository<ExerciseEntry, Long>, JpaSpecificationExecutor<ExerciseEntry> {
-    Optional<ExerciseEntry> findByCode(String code);
-    Optional<ExerciseEntry> findByIdAndIsSystemTrueAndStatus(Long id, ExerciseEntry.EntryStatus status);
-    List<ExerciseEntry> findAllByMovementGroupAndIsSystemTrueAndStatus(
-            ExerciseEntry.MovementGroup movementGroup,
-            ExerciseEntry.EntryStatus status);
-    boolean existsByNameIgnoreCaseAndIsSystemFalse(String name);
+public interface ExerciseRepository extends JpaRepository<Exercise, Long>, JpaSpecificationExecutor<Exercise> {
+    Optional<Exercise> findByCode(String code);
     boolean existsByCode(String code);
-    Optional<ExerciseEntry> findByIdAndAuthor_IdAndIsSystemFalse(Long id, Long authorId);
-    long countByAuthor_IdAndIsSystemFalseAndStatus(Long authorId, ExerciseEntry.EntryStatus status);
-    List<ExerciseEntry> findAllByCodeIn(List<String> codes);
-    long countByTypeAndIsSystemTrueAndStatus(ExerciseEntry.EntryType type, ExerciseEntry.EntryStatus status);
-    long countByTypeAndActive(ExerciseEntry.EntryType type, boolean active);
-    long countByType(ExerciseEntry.EntryType type);
+    List<Exercise> findAllByCodeIn(List<String> codes);
+    Optional<Exercise> findByNameIgnoreCase(String name);
+    boolean existsByNameIgnoreCaseAndSource(String name, String source);
+    Optional<Exercise> findByIdAndSystemTrueAndStatus(Long id, String status);
+    long countByTypeAndSystemTrueAndStatus(String type, String status);
+    long countByAuthor_IdAndSystemFalseAndStatus(Long authorId, String status);
+    Optional<Exercise> findByIdAndAuthor_IdAndSystemFalse(Long id, Long authorId);
+    List<Exercise> findAllByMovementGroupAndSystemTrueAndStatus(
+            Exercise.MovementGroup movementGroup,
+            String status);
+
+    @Query("""
+            SELECT COUNT(e) FROM Exercise e
+            WHERE e.source IN ('MEMBER', 'CUSTOM') AND e.createdBy.email = :email
+            """)
+    long countMemberExercisesByEmail(String email);
+
+    @Query("""
+            SELECT e FROM Exercise e
+            WHERE e.source IN ('MEMBER', 'CUSTOM') AND e.createdBy.email = :email
+            """)
+    List<Exercise> findMemberExercisesByEmail(String email);
+
+    @Query("""
+            SELECT COUNT(e) FROM Exercise e
+            WHERE e.system = true AND e.status = 'ACCEPTED' AND e.type = :type
+            """)
+    long countAcceptedSystemExercisesByType(String type);
+
+    @Query("""
+            SELECT COUNT(e) FROM Exercise e
+            WHERE e.author.id = :authorId AND e.system = false
+              AND e.status = 'ACCEPTED'
+            """)
+    long countAcceptedMemberExercisesByAuthorId(Long authorId);
 }

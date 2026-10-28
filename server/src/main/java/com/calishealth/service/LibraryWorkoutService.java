@@ -3,7 +3,7 @@ package com.calishealth.service;
 import com.calishealth.dtos.*;
 import com.calishealth.exception.ResourceNotFoundException;
 import com.calishealth.exception.RequestValidationException;
-import com.calishealth.models.ExerciseEntry;
+import com.calishealth.models.Exercise;
 import com.calishealth.models.User;
 import com.calishealth.models.WorkoutEntry;
 import com.calishealth.repository.ExerciseRepository;
@@ -132,7 +132,7 @@ public class LibraryWorkoutService {
     public WorkoutDetailResponseDTO createWorkout(String memberEmail, CreateUpdateWorkoutRequestDTO request) {
         User member = requireMember(memberEmail);
         validateItems(request.items());
-        Map<Long, ExerciseEntry> selectedExercises = getAllowedExercises(
+        Map<Long, Exercise> selectedExercises = getAllowedExercises(
                 member.getId(), request.items().stream().map(WorkoutItemDTO::exerciseId).toList());
         WorkoutEntry workout = new WorkoutEntry();
         workout.setCode("CUS-" + java.util.UUID.randomUUID().toString().replace("-", "")
@@ -160,7 +160,7 @@ public class LibraryWorkoutService {
         User member = requireMember(memberEmail);
         WorkoutEntry workout = requireOwnedWorkout(member.getId(), workoutId);
         validateItems(request.items());
-        Map<Long, ExerciseEntry> selectedExercises = getAllowedExercises(
+        Map<Long, Exercise> selectedExercises = getAllowedExercises(
                 member.getId(), request.items().stream().map(WorkoutItemDTO::exerciseId).toList());
         workout.setName(request.title().trim());
         workout.setDescription(request.description() == null ? null : request.description().trim());
@@ -179,12 +179,12 @@ public class LibraryWorkoutService {
     @Transactional(readOnly = true)
     public List<AvailableWorkoutExerciseDTO> getAvailableExercises(String memberEmail) {
         User member = requireMember(memberEmail);
-        Specification<ExerciseEntry> allowed = allowedExerciseSpecification(member.getId());
+        Specification<Exercise> allowed = allowedExerciseSpecification(member.getId());
         return exercises.findAll(allowed, Sort.by(Sort.Order.asc("name"))).stream()
                 .map(exercise -> new AvailableWorkoutExerciseDTO(
                         exercise.getId(),
                         exercise.getName(),
-                        exercise.getLevel().name(),
+                        exercise.getLevel(),
                         exercise.getMuscleGroup(),
                         exercise.getDefaultSets(),
                         exercise.getDefaultReps(),
@@ -192,29 +192,29 @@ public class LibraryWorkoutService {
                 .toList();
     }
 
-    private Map<Long, ExerciseEntry> getAllowedExercises(Long memberId, List<Long> requestedIds) {
+    private Map<Long, Exercise> getAllowedExercises(Long memberId, List<Long> requestedIds) {
         List<Long> uniqueRequestedIds = requestedIds.stream().distinct().toList();
-        List<ExerciseEntry> found = exercises.findAll(
+        List<Exercise> found = exercises.findAll(
                 allowedExerciseSpecification(memberId).and((root, query, builder) -> root.get("id").in(uniqueRequestedIds)));
         if (found.size() != uniqueRequestedIds.size()) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "One or more selected exercises are unavailable or are not accepted");
         }
-        return found.stream().collect(Collectors.toMap(ExerciseEntry::getId, Function.identity()));
+        return found.stream().collect(Collectors.toMap(Exercise::getId, Function.identity()));
     }
 
-    private Specification<ExerciseEntry> allowedExerciseSpecification(Long memberId) {
+    private Specification<Exercise> allowedExerciseSpecification(Long memberId) {
         return (root, query, builder) -> {
-            var system = builder.isTrue(root.get("isSystem"));
+            var system = builder.isTrue(root.get("system"));
             var memberExercise = builder.and(
-                    builder.isFalse(root.get("isSystem")),
+                    builder.isFalse(root.get("system")),
                     builder.or(
                             builder.equal(root.get("author").get("id"), memberId),
                             builder.isTrue(root.get("shareWithCommunity"))));
             return builder.and(
                     builder.isTrue(root.get("active")),
-                    builder.equal(root.get("status"), ExerciseEntry.EntryStatus.ACCEPTED),
+                    builder.equal(root.get("status"), "ACCEPTED"),
                     builder.or(system, memberExercise));
         };
     }
@@ -222,12 +222,12 @@ public class LibraryWorkoutService {
     private void populateWorkout(
             WorkoutEntry workout,
             List<WorkoutItemDTO> items,
-            Map<Long, ExerciseEntry> exercisesById
+            Map<Long, Exercise> exercisesById
     ) {
         List<WorkoutItemDTO> ordered = items.stream()
                 .sorted(Comparator.comparingInt(WorkoutItemDTO::orderIndex))
                 .toList();
-        List<ExerciseEntry> selected = ordered.stream()
+        List<Exercise> selected = ordered.stream()
                 .map(item -> exercisesById.get(item.exerciseId()))
                 .toList();
         workout.getExercises().clear();
@@ -240,7 +240,7 @@ public class LibraryWorkoutService {
         int maximumLevel = 0;
         for (int index = 0; index < ordered.size(); index++) {
             WorkoutItemDTO item = ordered.get(index);
-            ExerciseEntry exercise = selected.get(index);
+            Exercise exercise = selected.get(index);
             String countBy = normalizedCountBy(item);
             long effortSeconds = "SECONDS".equals(countBy)
                     ? item.duration()
@@ -286,16 +286,17 @@ public class LibraryWorkoutService {
 
     private WorkoutDetailResponseDTO toDetail(WorkoutEntry workout) {
         List<WorkoutExerciseItemDTO> items = jdbcTemplate.query("""
-                SELECT we.id, we.exercise_id, ee.name, ee.muscle_group, ee.level,
+                SELECT we.id, we.exercise_id, e.name, e.is_system, e.muscle_group, e.level,
                        we.order_index, we.sets, we.reps, we.duration, we.count_by, we.rest_seconds
                 FROM workout_exercises we
-                JOIN exercise_entries ee ON ee.id = we.exercise_id
+                JOIN exercises e ON e.id = we.exercise_id
                 WHERE we.workout_id = ?
                 ORDER BY we.order_index ASC, we.display_order ASC
                 """, (row, rowNum) -> new WorkoutExerciseItemDTO(
                 row.getLong("id"),
                 row.getLong("exercise_id"),
                 row.getString("name"),
+                row.getBoolean("is_system"),
                 row.getString("muscle_group"),
                 row.getString("level"),
                 row.getInt("order_index"),
@@ -332,7 +333,7 @@ public class LibraryWorkoutService {
                 workout.getTotalSets(),
                 workout.getEstimatedDuration(),
                 workout.getExercises().stream()
-                        .map(ExerciseEntry::getMuscleGroup)
+                        .map(Exercise::getMuscleGroup)
                         .filter(group -> group != null && !group.isBlank())
                         .distinct()
                         .collect(Collectors.joining(", ")),
@@ -400,11 +401,12 @@ public class LibraryWorkoutService {
         return countBy;
     }
 
-    private int levelRank(ExerciseEntry.EntryLevel level) {
-        return switch (level) {
-            case BEGINNER -> 1;
-            case INTERMEDIATE -> 2;
-            case ADVANCED -> 3;
+    private int levelRank(String level) {
+        return switch (level == null ? "" : level.toUpperCase(Locale.ROOT)) {
+            case "BEGINNER" -> 1;
+            case "INTERMEDIATE" -> 2;
+            case "ADVANCED" -> 3;
+            default -> 0;
         };
     }
 }

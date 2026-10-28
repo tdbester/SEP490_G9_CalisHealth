@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
+
 const api = axios.create({
-  baseURL: "http://localhost:8080/api",
+  baseURL: API_URL,
   headers: { "Content-Type": "application/json" },
 });
 
@@ -18,23 +20,8 @@ export const getStoredAuthToken = () => {
     return token || null;
   };
 
-  for (const key of ["token", "accessToken", "jwt"]) {
-    const token = normalizeToken(localStorage.getItem(key));
-    if (token) return { token, source: key };
-  }
-
-  const cachedUser = localStorage.getItem("user");
-  if (cachedUser) {
-    try {
-      const user = JSON.parse(cachedUser);
-      const token = normalizeToken(user?.token);
-      if (token) return { token, source: "user.token" };
-    } catch (error) {
-      console.warn("Unable to read cached user token:", error);
-    }
-  }
-
-  return { token: null, source: null };
+  const token = normalizeToken(localStorage.getItem("token"));
+  return { token, source: token ? "token" : null };
 };
 
 // Attach JWT token to every request
@@ -50,7 +37,12 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401 || err.response?.status === 403) {
+    const status = err.response?.status;
+    const requestPath = err.config?.url || "";
+    const isLoginRequest = /\/auth\/login(?:\?|$)/i.test(requestPath);
+    const { token } = getStoredAuthToken();
+
+    if (status === 401 || status === 403) {
       const requestUrl = err.config?.baseURL
         ? `${err.config.baseURL.replace(/\/$/, "")}/${(err.config.url || "").replace(/^\//, "")}`
         : err.config?.url || "unknown URL";
@@ -60,9 +52,21 @@ api.interceptors.response.use(
         method: err.config?.method?.toUpperCase() || "UNKNOWN",
         error: err,
       });
+
+      if (token && !isLoginRequest) {
+        localStorage.clear();
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
+      }
     }
     return Promise.reject(err);
   }
 );
+
+export const libraryApi = {
+  exercises: () => api.get("/public/library/exercises").then((response) => response.data),
+  workouts: () => api.get("/public/library/workouts").then((response) => response.data),
+};
 
 export default api;

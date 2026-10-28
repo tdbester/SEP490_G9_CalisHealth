@@ -8,6 +8,7 @@ public final class ExerciseDtos {
 
     public record ExerciseResponse(
             String code,
+            String movementGroup,
             String name,
             String type,
             String description,
@@ -17,8 +18,16 @@ public final class ExerciseDtos {
             String guide,
             String demoVideoUrl,
             String anatomyImageUrl,
+            /** SYSTEM = thư viện do Content Manager tạo, CUSTOM = bài tập của người dùng/community. */
+            String source,
+            String createdByName,
+            Integer defaultReps,
+            Integer duration,
             boolean active,
-            LocalDateTime updatedAt
+            LocalDateTime updatedAt,
+            LocalDateTime submittedAt,
+            String autoCheckStatus,
+            Integer defaultSets
     ) {}
 
     public record CreateExerciseRequest(
@@ -28,20 +37,42 @@ public final class ExerciseDtos {
             String category,
             String muscleGroup,
             String level,
-            String guide
+            String guide,
+            Integer defaultSets,
+            Integer defaultReps,
+            Integer duration
     ) {}
 
     public record ExerciseStatusRequest(boolean active) {}
+
+    public record ExerciseModerationHistoryResponse(
+            Long id,
+            String code,
+            String name,
+            String type,
+            String muscleGroup,
+            String level,
+            String description,
+            String category,
+            String guide,
+            String demoVideoUrl,
+            String anatomyImageUrl,
+            String createdByName,
+            String decision,
+            LocalDateTime reviewedAt
+    ) {}
 
     public record WorkoutResponse(
             String code,
             String name,
             String description,
-            String content,
             String type,
             String level,
+            int restSeconds,
             boolean active,
             LocalDateTime updatedAt,
+            String source,
+            String createdByName,
             List<WorkoutExerciseResponse> exercises,
             List<WorkoutPlanItemResponse> planItems
     ) {}
@@ -49,14 +80,22 @@ public final class ExerciseDtos {
     public record CreateWorkoutRequest(
             String name,
             String description,
-            String content,
-            String type,
+            int restSeconds,
             String level,
             List<String> exerciseCodes,
             List<WorkoutPlanItemRequest> planItems
     ) {}
 
-    public record WorkoutExerciseResponse(String code, String name, String level, String muscleGroup) {}
+    public record WorkoutExerciseResponse(
+            String code,
+            String name,
+            String level,
+            String muscleGroup,
+            String category,
+            Integer defaultSets,
+            Integer defaultReps,
+            Integer duration
+    ) {}
 
     public record WorkoutPlanItemRequest(
             int dayOfWeek,

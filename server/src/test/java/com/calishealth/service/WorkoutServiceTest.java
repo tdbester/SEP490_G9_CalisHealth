@@ -1,7 +1,7 @@
 package com.calishealth.service;
 
 import com.calishealth.dtos.ExerciseDtos.CreateWorkoutRequest;
-import com.calishealth.models.ExerciseEntry;
+import com.calishealth.models.Exercise;
 import com.calishealth.models.User;
 import com.calishealth.models.WorkoutEntry;
 import com.calishealth.repository.ExerciseRepository;
@@ -35,11 +35,11 @@ class WorkoutServiceTest {
         member.setEmail("member@example.test");
         when(users.findByEmail(member.getEmail())).thenReturn(Optional.of(member));
 
-        ExerciseEntry exercise = new ExerciseEntry();
+        Exercise exercise = new Exercise();
         exercise.setCode("PUSH_UP");
         exercise.setName("Push-up");
-        exercise.setType(ExerciseEntry.EntryType.HEALTH);
-        exercise.setLevel(ExerciseEntry.EntryLevel.BEGINNER);
+        exercise.setType(Exercise.EntryType.HEALTH);
+        exercise.setLevel(Exercise.EntryLevel.BEGINNER);
         exercise.setMuscleGroup("Chest");
         when(exercises.findAllByCodeIn(List.of("PUSH_UP"))).thenReturn(List.of(exercise));
         when(workouts.save(any(WorkoutEntry.class)))
@@ -48,8 +48,7 @@ class WorkoutServiceTest {
         var response = service.create(new CreateWorkoutRequest(
                 "Repeated exercises",
                 "Workout description",
-                null,
-                "WORKOUT",
+                60,
                 "Beginner",
                 List.of("PUSH_UP", "PUSH_UP"),
                 null

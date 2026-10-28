@@ -9,6 +9,7 @@ import {
 } from "./libraryFormValidation";
 import { createMyWorkout, getAvailableWorkoutExercises } from "../api/library";
 import useUndoDelete from "../hooks/useUndoDelete";
+import { getLevelBadgeStyle } from "../utils/levelBadge";
 
 function DumbbellIcon({ size = "h-4 w-4" }) {
   return (
@@ -56,14 +57,10 @@ function XIcon() {
 }
 
 function LevelBadge({ level }) {
-  const styles = {
-    Beginner:     "bg-emerald-950/60 text-emerald-400 border-emerald-700/60",
-    Intermediate: "bg-amber-950/60 text-amber-400 border-amber-700/60",
-    Advanced:     "bg-rose-950/60 text-rose-400 border-rose-700/60",
-  };
+  const displayLevel = level || "Intermediate";
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${styles[level] || styles.Intermediate}`}>
-      {level}
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold capitalize ${getLevelBadgeStyle(displayLevel)}`}>
+      {displayLevel}
     </span>
   );
 }

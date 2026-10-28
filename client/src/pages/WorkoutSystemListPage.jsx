@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
 import { getSystemWorkouts } from "../api/library";
+import { getLevelBadgeStyle } from "../utils/levelBadge";
 import "./ExerciseListPage.css";
 
 const MUSCLE_GROUPS = ["All", "Full body", "Chest", "Back", "Arms", "Core", "Legs"];
 const LEVEL_OPTIONS = ["All levels", "Beginner", "Intermediate", "Advanced"];
 const PAGE_SIZE = 6;
+
+function toNumberOrNull(value) {
+  if (value == null) return null;
+  const parsed = Number(String(value).match(/\d+(?:\.\d+)?/)?.[0]);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
 export const mockSystemWorkouts = [
   {
@@ -155,9 +162,9 @@ export const mockSystemWorkouts = [
     ...exercise,
     level: exercise.level || "Beginner",
     muscleGroup: exercise.muscleGroup || workout.muscleGroup || "Full body",
-    sets: exercise.sets ?? 3,
-    reps: exercise.reps ?? null,
-    duration: exercise.duration ?? null,
+    sets: toNumberOrNull(exercise.sets) ?? 3,
+    reps: toNumberOrNull(exercise.reps),
+    duration: toNumberOrNull(exercise.duration),
     rest: exercise.rest || "60s",
     description: exercise.description
       || `${exercise.name} develops ${(exercise.muscleGroup || workout.muscleGroup || "target muscle").toLowerCase()} strength and supports ${(exercise.level || "beginner").toLowerCase()} training.`,
@@ -244,11 +251,17 @@ function getLevelLabel(level) {
 
 function getMinutes(totalTime) {
   const match = String(totalTime || "").match(/\d+/);
-  return match ? Number(match[0]) : 0;
+  const minutes = match ? Number(match[0]) : 0;
+  return Number.isFinite(minutes) ? minutes : 0;
 }
 
 function normalizeWorkout(workout) {
-  const totalTime = workout.totalTime || `About ${Number(workout.duration || 0)} min`;
+  const rawDuration = Number(workout.estimatedDuration ?? workout.duration);
+  const duration = Number.isFinite(rawDuration) ? rawDuration : 0;
+  const minutesFromLabel = getMinutes(workout.totalTime);
+  const totalTime = minutesFromLabel > 0
+    ? `${minutesFromLabel} min`
+    : `About ${duration} min`;
   return {
     id: workout.id,
     title: workout.title,
@@ -256,7 +269,9 @@ function normalizeWorkout(workout) {
     level: getLevelLabel(workout.level),
     muscleGroup: workout.muscleGroup || "Full body",
     exerciseCount: Number(workout.exerciseCount ?? workout.exercisesCount ?? workout.totalExercises ?? 0),
-    totalSets: Number(workout.totalSets ?? workout.setsCount ?? 0),
+    totalSets: Number.isFinite(Number(workout.totalSets ?? workout.setsCount))
+      ? Number(workout.totalSets ?? workout.setsCount)
+      : 0,
     totalTime,
     description: workout.description || "",
     isMock: Boolean(workout.isMock),
@@ -279,12 +294,7 @@ function matchesMuscleGroup(workout, selectedGroup) {
 }
 
 function ExerciseCard({ workout, onClick }) {
-  const level = workout.level.toLowerCase();
-  const levelStyle = level === "beginner"
-    ? "border border-emerald-800/80 bg-emerald-950/50 text-emerald-400"
-    : level === "advanced"
-      ? "border border-rose-800/80 bg-rose-950/50 text-rose-400"
-      : "border border-amber-800/80 bg-amber-950/50 text-amber-400";
+  const level = workout.level || workout.difficultyLevel || "Intermediate";
   const details = [
     workout.muscleGroup,
     `${workout.exerciseCount} exercises`,
@@ -310,8 +320,8 @@ function ExerciseCard({ workout, onClick }) {
         </span>
       </span>
       <span className="flex shrink-0 items-center">
-        <span className={`min-w-[96px] rounded-full px-4 py-1.5 text-center text-xs font-bold tracking-wide capitalize ${levelStyle}`}>
-          {workout.level}
+        <span className={`min-w-[96px] rounded-full px-4 py-1.5 text-center text-xs font-bold tracking-wide capitalize ${getLevelBadgeStyle(level)}`}>
+          {level}
         </span>
       </span>
     </button>

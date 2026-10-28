@@ -2,12 +2,14 @@ package com.calishealth.service;
 
 import com.calishealth.dtos.SystemExerciseDetailResponseDTO;
 import com.calishealth.exception.ResourceNotFoundException;
-import com.calishealth.models.ExerciseEntry;
-import com.calishealth.repository.ErdExerciseRepository;
+import com.calishealth.models.Exercise;
+import com.calishealth.repository.ExerciseModerationHistoryRepository;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.ExerciseTreeEdgeRepository;
 import com.calishealth.repository.MuscleGroupRepository;
 import com.calishealth.repository.UserRepository;
+import com.calishealth.service.ExerciseVideoStorageService;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -27,31 +29,33 @@ class SystemExerciseDetailTest {
         exerciseRepository = mock(ExerciseRepository.class);
         exerciseService = new ExerciseService(
                 exerciseRepository,
-                mock(ErdExerciseRepository.class),
+                mock(ExerciseModerationHistoryRepository.class),
                 mock(MuscleGroupRepository.class),
                 mock(UserRepository.class),
+                mock(JdbcTemplate.class),
+                mock(ExerciseVideoStorageService.class),
                 mock(ExerciseTreeEdgeRepository.class));
     }
 
     @Test
     void mapsAcceptedSystemExerciseDetails() {
-        ExerciseEntry exercise = new ExerciseEntry();
+        Exercise exercise = new Exercise();
         exercise.setId(17L);
         exercise.setName("Wall handstand hold");
         exercise.setDescription("Build balance and shoulder strength.");
         exercise.setDemoVideoUrl("/media/exercise-demos/handstand.mp4");
         exercise.setGuide("Place hands on the floor.\nKick up against the wall.\nPush tall through the shoulders.\nBrace the core and hold.");
         exercise.setMuscleGroup("Shoulders, core");
-        exercise.setLevel(ExerciseEntry.EntryLevel.BEGINNER);
+        exercise.setLevel(Exercise.EntryLevel.BEGINNER);
         exercise.setDefaultSets(3);
         exercise.setDefaultDuration(30);
         exercise.setEquipment("Wall");
-        exercise.setType(ExerciseEntry.EntryType.SKILL);
-        exercise.setTargetSkill(ExerciseEntry.EntryTargetSkill.HANDSTAND);
-        exercise.setMovementGroup(ExerciseEntry.MovementGroup.PUSH);
+        exercise.setType(Exercise.EntryType.SKILL);
+        exercise.setTargetSkill(Exercise.EntryTargetSkill.HANDSTAND);
+        exercise.setMovementGroup(Exercise.MovementGroup.PUSH);
         exercise.setExerciseTreeId(12L);
-        when(exerciseRepository.findByIdAndIsSystemTrueAndStatus(
-                17L, ExerciseEntry.EntryStatus.ACCEPTED)).thenReturn(Optional.of(exercise));
+        when(exerciseRepository.findByIdAndSystemTrueAndStatus(
+                17L, Exercise.EntryStatus.ACCEPTED.name())).thenReturn(Optional.of(exercise));
 
         SystemExerciseDetailResponseDTO result = exerciseService.getSystemExerciseDetail(17L);
 
@@ -73,8 +77,8 @@ class SystemExerciseDetailTest {
 
     @Test
     void throwsNotFoundWhenNoAcceptedSystemExerciseExists() {
-        when(exerciseRepository.findByIdAndIsSystemTrueAndStatus(
-                17L, ExerciseEntry.EntryStatus.ACCEPTED)).thenReturn(Optional.empty());
+        when(exerciseRepository.findByIdAndSystemTrueAndStatus(
+                17L, Exercise.EntryStatus.ACCEPTED.name())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> exerciseService.getSystemExerciseDetail(17L))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -83,13 +87,13 @@ class SystemExerciseDetailTest {
 
     @Test
     void expandsLegacySingleParagraphGuideIntoFourExerciseSpecificSteps() {
-        ExerciseEntry exercise = new ExerciseEntry();
+        Exercise exercise = new Exercise();
         exercise.setId(18L);
         exercise.setName("Plank");
         exercise.setMuscleGroup("Core");
         exercise.setGuide("Keep your forearms grounded and avoid letting your hips sag.");
-        when(exerciseRepository.findByIdAndIsSystemTrueAndStatus(
-                18L, ExerciseEntry.EntryStatus.ACCEPTED)).thenReturn(Optional.of(exercise));
+        when(exerciseRepository.findByIdAndSystemTrueAndStatus(
+                18L, Exercise.EntryStatus.ACCEPTED.name())).thenReturn(Optional.of(exercise));
 
         var result = exerciseService.getSystemExerciseDetail(18L);
 
@@ -101,15 +105,15 @@ class SystemExerciseDetailTest {
 
     @Test
     void mapsBenchDipsToItsPushExerciseTreeNode() {
-        ExerciseEntry exercise = new ExerciseEntry();
+        Exercise exercise = new Exercise();
         exercise.setId(118L);
         exercise.setName("Bench Dips");
         exercise.setMuscleGroup("Arm/Shoulders");
-        exercise.setMovementGroup(ExerciseEntry.MovementGroup.PUSH);
+        exercise.setMovementGroup(Exercise.MovementGroup.PUSH);
         exercise.setTreeLevel(1);
         exercise.setExerciseTreeId(118L);
-        when(exerciseRepository.findByIdAndIsSystemTrueAndStatus(
-                118L, ExerciseEntry.EntryStatus.ACCEPTED)).thenReturn(Optional.of(exercise));
+        when(exerciseRepository.findByIdAndSystemTrueAndStatus(
+                118L, Exercise.EntryStatus.ACCEPTED.name())).thenReturn(Optional.of(exercise));
 
         var result = exerciseService.getSystemExerciseDetail(118L);
 

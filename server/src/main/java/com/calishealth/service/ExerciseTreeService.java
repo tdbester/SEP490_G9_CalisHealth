@@ -2,7 +2,7 @@ package com.calishealth.service;
 
 import com.calishealth.dtos.ExerciseTreeNodeDTO;
 import com.calishealth.dtos.ExerciseTreeResponseDTO;
-import com.calishealth.models.ExerciseEntry;
+import com.calishealth.models.Exercise;
 import com.calishealth.models.ExerciseTreeEdge;
 import com.calishealth.models.MemberExerciseProgress;
 import com.calishealth.repository.ExerciseRepository;
@@ -36,7 +36,7 @@ public class ExerciseTreeService {
 
     @Transactional(readOnly = true)
     public ExerciseTreeResponseDTO getTree(
-            ExerciseEntry.MovementGroup movementGroup,
+            Exercise.MovementGroup movementGroup,
             TreeOrder order,
             String memberEmail
     ) {
@@ -47,13 +47,13 @@ public class ExerciseTreeService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated member not found"))
                 .getId();
 
-        List<ExerciseEntry> groupExercises = new ArrayList<>(
-                exercises.findAllByMovementGroupAndIsSystemTrueAndStatus(
+        List<Exercise> groupExercises = new ArrayList<>(
+                exercises.findAllByMovementGroupAndSystemTrueAndStatus(
                         movementGroup,
-                        ExerciseEntry.EntryStatus.ACCEPTED));
-        Comparator<ExerciseEntry> comparator = Comparator
-                .comparing(ExerciseEntry::getTreeLevel, Comparator.nullsLast(Integer::compareTo))
-                .thenComparing(ExerciseEntry::getId);
+                        Exercise.EntryStatus.ACCEPTED.name()));
+        Comparator<Exercise> comparator = Comparator
+                .comparing(Exercise::getTreeLevel, Comparator.nullsLast(Integer::compareTo))
+                .thenComparing(Exercise::getId);
         if (order == TreeOrder.HARD_TO_EASY) {
             comparator = comparator.reversed();
         }
@@ -67,7 +67,7 @@ public class ExerciseTreeService {
         groupExercises.forEach(exercise -> exerciseIds.add(exercise.getId()));
         Map<Long, List<Long>> prerequisites = new HashMap<>();
         Map<Long, List<Long>> nextExercises = new HashMap<>();
-        for (ExerciseEntry exercise : groupExercises) {
+        for (Exercise exercise : groupExercises) {
             prerequisites.put(exercise.getId(), new ArrayList<>());
             nextExercises.put(exercise.getId(), new ArrayList<>());
         }
@@ -86,9 +86,9 @@ public class ExerciseTreeService {
                 .forEach(item -> storedStates.put(item.getExerciseId(), item.getStatus()));
 
         Map<Long, String> states = new HashMap<>();
-        for (ExerciseEntry exercise : groupExercises.stream()
-                .sorted(Comparator.comparing(ExerciseEntry::getTreeLevel,
-                        Comparator.nullsLast(Integer::compareTo)).thenComparing(ExerciseEntry::getId))
+        for (Exercise exercise : groupExercises.stream()
+                .sorted(Comparator.comparing(Exercise::getTreeLevel,
+                        Comparator.nullsLast(Integer::compareTo)).thenComparing(Exercise::getId))
                 .toList()) {
             Long id = exercise.getId();
             MemberExerciseProgress.ProgressStatus savedState = storedStates.get(id);
@@ -106,6 +106,7 @@ public class ExerciseTreeService {
         List<ExerciseTreeNodeDTO> nodes = groupExercises.stream()
                 .map(exercise -> new ExerciseTreeNodeDTO(
                         exercise.getId(),
+                        exercise.getCode(),
                         exercise.getName(),
                         exercise.getTreeLevel(),
                         displayDifficulty(exercise.getDifficulty()),
@@ -119,7 +120,7 @@ public class ExerciseTreeService {
     }
 
     private ExerciseTreeResponseDTO response(
-            ExerciseEntry.MovementGroup movementGroup,
+            Exercise.MovementGroup movementGroup,
             TreeOrder order,
             List<ExerciseTreeNodeDTO> nodes
     ) {
@@ -130,7 +131,7 @@ public class ExerciseTreeService {
         return new ExerciseTreeResponseDTO(movementGroup.name(), order.name(), nodes, legend);
     }
 
-    private String displayDifficulty(ExerciseEntry.TreeDifficulty difficulty) {
+    private String displayDifficulty(Exercise.TreeDifficulty difficulty) {
         if (difficulty == null) return null;
         String value = difficulty.name().toLowerCase(java.util.Locale.ROOT);
         return Character.toUpperCase(value.charAt(0)) + value.substring(1);

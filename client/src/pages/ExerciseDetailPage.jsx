@@ -2,6 +2,14 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getExerciseDetail, getSystemExerciseDetail } from "../api/library";
 import { mockSystemWorkouts } from "./WorkoutSystemListPage";
+import { getAnatomyImage } from "../utils/anatomyImages";
+import { getLevelBadgeStyle } from "../utils/levelBadge";
+import {
+  getExerciseDemoSearchUrl,
+  getExerciseMovementGroup,
+  getValidVideoUrl,
+  getYouTubeEmbedUrl,
+} from "../utils/exerciseMedia";
 
 // Default detailed guide data matching Figma mockup 100%
 const EXERCISE_CATALOG = {
@@ -317,6 +325,55 @@ function formatTime(seconds) {
   return `${m}:${s < 10 ? "0" : ""}${s}`;
 }
 
+function normalizeMuscleGroups(...values) {
+  const muscles = [];
+  const addMuscles = (value) => {
+    if (Array.isArray(value)) {
+      value.forEach(addMuscles);
+      return;
+    }
+    if (typeof value !== "string" || !value.trim()) return;
+
+    const text = value.trim();
+    if (text.startsWith("[") && text.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) {
+          parsed.forEach(addMuscles);
+          return;
+        }
+      } catch {
+        // Fall back to treating malformed JSON as a delimited label.
+      }
+    }
+
+    text.split(/[,·;|&]/)
+      .map((muscle) => muscle.trim())
+      .filter(Boolean)
+      .forEach((muscle) => muscles.push(muscle));
+  };
+
+  values.forEach(addMuscles);
+  return [...new Set(muscles)];
+}
+
+function inferMuscleGroups(exercise) {
+  const name = String(exercise?.name || "").toLowerCase();
+  if (/\b(push|dip|press|planche|handstand)\b/.test(name)) {
+    return ["Chest", "Triceps", "Shoulders"];
+  }
+  if (/\b(pull|row|chin|hang|muscle.?up|lever)\b/.test(name)) {
+    return ["Back", "Biceps"];
+  }
+  if (/\b(squat|lunge|pistol|leg|calf)\b/.test(name)) {
+    return ["Legs", "Glutes"];
+  }
+  if (/\b(plank|hollow|sit|flag|knee tuck|abs|core)\b/.test(name)) {
+    return ["Core"];
+  }
+  return ["Full Body"];
+}
+
 export default function ExerciseDetailPage() {
   const { id, exerciseId } = useParams();
   const currentExerciseId = exerciseId || id;
@@ -360,21 +417,29 @@ export default function ExerciseDetailPage() {
     EXERCISE_CATALOG["diamond-push-up"];
 
   const [exercise, setExercise] = useState(catalogItem);
-  const [anatomyImageFailed, setAnatomyImageFailed] = useState(false);
+  const [failedAnatomyImageUrl, setFailedAnatomyImageUrl] = useState("");
   const displayedMemberAuthor = exercise.authorName || memberAuthor;
   const displayedMemberPostedTime = exercise.postedTimeAgo || memberPostedTime;
-  const anatomyImageUrl =
-    exercise?.anatomyImageUrl || exercise?.muscleImage || exercise?.image || "";
-  const muscleGroups = [
-    ...new Set(
-      (Array.isArray(exercise?.muscleGroups)
-        ? exercise.muscleGroups
-        : String(exercise?.targetMuscle || exercise?.muscleGroup || "").split(/[,·]/)
-      )
-        .map((muscle) => String(muscle).trim())
-        .filter(Boolean),
-    ),
-  ];
+  const muscleGroups = normalizeMuscleGroups(
+    exercise?.muscleGroups,
+    exercise?.targetMuscle,
+    exercise?.muscleGroup,
+    exercise?.muscle_group,
+    exercise?.primaryMuscles,
+    exercise?.secondaryMuscles,
+    exercise?.targetMuscles,
+  );
+  const displayedMuscleGroups = muscleGroups.length > 0
+    ? muscleGroups
+    : inferMuscleGroups(exercise);
+  const uploadedAnatomyImageUrl =
+    exercise?.anatomyImageUrl || exercise?.anatomy_image_url || exercise?.muscleImage || "";
+  const anatomyImageUrl = uploadedAnatomyImageUrl && failedAnatomyImageUrl !== uploadedAnatomyImageUrl
+    ? uploadedAnatomyImageUrl
+    : getAnatomyImage(displayedMuscleGroups);
+  const demoVideoUrl = getValidVideoUrl(exercise);
+  const demoYouTubeEmbedUrl = getYouTubeEmbedUrl(demoVideoUrl);
+  const demoSearchUrl = getExerciseDemoSearchUrl(exercise.name || exercise.title);
 
   // Video player state
   const [videoDuration, setVideoDuration] = useState(null);
@@ -399,10 +464,6 @@ export default function ExerciseDetailPage() {
       document.title = "CalisHealth";
     };
   }, [exercise.name]);
-
-  useEffect(() => {
-    setAnatomyImageFailed(false);
-  }, [anatomyImageUrl]);
 
   // Fetch from API if exists, or fall back seamlessly
   useEffect(() => {
@@ -440,6 +501,14 @@ export default function ExerciseDetailPage() {
                 }),
             name: data.title || data.name || prev.name,
             level: data.level || prev.level,
+            targetMuscle: normalizeMuscleGroups(
+              data.targetMuscle,
+              data.muscleGroup,
+              data.muscle_group,
+              data.primaryMuscles,
+              data.secondaryMuscles,
+              data.targetMuscles,
+            ).join(", ") || prev.targetMuscle || prev.muscleGroup,
             description: data.description || prev.description,
             tips: data.tips || prev.tips,
           }));
@@ -456,7 +525,7 @@ export default function ExerciseDetailPage() {
 
   // Simulated player timer
   useEffect(() => {
-    if (exercise.videoUrl) return undefined;
+    if (demoVideoUrl) return undefined;
     let timer = null;
     if (isPlaying) {
       timer = setInterval(() => {
@@ -472,7 +541,7 @@ export default function ExerciseDetailPage() {
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [isPlaying, totalDuration, exercise.videoUrl]);
+  }, [isPlaying, totalDuration, demoVideoUrl]);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -522,9 +591,7 @@ export default function ExerciseDetailPage() {
     : null);
 
   // Badge level color tokens
-  const lvl = exercise.level?.toLowerCase();
-  const isBeginner = lvl === "beginner";
-  const isAdvanced = lvl === "advanced";
+  const level = exercise.level || exercise.difficultyLevel || "Intermediate";
 
   return (
     <div className="exercise-detail-page w-full max-w-6xl mx-auto text-white pb-10">
@@ -545,37 +612,46 @@ export default function ExerciseDetailPage() {
           background-color: #522cd9 !important;
         }
         .exercise-detail-page button.exercise-tree-btn {
-          background-color: #643bf6 !important;
-          border-radius: 12px !important;
+          min-width: 180px !important;
+          height: 42px !important;
+          justify-content: center !important;
+          color: #fff !important;
+          background-color: #7c5dfa !important;
+          border: 0 !important;
+          border-radius: 16px !important;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.18) !important;
+          transition: background-color 150ms ease !important;
         }
         .exercise-detail-page button.exercise-tree-btn:hover {
-          background-color: #522cd9 !important;
+          background-color: #6c47ff !important;
         }
       `}</style>
 
       {/* 1. TOPBAR & NÚT QUAY LẠI */}
       <div className="mb-4">
-        {/* Nút quay lại: < Back to list (dạng text link tối giản, không nền, không viền) */}
-        <button
-          type="button"
-          onClick={() => navigate(workoutBackPath || -1)}
-          className="bg-transparent border-0 p-0 text-xs text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer mb-3 group outline-none"
-          aria-label="Back to exercise list"
-        >
-          <svg
-            className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
+        <div className="mb-3 flex items-center justify-between gap-3">
+          {/* Nút quay lại: < Back to list (dạng text link tối giản, không nền, không viền) */}
+          <button
+            type="button"
+            onClick={() => navigate(workoutBackPath || -1)}
+            className="bg-transparent border-0 p-0 text-xs text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer group outline-none"
+            aria-label="Back to exercise list"
           >
-            <path
-              fillRule="evenodd"
-              d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <span>{workoutBackPath ? "Back to workout" : "Back to list"}</span>
-        </button>
+            <svg
+              className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <span>{workoutBackPath ? "Back to workout" : "Back to list"}</span>
+          </button>
+        </div>
 
         {/* Hàng tiêu đề bài tập & Badge level đầm rõ */}
         <div className="flex items-center justify-between gap-4">
@@ -585,15 +661,9 @@ export default function ExerciseDetailPage() {
                 {exercise.name}
               </h1>
               <span
-                className={`px-4 py-1.5 text-xs font-semibold rounded-full border capitalize ${
-                  isBeginner
-                    ? "border-emerald-800/80 bg-emerald-950/40 text-emerald-400"
-                    : isAdvanced
-                    ? "border-rose-800/80 bg-rose-950/40 text-rose-400"
-                    : "border-amber-800/80 bg-amber-950/40 text-amber-400"
-                }`}
+                className={`px-4 py-1.5 text-xs font-semibold rounded-full border capitalize ${getLevelBadgeStyle(level)}`}
               >
-                {exercise.level || "Intermediate"}
+                {level}
               </span>
             </div>
             {isMemberExercise && (
@@ -613,33 +683,32 @@ export default function ExerciseDetailPage() {
               </p>
             )}
           </div>
-          {!isMemberExercise && (!isSystemExercise || exercise.hasExerciseTree) && (
-            <button
+          <button
               type="button"
               onClick={() => {
+                const movementGroup = getExerciseMovementGroup(exercise);
                 const params = new URLSearchParams({
-                  path: exercise.movementGroup.toLowerCase(),
-                  exerciseId: String(exercise.id),
-                  exerciseName: exercise.name,
+                  highlight: String(exercise.code || exercise.id || ""),
+                  exercise: exercise.name || "",
+                  exerciseId: String(exercise.id || ""),
+                  exerciseName: exercise.name || "",
                 });
+                if (movementGroup) {
+                  params.set("group", movementGroup);
+                }
                 navigate(
-                  { pathname: "/explore", search: params.toString() },
+                  { pathname: "/library/skills/tree", search: params.toString() },
                   {
                     state: {
-                      exercise: {
-                        id: exercise.id,
-                        name: exercise.name,
-                        movementGroup: exercise.movementGroup,
-                      },
+                      selectedExercise: exercise,
                     },
                   },
                 );
               }}
-              className="exercise-tree-btn shrink-0 px-7 py-3 text-sm font-semibold text-white transition-colors"
+              className="exercise-tree-btn shrink-0 flex items-center gap-2 rounded-2xl bg-[#7c5dfa] px-5 py-2 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#6c47ff]"
             >
               Exercise tree
-            </button>
-          )}
+          </button>
         </div>
       </div>
 
@@ -659,10 +728,19 @@ export default function ExerciseDetailPage() {
                 background: "radial-gradient(circle at center, #1e1548 0%, #0d0924 70%, #080518 100%)",
               }}
             >
-              {exercise.videoUrl && (
+              {demoYouTubeEmbedUrl ? (
+                <iframe
+                  src={demoYouTubeEmbedUrl}
+                  title={`${exercise.name} demo video`}
+                  className="absolute inset-0 h-full w-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
+              ) : demoVideoUrl ? (
                 <video
                   ref={videoRef}
-                  src={exercise.videoUrl}
+                  src={demoVideoUrl}
                   className="absolute inset-0 h-full w-full object-contain"
                   muted={isMuted}
                   onLoadedMetadata={(event) => {
@@ -674,6 +752,20 @@ export default function ExerciseDetailPage() {
                   onPause={() => setIsPlaying(false)}
                   onEnded={() => setIsPlaying(false)}
                 />
+              ) : (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 p-6 text-center">
+                  <p className="text-sm font-semibold text-slate-200">
+                    {exercise.isSystem === true ? "Demo video is not available yet" : "Demo video for custom exercise"}
+                  </p>
+                  <a
+                    href={demoSearchUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-xl border border-[#8068c4] bg-[#2b1d5e] px-4 py-2 text-xs font-semibold text-violet-100 transition hover:bg-[#392676]"
+                  >
+                    Search YouTube for this exercise
+                  </a>
+                </div>
               )}
               {/* Overlay decor pattern */}
               <div className="absolute inset-0 bg-gradient-to-tr from-[#1b1244]/40 to-transparent pointer-events-none" />
@@ -682,6 +774,7 @@ export default function ExerciseDetailPage() {
               <div className="w-full h-8 z-10" />
 
               {/* Nút Play tròn to chính giữa: h-16 w-16 bg-[#643bf6] */}
+              {demoVideoUrl && !demoYouTubeEmbedUrl && (
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                 <button
                   type="button"
@@ -703,8 +796,10 @@ export default function ExerciseDetailPage() {
                   )}
                 </button>
               </div>
+              )}
 
               {/* Thanh điều khiển video ở đáy: Các nút trong suốt không viền */}
+              {demoVideoUrl && !demoYouTubeEmbedUrl && (
               <div className="w-full px-4 py-2.5 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex items-center gap-3 z-10">
                 {/* Nút Play/Pause nhỏ */}
                 <button
@@ -812,67 +907,36 @@ export default function ExerciseDetailPage() {
                   </svg>
                 </button>
               </div>
+              )}
             </div>
           </section>
 
           <section className="rounded-2xl border border-[#382b68] bg-[#171133] p-5 mt-4 shadow-xl">
             <h2 className="text-sm font-bold text-[#c4b5fd] mb-4">Muscle Anatomy</h2>
             <div className="flex min-h-48 items-center justify-center overflow-hidden rounded-xl border border-[#2d2254] bg-[#100b26] p-3">
-              {anatomyImageUrl && !anatomyImageFailed ? (
-                <img
-                  src={anatomyImageUrl}
-                  alt={`Muscle anatomy for ${exercise?.name || "this exercise"}`}
-                  onError={() => setAnatomyImageFailed(true)}
-                  className="max-h-64 w-full rounded-xl object-contain"
-                />
-              ) : (
-                <svg
-                  viewBox="0 0 360 240"
-                  role="img"
-                  aria-label="Anatomy illustration placeholder"
-                  className="max-h-64 w-full"
-                >
-                  <defs>
-                    <linearGradient id="anatomy-body" x1="0" x2="1" y1="0" y2="1">
-                      <stop offset="0%" stopColor="#a78bfa" />
-                      <stop offset="100%" stopColor="#5b32e8" />
-                    </linearGradient>
-                  </defs>
-                  <circle cx="180" cy="39" r="20" fill="#c4b5fd" />
-                  <path
-                    d="M151 68 Q180 55 209 68 L224 128 L208 139 L216 210 L190 210 L180 151 L170 210 L144 210 L152 139 L136 128 Z"
-                    fill="url(#anatomy-body)"
-                  />
-                  <path d="M143 76 L112 132 L122 139 L156 105 M217 76 L248 132 L238 139 L204 105"
-                    fill="none" stroke="#8b5cf6" strokeWidth="17" strokeLinecap="round" />
-                  <path d="M151 137 L132 211 M209 137 L228 211"
-                    fill="none" stroke="#7c5ce0" strokeWidth="17" strokeLinecap="round" />
-                  <path d="M157 83 Q180 72 203 83 L198 112 Q180 122 162 112 Z"
-                    fill="#ec4899" fillOpacity=".85" />
-                  <path d="M162 119 Q180 127 198 119 L195 143 Q180 151 165 143 Z"
-                    fill="#f472b6" fillOpacity=".8" />
-                  <text x="180" y="231" textAnchor="middle" fill="#c4b5fd" fontSize="12">
-                    Anatomy illustration
-                  </text>
-                </svg>
-              )}
+              <img
+                src={anatomyImageUrl}
+                alt={`Muscle anatomy for ${exercise?.name || "this exercise"}`}
+                onError={() => {
+                  if (uploadedAnatomyImageUrl && failedAnatomyImageUrl !== uploadedAnatomyImageUrl) {
+                    setFailedAnatomyImageUrl(uploadedAnatomyImageUrl);
+                  }
+                }}
+                className="max-h-64 w-full rounded-xl object-contain"
+              />
             </div>
             <div className="mt-4">
               <h3 className="text-xs font-bold text-white mb-2">Muscle Group</h3>
-              {muscleGroups.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {muscleGroups.map((muscle) => (
-                    <span
-                      key={muscle}
-                      className="rounded-full border border-violet-700/70 bg-violet-950/50 px-3 py-1 text-xs font-medium text-violet-200"
-                    >
-                      {muscle}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-slate-400">Muscle group information is not available.</p>
-              )}
+              <div className="flex flex-wrap gap-2">
+                {displayedMuscleGroups.map((muscle) => (
+                  <span
+                    key={muscle}
+                    className="rounded-full border border-violet-700/70 bg-violet-950/50 px-3 py-1 text-xs font-medium text-violet-200"
+                  >
+                    {muscle}
+                  </span>
+                ))}
+              </div>
             </div>
           </section>
 

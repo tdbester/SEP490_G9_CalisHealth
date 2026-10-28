@@ -102,7 +102,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token) {
+      setUser(null);
+      setAuthStatus("guest");
+      return;
+    }
 
     const cached = localStorage.getItem("user");
     if (cached) {
@@ -120,6 +124,8 @@ export default function Dashboard() {
       })
       .catch(() => {
         localStorage.removeItem("token");
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("jwt");
         localStorage.removeItem("user");
         setUser(null);
         setAuthStatus("guest");
@@ -325,11 +331,17 @@ export default function Dashboard() {
           </header>
 
           <p className="dash-community-text">
-            Discover workouts shared by the Calisthenics community
+            Discover exercises and workouts shared by the Calisthenics community
           </p>
 
           {dashboardData?.community && (
             <div className="dash-community-stats">
+              <div>
+                <span className="dash-community-number">
+                  {Number(dashboardData.community.exercises || 0).toLocaleString()}
+                </span>
+                <span className="dash-community-label">Exercises</span>
+              </div>
               <div>
                 <span className="dash-community-number">
                   {dashboardData.community.workouts.toLocaleString()}

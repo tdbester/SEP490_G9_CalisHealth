@@ -8,10 +8,8 @@ import com.calishealth.dtos.LibraryDtos.PagedExerciseListResponse;
 import com.calishealth.dtos.LibraryDtos.WorkoutCounts;
 import com.calishealth.dtos.LibraryOverviewDTO;
 import com.calishealth.models.Exercise;
-import com.calishealth.models.ExerciseEntry;
 import com.calishealth.models.User;
 import com.calishealth.models.UserRole;
-import com.calishealth.repository.ErdExerciseRepository;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.UserRepository;
 import com.calishealth.repository.WorkoutRepository;
@@ -32,7 +30,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class LibraryService {
     private final ExerciseRepository exerciseRepository;
-    private final ErdExerciseRepository erdExerciseRepository;
     private final WorkoutRepository workoutRepository;
     private final UserRepository userRepository;
 
@@ -41,25 +38,23 @@ public class LibraryService {
 
     @Transactional(readOnly = true)
     public ExerciseCounts getExerciseCounts(String userEmail) {
-        long healthCount = exerciseRepository.countByTypeAndIsSystemTrueAndStatus(
-                ExerciseEntry.EntryType.HEALTH, ExerciseEntry.EntryStatus.ACCEPTED);
-        long skillCount = exerciseRepository.countByTypeAndIsSystemTrueAndStatus(
-                ExerciseEntry.EntryType.SKILL, ExerciseEntry.EntryStatus.ACCEPTED);
+        long healthCount = exerciseRepository.countByTypeAndSystemTrueAndStatus("HEALTH", "ACCEPTED");
+        long skillCount = exerciseRepository.countByTypeAndSystemTrueAndStatus("SKILL", "ACCEPTED");
         long memberCount = userEmail == null || userEmail.isBlank()
                 ? 0
                 : userRepository.findByEmail(userEmail)
                         .map(User::getId)
-                        .map(erdExerciseRepository::countAcceptedMemberExercisesByAuthorId)
+                        .map(exerciseRepository::countAcceptedMemberExercisesByAuthorId)
                         .orElse(0L);
 
         return new ExerciseCounts(healthCount, skillCount, memberCount);
     }
 
-    private String entryLevelLabel(ExerciseEntry.EntryLevel level) {
-        if (level == null) {
+    private String entryLevelLabel(String level) {
+        if (level == null || level.isBlank()) {
             return "Beginner";
         }
-        String normalized = level.name().toLowerCase(Locale.ROOT);
+        String normalized = level.toLowerCase(Locale.ROOT);
         return Character.toUpperCase(normalized.charAt(0)) + normalized.substring(1);
     }
 
@@ -88,11 +83,9 @@ public class LibraryService {
         }
 
         return new LibraryOverviewDTO(
-                exerciseRepository.countByTypeAndIsSystemTrueAndStatus(
-                        ExerciseEntry.EntryType.HEALTH, ExerciseEntry.EntryStatus.ACCEPTED),
-                exerciseRepository.countByTypeAndIsSystemTrueAndStatus(
-                        ExerciseEntry.EntryType.SKILL, ExerciseEntry.EntryStatus.ACCEPTED),
-                erdExerciseRepository.countAcceptedMemberExercisesByAuthorId(member.getId()),
+                exerciseRepository.countByTypeAndSystemTrueAndStatus("HEALTH", "ACCEPTED"),
+                exerciseRepository.countByTypeAndSystemTrueAndStatus("SKILL", "ACCEPTED"),
+                exerciseRepository.countAcceptedMemberExercisesByAuthorId(member.getId()),
                 workoutRepository.countSystemWorkoutsByType("HEALTH"),
                 workoutRepository.countSystemWorkoutsByType("SKILL"),
                 workoutRepository.countCustomWorkoutsByAuthorId(member.getId())
@@ -245,47 +238,35 @@ public class LibraryService {
 
         Long newId = System.currentTimeMillis();
         String code = "MEM-" + (newId % 10000);
+        boolean persisted = false;
 
         if (userEmail != null && !userEmail.isBlank()) {
             User user = userRepository.findByEmail(userEmail).orElse(null);
             if (user != null) {
-                Exercise me = new Exercise();
-                me.setName(name);
-                me.setType("HEALTH");
-                me.setCategory(req.category() != null ? req.category() : "Custom");
-                me.setDifficultyLevel(lvl);
-                me.setInstructions(desc);
-                me.setDefaultSets(sets);
-                try {
-                    me.setDefaultReps(Integer.parseInt(reps.replaceAll("\\D+", "")));
-                } catch (Exception ignored) {
-                    me.setDefaultReps(10);
-                }
-                me.setSource("MEMBER");
-                me.setStatus("PENDING");
-                me.setCreatedBy(user);
-                Exercise saved = erdExerciseRepository.save(me);
-                newId = saved.getId();
-                code = "MEM-" + newId;
-
-                ExerciseEntry memberEntry = new ExerciseEntry();
+                Exercise memberEntry = new Exercise();
                 memberEntry.setCode("MEM-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT));
                 memberEntry.setName(name);
                 memberEntry.setDescription(desc);
-                memberEntry.setType(ExerciseEntry.EntryType.HEALTH);
+                memberEntry.setType("HEALTH");
                 memberEntry.setSystem(false);
                 memberEntry.setAuthor(user);
-                memberEntry.setStatus(ExerciseEntry.EntryStatus.PENDING);
+                memberEntry.setCreatedBy(user);
+                memberEntry.setSource("CUSTOM");
+                memberEntry.setStatus("PENDING");
+                memberEntry.setActive(false);
                 memberEntry.setCategory(req.category() != null ? req.category() : "Custom");
                 memberEntry.setMuscleGroup(mg);
-                memberEntry.setLevel(ExerciseEntry.EntryLevel.valueOf(lvl.toUpperCase(Locale.ROOT)));
+                memberEntry.setLevel(lvl.toUpperCase(Locale.ROOT));
                 memberEntry.setDefaultSets(sets);
                 memberEntry.setDefaultReps(parseRepCount(reps));
                 memberEntry.setDefaultDuration(parseDurationSeconds(reps));
                 memberEntry.setEquipment(equip);
                 memberEntry.setGuide(desc);
                 memberEntry.setSaveCount(0);
-                exerciseRepository.save(memberEntry);
+                Exercise saved = exerciseRepository.save(memberEntry);
+                newId = saved.getId();
+                code = saved.getCode();
+                persisted = true;
             }
         }
 
@@ -307,7 +288,9 @@ public class LibraryService {
                 null
         );
 
-        customSessionExercises.add(0, newItem);
+        if (!persisted) {
+            customSessionExercises.add(0, newItem);
+        }
         return newItem;
     }
 
@@ -334,7 +317,7 @@ public class LibraryService {
 
         try {
             Long numericId = Long.parseLong(idOrSlug);
-            var found = erdExerciseRepository.findById(numericId);
+            var found = exerciseRepository.findById(numericId);
             if (found.isPresent()) {
                 return mapExerciseEntityToDto(found.get());
             }
@@ -386,9 +369,6 @@ public class LibraryService {
         }
 
         String videoUrl = e.getVideoUrl();
-        if (videoUrl == null && e.getDemoMedia() != null) {
-            videoUrl = e.getDemoMedia().getFileUrl();
-        }
 
         String source = e.getSource() != null ? e.getSource() : "SYSTEM";
         String code = "EX-" + e.getId();
@@ -436,10 +416,12 @@ public class LibraryService {
         List<ExerciseListItem> list = new ArrayList<>();
 
         // 1. Load system exercises from database
-        List<ExerciseEntry> dbEntries = exerciseRepository.findAll();
+        List<Exercise> dbEntries = exerciseRepository.findAll().stream()
+                .filter(Exercise::isSystem)
+                .toList();
         if (!dbEntries.isEmpty()) {
-            for (ExerciseEntry e : dbEntries) {
-                String typeStr = e.getType() != null ? e.getType().name() : "HEALTH";
+            for (Exercise e : dbEntries) {
+                String typeStr = e.getType() != null ? e.getType() : "HEALTH";
                 String mg = e.getMuscleGroup() != null ? e.getMuscleGroup() : "Full body";
                 String equip = "Bodyweight";
                 if (mg.equalsIgnoreCase("Back")) {
@@ -480,7 +462,7 @@ public class LibraryService {
         // 4. Load Member exercises from database (if member is logged in)
         if (userEmail != null && !userEmail.isBlank()) {
             try {
-                List<Exercise> memberDbExercises = erdExerciseRepository.findMemberExercises(userEmail);
+                List<Exercise> memberDbExercises = exerciseRepository.findMemberExercisesByEmail(userEmail);
                 for (Exercise me : memberDbExercises) {
                     list.add(mapExerciseEntityToDto(me));
                 }

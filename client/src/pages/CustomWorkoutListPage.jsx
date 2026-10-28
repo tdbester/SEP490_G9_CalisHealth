@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCommunityWorkouts } from "../api/library";
+import { getLevelBadgeStyle } from "../utils/levelBadge";
 
 const STORAGE_KEY = "custom_workouts";
 const PERSONAL_STORAGE_KEY = "my_custom_workouts";
@@ -177,12 +178,12 @@ function ChevronDownIcon({ className = "w-4 h-4" }) {
 }
 
 function LevelBadge({ level }) {
-  const map = {
-    Beginner: "rounded-full px-3 py-0.5 text-[11px] font-medium border border-emerald-800/80 bg-emerald-950/40 text-emerald-400",
-    Intermediate: "rounded-full px-3 py-0.5 text-[11px] font-medium border border-amber-800/80 bg-amber-950/40 text-amber-400",
-    Advanced: "rounded-full px-3 py-0.5 text-[11px] font-medium border border-rose-800/80 bg-rose-950/40 text-rose-400",
-  };
-  return <span className={map[level] || map.Intermediate}>{level}</span>;
+  const displayLevel = level || "Intermediate";
+  return (
+    <span className={`rounded-full px-3 py-0.5 text-[11px] font-medium capitalize ${getLevelBadgeStyle(displayLevel)}`}>
+      {displayLevel}
+    </span>
+  );
 }
 
 function parseMinutes(duration) {

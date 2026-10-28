@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import LibraryDetailPlaceholder from "./LibraryDetailPlaceholder";
 import { deleteMyWorkout, getMyWorkouts } from "../api/library";
 import useUndoDelete from "../hooks/useUndoDelete";
+import { getLevelBadgeStyle } from "../utils/levelBadge";
 
 const STORAGE_KEY = "my_custom_workouts";
 const INITIALIZED_KEY = `${STORAGE_KEY}_initialized`;
@@ -85,15 +86,10 @@ function DumbbellIcon() {
 }
 
 function LevelBadge({ level }) {
-  const styles = {
-    Beginner: "border-emerald-600/80 bg-emerald-950/70 text-emerald-200",
-    Intermediate: "border-amber-600/80 bg-amber-950/70 text-amber-200",
-    Advanced: "border-rose-600/80 bg-rose-950/70 text-rose-200",
-  };
-
+  const displayLevel = level || "Intermediate";
   return (
-    <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${styles[level] || styles.Intermediate}`}>
-      {level}
+    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold capitalize ${getLevelBadgeStyle(displayLevel)}`}>
+      {displayLevel}
     </span>
   );
 }

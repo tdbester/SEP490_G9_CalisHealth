@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { getExerciseTree } from "../api/library";
+import { getLevelBadgeStyle } from "../utils/levelBadge";
 
 // Movement groups and their Calisthenics progression tree data
 const TREE_DATA = {
@@ -458,31 +459,53 @@ const TREE_DATA = {
 
 const MOVEMENT_GROUPS = ["Push", "Pull", "Legs", "Core"];
 
+function normalizeExerciseName(value) {
+  return String(value || "")
+    .trim()
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function inferMovementGroup(exerciseName, muscleGroups = "") {
+  const normalizedName = normalizeExerciseName(exerciseName);
+  const matchingTreeGroup = MOVEMENT_GROUPS.find((group) =>
+    (TREE_DATA[group]?.nodes || []).some(
+      (node) => normalizeExerciseName(node.name) === normalizedName,
+    ),
+  );
+  if (matchingTreeGroup) return matchingTreeGroup;
+
+  if (/\b(pull|row|lever|muscle up|chin up)\b/.test(normalizedName)) return "Pull";
+  if (/\b(plank|hollow|sit|flag|abs|core|leg raise|knee tuck|knee raise)\b/.test(normalizedName)) return "Core";
+  if (/\b(squat|lunge|calf|leg|nordic)\b/.test(normalizedName)) return "Legs";
+  if (/\bhang\b/.test(normalizedName)) return "Pull";
+  if (/\b(push|dip|press|planche|handstand)\b/.test(normalizedName)) return "Push";
+
+  const normalizedMuscles = normalizeExerciseName(muscleGroups);
+  if (/\b(core|abdominal|abs|oblique)\b/.test(normalizedMuscles)) return "Core";
+  if (/\b(leg|legs|quadricep|hamstring|calf|glute)\b/.test(normalizedMuscles)) return "Legs";
+  if (/\b(back|lat|bicep|forearm)\b/.test(normalizedMuscles)) return "Pull";
+  if (/\b(chest|tricep|shoulder|arm)\b/.test(normalizedMuscles)) return "Push";
+  return "Push";
+}
+
 // Layout constants for the SVG grid
 const CARD_WIDTH = 144;
 const CARD_HEIGHT = 144;
 const GAP_X = 48;
 const GAP_Y = 48;
 const GRID_WIDTH = 5 * CARD_WIDTH + 4 * GAP_X;
-const PUSH_NODE_POSITIONS = {
-  "knee push-up": { col: 0, row: 0 },
-  "push-up": { col: 1, row: 0 },
-  "diamond push-up": { col: 2, row: 0 },
-  "archer push-up": { col: 3, row: 0 },
-  "one arm push-up": { col: 4, row: 0 },
-  "pike push-up": { col: 2, row: 1 },
-  "handstand push-up": { col: 3, row: 1 },
-};
-
 export default function CalisthenicsExerciseTreePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const navigationExercise = location.state?.exercise;
+  const navigationExercise = location.state?.selectedExercise || location.state?.exercise;
 
   const requestedGroup = [
-      searchParams.get("movementGroup") ||
-      "",
+      searchParams.get("group") || "",
+      searchParams.get("movementGroup") || "",
+      searchParams.get("skillGroup") || "",
       searchParams.get("path") || "",
       navigationExercise?.movementGroup || "",
       location.state?.movementGroup || "",
@@ -494,6 +517,12 @@ export default function CalisthenicsExerciseTreePage() {
       navigationExercise?.id ||
       location.state?.exerciseId ||
       "";
+  const initialExerciseCode =
+      searchParams.get("highlight") ||
+      searchParams.get("exerciseCode") ||
+      navigationExercise?.code ||
+      location.state?.exerciseCode ||
+      "";
   const initialExerciseName =
       searchParams.get("exerciseName") ||
       searchParams.get("exercise") ||
@@ -501,20 +530,20 @@ export default function CalisthenicsExerciseTreePage() {
       location.state?.exerciseName ||
       "";
   const initialSearch = searchParams.get("search") || "";
-  const inferredGroup = initialExerciseName
-      ? MOVEMENT_GROUPS.find((group) =>
-          (TREE_DATA[group]?.nodes || []).some((node) =>
-              node.name.toLowerCase().includes(initialExerciseName.trim().toLowerCase()) ||
-              initialExerciseName.trim().toLowerCase().includes(node.name.toLowerCase()),
-          ),
-      )
-      : null;
+  const initialMuscleGroups = navigationExercise?.targetMuscle
+      || navigationExercise?.muscleGroup
+      || navigationExercise?.muscleGroups?.join?.(" ")
+      || "";
+  const inferredGroup = inferMovementGroup(initialExerciseName, initialMuscleGroups);
   const initialGroup = requestedGroup || inferredGroup || "Push";
 
   const [selectedGroup, setSelectedGroup] = useState(initialGroup);
   const [direction, setDirection] = useState("Easy → Hard");
-  const [exerciseFilter, setExerciseFilter] = useState(initialExerciseName || initialSearch);
+  const [exerciseFilter, setExerciseFilter] = useState(
+      initialExerciseName || initialSearch || initialExerciseCode || initialExerciseId,
+  );
   const [contextExerciseId, setContextExerciseId] = useState(String(initialExerciseId));
+  const [contextExerciseCode, setContextExerciseCode] = useState(String(initialExerciseCode));
   const [treeResponse, setTreeResponse] = useState(null);
   const [treeError, setTreeError] = useState("");
   const [treeLoading, setTreeLoading] = useState(true);
@@ -538,23 +567,39 @@ export default function CalisthenicsExerciseTreePage() {
         location.state?.exerciseId ||
         "",
     );
+    const nextExerciseCode = String(
+        searchParams.get("highlight") ||
+        searchParams.get("exerciseCode") ||
+        navigationExercise?.code ||
+        location.state?.exerciseCode ||
+        "",
+    );
     const nextExerciseName =
         searchParams.get("exerciseName") ||
         searchParams.get("exercise") ||
         navigationExercise?.name ||
         location.state?.exerciseName ||
         "";
-    if (nextExerciseId || nextExerciseName) {
-      setContextExerciseId(nextExerciseId);
-      setExerciseFilter(nextExerciseName);
+    const nextMuscleGroups = navigationExercise?.targetMuscle
+        || navigationExercise?.muscleGroup
+        || navigationExercise?.muscleGroups?.join?.(" ")
+        || "";
+    const inferredNextGroup = requestedGroup
+        || inferMovementGroup(nextExerciseName, nextMuscleGroups);
+    if (inferredNextGroup && inferredNextGroup !== selectedGroup) {
+      setSelectedGroup(inferredNextGroup);
     }
-  }, [requestedGroup, searchParams, navigationExercise, location.state]);
+    const nextSearch = searchParams.get("search") || "";
+    setContextExerciseId(nextExerciseId);
+    setContextExerciseCode(nextExerciseCode);
+    setExerciseFilter(nextExerciseName || nextSearch || nextExerciseCode || nextExerciseId);
+  }, [requestedGroup, searchParams, navigationExercise, location.state, selectedGroup]);
 
   // If navigation supplies an exercise but no group, resolve its group from the API.
   useEffect(() => {
     if (
         requestedGroup ||
-        (!contextExerciseId && !exerciseFilter.trim())
+        (!contextExerciseId && !contextExerciseCode && !exerciseFilter.trim())
     ) return undefined;
     let isMounted = true;
     Promise.all(
@@ -564,18 +609,32 @@ export default function CalisthenicsExerciseTreePage() {
     )
         .then((responses) => {
           if (!isMounted) return;
-          const normalizedName = exerciseFilter.trim().toLocaleLowerCase();
-          const matchIndex = responses.findIndex((response) =>
-              (response.nodes || []).some((node) =>
-                  (contextExerciseId && String(node.id) === contextExerciseId) ||
-                  (normalizedName && (
-                      node.name.trim().toLocaleLowerCase() === normalizedName ||
-                      node.name.trim().toLocaleLowerCase().includes(normalizedName) ||
-                      normalizedName.includes(node.name.trim().toLocaleLowerCase())
-                  )),
-              ),
-          );
-          if (matchIndex >= 0) setSelectedGroup(MOVEMENT_GROUPS[matchIndex]);
+      const normalizedName = normalizeExerciseName(exerciseFilter);
+      const matchingCodeIndex = contextExerciseCode
+          ? responses.findIndex((response) =>
+            (response.nodes || []).some(
+                (node) => String(node.code || "").toLowerCase() === contextExerciseCode.toLowerCase(),
+            ),
+        )
+          : -1;
+      const matchingNameIndex = responses.findIndex((response) =>
+          (response.nodes || []).some(
+          (node) =>
+              normalizeExerciseName(node.name) === normalizedName ||
+              normalizeExerciseName(node.code) === normalizedName,
+          ),
+      );
+      const matchingIdIndex = contextExerciseId
+          ? responses.findIndex((response) =>
+            (response.nodes || []).some(
+                (node) => String(node.id) === contextExerciseId,
+            ),
+        )
+          : -1;
+      const matchIndex = matchingCodeIndex >= 0
+          ? matchingCodeIndex
+          : matchingNameIndex >= 0 ? matchingNameIndex : matchingIdIndex;
+      if (matchIndex >= 0) setSelectedGroup(MOVEMENT_GROUPS[matchIndex]);
         })
         .catch((error) => {
           console.error("Failed to resolve exercise tree group:", error);
@@ -583,7 +642,7 @@ export default function CalisthenicsExerciseTreePage() {
     return () => {
       isMounted = false;
     };
-  }, [requestedGroup, contextExerciseId, exerciseFilter]);
+  }, [requestedGroup, contextExerciseCode, contextExerciseId, exerciseFilter]);
 
   useEffect(() => {
     let isMounted = true;
@@ -620,37 +679,78 @@ export default function CalisthenicsExerciseTreePage() {
     }
 
     // Stable level-and-ID ordering defines coordinates independently of arrow direction.
+    const levelOf = (node) => {
+      const parsed = Number.parseInt(String(node.level ?? node.levelNumber ?? ""), 10);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+    };
     const sortedNodes = [...(treeResponse.nodes || [])].sort(
         (first, second) =>
-            Number(first.level) - Number(second.level) ||
+            levelOf(first) - levelOf(second) ||
             String(first.id).localeCompare(String(second.id), undefined, { numeric: true }) ||
             first.name.localeCompare(second.name),
     );
+    const nodeIdAliases = new Map();
+    const nodeByIdentity = new Map();
+    const uniqueNodes = [];
+    sortedNodes.forEach((node) => {
+      const nameKey = normalizeExerciseName(node.name);
+      const codeKey = String(node.code || "").trim().toLowerCase();
+      const canonicalId = (codeKey && nodeByIdentity.get(`code:${codeKey}`))
+          || nodeByIdentity.get(`name:${nameKey}`);
+      if (canonicalId) {
+        nodeIdAliases.set(String(node.id), canonicalId);
+        if (codeKey) nodeByIdentity.set(`code:${codeKey}`, canonicalId);
+        return;
+      }
+
+      const id = String(node.id);
+      nodeIdAliases.set(id, id);
+      nodeByIdentity.set(`name:${nameKey}`, id);
+      if (codeKey) nodeByIdentity.set(`code:${codeKey}`, id);
+      uniqueNodes.push(node);
+    });
     const rowsByLevel = new Map();
-    const nodes = sortedNodes.map((node) => {
-      const level = Number(node.level || 1);
-      const row = rowsByLevel.get(level) || 0;
-      rowsByLevel.set(level, row + 1);
-      const fixedPosition = selectedGroup === "Push"
-          ? PUSH_NODE_POSITIONS[node.name.trim().toLocaleLowerCase()]
-          : null;
+    const rowsById = new Map();
+    const nodes = uniqueNodes.map((node) => {
+      const level = levelOf(node);
+      const prerequisiteIds = [...new Set((node.prerequisiteIds || [])
+          .map((id) => nodeIdAliases.get(String(id)) || String(id))
+          .filter((id) => id !== String(node.id)))];
+      const nextExerciseIds = [...new Set((node.nextExerciseIds || [])
+          .map((id) => nodeIdAliases.get(String(id)) || String(id))
+          .filter((id) => id !== String(node.id)))];
+      const occupiedRows = rowsByLevel.get(level) || new Set();
+      const parentRows = prerequisiteIds
+          .map((id) => rowsById.get(String(id)))
+          .filter((row) => row !== undefined);
+      let row = parentRows.find((candidate) => !occupiedRows.has(candidate));
+      if (row === undefined) {
+        row = 0;
+        while (occupiedRows.has(row)) row += 1;
+      }
+      occupiedRows.add(row);
+      rowsByLevel.set(level, occupiedRows);
+      rowsById.set(String(node.id), row);
       return {
         ...node,
         level: `Lv ${level}`,
         levelNumber: level,
         state: node.state?.toLowerCase(),
-        col: fixedPosition?.col ?? Math.max(0, Math.min(4, level - 1)),
-        row: fixedPosition?.row ?? row,
-        prerequisiteIds: node.prerequisiteIds || [],
-        nextExerciseIds: node.nextExerciseIds || [],
+        col: Math.max(0, Math.min(4, level - 1)),
+        row,
+        prerequisiteIds,
+        nextExerciseIds,
         muscleGroups: node.targetMuscle ? node.targetMuscle.split(",").map((m) => m.trim()) : [],
-        previous: (node.prerequisiteIds || [])
-            .map((id) => sortedNodes.find((candidate) => candidate.id === id)?.name)
-            .filter(Boolean),
-        next: (node.nextExerciseIds || [])
-            .map((id) => sortedNodes.find((candidate) => candidate.id === id)?.name)
-            .filter(Boolean),
       };
+    });
+    const uniqueNodeById = new Map(nodes.map((node) => [String(node.id), node]));
+    nodes.forEach((node) => {
+      node.previous = node.prerequisiteIds
+          .map((id) => uniqueNodeById.get(String(id))?.name)
+          .filter(Boolean);
+      node.next = node.nextExerciseIds
+          .map((id) => uniqueNodeById.get(String(id))?.name)
+          .filter(Boolean);
     });
     return {
       name: selectedGroup,
@@ -659,8 +759,6 @@ export default function CalisthenicsExerciseTreePage() {
     };
   }, [selectedGroup, treeResponse]);
 
-  const maxRow = Math.max(0, ...groupData.nodes.map((node) => node.row || 0));
-  const gridHeight = Math.max(1, maxRow + 1) * CARD_HEIGHT + maxRow * GAP_Y;
   const nodeById = useMemo(() => new Map(groupData.nodes.map((node) => [String(node.id), node])), [groupData]);
 
   // Find default selected exercise (prefer state 'current', else first node)
@@ -670,50 +768,195 @@ export default function CalisthenicsExerciseTreePage() {
     );
   }, [groupData]);
 
+  const requestedExerciseName =
+      searchParams.get("exercise") ||
+      searchParams.get("exerciseName") ||
+      navigationExercise?.name ||
+      location.state?.exerciseName ||
+      "";
   const matchingExercise = useMemo(() => {
-    if (contextExerciseId) {
-      const byId = groupData.nodes.find(
-          (node) => String(node.id) === contextExerciseId,
-      );
-      if (byId) return byId;
-    }
+    const normalizedFilter = normalizeExerciseName(exerciseFilter);
+    const exactName = normalizedFilter
+        ? groupData.nodes.find((node) => normalizeExerciseName(node.name) === normalizedFilter)
+        : null;
+    if (exactName) return exactName;
 
-    const normalizedFilter = exerciseFilter.trim().toLocaleLowerCase();
+    const nameAliases = {
+      "push up": ["standard push up"],
+      "australian row": ["australian pull up"],
+      "wall handstand": ["wall handstand hold"],
+    };
+    const aliasName = (nameAliases[normalizedFilter] || []).map(normalizeExerciseName);
+    const aliasedName = aliasName.length
+        ? groupData.nodes.find((node) => aliasName.includes(normalizeExerciseName(node.name)))
+        : null;
+    if (aliasedName) return aliasedName;
+
+    const normalizedCode = String(contextExerciseCode || "").trim().toLowerCase();
+    const byCode = normalizedCode
+        ? groupData.nodes.find((node) => String(node.code || "").trim().toLowerCase() === normalizedCode)
+        : null;
+    if (byCode) return byCode;
+
+    const byId = contextExerciseId
+        ? groupData.nodes.find((node) => String(node.id) === contextExerciseId)
+        : null;
+    if (byId) return byId;
     if (!normalizedFilter) return null;
-    return (
-        groupData.nodes.find(
-            (node) => node.name.trim().toLocaleLowerCase() === normalizedFilter,
-        ) ||
-        groupData.nodes.find((node) =>
-            node.name.toLocaleLowerCase().includes(normalizedFilter) ||
-            normalizedFilter.includes(node.name.toLocaleLowerCase()),
-        ) ||
-        null
-    );
-  }, [contextExerciseId, exerciseFilter, groupData]);
-  const selectedExercise = matchingExercise || (
-      !exerciseFilter.trim() && !contextExerciseId ? defaultExercise : null
+
+    return groupData.nodes.find(
+        (node) => String(node.code || "").trim().toLowerCase() === normalizedFilter.toLowerCase(),
+    ) || null;
+  }, [contextExerciseCode, contextExerciseId, exerciseFilter, groupData]);
+  const isSpecificExerciseContext = Boolean(
+      contextExerciseId ||
+      contextExerciseCode ||
+      searchParams.get("search") ||
+      searchParams.get("exerciseName") ||
+      searchParams.get("exercise") ||
+      navigationExercise?.name ||
+      location.state?.exerciseName,
   );
-  const visibleNodes = groupData.nodes;
+  const fallbackExercise = useMemo(() => {
+    if (!isSpecificExerciseContext || !groupData.nodes.length) return null;
+    const ignoredWords = new Set(["reviewed", "submission", "exercise", "custom", "member"]);
+    const searchWords = normalizeExerciseName(exerciseFilter)
+        .split(" ")
+        .filter((word) => word && !ignoredWords.has(word));
+    const nearest = groupData.nodes
+        .map((node) => {
+          const nodeWords = new Set(normalizeExerciseName(node.name).split(" "));
+          const overlap = searchWords.reduce(
+              (score, word) => score + (nodeWords.has(word) ? 1 : 0),
+              0,
+          );
+          return { node, overlap };
+        })
+        .sort((first, second) =>
+            second.overlap - first.overlap ||
+            (first.node.levelNumber || 1) - (second.node.levelNumber || 1),
+        )[0];
+    return nearest?.overlap > 0 ? nearest.node : defaultExercise || groupData.nodes[0];
+  }, [defaultExercise, exerciseFilter, groupData, isSpecificExerciseContext]);
+  const selectedExercise = matchingExercise || (
+      isSpecificExerciseContext && requestedExerciseName
+          ? {
+            ...(navigationExercise || {}),
+            id: navigationExercise?.id || contextExerciseId || `context-${normalizeExerciseName(requestedExerciseName).replace(/\s+/g, "-")}`,
+            code: navigationExercise?.code || contextExerciseCode,
+            name: requestedExerciseName,
+            levelNumber: fallbackExercise?.levelNumber || 2,
+            level: `Lv ${fallbackExercise?.levelNumber || 2}`,
+            difficulty: navigationExercise?.difficulty || fallbackExercise?.difficulty || "Intermediate",
+            movementGroup: selectedGroup.toUpperCase(),
+            state: "current",
+            muscleGroups: String(
+                navigationExercise?.targetMuscle ||
+                navigationExercise?.muscleGroup ||
+                navigationExercise?.muscleGroups?.join?.(", ") ||
+                "",
+            ).split(",").map((muscle) => muscle.trim()).filter(Boolean),
+            prerequisiteIds: fallbackExercise?.prerequisiteIds || [],
+            nextExerciseIds: fallbackExercise?.nextExerciseIds || [],
+            previous: fallbackExercise?.previous || [],
+            next: fallbackExercise?.next || [],
+            col: fallbackExercise?.col ?? 1,
+            row: Math.max(
+                -1,
+                ...groupData.nodes
+                    .filter((node) => node.col === (fallbackExercise?.col ?? 1))
+                    .map((node) => node.row || 0),
+            ) + 1,
+          }
+          : isSpecificExerciseContext ? fallbackExercise : defaultExercise
+  );
+  const selectedExerciseLabel =
+      requestedExerciseName ||
+      selectedExercise?.name ||
+      exerciseFilter ||
+      contextExerciseCode ||
+      contextExerciseId;
+  const visibleNodes = useMemo(() => {
+    if (!isSpecificExerciseContext) return groupData.nodes;
+    if (!selectedExercise) return groupData.nodes;
+
+    const nodeById = new Map(groupData.nodes.map((node) => [String(node.id), node]));
+    const collectProgression = (startingIds, relation) => {
+      const collectedIds = new Set();
+      const pendingIds = [...startingIds].map(String);
+      while (pendingIds.length > 0) {
+        const currentId = pendingIds.pop();
+        if (collectedIds.has(currentId)) continue;
+        collectedIds.add(currentId);
+        const currentNode = nodeById.get(currentId);
+        if (currentNode) pendingIds.push(...relation(currentNode).map(String));
+      }
+      return collectedIds;
+    };
+
+    const ancestorIds = collectProgression(
+        selectedExercise.prerequisiteIds || [],
+        (node) => node.prerequisiteIds || [],
+    );
+    const descendantIds = collectProgression(
+        selectedExercise.nextExerciseIds || [],
+        (node) => node.nextExerciseIds || [],
+    );
+    const progressionIds = new Set([
+      String(selectedExercise.id),
+      ...ancestorIds,
+      ...descendantIds,
+    ]);
+    const progressionNodes = groupData.nodes.filter((node) => progressionIds.has(String(node.id)));
+    if (!nodeById.has(String(selectedExercise.id))) {
+      progressionNodes.push(selectedExercise);
+      return progressionNodes.map((node) => (
+        selectedExercise.prerequisiteIds?.some((id) => String(id) === String(node.id))
+            ? {
+              ...node,
+              nextExerciseIds: [...new Set([...(node.nextExerciseIds || []), String(selectedExercise.id)])],
+              next: [...new Set([...(node.next || []), selectedExercise.name])],
+            }
+            : node
+      ));
+    }
+    return progressionNodes;
+  }, [groupData, isSpecificExerciseContext, selectedExercise]);
+  const maxRow = Math.max(0, ...visibleNodes.map((node) => node.row || 0));
+  const gridHeight = Math.max(1, maxRow + 1) * CARD_HEIGHT + maxRow * GAP_Y;
 
   const visibleNodeIds = useMemo(() => new Set(visibleNodes.map((node) => String(node.id))), [visibleNodes]);
 
   const treeEdges = useMemo(() => {
+    const visibleNodeById = new Map(visibleNodes.map((node) => [String(node.id), node]));
     return visibleNodes.flatMap((node) =>
         (node.nextExerciseIds || [])
-            .map((nextId) => ({ from: node, to: nodeById.get(String(nextId)) }))
+            .map((nextId) => ({ from: node, to: visibleNodeById.get(String(nextId)) }))
             .filter((edge) => edge.to && visibleNodeIds.has(String(edge.to.id)))
     );
-  }, [visibleNodes, nodeById, visibleNodeIds]);
+  }, [visibleNodes, visibleNodeIds]);
 
   const handleNodeClick = (node) => {
     setExerciseFilter(node.name);
     setContextExerciseId(String(node.id));
+    setContextExerciseCode(String(node.code || ""));
     setSearchParams({
-      path: selectedGroup.toLowerCase(),
+      group: selectedGroup.toLowerCase(),
+      highlight: String(node.code || node.id),
       exerciseId: String(node.id),
       exerciseName: node.name,
     });
+  };
+
+  const handleGroupChange = (group) => {
+    setSelectedGroup(group);
+    setExerciseFilter("");
+    setContextExerciseId("");
+    setContextExerciseCode("");
+    navigate(
+        { pathname: location.pathname, search: `?group=${group.toLowerCase()}` },
+        { replace: true, state: null },
+    );
   };
 
   const handleViewExercise = () => {
@@ -724,7 +967,7 @@ export default function CalisthenicsExerciseTreePage() {
     navigate(`/library/exercise/${slug}`);
   };
 
-  // Sorting changes ONLY edge arrow direction; node X/Y coordinates strictly remain stable.
+  // Sorting changes only edge flow; node order and X/Y positions stay fixed.
   const isReverse = direction === "Hard → Easy";
 
   const getNodeX = (col) => col * (CARD_WIDTH + GAP_X);
@@ -736,19 +979,8 @@ export default function CalisthenicsExerciseTreePage() {
     const toY = getNodeY(to.row);
     const fromCenterY = fromY + CARD_HEIGHT / 2;
     const toCenterY = toY + CARD_HEIGHT / 2;
-    const isPushToPike =
-        selectedGroup === "Push" &&
-        from.name.trim().toLocaleLowerCase() === "push-up" &&
-        to.name.trim().toLocaleLowerCase() === "pike push-up";
-
     let points;
-    if (isPushToPike) {
-      points = [
-        { x: fromX + CARD_WIDTH / 2, y: fromY + CARD_HEIGHT },
-        { x: fromX + CARD_WIDTH / 2, y: toCenterY },
-        { x: toX, y: toCenterY },
-      ];
-    } else if (from.row === to.row) {
+    if (from.row === to.row) {
       const movesRight = to.col >= from.col;
       points = [
         { x: fromX + (movesRight ? CARD_WIDTH : 0), y: fromCenterY },
@@ -777,7 +1009,6 @@ export default function CalisthenicsExerciseTreePage() {
       <div className="exercise-tree-page w-full max-w-7xl mx-auto text-white pb-12">
         <style>{`
         .exercise-tree-page button {
-          border: none;
           outline: none;
         }
       `}</style>
@@ -793,13 +1024,34 @@ export default function CalisthenicsExerciseTreePage() {
         </header>
 
         {/* 2. CONTROLS (MOVEMENT GROUP CHIPS & ORDER TOGGLE) */}
-        <div className="flex items-center justify-between mt-6 flex-wrap gap-4">
-          <div className="inline-flex items-center rounded-full border border-[#8068c4] bg-[#2b1d5e] px-4 py-2 text-xs font-medium text-violet-100">
-            {selectedExercise?.name || exerciseFilter || contextExerciseId || `${selectedGroup} progression`}
-          </div>
+        <div className="mt-6 flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            {isSpecificExerciseContext ? (
+              <div className="inline-flex items-center rounded-full border border-[#8068c4] bg-[#2b1d5e] px-4 py-2 text-xs font-medium text-violet-100">
+                {selectedExerciseLabel}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Movement group">
+                {MOVEMENT_GROUPS.map((group) => (
+                  <button
+                    key={group}
+                    type="button"
+                    aria-pressed={selectedGroup === group}
+                    onClick={() => handleGroupChange(group)}
+                    className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+                      selectedGroup === group
+                        ? "border-[#9b83ff] bg-[#643bf6] text-white"
+                        : "border-[#403464] bg-[#1a1435] text-[#c4b5fd] hover:border-[#8068c4] hover:bg-[#261c4b]"
+                    }`}
+                  >
+                    {group}
+                  </button>
+                ))}
+              </div>
+            )}
 
-          {/* Order toggle: Easy -> Hard / Hard -> Easy */}
-          <div className="flex items-center gap-1.5 rounded-full border border-[#51427f] bg-[#0c0820] p-1.5 shadow-inner shadow-black/30">
+            {/* Order toggle changes edge direction only; node coordinates remain stable. */}
+            <div className="flex items-center gap-1.5 rounded-full border border-[#51427f] bg-[#0c0820] p-1.5 shadow-inner shadow-black/30">
             <button
                 type="button"
                 onClick={() => setDirection("Easy → Hard")}
@@ -822,7 +1074,9 @@ export default function CalisthenicsExerciseTreePage() {
             >
               Hard → Easy
             </button>
+            </div>
           </div>
+
         </div>
 
         {/* 3. EXERCISE TREE BOX */}
@@ -833,19 +1087,20 @@ export default function CalisthenicsExerciseTreePage() {
                 {treeError}
               </p>
           )}
-          {!treeLoading && (exerciseFilter.trim() || contextExerciseId) && !matchingExercise && (
-              <p className="mb-4 text-sm text-amber-300">
-                No exercise in this tree matches “{exerciseFilter || contextExerciseId}”.
-              </p>
-          )}
-
           <div
-              className="relative mx-auto select-none"
-              style={{ width: `${GRID_WIDTH}px`, height: `${gridHeight}px` }}
+              className="relative mx-auto grid select-none"
+              style={{
+                width: `${GRID_WIDTH}px`,
+                height: `${gridHeight}px`,
+                gridTemplateColumns: `repeat(5, ${CARD_WIDTH}px)`,
+                gridTemplateRows: `repeat(${Math.max(1, maxRow + 1)}, ${CARD_HEIGHT}px)`,
+                columnGap: `${GAP_X}px`,
+                rowGap: `${GAP_Y}px`,
+              }}
           >
             {/* SVG Connection Lines & Arrows */}
             <svg
-                className="absolute inset-0 pointer-events-none"
+                className="absolute inset-0 z-0 pointer-events-none"
                 width={GRID_WIDTH}
                 height={gridHeight}
                 viewBox={`0 0 ${GRID_WIDTH} ${gridHeight}`}
@@ -880,30 +1135,22 @@ export default function CalisthenicsExerciseTreePage() {
 
             {/* Exercise Nodes */}
             {visibleNodes.map((node) => {
-              const posX = getNodeX(node.col);
-              const posY = getNodeY(node.row);
               const isSelected = selectedExercise?.id === node.id;
 
               const isMastered = node.state === "mastered";
               const isCurrent = node.state === "current";
-
-              const diff = node.difficulty?.toLowerCase();
-              const isBeginner = diff === "beginner";
-              const isIntermediate = diff === "intermediate";
-              const isAdvanced = diff === "advanced";
 
               return (
                   <div
                       key={node.id}
                       onClick={() => handleNodeClick(node)}
                       style={{
-                        position: "absolute",
-                        left: `${posX}px`,
-                        top: `${posY}px`,
+                        gridColumn: node.col + 1,
+                        gridRow: node.row + 1,
                         width: `${CARD_WIDTH}px`,
                         height: `${CARD_HEIGHT}px`,
                       }}
-                      className={`rounded-2xl p-3.5 flex flex-col justify-between cursor-pointer transition-all select-none ${
+                      className={`relative z-10 rounded-2xl p-3.5 flex flex-col justify-between cursor-pointer transition-all select-none ${
                           isMastered
                               ? "border-2 border-emerald-500/80 bg-[#131f24] hover:border-emerald-400"
                               : isCurrent
@@ -958,15 +1205,7 @@ export default function CalisthenicsExerciseTreePage() {
                     {/* Difficulty badge */}
                     <div className="flex justify-center">
                   <span
-                      className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border capitalize ${
-                          isBeginner
-                              ? "border-emerald-800/80 bg-emerald-950/50 text-emerald-400"
-                              : isIntermediate
-                                  ? "border-amber-800/80 bg-amber-950/50 text-amber-400"
-                                  : isAdvanced
-                                      ? "border-rose-800/80 bg-rose-950/50 text-rose-400"
-                                      : "border-amber-600/80 bg-amber-900/40 text-amber-300"
-                      }`}
+                      className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border capitalize ${getLevelBadgeStyle(node.difficulty)}`}
                   >
                     {node.difficulty}
                   </span>

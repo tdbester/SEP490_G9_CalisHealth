@@ -1,8 +1,10 @@
 package com.calishealth.service;
 
 import com.calishealth.dtos.MemberExerciseFilterRequestDTO;
-import com.calishealth.models.ExerciseEntry;
+import com.calishealth.models.Exercise;
+import com.calishealth.models.ExerciseMuscleGroup;
 import com.calishealth.models.MemberSavedExercise;
+import com.calishealth.models.MuscleGroup;
 import com.calishealth.models.User;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.MemberSavedExerciseRepository;
@@ -45,18 +47,18 @@ class MemberExerciseServiceTest {
 
         User author = new User();
         author.setFullName("Exercise Author");
-        ExerciseEntry exercise = new ExerciseEntry();
+        Exercise exercise = new Exercise();
         exercise.setId(25L);
         exercise.setSystem(false);
         exercise.setName("Community push-up");
-        exercise.setLevel(ExerciseEntry.EntryLevel.INTERMEDIATE);
+        exercise.setLevel(Exercise.EntryLevel.INTERMEDIATE);
         exercise.setMuscleGroup("Chest, triceps");
         exercise.setDefaultSets(3);
         exercise.setDefaultReps(8);
         exercise.setAuthor(author);
         exercise.setCreatedAt(LocalDateTime.now().minusDays(2));
         exercise.setSaveCount(11);
-        exercise.setStatus(ExerciseEntry.EntryStatus.ACCEPTED);
+        exercise.setStatus(Exercise.EntryStatus.ACCEPTED);
         when(exercises.findAll(any(org.springframework.data.jpa.domain.Specification.class),
                 any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(exercise), PageRequest.of(0, 6), 1));
@@ -96,12 +98,12 @@ class MemberExerciseServiceTest {
 
         User author = new User();
         author.setFullName("Exercise Author");
-        ExerciseEntry exercise = new ExerciseEntry();
+        Exercise exercise = new Exercise();
         exercise.setId(25L);
         exercise.setSystem(false);
         exercise.setName("Community push-up");
         exercise.setDescription("A controlled push-up variation.");
-        exercise.setLevel(ExerciseEntry.EntryLevel.INTERMEDIATE);
+        exercise.setLevel(Exercise.EntryLevel.INTERMEDIATE);
         exercise.setMuscleGroup("Chest, triceps");
         exercise.setDefaultSets(3);
         exercise.setDefaultReps(8);
@@ -110,7 +112,7 @@ class MemberExerciseServiceTest {
         exercise.setAuthor(author);
         exercise.setCreatedAt(LocalDateTime.now().minusDays(2));
         exercise.setSaveCount(11);
-        exercise.setStatus(ExerciseEntry.EntryStatus.ACCEPTED);
+        exercise.setStatus(Exercise.EntryStatus.ACCEPTED);
         exercise.setShareWithCommunity(true);
         when(exercises.findById(25L)).thenReturn(Optional.of(exercise));
         when(savedExercises.findAllByMemberIdAndExerciseIdIn(10L, List.of(25L))).thenReturn(List.of());
@@ -128,5 +130,38 @@ class MemberExerciseServiceTest {
         assertThat(result.saveCount()).isEqualTo(11);
         assertThat(result.isSavedByCurrentMember()).isFalse();
         assertThat(result.status()).isEqualTo("ACCEPTED");
+    }
+
+    @Test
+    void mapsMuscleGroupsFromLinksWhenLegacyTextFieldIsEmpty() {
+        User member = new User();
+        member.setId(10L);
+        when(users.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+
+        Exercise exercise = new Exercise();
+        exercise.setId(26L);
+        exercise.setSystem(false);
+        exercise.setName("Community pull-up");
+        exercise.setStatus(Exercise.EntryStatus.ACCEPTED);
+        exercise.setShareWithCommunity(true);
+
+        MuscleGroup back = new MuscleGroup();
+        back.setName("Back");
+        MuscleGroup biceps = new MuscleGroup();
+        biceps.setName("Biceps");
+        ExerciseMuscleGroup backLink = new ExerciseMuscleGroup();
+        backLink.setExercise(exercise);
+        backLink.setMuscleGroup(back);
+        ExerciseMuscleGroup bicepsLink = new ExerciseMuscleGroup();
+        bicepsLink.setExercise(exercise);
+        bicepsLink.setMuscleGroup(biceps);
+        exercise.setMuscleGroups(List.of(backLink, bicepsLink));
+
+        when(exercises.findById(26L)).thenReturn(Optional.of(exercise));
+        when(savedExercises.findAllByMemberIdAndExerciseIdIn(10L, List.of(26L))).thenReturn(List.of());
+
+        var result = service.getMemberExerciseDetail(26L, "member@example.com");
+
+        assertThat(result.targetMuscle()).isEqualTo("Back, Biceps");
     }
 }

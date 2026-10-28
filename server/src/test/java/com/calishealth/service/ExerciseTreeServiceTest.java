@@ -1,6 +1,6 @@
 package com.calishealth.service;
 
-import com.calishealth.models.ExerciseEntry;
+import com.calishealth.models.Exercise;
 import com.calishealth.models.ExerciseTreeEdge;
 import com.calishealth.models.MemberExerciseProgress;
 import com.calishealth.models.User;
@@ -42,12 +42,12 @@ class ExerciseTreeServiceTest {
         member.setId(5L);
         when(users.findByEmail("member@example.com")).thenReturn(Optional.of(member));
 
-        ExerciseEntry levelOne = entry(101L, "Incline push-up", 1);
-        ExerciseEntry levelTwo = entry(102L, "Push-up", 2);
-        ExerciseEntry levelThree = entry(103L, "Diamond push-up", 3);
-        when(exercises.findAllByMovementGroupAndIsSystemTrueAndStatus(
-                ExerciseEntry.MovementGroup.PUSH,
-                ExerciseEntry.EntryStatus.ACCEPTED))
+        Exercise levelOne = entry(101L, "Incline push-up", 1);
+        Exercise levelTwo = entry(102L, "Push-up", 2);
+        Exercise levelThree = entry(103L, "Diamond push-up", 3);
+        when(exercises.findAllByMovementGroupAndSystemTrueAndStatus(
+                Exercise.MovementGroup.PUSH,
+                Exercise.EntryStatus.ACCEPTED.name()))
                 .thenReturn(List.of(levelThree, levelOne, levelTwo));
         when(edges.findAllConnectedTo(anyCollection()))
                 .thenReturn(List.of(edge(101L, 102L), edge(102L, 103L)));
@@ -59,25 +59,28 @@ class ExerciseTreeServiceTest {
                 .thenReturn(List.of(mastered));
 
         var result = service.getTree(
-                ExerciseEntry.MovementGroup.PUSH,
+                Exercise.MovementGroup.PUSH,
                 ExerciseTreeService.TreeOrder.HARD_TO_EASY,
                 "member@example.com");
 
         assertThat(result.nodes()).extracting(
                 com.calishealth.dtos.ExerciseTreeNodeDTO::id).containsExactly(103L, 102L, 101L);
         assertThat(result.nodes()).extracting(
+                com.calishealth.dtos.ExerciseTreeNodeDTO::code).containsExactly("EX-103", "EX-102", "EX-101");
+        assertThat(result.nodes()).extracting(
                 com.calishealth.dtos.ExerciseTreeNodeDTO::state).containsExactly("LOCKED", "CURRENT", "MASTERED");
         assertThat(result.nodes().get(1).prerequisiteIds()).containsExactly(101L);
         assertThat(result.nodes().get(1).nextExerciseIds()).containsExactly(103L);
     }
 
-    private ExerciseEntry entry(Long id, String name, int level) {
-        ExerciseEntry entry = new ExerciseEntry();
+    private Exercise entry(Long id, String name, int level) {
+        Exercise entry = new Exercise();
         entry.setId(id);
+        entry.setCode("EX-" + id);
         entry.setName(name);
-        entry.setMovementGroup(ExerciseEntry.MovementGroup.PUSH);
+        entry.setMovementGroup(Exercise.MovementGroup.PUSH);
         entry.setTreeLevel(level);
-        entry.setDifficulty(ExerciseEntry.TreeDifficulty.BEGINNER);
+        entry.setDifficulty(Exercise.TreeDifficulty.BEGINNER);
         entry.setMuscleGroup("Chest");
         return entry;
     }
