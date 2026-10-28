@@ -33,7 +33,7 @@ public class DashboardService {
                        COUNT(DISTINCT e.id) AS exercise_count
                 FROM muscle_groups mg
                 LEFT JOIN exercise_muscle_groups emg ON emg.muscle_group_id = mg.id
-                LEFT JOIN exercises e ON e.id = emg.exercise_id AND e.status = 'ACTIVE'
+                LEFT JOIN exercises e ON e.id = emg.exercise_id AND e.moderation_status = 'ACTIVE'
                 GROUP BY mg.id, mg.dashboard_code, mg.name, mg.icon_key, mg.tone
                 ORDER BY mg.id
                 """,
@@ -63,7 +63,7 @@ public class DashboardService {
                        COUNT(DISTINCT pr.prerequisite_exercise_id) + 1 AS step_count
                 FROM exercises e
                 LEFT JOIN progression_rules pr ON pr.exercise_id = e.id AND pr.status = 'ACTIVE'
-                WHERE e.type = 'SKILL' AND e.status = 'ACTIVE'
+                WHERE e.type = 'SKILL' AND e.moderation_status = 'ACTIVE'
                 GROUP BY e.id, e.name, e.difficulty_level
                 ORDER BY e.id
                 """,
@@ -92,9 +92,19 @@ public class DashboardService {
                 "SELECT COUNT(DISTINCT created_by) FROM workout_entries WHERE active = TRUE AND created_by IS NOT NULL",
                 Long.class
         );
+        Long exercises = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(DISTINCT we.exercise_id)
+                FROM workout_exercises we
+                JOIN workout_entries w ON w.id = we.workout_id
+                WHERE w.active = TRUE AND w.created_by IS NOT NULL
+                """,
+                Long.class
+        );
         return jsonMapper.createObjectNode()
                 .put("workouts", workouts == null ? 0 : workouts)
-                .put("athletes", athletes == null ? 0 : athletes);
+                .put("athletes", athletes == null ? 0 : athletes)
+                .put("exercises", exercises == null ? 0 : exercises);
     }
 
     private ObjectNode healthMetrics(String email) {

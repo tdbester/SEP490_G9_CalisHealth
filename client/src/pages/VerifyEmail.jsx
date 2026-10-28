@@ -21,7 +21,7 @@ export default function VerifyEmail() {
   useEffect(() => {
     if (!token) {
       setStatus("error");
-      setMessage("Link xác thực không hợp lệ hoặc thiếu mã xác thực.");
+      setMessage("The verification link is invalid or missing a verification code.");
       return;
     }
     if (startedRef.current) return;
@@ -30,12 +30,12 @@ export default function VerifyEmail() {
     api.post(`/auth/verify?token=${encodeURIComponent(token)}`)
       .then((res) => {
         setStatus("success");
-        setMessage(res.data?.message || "Xác thực email thành công!");
+        setMessage(res.data?.message || "Email verified successfully!");
         setSeconds(REDIRECT_SECONDS);
       })
       .catch((err) => {
         setStatus("error");
-        setMessage(err.response?.data?.message || "Không thể xác thực email. Vui lòng thử lại.");
+        setMessage(err.response?.data?.message || "Unable to verify email. Please try again.");
         setSeconds(REDIRECT_SECONDS);
       });
   }, [token]);
@@ -55,14 +55,14 @@ export default function VerifyEmail() {
       <div className="login-card">
         <AuthLogo />
         <h1 className="login-title">
-          {status === "verifying" ? "Đang xác thực..." : status === "success" ? "Xác thực thành công" : "Xác thực thất bại"}
+          {status === "verifying" ? "Verifying..." : status === "success" ? "Verification successful" : "Verification failed"}
         </h1>
         <div className="login-form">
-          {status === "verifying" && <div className="login-success">Đang xác thực email của bạn, vui lòng chờ...</div>}
+          {status === "verifying" && <div className="login-success">Verifying your email, please wait...</div>}
           {status === "success" && <div className="login-success">{message}</div>}
           {status === "error" && <div className="login-error">{message}</div>}
           {(status === "success" || status === "error") && (
-            <div className="login-redirect">Tự động chuyển về trang đăng nhập sau {seconds} giây.</div>
+            <div className="login-redirect">Redirecting to the login page in {seconds} seconds.</div>
           )}
         </div>
       </div>

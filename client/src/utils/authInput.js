@@ -5,4 +5,4 @@ export function hasNonAscii(value) {
 }
 
 export const IME_WARNING_MESSAGE =
-  "Phát hiện ký tự có dấu. Hãy chuyển bộ gõ sang tiếng Anh rồi nhập lại.";
+  "Accented characters detected. Switch your input method to English and type again.";

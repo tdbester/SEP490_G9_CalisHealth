@@ -1,0 +1,72 @@
+.workout-list-page .MuiAlert-root {
+  border-radius: 10px;
+}
+
+.workout-row-mark {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+}
+
+.workout-row-mark svg {
+  font-size: 16px;
+}
+
+.exercise-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #c4b5fd;
+  font-weight: 600;
+}
+
+.exercise-count svg {
+  font-size: 15px;
+  color: #a78bfa;
+}
+
+.workout-list-page .MuiTablePagination-root {
+  border-top: 1px solid rgba(150, 124, 255, 0.16);
+  color: #a89bd0;
+}
+
+.workout-list-page .MuiTablePagination-selectLabel,
+.workout-list-page .MuiTablePagination-displayedRows {
+  font-size: 0.75rem;
+}
+
+.workout-list-page .MuiTableRow-hover:hover {
+  background-color: rgba(139, 92, 246, 0.08);
+}
+
+.workout-list-page .MuiChip-root {
+  border-radius: 7px;
+}
+
+.workout-list-page .workout-list-table-card {
+  overflow: hidden;
+}
+
+.workout-list-page .MuiTableHead-root th:first-of-type {
+  padding-left: 20px;
+}
+
+.workout-list-page .MuiTableBody-root td:first-of-type {
+  padding-left: 20px;
+}
+
+.workout-list-page .MuiTableBody-root tr {
+  transition: background-color 140ms ease;
+}
+
+@media (max-width: 900px) {
+  .workout-list-page .workout-list-table-card {
+    overflow: hidden;
+  }
+}

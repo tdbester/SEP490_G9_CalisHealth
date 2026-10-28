@@ -25,7 +25,7 @@ public class EmailService {
             m.setText(body);
             mailSender.send(m);
         } catch (Exception e) {
-            log.warn("Gửi mail thất bại (dùng link trong console): {}", e.getMessage());
+            log.warn("Failed to send mail (use the link in the console): {}", e.getMessage());
         }
     }
 }

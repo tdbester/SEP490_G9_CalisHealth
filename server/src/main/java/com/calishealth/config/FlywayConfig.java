@@ -1,5 +1,6 @@
 package com.calishealth.config;
 
+import java.util.Map;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
@@ -76,6 +77,7 @@ public class FlywayConfig {
                 .locations("classpath:db/migration")
                 .baselineOnMigrate(false)
                 .validateOnMigrate(true)
+                .placeholders(Map.of("'$'", "$"))
                 .cleanDisabled(true)
                 .placeholders(Map.of("'$'", "$"))
                 .load();

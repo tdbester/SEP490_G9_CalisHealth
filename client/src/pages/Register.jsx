@@ -42,13 +42,13 @@ export default function Register() {
     setError("");
     if (imeWarn.email || imeWarn.password || imeWarn.confirmPassword) return;
     if (form.password !== form.confirmPassword) {
-      setError("Mật khẩu xác nhận không khớp");
+      setError("The confirmation password does not match");
       return;
     }
     setLoading(true);
     try {
       await api.post("/auth/register", form);
-      setResult({ success: true, message: "Đã gửi email xác thực thành công. Vui lòng kiểm tra hộp thư để xác thực tài khoản." });
+      setResult({ success: true, message: "Verification email sent successfully. Please check your inbox to verify your account." });
     } catch (err) {
       const data = err.response?.data;
       const msg = typeof data === "string"
@@ -56,8 +56,8 @@ export default function Register() {
         : data?.message || data?.error || data?.detail || (data && typeof data === "object"
           ? Object.values(data).flat().filter((value) => typeof value === "string").join(" • ")
           : "");
-      const message = msg || "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin và thử lại.";
-      if (message.toLowerCase().includes("email đã được đăng ký")) {
+      const message = msg || "Registration failed. Please check your information and try again.";
+      if (message.toLowerCase().includes("email is already registered")) {
         setError(message);
       } else {
         setResult({ success: false, message });
@@ -75,16 +75,16 @@ export default function Register() {
 
         {result ? (
           <div className="login-form">
-            {result.success && <h2 className="login-title">Email xác thực đã được gửi</h2>}
+            {result.success && <h2 className="login-title">Verification email sent</h2>}
             <div className={result.success ? "login-success" : "login-error"}>{result.message}</div>
-            {result.success && <div className="login-redirect">Hãy xác thực email trước khi đăng nhập.</div>}
-            {!result.success && <div className="login-redirect">Bạn sẽ được chuyển về màn hình đăng nhập sau {seconds} giây.</div>}
+            {result.success && <div className="login-redirect">Please verify your email before logging in.</div>}
+            {!result.success && <div className="login-redirect">You will be redirected to the login page in {seconds} seconds.</div>}
             <button type="button" className="login-submit" onClick={() => navigate("/login", { replace: true })}>
-              <span className="login-submit-text">Về đăng nhập ngay</span>
+              <span className="login-submit-text">Go to login now</span>
             </button>
             {!result.success && (
               <button type="button" className="login-link" onClick={() => { setResult(null); setSeconds(8); }}>
-                Quay lại đăng ký
+                Back to sign up
               </button>
             )}
           </div>

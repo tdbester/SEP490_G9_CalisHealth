@@ -38,12 +38,12 @@ export default function VerifyResetPassword() {
       <div className="login-card">
         <AuthLogo />
         <h1 className="login-title">
-          {status === "verifying" ? "Đang xác thực..." : status === "success" ? "Xác thực thành công" : "Xác thực thất bại"}
+          {status === "verifying" ? "Verifying..." : status === "success" ? "Verification successful" : "Verification failed"}
         </h1>
         <div className="login-form">
-          {status === "verifying" && <div className="login-success">Đang kiểm tra liên kết đặt lại mật khẩu...</div>}
-          {status === "success" && <div className="login-success">Token hợp lệ. Bạn sẽ được chuyển đến màn hình đặt lại mật khẩu sau {seconds} giây.</div>}
-          {status === "error" && <div className="login-error">token đã hết hạn, vui lòng đăng kí lại. Tự động chuyển về trang đăng nhập sau {seconds} giây.</div>}
+          {status === "verifying" && <div className="login-success">Checking the password reset link...</div>}
+          {status === "success" && <div className="login-success">Token is valid. You will be redirected to the reset password page in {seconds} seconds.</div>}
+          {status === "error" && <div className="login-error">The token has expired, please sign up again. Redirecting to the login page in {seconds} seconds.</div>}
         </div>
       </div>
     </div>

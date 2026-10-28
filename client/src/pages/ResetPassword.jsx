@@ -22,14 +22,14 @@ export default function ResetPassword() {
   useEffect(() => {
     if (!token) {
       setStatus("error");
-      setError("token đã hết hạn, vui lòng đăng kí lại");
+      setError("The token has expired, please sign up again");
       return;
     }
     api.get(`/auth/verify-reset-token?token=${encodeURIComponent(token)}`)
       .then(() => setStatus("ready"))
       .catch(() => {
         setStatus("error");
-        setError("token đã hết hạn, vui lòng đăng kí lại");
+        setError("The token has expired, please sign up again");
       });
   }, [token]);
 
@@ -58,7 +58,7 @@ export default function ResetPassword() {
     setError("");
     if (imeWarn.newPassword || imeWarn.confirmNewPassword) return;
     if (form.newPassword !== form.confirmNewPassword) {
-      setError("Mật khẩu xác nhận không khớp");
+      setError("The confirmation password does not match");
       return;
     }
     setLoading(true);
@@ -67,7 +67,12 @@ export default function ResetPassword() {
       setSuccess(true);
       setSeconds(REDIRECT_SECONDS);
     } catch (err) {
-      setError("token đã hết hạn, vui lòng đăng kí lại");
+      const data = err.response?.data;
+      const msg =
+        (data && typeof data === "object"
+          ? Object.values(data).flat().join(" • ")
+          : data) || "Unable to reset password. Please try again.";
+      setError(typeof msg === "string" ? msg : "Unable to reset password. Please try again.");
       setStatus("error");
       setSeconds(REDIRECT_SECONDS);
     } finally {
@@ -80,40 +85,62 @@ export default function ResetPassword() {
       <div className="login-card">
         <AuthLogo />
         <h1 className="login-title">
-          {status === "verifying" ? "Đang xác thực..." : status === "error" ? "Xác thực thất bại" : "Đặt lại mật khẩu"}
+          {status === "verifying" ? "Verifying..." : status === "error" ? "Verification failed" : "Reset Password"}
         </h1>
 
-        {status === "verifying" && <div className="login-form"><div className="login-success">Đang kiểm tra token, vui lòng chờ...</div></div>}
+        {status === "verifying" && <div className="login-form"><div className="login-success">Checking token, please wait...</div></div>}
         {status === "error" && (
           <div className="login-form">
             <div className="login-error">{error}</div>
-            <div className="login-redirect">Tự động chuyển về trang đăng nhập sau {seconds} giây.</div>
+            <div className="login-redirect">Redirecting to the login page in {seconds} seconds.</div>
           </div>
         )}
         {status === "ready" && !success && (
           <form className="login-form" onSubmit={handleSubmit}>
             {error && <div className="login-error">{error}</div>}
             <div className="login-field">
-              <label className="login-label">Mật khẩu mới</label>
-              <div className="login-input-wrap"><input className="login-input" type="password" value={form.newPassword} onChange={set("newPassword")} required /></div>
+              <label className="login-label">New Password</label>
+              <div className="login-input-wrap">
+                <input
+                  className="login-input"
+                  type="password"
+                  placeholder="Min 8 chars, upper, lower, digit, special"
+                  value={form.newPassword}
+                  onChange={set("newPassword")}
+                  required
+                />
+              </div>
               <ImeNotice warn={imeWarn.newPassword} />
             </div>
             <div className="login-field">
-              <label className="login-label">Xác nhận mật khẩu mới</label>
-              <div className="login-input-wrap"><input className="login-input" type="password" value={form.confirmNewPassword} onChange={set("confirmNewPassword")} required /></div>
+              <label className="login-label">Confirm New Password</label>
+              <div className="login-input-wrap">
+                <input
+                  className="login-input"
+                  type="password"
+                  placeholder="Re-enter new password"
+                  value={form.confirmNewPassword}
+                  onChange={set("confirmNewPassword")}
+                  required
+                />
+              </div>
               <ImeNotice warn={imeWarn.confirmNewPassword} />
             </div>
             <button type="submit" className="login-submit" disabled={loading}>
-              <span className="login-submit-text">{loading ? "Đang xử lý..." : "Đặt lại mật khẩu"}</span>
+              <span className="login-submit-text">{loading ? "Processing..." : "Reset Password"}</span>
             </button>
           </form>
         )}
         {success && (
           <div className="login-form">
-            <div className="login-success">Đặt lại mật khẩu thành công! Hãy đăng nhập lại.</div>
-            <div className="login-redirect">Tự động chuyển đến màn hình reset password sau {seconds} giây.</div>
+            <div className="login-success">Password reset successfully! Please log in again.</div>
+            <div className="login-redirect">Redirecting to the login page in {seconds} seconds.</div>
           </div>
         )}
+
+        <div className="login-links">
+          <button className="login-link" onClick={() => navigate("/login")}>Back to login</button>
+        </div>
       </div>
     </div>
   );

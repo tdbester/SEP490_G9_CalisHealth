@@ -8,7 +8,7 @@ export default function ImeNotice({ warn = false }) {
       className={`login-hint ${warn ? "login-hint--warn" : "login-hint--idle"}`}
       role={warn ? "alert" : undefined}
     >
-      {warn ? IME_WARNING_MESSAGE : "Hãy chuyển bộ gõ sang tiếng Anh trước khi nhập."}
+      {warn ? IME_WARNING_MESSAGE : "Switch your input method to English before typing."}
     </small>
   );
 }
