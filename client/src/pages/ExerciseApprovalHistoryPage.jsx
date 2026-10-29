@@ -9,17 +9,13 @@ import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import { contentManagerApi } from "../api/contentManager";
 import { useApiQuery } from "../hooks";
+import { useLevelNames } from "../useLevelNames";
 import { CONTENT_PATHS, ContentPageHeader, DarkPill, formatDateTime, SummaryCard } from "../components/ContentShared";
 import ContentDataCard, { DbSourceNote, EmptyState, HEAD_ROW_SX } from "../components/ContentDataCard";
 import { CM } from "../theme-content";
 
 function initials(value) {
   return String(value || "Unknown").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
-}
-
-function levelTone(level) {
-  const normalized = String(level || "").toLowerCase();
-  return normalized === "beginner" ? "success" : normalized === "advanced" ? "danger" : "warning";
 }
 
 function FitnessIconSmall() {
@@ -55,6 +51,7 @@ const DECISION_TABS = [
 
 export default function ExerciseApprovalHistoryPage() {
   const query = useApiQuery(() => contentManagerApi.exerciseApprovalHistory());
+  const { levelTone } = useLevelNames();
   const rows = Array.isArray(query.data)
     ? query.data.filter((row) => row.decision === "APPROVED" || row.decision === "REJECTED")
     : [];
@@ -128,11 +125,11 @@ export default function ExerciseApprovalHistoryPage() {
               <TableContainer>
                 <Table size="small" sx={{ minWidth: 980 }}>
                   <TableHead><TableRow sx={HEAD_ROW_SX}>
-                    <TableCell>Exercise</TableCell><TableCell>Uploaded by</TableCell><TableCell>Muscle group</TableCell><TableCell>Level</TableCell><TableCell>Decision</TableCell><TableCell>Reviewed</TableCell><TableCell align="center">Action</TableCell>
+                    <TableCell sx={{ textAlign: "left !important", pl: 3 }}>Exercise</TableCell><TableCell>Uploaded by</TableCell><TableCell>Muscle group</TableCell><TableCell>Level</TableCell><TableCell>Decision</TableCell><TableCell>Reviewed</TableCell><TableCell align="center">Action</TableCell>
                   </TableRow></TableHead>
                   <TableBody>{visibleRows.map((row) => (
                     <TableRow key={row.id} hover>
-                      <TableCell><Stack direction="row" spacing={1.25} alignItems="center"><Box sx={{ width: 32, height: 32, borderRadius: 1.5, display: "grid", placeItems: "center", flexShrink: 0, bgcolor: "rgba(168,155,208,0.14)", color: CM.textMuted }}><FitnessIconSmall /></Box><Box sx={{ minWidth: 0 }}><Typography variant="body2" fontWeight={600} sx={{ color: "#fff" }}>{row.name}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>{row.code}</Typography></Box></Stack></TableCell>
+                      <TableCell sx={{ textAlign: "left !important", pl: 3, "& > .MuiStack-root": { justifyContent: "flex-start" } }}><Stack direction="row" spacing={1.25} alignItems="center"><Box sx={{ width: 32, height: 32, borderRadius: 1.5, display: "grid", placeItems: "center", flexShrink: 0, bgcolor: "rgba(168,155,208,0.14)", color: CM.textMuted }}><FitnessIconSmall /></Box><Box sx={{ minWidth: 0, textAlign: "left" }}><Typography variant="body2" fontWeight={600} sx={{ color: "#fff" }}>{row.name}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>{row.code}</Typography></Box></Stack></TableCell>
                       <TableCell><Stack direction="row" spacing={1} alignItems="center"><Avatar sx={{ width: 28, height: 28, fontSize: 11, fontWeight: 700, bgcolor: "rgba(65,201,173,0.2)", color: "#8dd8c5" }}>{initials(row.createdByName)}</Avatar><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.createdByName || "Unknown"}</Typography></Stack></TableCell>
                       <TableCell><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.muscleGroup || "—"}</Typography></TableCell>
                       <TableCell><DarkPill tone={levelTone(row.level)}>{row.level || "—"}</DarkPill></TableCell>

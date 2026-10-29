@@ -79,6 +79,19 @@ export function requestError(error) {
 export const contentManagerApi = {
   exercises: () => contentApi.get("/content/exercises").then((r) => r.data),
 
+  levelBenchmarkConfiguration: () =>
+    contentApi.get("/content/level-benchmarks").then((r) => r.data).catch((error) => { throw requestError(error); }),
+
+  updateLevelBenchmarkConfiguration: (data) =>
+    contentApi.put("/content/level-benchmarks", data).then((r) => r.data).catch((error) => { throw requestError(error); }),
+
+  deleteLevelBenchmark: (id) =>
+    contentApi.delete(`/content/level-benchmarks/levels/${encodeURIComponent(id)}`).then((r) => r.data).catch((error) => { throw requestError(error); }),
+
+  updateLevelBenchmarkStatus: (level, status) =>
+    contentApi.patch(`/content/level-benchmarks/levels/${encodeURIComponent(level)}/status`, null, { params: { status } })
+      .then((r) => r.data).catch((error) => { throw requestError(error); }),
+
   memberLevels: () => contentApi.get("/content/dashboard/member-levels").then((r) => r.data),
 
   exercise: (code) =>

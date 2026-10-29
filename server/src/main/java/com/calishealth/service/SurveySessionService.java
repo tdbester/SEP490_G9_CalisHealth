@@ -60,7 +60,6 @@ public class SurveySessionService {
     private final SurveyService surveys;
     private final SurveyDefinitionLoader loader;
     private final QuestionTypeRegistry registry;
-    private final LevelAssessmentService levels;
 
     public record StartResult(SessionResponse session, boolean created) {}
 
@@ -258,34 +257,13 @@ public class SurveySessionService {
                     "The survey cannot be completed yet.", errors);
         }
 
+        assignBenchmarkLevelIfPresent(session, values);
         LocalDateTime now = LocalDateTime.now();
         session.setStatus(SurveySession.Status.COMPLETED);
         session.setCompletedAt(now);
         session.setUpdatedAt(now);
         levels.assess(session, definition, values);
         return view(session, definition, values);
-    }
-
-    /**
-     * Kết quả level + kế hoạch gợi ý của phiên đã hoàn thành. Phiên hoàn thành trước khi có tính năng chấm level
-     * được chấm bù 1 lần (khóa dòng phiên để 2 request song song không cùng chấm).
-     */
-    @Transactional
-    public SurveyResultResponse result(String email, Long sessionId) {
-        User user = currentUser(email);
-        SurveySession session = owned(sessions.findWithSurveyById(sessionId), user);
-        if (session.getStatus() != SurveySession.Status.COMPLETED) {
-            throw SurveyException.conflict("SESSION_NOT_COMPLETED",
-                    "The survey must be completed before its result is available (current status: "
-                            + session.getStatus() + ")");
-        }
-        LevelAssessment assessment = levels.find(session).orElseGet(() -> {
-            SurveySession locked = owned(sessions.findByIdForUpdate(sessionId), user);
-            return levels.find(locked).orElseGet(() ->
-                    levels.assess(locked, loader.load(locked.getSurvey()), values(storedAnswers(locked))));
-        });
-        return new SurveyResultResponse(session.getId(), session.getSurvey().getSurveyCode(),
-                session.getSurveyVersion(), session.getCompletedAt(), assessment);
     }
 
     /** Bỏ qua: giữ nguyên câu trả lời đã lưu. */

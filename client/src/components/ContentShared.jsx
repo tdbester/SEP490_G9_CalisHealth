@@ -100,43 +100,52 @@ export function SummaryCard({ label, count, detail, tone = "primary" }) {
         "&:hover": { borderColor: CM.borderStrong, transform: "translateY(-1px)" },
       }}
     >
-      <Stack direction="row" spacing={1.5} alignItems="center">
-        <Box
-          sx={{
-            width: 9,
-            height: 9,
-            borderRadius: "50%",
-            bgcolor: colors.dot,
-            flexShrink: 0,
-            boxShadow: `0 0 12px ${colors.dot}`,
-          }}
-        />
-        <Box sx={{ minWidth: 0 }}>
+      <Stack spacing={0.25} alignItems="center" sx={{ textAlign: "center" }}>
+        <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="center">
+          <Box
+            sx={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              bgcolor: colors.dot,
+              flexShrink: 0,
+              boxShadow: `0 0 12px ${colors.dot}`,
+            }}
+          />
           <Typography
             variant="caption"
-            sx={{ color: CM.textDim, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, fontSize: 10 }}
+            sx={{ color: CM.textDim, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, fontSize: 10.5 }}
           >
             {label}
           </Typography>
-          <Typography variant="body2" fontWeight={700} noWrap sx={{ color: "#fff", fontSize: 14.5 }}>
-            {count} {detail}
-          </Typography>
-        </Box>
+        </Stack>
+        <Typography sx={{ color: "#fff", fontSize: 36, fontWeight: 800, lineHeight: 1.15 }}>
+          {count}
+        </Typography>
+        <Typography variant="caption" sx={{ color: CM.textMuted }}>
+          {detail}
+        </Typography>
       </Stack>
     </Box>
   );
 }
 
 /** Pill dùng cho các nhãn nhỏ (type, level...) trong bảng tối. */
+export const TONE_STYLES = {
+  primary: { color: "#C4B5FD", bg: "rgba(139,92,246,0.18)", border: "rgba(167,139,250,0.38)" },
+  success: { color: "#86EFAC", bg: "rgba(120,232,136,0.14)", border: "rgba(120,232,136,0.34)" },
+  warning: { color: "#FCD34D", bg: "rgba(248,200,88,0.14)", border: "rgba(248,200,88,0.34)" },
+  danger: { color: "#FDA4AF", bg: "rgba(255,119,153,0.14)", border: "rgba(255,119,153,0.34)" },
+  // Extra tones so every level can get its own colour (see useLevelNames).
+  sky: { color: "#7DD3FC", bg: "rgba(56,189,248,0.14)", border: "rgba(56,189,248,0.34)" },
+  orange: { color: "#FDBA74", bg: "rgba(251,146,60,0.15)", border: "rgba(251,146,60,0.36)" },
+  pink: { color: "#F9A8D4", bg: "rgba(236,72,153,0.15)", border: "rgba(236,72,153,0.36)" },
+  teal: { color: "#5EEAD4", bg: "rgba(45,212,191,0.14)", border: "rgba(45,212,191,0.34)" },
+  neutral: { color: CM.textMuted, bg: "rgba(168,155,208,0.12)", border: "rgba(168,155,208,0.26)" },
+};
+
 export function DarkPill({ children, tone = "primary", icon, sx }) {
-  const map = {
-    primary: { color: "#C4B5FD", bg: "rgba(139,92,246,0.18)", border: "rgba(167,139,250,0.38)" },
-    success: { color: "#86EFAC", bg: "rgba(120,232,136,0.14)", border: "rgba(120,232,136,0.34)" },
-    warning: { color: "#FCD34D", bg: "rgba(248,200,88,0.14)", border: "rgba(248,200,88,0.34)" },
-    danger: { color: "#FDA4AF", bg: "rgba(255,119,153,0.14)", border: "rgba(255,119,153,0.34)" },
-    neutral: { color: CM.textMuted, bg: "rgba(168,155,208,0.12)", border: "rgba(168,155,208,0.26)" },
-  };
-  const c = map[tone] ?? map.primary;
+  const c = TONE_STYLES[tone] ?? TONE_STYLES.primary;
   return (
     <Chip
       size="small"
@@ -177,7 +186,7 @@ export const CONTENT_PATHS = {
   surveys: "/content/surveys",
   exercises: "/content/exercises",
   progressionRules: "/content/progression-rules",
-  levelCriteria: "/content/level-criteria",
+  levelCriteria: "/content/benchmark-criteria",
   pendingExerciseModeration: "/content/exercises/pending-moderation",
   exerciseApprovalHistory: "/content/exercises/approval-history",
   workouts: "/content/workouts",

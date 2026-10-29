@@ -30,6 +30,7 @@ import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import { contentManagerApi } from "../api/contentManager";
 import { useApiMutation, useApiQuery } from "../hooks";
+import { useLevelNames } from "../useLevelNames";
 import ContentListToolbar from "../components/ContentListToolbar";
 import {
   CONTENT_PATHS,
@@ -70,10 +71,8 @@ function SourceChip({ source }) {
   );
 }
 
-function LevelChip({ level }) {
-  const normalized = String(level).toLowerCase();
-  const tone = normalized === "beginner" ? "success" : normalized === "advanced" ? "danger" : "warning";
-  return <DarkPill tone={tone}>{level}</DarkPill>;
+function LevelChip({ level, toneOf }) {
+  return <DarkPill tone={toneOf(level)}>{level}</DarkPill>;
 }
 
 function StatusDot({ active }) {
@@ -102,6 +101,8 @@ export default function ExerciseListPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [type, setType] = useState("all");
+  const [level, setLevel] = useState("all");
+  const { levels: levelNames, levelTone } = useLevelNames();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [menu, setMenu] = useState({ anchor: null, entry: null });
@@ -147,9 +148,11 @@ export default function ExerciseListPage() {
       const matchesType =
         type === "all" ||
         (type === "custom" ? isCustom : String(entry.type).toLowerCase() === type);
-      return matchesSearch && matchesStatus && matchesType;
+      const matchesLevel =
+        level === "all" || String(entry.level || "").toLowerCase() === level;
+      return matchesSearch && matchesStatus && matchesType && matchesLevel;
     });
-  }, [entries, search, status, type]);
+  }, [entries, search, status, type, level]);
 
   const pageEntries = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
@@ -255,6 +258,19 @@ export default function ExerciseListPage() {
           <TextField
             select
             size="small"
+            value={level}
+            onChange={resetPage(setLevel)}
+            SelectProps={{ SelectDisplayProps: { "aria-label": "Filter by level" } }}
+            sx={{ minWidth: 130 }}
+          >
+            <MenuItem value="all">All levels</MenuItem>
+            {levelNames.map((name) => (
+              <MenuItem key={name} value={name.toLowerCase()}>{name}</MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            size="small"
             value={type}
             onChange={resetPage(setType)}
             SelectProps={{ SelectDisplayProps: { "aria-label": "Filter by type" } }}
@@ -315,7 +331,7 @@ export default function ExerciseListPage() {
               <Table size="small" sx={{ minWidth: 940, "& th, & td": { textAlign: "center" } }}>
                 <TableHead>
                   <TableRow sx={{ "& th": { bgcolor: "rgba(19,10,39,0.85)", color: CM.textMuted, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, whiteSpace: "nowrap" } }}>
-                    <TableCell align="center">Exercise / Skill</TableCell>
+                    <TableCell sx={{ textAlign: "left !important", pl: 3 }}>Exercise / Skill</TableCell>
                     <TableCell>Type</TableCell>
                     <TableCell>Source</TableCell>
                     <TableCell>Muscle group</TableCell>
@@ -331,8 +347,8 @@ export default function ExerciseListPage() {
                       statusMutation.isPending && menu.entry?.code === entry.code;
                     return (
                       <TableRow key={entry.code} hover>
-                        <TableCell align="center" sx={{ width: 280 }}>
-                          <Stack direction="row" spacing={1.25} alignItems="center" justifyContent="flex-start" sx={{ width: "100%", textAlign: "left" }}>
+                        <TableCell sx={{ width: 300, textAlign: "left !important", pl: 3, "& > .MuiStack-root": { justifyContent: "flex-start" } }}>
+                          <Stack direction="row" spacing={1.25} alignItems="center" justifyContent="flex-start" sx={{ width: "100%" }}>
                             <Box
                               sx={{
                                 width: 32,
@@ -355,7 +371,7 @@ export default function ExerciseListPage() {
                                 <FitnessIconSmall />
                               )}
                             </Box>
-                            <Box sx={{ minWidth: 0 }}>
+                            <Box sx={{ minWidth: 0, textAlign: "left" }}>
                               <Typography variant="body2" fontWeight={600} noWrap sx={{ color: "#fff" }}>
                                 {entry.name}
                               </Typography>
@@ -377,7 +393,7 @@ export default function ExerciseListPage() {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <LevelChip level={entry.level} />
+                          <LevelChip level={entry.level} toneOf={levelTone} />
                         </TableCell>
                         <TableCell>
                           <StatusDot active={entry.active} />

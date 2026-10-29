@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLevelNames } from "../useLevelNames";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import {
   Alert,
@@ -58,6 +59,7 @@ function Detail({ label, value, full }) {
 
 export default function WorkoutDetailPage() {
   const { code = "" } = useParams();
+  const { levels: levelNames } = useLevelNames();
   const { data: workout, isLoading, error, refetch } = useApiQuery(
     () => contentManagerApi.workout(code),
     { enabled: Boolean(code), deps: [code] },
@@ -144,7 +146,7 @@ export default function WorkoutDetailPage() {
       description: workout.description || "",
       restSeconds: workout.restSeconds ?? 60,
       type: "WORKOUT",
-      level: workout.level || "Beginner",
+      level: workout.level || "",
       exerciseCodes: exercises.map((exercise) => exercise.code),
       planItems: [],
     });
@@ -163,7 +165,7 @@ export default function WorkoutDetailPage() {
     if (!form?.name.trim() || form.name.length > 60 || !form.description.trim()
       || form.description.length > 300 || !Number.isInteger(form.restSeconds)
       || form.restSeconds < 0 || form.restSeconds > 3600
-      || !["Beginner", "Intermediate", "Advanced"].includes(form.level)
+      || !levelNames.includes(form.level)
       || form.exerciseCodes.length === 0) return;
     saveMutation.mutate({
       name: form.name.trim(),

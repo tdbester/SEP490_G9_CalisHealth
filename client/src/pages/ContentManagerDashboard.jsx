@@ -5,7 +5,8 @@ import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import RuleRoundedIcon from "@mui/icons-material/RuleRounded";
 import SelfImprovementRoundedIcon from "@mui/icons-material/SelfImprovementRounded";
-import { CONTENT_PATHS, ContentPageHeader } from "../components/ContentShared";
+import { CONTENT_PATHS, ContentPageHeader, TONE_STYLES } from "../components/ContentShared";
+import { useLevelNames } from "../useLevelNames";
 import { CM } from "../theme-content";
 import { contentManagerApi } from "../api/contentManager";
 import { useApiQuery } from "../hooks";
@@ -145,7 +146,9 @@ export default function ContentManagerDashboard() {
   const memberLevelsQuery = useApiQuery(() => contentManagerApi.memberLevels());
   const memberLevels = Array.isArray(memberLevelsQuery.data) ? memberLevelsQuery.data : [];
   const totalMembers = memberLevels.reduce((total, item) => total + Number(item.memberCount || 0), 0);
-  const levelColors = [CM.green, CM.amber, CM.pink];
+  // Same colour a level gets in every pill (Benchmark Criteria, exercise and workout lists).
+  const { levelTone } = useLevelNames();
+  const colorOf = (levelName) => (TONE_STYLES[levelTone(levelName)] ?? TONE_STYLES.neutral).color;
 
   return (
     <Box sx={{ maxWidth: 1240, mx: "auto", px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 2.5 } }}>
@@ -193,7 +196,7 @@ export default function ContentManagerDashboard() {
           tone={CARD_TONES[2]}
         />
         <ManagementCard
-          title="Level criteria"
+          title="Level benchmark criteria"
           description="Set measurable requirements for Beginner, Intermediate, and Advanced."
           to={CONTENT_PATHS.levelCriteria}
           action="Manage criteria"
@@ -248,7 +251,7 @@ export default function ContentManagerDashboard() {
                   sx={{
                     width: `${percent}%`,
                     minWidth: count > 0 ? 2 : 0,
-                    bgcolor: levelColors[index % levelColors.length],
+                    bgcolor: colorOf(item.level),
                     borderRight: index < memberLevels.length - 1 ? "2px solid rgba(20,15,32,0.8)" : "none",
                     boxShadow: "inset -1px 0 rgba(255,255,255,0.3)",
                     transition: "width .3s ease",
@@ -257,16 +260,24 @@ export default function ContentManagerDashboard() {
               );
             })}
             </Box>
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" }, gap: 1, mt: 1.25 }}>
+            <Box sx={{ display: "grid", gap: 0.75, mt: 1.25, gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
               {memberLevels.map((item, index) => {
                 const count = Number(item.memberCount || 0);
                 const percent = totalMembers ? Math.round((count / totalMembers) * 100) : 0;
+                const color = colorOf(item.level);
                 return (
-                  <Stack key={item.level} direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, p: 1, border: `1px solid ${CM.border}`, borderRadius: 1, bgcolor: "rgba(12,8,27,0.3)" }}>
-                    <Box sx={{ width: 10, height: 10, borderRadius: 0.5, flexShrink: 0, bgcolor: levelColors[index % levelColors.length], boxShadow: `0 0 0 2px ${levelColors[index % levelColors.length]}33` }} />
-                    <Typography variant="caption" sx={{ color: CM.textMuted, flex: 1, minWidth: 0 }}>{item.level}</Typography>
-                    <Typography variant="body2" fontWeight={700} sx={{ color: "#fff", whiteSpace: "nowrap" }}>{percent}%</Typography>
-                    <Typography variant="caption" sx={{ color: CM.textDim, whiteSpace: "nowrap" }}>{count.toLocaleString()} members</Typography>
+                  <Stack
+                    key={item.level}
+                    direction="row"
+                    spacing={0.75}
+                    alignItems="center"
+                    title={`${item.level}: ${count.toLocaleString()} members (${percent}%)`}
+                    sx={{ minWidth: 0, px: 1.25, py: 0.5, border: `1px solid ${CM.border}`, borderRadius: 99, bgcolor: "rgba(12,8,27,0.3)" }}
+                  >
+                    <Box sx={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, bgcolor: color }} />
+                    <Typography variant="caption" noWrap sx={{ color: CM.textMuted, flex: 1, minWidth: 0 }}>{item.level}</Typography>
+                    <Typography variant="caption" fontWeight={700} sx={{ color: "#fff", whiteSpace: "nowrap" }}>{percent}%</Typography>
+                    <Typography variant="caption" sx={{ color: CM.textDim, whiteSpace: "nowrap" }}>· {count.toLocaleString()}</Typography>
                   </Stack>
                 );
               })}
