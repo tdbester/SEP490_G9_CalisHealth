@@ -349,16 +349,18 @@ function ExerciseEditor({ rules, exerciseOptions, canAdd, canRemove, minExercise
     <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", sm: "center" }} spacing={1}>
       <Box>
         <Typography sx={{ color: "#fff", fontWeight: 700 }}>Exercises and thresholds</Typography>
-        <Typography variant="caption" sx={{ color: CM.textMuted }}>Shared by every level. Each exercise scores 1, 2, or 3 points from the member's survey result; {rules.length} exercise{rules.length === 1 ? "" : "s"} give a total of {floor}-{ceiling} points.</Typography>
+        <Typography variant="caption" sx={{ color: CM.textMuted }}>Shared by every level. Each exercise scores 1, 2, or 3 points from the member's survey result. Set where the 1-point and 2-point ranges end; the next range starts automatically. {rules.length} exercise{rules.length === 1 ? "" : "s"} give a total of {floor}-{ceiling} points.</Typography>
       </Box>
-      <Tooltip title={canAdd ? "" : `At most ${MAX_EXERCISES} exercises`}><span><Button variant="outlined" size="small" startIcon={<AddRoundedIcon />} disabled={!canAdd} onClick={onAdd}>Add exercise</Button></span></Tooltip>
+      <Tooltip title={canAdd ? "" : `At most ${MAX_EXERCISES} exercises`}><Box component="span" sx={{ flexShrink: 0, alignSelf: { xs: "flex-start", sm: "center" } }}><Button variant="outlined" size="small" startIcon={<AddRoundedIcon fontSize="small" />} disabled={!canAdd} onClick={onAdd} sx={{ whiteSpace: "nowrap", py: 0.25, px: 1.25, minWidth: 0, fontSize: 13 }}>Add exercise</Button></Box></Tooltip>
     </Stack>
     {errors.map((error) => <Alert key={error} severity="error" sx={{ mt: 1.5 }}>{error}</Alert>)}
     {!rules.length && <Alert severity="info" sx={{ mt: 1.5 }}>No exercise yet. Add one to score members.</Alert>}
     <Stack spacing={1.5} sx={{ mt: 1.5 }}>{rules.map((rule, index) => {
       const unit = unitOf(rule.category);
       const onePoint = Number(rule.beginnerMax);
-      const twoPointsFrom = Number.isFinite(onePoint) && onePoint >= 1 ? onePoint + 1 : "";
+      const twoPoints = Number(rule.intermediateMax);
+      const twoPointsFrom = rule.beginnerMax !== "" && rule.beginnerMax != null && Number.isFinite(onePoint) && onePoint >= 1 ? onePoint + 1 : "";
+      const threePointsFrom = rule.intermediateMax !== "" && rule.intermediateMax != null && Number.isFinite(twoPoints) && twoPoints >= 1 ? twoPoints + 1 : "";
       const picked = exerciseOptions.find((x) => x.code === rule.code);
       const sameCategory = exerciseOptions.filter((x) => !rule.category || x.category === rule.category || x.code === rule.code);
       return <Box key={rule.rowKey} sx={{ p: 1.5, border: `1px solid ${CM.border}`, borderRadius: 1 }}>
@@ -366,11 +368,20 @@ function ExerciseEditor({ rules, exerciseOptions, canAdd, canRemove, minExercise
           <Typography variant="caption" sx={{ color: CM.textDim, fontWeight: 700 }}>EXERCISE {index + 1}{picked ? ` - ${picked.category === "HOLD" ? "HOLD (seconds)" : "REPS"}` : ""}</Typography>
           <Tooltip title={canRemove ? "Remove exercise" : `Keep at least ${minExercises} exercise${minExercises === 1 ? "" : "s"} so every level can keep a score`}><span><IconButton size="small" color="error" aria-label={`Remove exercise ${index + 1}`} disabled={!canRemove} onClick={() => onRemove(rule.rowKey)}><DeleteOutlineRoundedIcon fontSize="small" /></IconButton></span></Tooltip>
         </Stack>
-        <Box sx={{ display: "grid", gap: 1, gridTemplateColumns: { xs: "1fr", md: "1.6fr 1fr 1fr 1fr" } }}>
-          <TextField select label="Exercise" value={rule.code || ""} onChange={(e) => onChooseExercise(rule.rowKey, e.target.value)}>{sameCategory.map((x) => <MenuItem key={x.code} value={x.code}>{x.name}</MenuItem>)}</TextField>
-          <TextField type="number" label={`1 point up to (${unit})`} value={rule.beginnerMax ?? ""} onChange={(e) => onChange(rule.rowKey, { beginnerMax: e.target.value })} helperText="Inclusive" />
-          <TextField type="number" label={`2 points up to (${unit})`} value={rule.intermediateMax ?? ""} onChange={(e) => onChange(rule.rowKey, { intermediateMax: e.target.value })} helperText={twoPointsFrom === "" ? "Inclusive" : `From ${twoPointsFrom}, inclusive`} />
-          <TextField disabled label={`3 points above (${unit})`} value={rule.intermediateMax ?? ""} helperText="Automatic" />
+        <TextField select fullWidth label="Exercise" value={rule.code || ""} onChange={(e) => onChooseExercise(rule.rowKey, e.target.value)} sx={{ mb: 1.5 }}>{sameCategory.map((x) => <MenuItem key={x.code} value={x.code}>{x.name}</MenuItem>)}</TextField>
+        <Box sx={{ display: "grid", gap: 1, gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" } }}>
+          {POINT_COLUMNS.map((column, bandIndex) => {
+            const from = bandIndex === 0 ? 1 : bandIndex === 1 ? twoPointsFrom : threePointsFrom;
+            return <Box key={column.label} sx={{ p: 1.25, border: `1px solid ${CM.border}`, borderLeft: `3px solid ${column.color}`, borderRadius: 1 }}>
+              <Typography variant="caption" sx={{ color: column.color, fontWeight: 800 }}>{column.label.toUpperCase()}</Typography>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.75 }}>
+                <Typography variant="body2" sx={{ color: "#fff", whiteSpace: "nowrap" }}>From <b>{from === "" ? "…" : from}</b> {bandIndex < 2 ? "to" : unit}</Typography>
+                {bandIndex === 0 && <TextField size="small" type="number" aria-label={`1 point up to (${unit})`} value={rule.beginnerMax ?? ""} onChange={(e) => onChange(rule.rowKey, { beginnerMax: e.target.value })} inputProps={{ min: 1 }} sx={{ flex: 1, minWidth: 80 }} />}
+                {bandIndex === 1 && <TextField size="small" type="number" aria-label={`2 points up to (${unit})`} value={rule.intermediateMax ?? ""} onChange={(e) => onChange(rule.rowKey, { intermediateMax: e.target.value })} inputProps={{ min: twoPointsFrom || 2 }} sx={{ flex: 1, minWidth: 80 }} />}
+                {bandIndex === 0 || bandIndex === 1 ? <Typography variant="body2" sx={{ color: CM.textMuted }}>{unit}</Typography> : <Typography variant="body2" sx={{ color: CM.textMuted }}>and above</Typography>}
+              </Stack>
+            </Box>;
+          })}
         </Box>
       </Box>;
     })}</Stack>
@@ -390,6 +401,7 @@ export function LevelBenchmarkFormPage() {
   const save = useApiMutation((payload) => contentManagerApi.updateLevelBenchmarkConfiguration(payload), { onSuccess: () => navigate(CONTENT_PATHS.levelCriteria, { state: { successMessage: "All benchmark levels updated." } }) });
   const [levels, setLevels] = useState(null);
   const [rules, setRules] = useState(null);
+  const [pendingRemoval, setPendingRemoval] = useState(null);
   const data = query.data;
   if (query.isLoading || !data) return <Box sx={{ py: 10, display: "grid", placeItems: "center" }}><CircularProgress /></Box>;
   const currentRules = rules || data.exercises.map((x) => ({ ...x, rowKey: x.code }));
@@ -406,6 +418,13 @@ export function LevelBenchmarkFormPage() {
   const canRemoveLevel = currentLevels.length > 1;
   const addLevel = () => setLevels(addLevelRow(currentLevels, `new-level-${Date.now()}`, floor, ceiling));
   const removeLevel = (idValue) => setLevels(removeLevelRow(currentLevels, idValue, floor, ceiling));
+  // Rows that are already saved ask for confirmation first; rows added in this session are dropped straight away.
+  const askRemoveLevel = (idValue) => {
+    const level = currentLevels.find((x) => x.id === idValue);
+    if (!level) return;
+    if (level.isNew) { removeLevel(idValue); return; }
+    setPendingRemoval({ kind: "level", id: idValue });
+  };
   const setRule = (rowKey, patch) => setRules(currentRules.map((x) => x.rowKey === rowKey ? { ...x, ...patch } : x));
   const chooseExercise = (rowKey, code) => {
     const option = exerciseOptions.find((x) => x.code === code);
@@ -418,6 +437,41 @@ export function LevelBenchmarkFormPage() {
   };
   const addRule = () => changeRules([...currentRules, { rowKey: `new-${Date.now()}`, code: "", name: "", category: "", beginnerMax: "", intermediateMax: "" }]);
   const removeRule = (rowKey) => changeRules(currentRules.filter((x) => x.rowKey !== rowKey));
+  const askRemoveRule = (rowKey) => {
+    if (!data.exercises.some((x) => x.code === rowKey)) { removeRule(rowKey); return; }
+    setPendingRemoval({ kind: "exercise", id: rowKey });
+  };
+  const confirmRemoval = () => {
+    if (pendingRemoval?.kind === "level") removeLevel(pendingRemoval.id);
+    if (pendingRemoval?.kind === "exercise") removeRule(pendingRemoval.id);
+    setPendingRemoval(null);
+  };
+  const removalDialog = (() => {
+    if (!pendingRemoval) return { title: "", body: null };
+    if (pendingRemoval.kind === "level") {
+      const index = currentLevels.findIndex((x) => x.id === pendingRemoval.id);
+      const level = currentLevels[index];
+      const heir = currentLevels[index > 0 ? index - 1 : 1];
+      return {
+        title: "Remove this level?",
+        body: <>
+          <DialogContentText>"{level?.name || "This level"}" ({level?.scoreMin}-{level?.scoreMax} points) will be deleted when you press Save All Changes.</DialogContentText>
+          {heir && <DialogContentText sx={{ mt: 1 }}>Its score range goes to "{heir.name || "the neighbouring level"}", so members with those scores will be placed in that level.</DialogContentText>}
+          <DialogContentText sx={{ mt: 1 }}>A level that is still used by members, exercises or workouts cannot be deleted and saving will fail. Set it to Inactive instead.</DialogContentText>
+        </>,
+      };
+    }
+    const rule = currentRules.find((x) => x.rowKey === pendingRemoval.id);
+    const nextCount = currentRules.length - 1;
+    return {
+      title: "Remove this exercise?",
+      body: <>
+        <DialogContentText>"{rule?.name || "This exercise"}" will no longer count towards the level score once you press Save All Changes.</DialogContentText>
+        <DialogContentText sx={{ mt: 1 }}>The total score range changes from {floor}-{ceiling} to {scoreFloor(nextCount)}-{scoreCeiling(nextCount)}, and the level ranges are re-fitted automatically. Review the minimum and maximum scores of every level afterwards.</DialogContentText>
+        <DialogContentText sx={{ mt: 1 }}>The survey question linked to this exercise stays in the survey, but its answer is no longer used to place members.</DialogContentText>
+      </>,
+    };
+  })();
   // N exercises give N..3N = 2N+1 distinct scores and every level needs at least one, so 2N+1 >= number of levels.
   const minExercises = Math.max(1, Math.ceil((currentLevels.length - 1) / 2));
   const canRemove = currentRules.length > minExercises;
@@ -438,6 +492,15 @@ export function LevelBenchmarkFormPage() {
       <Typography sx={{ color: "#fff", fontWeight: 700 }}>Levels</Typography>
       <Typography variant="caption" sx={{ color: CM.textMuted }}>{currentLevels.length} level{currentLevels.length === 1 ? "" : "s"} share the {floor}-{ceiling} point range. Adding or removing a level re-balances the ranges automatically; adjust them afterwards.</Typography>
     </Box>
-    <Tooltip title={canAddLevel ? "" : `No score points left: at most ${totalPoints} levels fit in ${floor}-${ceiling}. Add an exercise to make room.`}><span><Button variant="outlined" size="small" startIcon={<AddRoundedIcon />} disabled={!canAddLevel} onClick={addLevel}>Add level</Button></span></Tooltip>
-  </Stack>{scoreErrors.map((error) => <Alert key={error} severity="error" sx={{ mt: 1.5 }}>{error}</Alert>)}<LevelEditor levels={currentLevels} floor={floor} ceiling={ceiling} canRemove={canRemoveLevel} removeHint="Keep at least one level" onChange={setLevel} onMove={reorderLevel} onRemove={removeLevel} /><ExerciseEditor rules={currentRules} exerciseOptions={exerciseOptions} canAdd={canAdd} canRemove={canRemove} minExercises={minExercises} floor={floor} ceiling={ceiling} errors={thresholdErrors} onAdd={addRule} onRemove={removeRule} onChooseExercise={chooseExercise} onChange={setRule} /><Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 3 }}><Button component={RouterLink} to={CONTENT_PATHS.levelCriteria} variant="outlined">Cancel</Button><Button type="submit" variant="contained" disabled={save.isPending || validationErrors.length > 0}>{save.isPending ? "Saving…" : "Save All Changes"}</Button></Stack></Card></Box>;
+    <Tooltip title={canAddLevel ? "" : `No score points left: at most ${totalPoints} levels fit in ${floor}-${ceiling}. Add an exercise to make room.`}><Box component="span" sx={{ flexShrink: 0, alignSelf: { xs: "flex-start", sm: "center" } }}><Button variant="outlined" size="small" startIcon={<AddRoundedIcon fontSize="small" />} disabled={!canAddLevel} onClick={addLevel} sx={{ whiteSpace: "nowrap", py: 0.25, px: 1.25, minWidth: 0, fontSize: 13 }}>Add level</Button></Box></Tooltip>
+  </Stack>{scoreErrors.map((error) => <Alert key={error} severity="error" sx={{ mt: 1.5 }}>{error}</Alert>)}<LevelEditor levels={currentLevels} floor={floor} ceiling={ceiling} canRemove={canRemoveLevel} removeHint="Keep at least one level" onChange={setLevel} onMove={reorderLevel} onRemove={askRemoveLevel} /><ExerciseEditor rules={currentRules} exerciseOptions={exerciseOptions} canAdd={canAdd} canRemove={canRemove} minExercises={minExercises} floor={floor} ceiling={ceiling} errors={thresholdErrors} onAdd={addRule} onRemove={askRemoveRule} onChooseExercise={chooseExercise} onChange={setRule} /><Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 3 }}><Button component={RouterLink} to={CONTENT_PATHS.levelCriteria} variant="outlined">Cancel</Button><Button type="submit" variant="contained" disabled={save.isPending || validationErrors.length > 0}>{save.isPending ? "Saving…" : "Save All Changes"}</Button></Stack></Card>
+    <Dialog open={Boolean(pendingRemoval)} onClose={() => setPendingRemoval(null)}>
+      <DialogTitle>{removalDialog.title}</DialogTitle>
+      <DialogContent>{removalDialog.body}</DialogContent>
+      <DialogActions>
+        <Button variant="outlined" onClick={() => setPendingRemoval(null)}>Keep</Button>
+        <Button color="error" variant="contained" onClick={confirmRemoval}>Remove</Button>
+      </DialogActions>
+    </Dialog>
+  </Box>;
 }

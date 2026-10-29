@@ -32,6 +32,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -347,14 +348,24 @@ public class LevelBenchmarkService {
         List<BenchmarkExercise> configured = getConfiguration().exercises();
         if (configured.isEmpty()) return Optional.empty();
         int totalScore = 0;
+        boolean zeroResult = false;
+        List<Integer> exercisePoints = new ArrayList<>();
         for (BenchmarkExercise exercise : configured) {
             Integer value = valuesBySlot.get(exercise.slot());
             if (value == null) {
                 log.warn("Level not assigned for user {}: no answer for benchmark question {}", userId, exercise.slot());
                 return Optional.empty();
             }
-            totalScore += pointsFor(value, exercise.beginnerMax(), exercise.intermediateMax());
+            // 0 reps / seconds still scores the minimum 1 point; the penalty is applied to the level below.
+            if (isCriticalFailure(value)) zeroResult = true;
+            int points = pointsFor(value, exercise.beginnerMax(), exercise.intermediateMax());
+            exercisePoints.add(points);
+            totalScore += points;
         }
+        // Two penalties, each worth one level, that add up: any exercise at 0 reps / seconds, and lopsided
+        // results (e.g. 3 points on one exercise but 1 point on another).
+        boolean unbalanced = isUnbalanced(exercisePoints);
+        int levelsToDrop = levelsToDrop(zeroResult, unbalanced);
         final int score = totalScore;
         List<FitnessLevel> activeLevels = fitnessLevels.findAll().stream()
                 .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
@@ -371,11 +382,50 @@ public class LevelBenchmarkService {
                                 .thenComparing(Comparator.comparingInt(FitnessLevel::getScoreMin).reversed()))
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                                 "No active benchmark level is available for the calculated score " + score)));
+        if (levelsToDrop > 0) {
+            FitnessLevel lowered = levelsBelow(activeLevels, level, levelsToDrop);
+            if (lowered != level) {
+                log.info("User {} (zero result: {}, unbalanced: {}, points {}): level lowered from {} to {}",
+                        userId, zeroResult, unbalanced, exercisePoints, level.getName(), lowered.getName());
+            }
+            level = lowered;
+        }
         MemberProfile profile = memberProfiles.findByUser_Id(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member profile not found"));
         profile.setFitnessLevel(level);
         memberProfiles.save(profile);
         return Optional.of(level.getName());
+    }
+
+    /**
+     * True when the best and the worst exercise are two points apart (a 3-point exercise next to a 1-point
+     * one): the member is strong in one benchmark but weak in another.
+     */
+    static boolean isUnbalanced(List<Integer> exercisePoints) {
+        if (exercisePoints.size() < 2) return false;
+        int max = Collections.max(exercisePoints);
+        int min = Collections.min(exercisePoints);
+        return max - min >= 2;
+    }
+
+    /** A member who cannot do a single rep (or hold for a single second) of a benchmark exercise. */
+    static boolean isCriticalFailure(int value) {
+        return value <= 0;
+    }
+
+    /** Each penalty costs one level and the two add up, so the drop is 0, 1 or 2 levels. */
+    static int levelsToDrop(boolean zeroResult, boolean unbalanced) {
+        return (zeroResult ? 1 : 0) + (unbalanced ? 1 : 0);
+    }
+
+    /**
+     * The active level {@code steps} places below {@code level} (activeLevels is sorted by score, lowest
+     * first). It stops at the lowest level, and a level that is not in the list stays where it is.
+     */
+    static FitnessLevel levelsBelow(List<FitnessLevel> activeLevels, FitnessLevel level, int steps) {
+        int index = activeLevels.indexOf(level);
+        if (index < 0) return level;
+        return activeLevels.get(Math.max(0, index - Math.max(0, steps)));
     }
 
     public static int pointsFor(int value, int beginnerMax, int intermediateMax) {
