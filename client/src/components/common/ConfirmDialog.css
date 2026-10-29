@@ -1,0 +1,95 @@
+/* ConfirmDialog.css — popup xác nhận (khung lấy từ ModalShell.css) */
+
+.confirm-dialog {
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 28px 28px 24px;
+}
+
+.confirm-dialog-icon {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  border-radius: 14px;
+  background: #2E2163;
+  color: #C4B5FD;
+}
+
+.confirm-dialog.danger .confirm-dialog-icon {
+  background: rgba(239, 68, 68, 0.14);
+  color: #F87171;
+}
+
+.confirm-dialog-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.confirm-dialog h2 {
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.confirm-dialog-message {
+  margin-top: 8px !important;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #B0ABD0;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-top: 24px;
+}
+
+.confirm-dialog-actions button {
+  flex: 1;
+  height: 44px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.confirm-dialog-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confirm-dialog-cancel {
+  border: 1px solid #3B2A6B;
+  background: transparent;
+  color: #D8CEEC;
+}
+
+.confirm-dialog-cancel:hover:not(:disabled) {
+  background: #1F1838;
+}
+
+.confirm-dialog-confirm {
+  border: none;
+  background: #8B7CF6;
+  color: #FFFFFF;
+}
+
+.confirm-dialog-confirm:hover:not(:disabled) {
+  background: #9D90F8;
+}
+
+.confirm-dialog.danger .confirm-dialog-confirm {
+  background: #DC2626;
+}
+
+.confirm-dialog.danger .confirm-dialog-confirm:hover:not(:disabled) {
+  background: #EF4444;
+}

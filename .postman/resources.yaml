@@ -1,7 +1,13 @@
-# Use this workspace to collaborate
 workspace:
   id: 296122f6-887f-4bb2-8cdc-57aa92803dd9
 
 localResources:
   specs:
     - ../server/swagger/openapi.yaml
+
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
+cloudResources:
+  collections:
+    ../postman/collections/SEP: 59129516-36c4bb5b-6bb5-49c6-94b1-cc909665976d
+    ../postman/collections/CalisHealth - Survey Management API (Content Manager): abdc32e9-4869-4672-80c3-030682574654

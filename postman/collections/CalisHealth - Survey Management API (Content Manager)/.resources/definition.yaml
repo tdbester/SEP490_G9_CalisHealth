@@ -1,0 +1,34 @@
+$kind: collection
+description: |-
+  Kiem thu man Survey management (Content Manager): /api/content/surveys/{surveyCode}/steps.
+
+  Chuan bi:
+  1. Chay backend (Flyway chay V1..V4).
+  2. Chay server/docs/survey-management/seed_survey_management.sql (sua @cm_email truoc).
+  3. Import collection nay + environment "CalisHealth - Local"; dien cmEmail / cmPassword (tai khoan Content Manager) va userEmail / userPassword (tai khoan member thuong).
+
+  Chay bang Collection Runner TU TREN XUONG. Collection tu don dep (buoc tao ra se bi xoa, thu tu va cau hinh Result duoc tra ve nhu seed) nen chay lai bao nhieu lan cung duoc.
+
+  Tai lieu chuc nang: server/docs/survey-management/SURVEY_MANAGEMENT_BE.md
+variables:
+  bodyStepId: ""
+  goalsStepId: ""
+  resultStepId: ""
+  resultStepCode: ""
+  newStepId: ""
+  newStepName: ""
+  newStepRevision: "0"
+  bodyRevision: "0"
+  bodyOriginal: ""
+  editBody: ""
+  expectedCodes: ""
+  currentStepIds: ""
+  reorderBody: ""
+  fallbackLevelId: "null"
+  longSearch: ""
+auth:
+  - id: 711ab6e3-c559-4487-aa49-548b0e0cd2d9
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{cmToken}}"

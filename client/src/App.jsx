@@ -3,6 +3,9 @@ import AdminLayout from "./components/layout/AdminLayout";
 import RoleHomeRoute from "./components/RoleHomeRoute";
 import ContentManagerLayout from "./components/layout/ContentManagerLayout";
 import Dashboard from "./pages/Dashboard";
+import HealthTracking from "./pages/HealthTracking";
+import WorkoutHistory from "./pages/WorkoutHistory";
+import PerformanceAnalytics from "./pages/PerformanceAnalytics";
 import DayStreak from "./pages/DayStreak";
 import ContentManagerDashboard from "./pages/ContentManagerDashboard";
 import ContentManagerSectionPage from "./pages/ContentManagerSectionPage";
@@ -24,6 +27,11 @@ import ForgotPassword from "./pages/ForgotPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import VerifyResetPassword from "./pages/VerifyResetPassword";
 import ResetPassword from "./pages/ResetPassword";
+import ProtectedRoute from "./components/ProtectedRoute";
+import SurveyFlow, { SurveyEntry } from "./pages/survey/SurveyFlow";
+import SurveyStepPage from "./pages/survey/SurveyStepPage";
+import SurveyResult from "./pages/survey/SurveyResult";
+import SurveyManagement from "./pages/content/SurveyManagement";
 
 export default function App() {
   return (
@@ -36,6 +44,27 @@ export default function App() {
         <Route path="/verify-reset-password" element={<VerifyResetPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
+        {/* Onboarding survey của member (sau khi đăng nhập); URL theo Figma: /survey/body-information … */}
+        <Route
+          path="/survey"
+          element={
+            <ProtectedRoute>
+              <SurveyFlow />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<SurveyEntry />} />
+          <Route path=":stepSlug" element={<SurveyStepPage />} />
+        </Route>
+        <Route
+          path="/survey/result"
+          element={
+            <ProtectedRoute>
+              <SurveyResult />
+            </ProtectedRoute>
+          }
+        />
+
         {/*
           Content Manager area (role CONTENT_MANAGER) - the guard reads /auth/me and
           redirects to /login or shows a "no access" screen.
@@ -43,7 +72,9 @@ export default function App() {
         <Route path="/content" element={<ContentManagerLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<ContentManagerDashboard />} />
-          <Route path="surveys" element={<ContentManagerSectionPage section="surveys" />} />
+          <Route path="surveys" element={<SurveyManagement />} />
+          {/* URL cũ của màn Survey management */}
+          <Route path="survey" element={<Navigate to="/content/surveys" replace />} />
           <Route path="exercises" element={<ExerciseListPage />} />
           <Route path="progression-rules" element={<ContentManagerSectionPage section="progressionRules" />} />
           <Route path="benchmark-criteria" element={<LevelBenchmarkCriteriaPage />} />
@@ -72,7 +103,31 @@ export default function App() {
           }
         />
         <Route path="/library" element={<Navigate to="/" replace />} />
-        <Route path="/tracking" element={<Navigate to="/" replace />} />
+        <Route
+          path="/tracking"
+          element={
+            <AdminLayout>
+              <HealthTracking />
+            </AdminLayout>
+          }
+        />
+        <Route
+          path="/tracking/workout-history"
+          element={
+            <AdminLayout>
+              <WorkoutHistory />
+            </AdminLayout>
+          }
+        />
+        <Route
+          path="/tracking/assessment"
+          element={
+            <AdminLayout>
+              <PerformanceAnalytics />
+            </AdminLayout>
+          }
+        />
+        <Route path="/day-streak" element={<Navigate to="/" replace />} />
         <Route path="/profile" element={<Navigate to="/" replace />} />
         <Route path="/settings" element={<Navigate to="/" replace />} />
 

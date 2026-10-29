@@ -31,6 +31,24 @@ public final class SurveyJson {
         return MAPPER.writeValueAsString(node);
     }
 
+    /** Ghi 1 đối tượng (record cấu hình) thành chuỗi JSON để lưu vào cột JSON. */
+    public static String writeValue(Object value) {
+        return MAPPER.writeValueAsString(value);
+    }
+
+    /** null/blank -> null; JSON hỏng hoặc sai cấu trúc -> IllegalArgumentException. */
+    public static <T> T read(String json, Class<T> type) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return MAPPER.readValue(json, type);
+        } catch (RuntimeException exception) {
+            throw new IllegalArgumentException("Invalid JSON for " + type.getSimpleName() + ": "
+                    + exception.getMessage(), exception);
+        }
+    }
+
     /** JSON null hoặc không có giá trị. */
     public static boolean isNull(JsonNode node) {
         return node == null || node.isNull() || node.isMissingNode();

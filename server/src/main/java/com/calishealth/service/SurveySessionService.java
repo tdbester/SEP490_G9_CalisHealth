@@ -1,11 +1,13 @@
 package com.calishealth.service;
 
 import com.calishealth.dtos.SurveyDtos.AnswerItem;
+import com.calishealth.dtos.SurveyDtos.LevelAssessment;
 import com.calishealth.dtos.SurveyDtos.SaveAnswersRequest;
 import com.calishealth.dtos.SurveyDtos.SessionQuestionResponse;
 import com.calishealth.dtos.SurveyDtos.SessionResponse;
 import com.calishealth.dtos.SurveyDtos.SessionStepResponse;
 import com.calishealth.dtos.SurveyDtos.SessionSummaryResponse;
+import com.calishealth.dtos.SurveyDtos.SurveyResultResponse;
 import com.calishealth.exception.SurveyException;
 import com.calishealth.exception.SurveyException.ErrorItem;
 import com.calishealth.models.AssessmentAnswer;
@@ -22,6 +24,7 @@ import com.calishealth.service.survey.definition.QuestionDefinition;
 import com.calishealth.service.survey.definition.StepDefinition;
 import com.calishealth.service.survey.definition.StepQuestion;
 import com.calishealth.service.survey.definition.SurveyDefinition;
+import com.calishealth.service.survey.level.LevelAssessmentService;
 import com.calishealth.service.survey.questiontype.AnswerCheck;
 import com.calishealth.service.survey.questiontype.QuestionTypeHandler;
 import com.calishealth.service.survey.questiontype.QuestionTypeRegistry;
@@ -57,7 +60,6 @@ public class SurveySessionService {
     private final SurveyService surveys;
     private final SurveyDefinitionLoader loader;
     private final QuestionTypeRegistry registry;
-    private final LevelBenchmarkService levelBenchmarks;
 
     public record StartResult(SessionResponse session, boolean created) {}
 
@@ -215,7 +217,7 @@ public class SurveySessionService {
     /**
      * Hoàn thành: mọi câu bắt buộc đang áp dụng phải có câu trả lời hợp lệ (kiểm tra lại theo cấu hình),
      * và không còn câu trả lời cho câu hỏi đã hết áp dụng (frontend phải gửi null để xóa).
-     * Không tính level / không sinh giáo án.
+     * Hoàn thành xong thì chấm level theo bộ luật (LevelAssessmentService) trong cùng transaction.
      */
     @Transactional
     public SessionResponse complete(String email, Long sessionId) {
@@ -260,20 +262,8 @@ public class SurveySessionService {
         session.setStatus(SurveySession.Status.COMPLETED);
         session.setCompletedAt(now);
         session.setUpdatedAt(now);
+        levels.assess(session, definition, values);
         return view(session, definition, values);
-    }
-
-    private void assignBenchmarkLevelIfPresent(SurveySession session, Map<String, JsonNode> values) {
-        boolean hasLevelTest = session.getSurvey().getSurveyCode().toUpperCase(java.util.Locale.ROOT).contains("ONBOARD");
-        if (!hasLevelTest) return;
-        // The benchmark exercises are configured by content (Exercises and thresholds); each one names the
-        // survey question that holds its reps / seconds answer, so no question code is hard-coded here.
-        Map<String, Integer> valuesBySlot = new HashMap<>();
-        for (String slot : levelBenchmarks.benchmarkSlots()) {
-            JsonNode value = values.get(slot);
-            if (value != null && value.canConvertToInt()) valuesBySlot.put(slot, value.intValue());
-        }
-        levelBenchmarks.assignLevelFromOnboarding(session.getUser().getId(), valuesBySlot);
     }
 
     /** Bỏ qua: giữ nguyên câu trả lời đã lưu. */
