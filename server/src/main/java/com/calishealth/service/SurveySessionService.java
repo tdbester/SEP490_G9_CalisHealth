@@ -60,6 +60,8 @@ public class SurveySessionService {
     private final SurveyService surveys;
     private final SurveyDefinitionLoader loader;
     private final QuestionTypeRegistry registry;
+    private final LevelBenchmarkService levelBenchmarks;
+    private final LevelAssessmentService levels;
 
     public record StartResult(SessionResponse session, boolean created) {}
 
@@ -264,6 +266,41 @@ public class SurveySessionService {
         session.setUpdatedAt(now);
         levels.assess(session, definition, values);
         return view(session, definition, values);
+    }
+
+    private void assignBenchmarkLevelIfPresent(SurveySession session, Map<String, JsonNode> values) {
+        boolean hasLevelTest = session.getSurvey().getSurveyCode().toUpperCase(java.util.Locale.ROOT).contains("ONBOARD");
+        if (!hasLevelTest) return;
+        // The benchmark exercises are configured by content (Exercises and thresholds); each one names the
+        // survey question that holds its reps / seconds answer, so no question code is hard-coded here.
+        Map<String, Integer> valuesBySlot = new HashMap<>();
+        for (String slot : levelBenchmarks.benchmarkSlots()) {
+            JsonNode value = values.get(slot);
+            if (value != null && value.canConvertToInt()) valuesBySlot.put(slot, value.intValue());
+        }
+        levelBenchmarks.assignLevelFromOnboarding(session.getUser().getId(), valuesBySlot);
+    }
+
+    /**
+     * Kết quả level + kế hoạch gợi ý của phiên đã hoàn thành. Phiên hoàn thành trước khi có tính năng chấm level
+     * được chấm bù 1 lần (khóa dòng phiên để 2 request song song không cùng chấm).
+     */
+    @Transactional
+    public SurveyResultResponse result(String email, Long sessionId) {
+        User user = currentUser(email);
+        SurveySession session = owned(sessions.findWithSurveyById(sessionId), user);
+        if (session.getStatus() != SurveySession.Status.COMPLETED) {
+            throw SurveyException.conflict("SESSION_NOT_COMPLETED",
+                    "The survey must be completed before its result is available (current status: "
+                            + session.getStatus() + ")");
+        }
+        LevelAssessment assessment = levels.find(session).orElseGet(() -> {
+            SurveySession locked = owned(sessions.findByIdForUpdate(sessionId), user);
+            return levels.find(locked).orElseGet(() ->
+                    levels.assess(locked, loader.load(locked.getSurvey()), values(storedAnswers(locked))));
+        });
+        return new SurveyResultResponse(session.getId(), session.getSurvey().getSurveyCode(),
+                session.getSurveyVersion(), session.getCompletedAt(), assessment);
     }
 
     /** Bỏ qua: giữ nguyên câu trả lời đã lưu. */

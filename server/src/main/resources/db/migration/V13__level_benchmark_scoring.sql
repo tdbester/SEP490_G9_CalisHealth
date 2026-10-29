@@ -1,6 +1,6 @@
--- V8: Level benchmark scoring uses three exercise bands and a summed 3..9 score.
+-- V13: Level benchmark scoring uses three exercise bands and a summed 3..9 score.
 -- The guarded drops make this migration recoverable if a previous run stopped after
--- MySQL committed an ALTER TABLE before Flyway recorded V8 as successful.
+-- MySQL committed an ALTER TABLE before Flyway recorded V13 as successful.
 SET @drop_old_range_check = (
     SELECT IF(COUNT(*) > 0,
         'ALTER TABLE benchmark_criteria DROP CHECK ck_benchmark_criteria_range',
