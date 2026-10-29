@@ -29,7 +29,7 @@ public class DashboardService {
     private ArrayNode muscleGroups() {
         List<MuscleGroupRow> rows = jdbcTemplate.query(
                 """
-                SELECT mg.dashboard_code, mg.name, mg.icon_key, mg.tone,
+                SELECT mg.id AS muscle_group_id, mg.dashboard_code, mg.name, mg.icon_key, mg.tone,
                        COUNT(DISTINCT e.id) AS exercise_count
                 FROM muscle_groups mg
                 LEFT JOIN exercise_muscle_groups emg ON emg.muscle_group_id = mg.id
@@ -38,8 +38,15 @@ public class DashboardService {
                 ORDER BY mg.id
                 """,
                 (rs, rowNum) -> new MuscleGroupRow(
-                        rs.getString("dashboard_code"), rs.getString("name"),
-                        rs.getInt("exercise_count"), rs.getString("icon_key"), rs.getString("tone")
+                        // Nhóm cơ tạo mới từ Library (ExerciseService) chỉ có `name`,
+                        // nên dashboard_code/icon_key/tone có thể NULL -> fallback để
+                        // client luôn nhận id và icon hợp lệ.
+                        rs.getString("dashboard_code") != null ? rs.getString("dashboard_code")
+                                : String.valueOf(rs.getLong("muscle_group_id")),
+                        rs.getString("name"),
+                        rs.getInt("exercise_count"),
+                        rs.getString("icon_key") != null ? rs.getString("icon_key") : "fitness",
+                        rs.getString("tone") != null ? rs.getString("tone") : "purple"
                 )
         );
         ArrayNode result = jsonMapper.createArrayNode();

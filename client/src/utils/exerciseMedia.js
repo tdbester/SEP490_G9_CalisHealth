@@ -117,6 +117,13 @@ const EXERCISE_CODE_VIDEO_IDS = {
   "SK-004": "2z8JmcrW-As",
 };
 
+const FALLBACK_VIDEO_IDS_BY_GROUP = {
+  PUSH: "IODxDxX7oi4",
+  PULL: "eGo4IYlbE5g",
+  LEGS: "aclHkVaku9U",
+  CORE: "pSHjTRCQxIw",
+};
+
 function normalizeExerciseName(value) {
   return String(value || "")
     .trim()
@@ -199,7 +206,9 @@ export function getValidVideoUrl(exercise) {
     }
   }
 
-  return expectedVideoId ? `https://www.youtube.com/embed/${expectedVideoId}` : null;
+  const fallbackVideoId =
+    expectedVideoId || FALLBACK_VIDEO_IDS_BY_GROUP[getExerciseMovementGroup(exercise)];
+  return `https://www.youtube.com/embed/${fallbackVideoId}`;
 }
 
 export function getExerciseDemoVideoUrl(exercise) {

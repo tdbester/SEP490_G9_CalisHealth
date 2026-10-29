@@ -1,60 +1,68 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/client";
+import AuthLogo from "../components/AuthLogo";
 import "./Login.css";
+
+const REDIRECT_SECONDS = 8;
 
 export default function VerifyEmail() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const [status, setStatus] = useState("verifying"); // verifying | success | error
+  const token = params.get("token") || "";
+  const [status, setStatus] = useState("verifying");
   const [message, setMessage] = useState("");
+  const [seconds, setSeconds] = useState(REDIRECT_SECONDS);
+
+  // The token is single-use, so guard against React StrictMode running the effect twice
+  // (the second POST would fail and wrongly show an error).
+  const startedRef = useRef(false);
 
   useEffect(() => {
-    const token = params.get("token");
     if (!token) {
       setStatus("error");
-      setMessage("The verification token is missing.");
+      setMessage("The verification link is invalid or missing a verification code.");
       return;
     }
-    api.get(`/auth/verify?token=${encodeURIComponent(token)}`)
+    if (startedRef.current) return;
+    startedRef.current = true;
+
+    api.post(`/auth/verify?token=${encodeURIComponent(token)}`)
       .then((res) => {
         setStatus("success");
         setMessage(res.data?.message || "Email verified successfully!");
+        setSeconds(REDIRECT_SECONDS);
       })
       .catch((err) => {
         setStatus("error");
-        setMessage(err.response?.data?.message || err.response?.data?.detail || "The link is invalid or has expired.");
+        setMessage(err.response?.data?.message || "Unable to verify email. Please try again.");
+        setSeconds(REDIRECT_SECONDS);
       });
-  }, [params]);
+  }, [token]);
+
+  useEffect(() => {
+    if (status === "verifying") return undefined;
+    if (seconds <= 0) {
+      navigate("/login", { replace: true });
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setSeconds((value) => value - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [status, seconds, navigate]);
 
   return (
     <div className="login">
       <div className="login-card">
-        <div className="login-logo">
-          <span className="login-logo-text">Calis</span>
-          <span className="logo-gradient-text">Health</span>
-        </div>
+        <AuthLogo />
         <h1 className="login-title">
-          {status === "verifying" ? "Verifying..." : status === "success" ? "Success!" : "Failed"}
+          {status === "verifying" ? "Verifying..." : status === "success" ? "Verification successful" : "Verification failed"}
         </h1>
-
         <div className="login-form">
           {status === "verifying" && <div className="login-success">Verifying your email, please wait...</div>}
-          {status === "success" && (
-            <>
-              <div className="login-success">{message}</div>
-              <button className="login-submit" onClick={() => navigate("/login")}>
-                <span className="login-submit-text">Sign in now</span>
-              </button>
-            </>
-          )}
-          {status === "error" && (
-            <>
-              <div className="login-error">{message}</div>
-              <button className="login-submit" onClick={() => navigate("/login")}>
-                <span className="login-submit-text">Back to login</span>
-              </button>
-            </>
+          {status === "success" && <div className="login-success">{message}</div>}
+          {status === "error" && <div className="login-error">{message}</div>}
+          {(status === "success" || status === "error") && (
+            <div className="login-redirect">Redirecting to the login page in {seconds} seconds.</div>
           )}
         </div>
       </div>

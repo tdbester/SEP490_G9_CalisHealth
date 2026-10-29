@@ -43,7 +43,7 @@ public final class ExerciseDtos {
             Integer duration
     ) {}
 
-    public record ExerciseStatusRequest(boolean active) {}
+    public record ExerciseStatusRequest(boolean active, String rejectionReason) {}
 
     public record ExerciseModerationHistoryResponse(
             Long id,
@@ -59,6 +59,7 @@ public final class ExerciseDtos {
             String anatomyImageUrl,
             String createdByName,
             String decision,
+            String rejectionReason,
             LocalDateTime reviewedAt
     ) {}
 

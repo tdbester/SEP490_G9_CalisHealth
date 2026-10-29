@@ -440,6 +440,13 @@ export default function ExerciseDetailPage() {
   const demoVideoUrl = getValidVideoUrl(exercise);
   const demoYouTubeEmbedUrl = getYouTubeEmbedUrl(demoVideoUrl);
   const demoSearchUrl = getExerciseDemoSearchUrl(exercise.name || exercise.title);
+  const isCustomExercise =
+    exercise.isSystem === false ||
+    String(exercise.isSystem).toLowerCase() === "false" ||
+    exercise.authorId != null;
+  const hasUploadedDemoVideo = Boolean(
+    exercise.videoUrl || exercise.demoVideoUrl || exercise.video_url,
+  );
 
   // Video player state
   const [videoDuration, setVideoDuration] = useState(null);
@@ -755,7 +762,7 @@ export default function ExerciseDetailPage() {
               ) : (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 p-6 text-center">
                   <p className="text-sm font-semibold text-slate-200">
-                    {exercise.isSystem === true ? "Demo video is not available yet" : "Demo video for custom exercise"}
+                    Demo video is unavailable. Try searching YouTube for this exercise.
                   </p>
                   <a
                     href={demoSearchUrl}
@@ -909,6 +916,11 @@ export default function ExerciseDetailPage() {
               </div>
               )}
             </div>
+            {(isMemberExercise || isCustomExercise) && !hasUploadedDemoVideo && (
+              <p className="mt-2 text-xs text-slate-400">
+                Demo video for custom exercise: showing a sample while no video has been uploaded.
+              </p>
+            )}
           </section>
 
           <section className="rounded-2xl border border-[#382b68] bg-[#171133] p-5 mt-4 shadow-xl">

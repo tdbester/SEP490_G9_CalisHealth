@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import {
-  Alert, Box, Button, Card, CircularProgress, Dialog, DialogActions, DialogContent,
+  Alert, Avatar, Box, Button, Card, CircularProgress, Dialog, DialogActions, DialogContent,
   DialogContentText, DialogTitle, InputAdornment, MenuItem, Snackbar, Stack, Table,
   TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField,
   Tooltip, Typography,
@@ -11,9 +11,26 @@ import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import { contentManagerApi } from "../api/contentManager";
 import { useApiMutation, useApiQuery } from "../hooks";
-import { CONTENT_PATHS, ContentPageHeader, SummaryCard } from "../components/ContentShared";
+import { CONTENT_PATHS, ContentPageHeader, DarkPill, SummaryCard } from "../components/ContentShared";
 import ContentDataCard, { DbSourceNote, EmptyState, HEAD_ROW_SX } from "../components/ContentDataCard";
 import { CM } from "../theme-content";
+
+function initials(value) {
+  return String(value || "Unknown").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
+}
+
+function levelTone(level) {
+  const normalized = String(level || "").toLowerCase();
+  return normalized === "beginner" ? "success" : normalized === "advanced" ? "danger" : "warning";
+}
+
+function FitnessIconSmall() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+      <path d="M3 9v6m3-9v12m12-12v12m3-9v6M6 12h12" />
+    </svg>
+  );
+}
 
 function relativeAge(value) {
   if (!value) return "—";
@@ -38,6 +55,7 @@ export default function PendingModerationPage() {
   const [undoNotice, setUndoNotice] = useState(null);
   const [hiddenCodes, setHiddenCodes] = useState(() => new Set());
   const [successNotice, setSuccessNotice] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
   const rejectTimer = useRef(null);
 
   useEffect(() => () => clearTimeout(rejectTimer.current), []);
@@ -61,7 +79,7 @@ export default function PendingModerationPage() {
       if (seconds > 0) rejectTimer.current = setTimeout(tick, 250);
       else {
         setUndoNotice(null);
-        reject.mutate(routedReject.code);
+        reject.mutate({ code: routedReject.code, reason: routedReject.rejectionReason });
       }
     };
     rejectTimer.current = setTimeout(tick, 250);
@@ -71,7 +89,7 @@ export default function PendingModerationPage() {
     onSuccess: () => { setBusyCode(null); query.refetch(); historyQuery.refetch(); },
     onError: () => setBusyCode(null),
   });
-  const reject = useApiMutation((code) => contentManagerApi.updateExerciseStatus(code, false), {
+  const reject = useApiMutation(({ code, reason }) => contentManagerApi.updateExerciseStatus(code, false, reason), {
     onSuccess: () => { setBusyCode(null); query.refetch(); historyQuery.refetch(); },
     onError: (_, code) => {
       setBusyCode(null);
@@ -103,19 +121,24 @@ export default function PendingModerationPage() {
 
   const resetPage = (setter) => (event) => { setter(event.target.value); setPage(0); };
   const handleApprove = (row) => setConfirmAction({ type: "approve", row });
-  const handleReject = (row) => setConfirmAction({ type: "reject", row });
+  const handleReject = (row) => {
+    setRejectionReason("");
+    setConfirmAction({ type: "reject", row });
+  };
   const closeConfirm = () => setConfirmAction(null);
   const confirmModerationAction = () => {
     const action = confirmAction;
+    if (action?.type === "reject" && !rejectionReason.trim()) return;
     closeConfirm();
     if (!action) return;
-    setBusyCode(action.row.code);
-    if (action.type === "approve") {
-      approve.mutate({ code: action.row.code });
+    const actionWithReason = action.type === "reject" ? { ...action, reason: rejectionReason.trim() } : action;
+    setBusyCode(actionWithReason.row.code);
+    if (actionWithReason.type === "approve") {
+      approve.mutate({ code: actionWithReason.row.code });
       return;
     }
-    setHiddenCodes((current) => new Set(current).add(action.row.code));
-    setUndoNotice({ row: action.row, seconds: 10 });
+    setHiddenCodes((current) => new Set(current).add(actionWithReason.row.code));
+    setUndoNotice({ row: actionWithReason.row, seconds: 10, rejectionReason: actionWithReason.reason });
     const startedAt = Date.now();
     const tick = () => {
       const seconds = Math.max(0, 10 - Math.floor((Date.now() - startedAt) / 1000));
@@ -123,7 +146,7 @@ export default function PendingModerationPage() {
       if (seconds > 0) rejectTimer.current = setTimeout(tick, 250);
       else {
         setUndoNotice(null);
-        reject.mutate(action.row.code, {
+        reject.mutate({ code: actionWithReason.row.code, reason: actionWithReason.reason }, {
           onError: () => setHiddenCodes((current) => {
             const next = new Set(current);
             next.delete(action.row.code);
@@ -204,10 +227,10 @@ export default function PendingModerationPage() {
                 <TableBody>{visibleRows.map((row) => {
                   return (
                     <TableRow key={row.code} hover>
-                      <TableCell><Typography variant="body2" fontWeight={600} sx={{ color: "#fff" }}>{row.name}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>{row.code}</Typography></TableCell>
-                      <TableCell><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.createdByName || "Unknown"}</Typography></TableCell>
+                      <TableCell><Stack direction="row" spacing={1.25} alignItems="center"><Box sx={{ width: 32, height: 32, borderRadius: 1.5, display: "grid", placeItems: "center", flexShrink: 0, bgcolor: "rgba(168,155,208,0.14)", color: CM.textMuted }}><FitnessIconSmall /></Box><Box sx={{ minWidth: 0 }}><Typography variant="body2" fontWeight={600} sx={{ color: "#fff" }}>{row.name}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>{row.code}</Typography></Box></Stack></TableCell>
+                      <TableCell><Stack direction="row" spacing={1} alignItems="center"><Avatar sx={{ width: 28, height: 28, fontSize: 11, fontWeight: 700, bgcolor: "rgba(65,201,173,0.2)", color: "#8dd8c5" }}>{initials(row.createdByName)}</Avatar><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.createdByName || "Unknown"}</Typography></Stack></TableCell>
                       <TableCell><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.muscleGroup || "—"}</Typography></TableCell>
-                      <TableCell><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.level || "—"}</Typography></TableCell>
+                      <TableCell><DarkPill tone={levelTone(row.level)}>{row.level || "—"}</DarkPill></TableCell>
                       <TableCell sx={{ whiteSpace: "nowrap" }}><Typography variant="caption" sx={{ color: CM.textDim }}>{relativeAge(row.submittedAt)}</Typography></TableCell>
                       <TableCell align="center"><Stack direction="row" spacing={0.75} justifyContent="center" alignItems="center">
                         <Button size="small" variant="outlined" component={RouterLink} to={`${CONTENT_PATHS.exercises}/moderation/${encodeURIComponent(row.code)}`} sx={{ py: 0.25, px: 1.25, fontSize: 11.5, minWidth: 0 }}>Review</Button>
@@ -231,8 +254,24 @@ export default function PendingModerationPage() {
           <DialogContentText>
             {confirmAction?.type === "approve"
               ? `Approve “${confirmAction?.row.name}” and add it to the active exercise list?`
-              : `Reject “${confirmAction?.row.name}”? You will have 10 seconds to undo before its status is changed to rejected.`}
+              : `Reject “${confirmAction?.row.name}”? Please provide the reason. You will have 10 seconds to undo before its status is changed to rejected.`}
           </DialogContentText>
+          {confirmAction?.type === "reject" && (
+            <TextField
+              autoFocus
+              required
+              fullWidth
+              multiline
+              minRows={3}
+              margin="dense"
+              label="Rejection reason"
+              placeholder="Explain why this exercise is rejected"
+              value={rejectionReason}
+              onChange={(event) => setRejectionReason(event.target.value)}
+              error={!rejectionReason.trim()}
+              helperText={!rejectionReason.trim() ? "A rejection reason is required." : ""}
+            />
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={closeConfirm}>Cancel</Button>

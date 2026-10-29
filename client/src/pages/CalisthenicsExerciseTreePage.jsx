@@ -1135,7 +1135,7 @@ export default function CalisthenicsExerciseTreePage() {
 
             {/* Exercise Nodes */}
             {visibleNodes.map((node) => {
-              const isSelected = selectedExercise?.id === node.id;
+              const isSelected = String(selectedExercise?.id) === String(node.id);
 
               const isMastered = node.state === "mastered";
               const isCurrent = node.state === "current";

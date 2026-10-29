@@ -23,8 +23,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: your_email@gmail.com
-    password: APP_PASSWORD_16_KY_TU
+    username: duongnthe180584@fpt.edu.vn
+    password: opta dpyv jwkq ijox
     properties:
       mail:
         smtp:

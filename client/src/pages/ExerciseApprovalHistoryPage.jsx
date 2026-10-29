@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import {
-  Box, Button, Card, InputAdornment, MenuItem, Stack, Tab, Tabs, Table,
+  Avatar, Box, Button, Card, InputAdornment, MenuItem, Stack, Tab, Tabs, Table,
   TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow,
   TextField, Typography,
 } from "@mui/material";
@@ -13,6 +13,18 @@ import { CONTENT_PATHS, ContentPageHeader, DarkPill, formatDateTime, SummaryCard
 import ContentDataCard, { DbSourceNote, EmptyState, HEAD_ROW_SX } from "../components/ContentDataCard";
 import { CM } from "../theme-content";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+
+function initials(value) {
+  return String(value || "Unknown").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
+}
+
+function FitnessIconSmall() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+      <path d="M3 9v6m3-9v12m12-12v12m3-9v6M6 12h12" />
+    </svg>
+  );
+}
 
 const dateFilterSx = {
   "& .MuiInputLabel-root": { color: "#c5cbd5" },
@@ -116,8 +128,8 @@ export default function ExerciseApprovalHistoryPage() {
                   </TableRow></TableHead>
                   <TableBody>{visibleRows.map((row) => (
                     <TableRow key={row.id} hover>
-                      <TableCell><Typography variant="body2" fontWeight={600} sx={{ color: "#fff" }}>{row.name}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>{row.code}</Typography></TableCell>
-                      <TableCell><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.createdByName || "Unknown"}</Typography></TableCell>
+                      <TableCell><Stack direction="row" spacing={1.25} alignItems="center"><Box sx={{ width: 32, height: 32, borderRadius: 1.5, display: "grid", placeItems: "center", flexShrink: 0, bgcolor: "rgba(168,155,208,0.14)", color: CM.textMuted }}><FitnessIconSmall /></Box><Box sx={{ minWidth: 0 }}><Typography variant="body2" fontWeight={600} sx={{ color: "#fff" }}>{row.name}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>{row.code}</Typography></Box></Stack></TableCell>
+                      <TableCell><Stack direction="row" spacing={1} alignItems="center"><Avatar sx={{ width: 28, height: 28, fontSize: 11, fontWeight: 700, bgcolor: "rgba(65,201,173,0.2)", color: "#8dd8c5" }}>{initials(row.createdByName)}</Avatar><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.createdByName || "Unknown"}</Typography></Stack></TableCell>
                       <TableCell><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.muscleGroup || "—"}</Typography></TableCell>
                       <TableCell>
                         <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${getLevelBadgeStyle(row.level)}`}>

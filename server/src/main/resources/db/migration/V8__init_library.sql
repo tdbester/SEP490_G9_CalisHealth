@@ -1,4 +1,4 @@
--- V5: Init Library & Exercise schema for CalisHealth
+-- V8: Init Library & Exercise schema for CalisHealth
 -- Hỗ trợ chức năng Library & Exercise cho Member và Content Manager
 -- Chiến lược cuốn gói: Kế thừa V1 (users, auth_tokens), tạo các bảng phục vụ bài tập, nhóm cơ, video và kế hoạch tập.
 
@@ -17,15 +17,15 @@ CREATE TABLE IF NOT EXISTS muscle_groups (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS media_files (
     id               BIGINT NOT NULL AUTO_INCREMENT,
-    uploader_id      BIGINT NOT NULL,
+    uploader_id      BIGINT DEFAULT NULL,
     file_url         VARCHAR(255) NOT NULL,
     file_type        VARCHAR(50) DEFAULT NULL,
-    format           VARCHAR(10) DEFAULT NULL,
-    size_mb          DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+    format           VARCHAR(50) DEFAULT NULL,
+    size_mb          DECIMAL(10,2) DEFAULT NULL,
     duration_seconds INT DEFAULT NULL,
-    purpose          VARCHAR(50) DEFAULT NULL,
-    status           VARCHAR(50) NOT NULL DEFAULT 'PENDING_SCAN',
-    uploaded_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    purpose          VARCHAR(100) DEFAULT NULL,
+    status           VARCHAR(50) DEFAULT NULL,
+    uploaded_at      DATETIME(6) DEFAULT NULL,
     deleted_at       DATETIME DEFAULT NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uk_media_files_url (file_url),
@@ -33,6 +33,61 @@ CREATE TABLE IF NOT EXISTS media_files (
     KEY idx_media_files_status (status, uploaded_at),
     CONSTRAINT fk_media_files_uploader FOREIGN KEY (uploader_id) REFERENCES users (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- V3 used uploaded_by; keep existing rows and expose the Entity's uploader_id.
+SET @has_media_uploader_id := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'media_files'
+      AND COLUMN_NAME = 'uploader_id'
+);
+SET @sql := IF(@has_media_uploader_id = 0,
+    'ALTER TABLE media_files ADD COLUMN uploader_id BIGINT NULL',
+    'DO 0');
+PREPARE add_media_uploader_id FROM @sql;
+EXECUTE add_media_uploader_id;
+DEALLOCATE PREPARE add_media_uploader_id;
+
+ALTER TABLE media_files MODIFY COLUMN uploader_id BIGINT NULL;
+
+SET @has_media_uploaded_by := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'media_files'
+      AND COLUMN_NAME = 'uploaded_by'
+);
+SET @sql := IF(@has_media_uploaded_by > 0,
+    'UPDATE media_files SET uploader_id = uploaded_by WHERE uploader_id IS NULL',
+    'DO 0');
+PREPARE copy_media_uploader FROM @sql;
+EXECUTE copy_media_uploader;
+DEALLOCATE PREPARE copy_media_uploader;
+
+SET @has_media_uploader_index := (
+    SELECT COUNT(*) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'media_files'
+      AND INDEX_NAME = 'idx_media_files_uploader'
+);
+SET @sql := IF(@has_media_uploader_index = 0,
+    'CREATE INDEX idx_media_files_uploader ON media_files (uploader_id)',
+    'DO 0');
+PREPARE add_media_uploader_index FROM @sql;
+EXECUTE add_media_uploader_index;
+DEALLOCATE PREPARE add_media_uploader_index;
+
+SET @has_media_uploader_fk := (
+    SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'media_files'
+      AND CONSTRAINT_NAME = 'fk_media_files_uploader'
+);
+SET @sql := IF(@has_media_uploader_fk = 0,
+    'ALTER TABLE media_files ADD CONSTRAINT fk_media_files_uploader FOREIGN KEY (uploader_id) REFERENCES users (id)',
+    'DO 0');
+PREPARE add_media_uploader_fk FROM @sql;
+EXECUTE add_media_uploader_fk;
+DEALLOCATE PREPARE add_media_uploader_fk;
 
 -- ============================================================
 -- 3. EXERCISES (ERD Exercise Model & Member-created Exercises)
@@ -106,6 +161,52 @@ SET @sql := IF(@exercise_columns IS NOT NULL,
 PREPARE add_library_exercise_columns FROM @sql;
 EXECUTE add_library_exercise_columns;
 DEALLOCATE PREPARE add_library_exercise_columns;
+
+-- Tables used by existing JPA entities/repositories.
+CREATE TABLE IF NOT EXISTS content_scans (
+    id                BIGINT NOT NULL AUTO_INCREMENT,
+    scan_type         VARCHAR(60) DEFAULT NULL,
+    status            VARCHAR(40) DEFAULT NULL,
+    score             DECIMAL(7,3) DEFAULT NULL,
+    flagged_terms     TEXT DEFAULT NULL,
+    details           TEXT DEFAULT NULL,
+    scanned_at        DATETIME(6) NOT NULL,
+    content_review_id BIGINT NOT NULL,
+    media_file_id     BIGINT DEFAULT NULL,
+    PRIMARY KEY (id),
+    KEY idx_content_scans_media_file (media_file_id),
+    CONSTRAINT fk_content_scans_media_file FOREIGN KEY (media_file_id)
+        REFERENCES media_files (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS exercise_variations (
+    id                  BIGINT NOT NULL AUTO_INCREMENT,
+    type                VARCHAR(60) DEFAULT NULL,
+    exercise_id         BIGINT NOT NULL,
+    variant_exercise_id BIGINT NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_exercise_variations_exercise (exercise_id),
+    KEY idx_exercise_variations_variant (variant_exercise_id),
+    CONSTRAINT fk_exercise_variations_exercise FOREIGN KEY (exercise_id)
+        REFERENCES exercises (id),
+    CONSTRAINT fk_exercise_variations_variant FOREIGN KEY (variant_exercise_id)
+        REFERENCES exercises (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS plan_exercises (
+    id               BIGINT NOT NULL AUTO_INCREMENT,
+    `sequence`       INT NOT NULL,
+    sets             INT NOT NULL,
+    reps             INT NOT NULL,
+    rest_seconds     INT NOT NULL,
+    training_plan_id BIGINT NOT NULL,
+    exercise_id      BIGINT NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_plan_exercises_training_plan (training_plan_id),
+    KEY idx_plan_exercises_exercise (exercise_id),
+    CONSTRAINT fk_plan_exercises_exercise FOREIGN KEY (exercise_id)
+        REFERENCES exercises (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET @exercise_indexes := (
     SELECT GROUP_CONCAT(statement ORDER BY position SEPARATOR ', ')
@@ -1126,8 +1227,10 @@ SET video_url = CASE
             OR LOWER(name) LIKE '%pseudo planche%'
             THEN 'https://www.youtube.com/embed/sposDXIE0zc'
         WHEN LOWER(name) LIKE '%front lever%' OR LOWER(name) LIKE '%muscle-up%'
-            OR LOWER(name) LIKE '%muscle up%' OR LOWER(name) LIKE '%wall handstand hold%'
-            THEN NULL
+            OR LOWER(name) LIKE '%muscle up%' OR LOWER(name) LIKE '%pulling skill%'
+            THEN 'https://www.youtube.com/embed/eGo4IYlbE5g'
+        WHEN LOWER(name) LIKE '%wall handstand%'
+            THEN 'https://www.youtube.com/embed/sposDXIE0zc'
         WHEN code IN ('EX-005', 'EX-017', 'EX-018', 'SK-004')
             OR LOWER(name) LIKE '%dip%'
             THEN 'https://www.youtube.com/embed/2z8JmcrW-As'
@@ -1151,19 +1254,19 @@ SET video_url = CASE
         WHEN code IN ('EX-001', 'EX-003', 'EX-004')
             OR LOWER(name) LIKE '%push-up%' OR LOWER(name) LIKE '%push up%'
             THEN 'https://www.youtube.com/embed/IODxDxX7oi4'
-        WHEN LOWER(video_url) LIKE '%iodxdxx7oi4%'
-            OR LOWER(video_url) LIKE '%j0dng1_s92i%'
-            OR LOWER(video_url) LIKE '%3wjs1e2v930%'
-            OR LOWER(video_url) LIKE '%sposdxie0zc%'
-            OR LOWER(video_url) LIKE '%2z8jmcrw-as%'
-            OR LOWER(video_url) LIKE '%ego4iylbe5g%'
-            OR LOWER(video_url) LIKE '%g2b13p6pan8%'
-            OR LOWER(video_url) LIKE '%aclhkvaku9u%'
-            OR LOWER(video_url) LIKE '%pshjtrcqxiw%'
-            THEN NULL
-        ELSE NULLIF(TRIM(video_url), '')
+        WHEN TRIM(COALESCE(video_url, '')) REGEXP '^https://www\\.youtube\\.com/embed/[^[:space:]]+$'
+            THEN TRIM(video_url)
+        WHEN movement_group = 'PULL' OR LOWER(muscle_group) LIKE '%back%'
+            THEN 'https://www.youtube.com/embed/eGo4IYlbE5g'
+        WHEN movement_group = 'LEGS' OR LOWER(muscle_group) LIKE '%leg%'
+            OR LOWER(muscle_group) LIKE '%glute%'
+            THEN 'https://www.youtube.com/embed/aclHkVaku9U'
+        WHEN movement_group = 'CORE' OR LOWER(muscle_group) LIKE '%core%'
+            OR LOWER(muscle_group) LIKE '%ab%'
+            THEN 'https://www.youtube.com/embed/pSHjTRCQxIw'
+        ELSE 'https://www.youtube.com/embed/IODxDxX7oi4'
     END
-WHERE is_system = TRUE AND status = 'ACCEPTED';
+WHERE is_system = TRUE;
 
 -- Give any otherwise disconnected node a parent in the nearest easier level.
 INSERT IGNORE INTO exercise_tree_edges (parent_exercise_id, child_exercise_id)
