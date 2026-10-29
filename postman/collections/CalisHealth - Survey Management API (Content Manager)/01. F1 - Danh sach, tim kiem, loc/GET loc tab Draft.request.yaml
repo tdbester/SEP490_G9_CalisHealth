@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps?status=DRAFT"
+method: GET
+queryParams:
+  status: DRAFT
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('chi co buoc DRAFT', () => j.steps.forEach(s => pm.expect(s.status).to.eql('DRAFT')));
+      pm.test('so buoc = counts.draft', () => pm.expect(j.steps.length).to.eql(j.counts.draft));
+    language: text/javascript
+order: 4000

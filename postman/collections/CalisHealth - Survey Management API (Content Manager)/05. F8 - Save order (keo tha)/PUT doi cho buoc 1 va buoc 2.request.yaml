@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/order"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: "{{reorderBody}}"
+scripts:
+  - type: beforeRequest
+    code: |-
+      const ids = JSON.parse(pm.collectionVariables.get('currentStepIds'));
+      [ids[0], ids[1]] = [ids[1], ids[0]];
+      pm.collectionVariables.set('reorderBody', JSON.stringify({ stepIds: ids }));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      const expected = JSON.parse(pm.collectionVariables.get('reorderBody')).stepIds;
+      pm.test('thu tu moi dung nhu da gui', () => pm.expect(j.steps.map(s => s.id)).to.eql(expected));
+      pm.test('position duoc danh lai 1..n', () => j.steps.forEach((s, i) => pm.expect(s.position).to.eql(i + 1)));
+    language: text/javascript
+order: 2000

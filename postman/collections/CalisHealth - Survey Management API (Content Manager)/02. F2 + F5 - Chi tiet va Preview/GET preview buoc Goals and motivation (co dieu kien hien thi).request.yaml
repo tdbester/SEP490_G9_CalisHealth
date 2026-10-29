@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{goalsStepId}}/preview"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      const byCode = c => j.questions.find(q => q.questionCode === c);
+      pm.test('cung format voi API member (co options)', () => { pm.expect(byCode('GOAL_TYPE').options.map(o => o.optionCode)).to.eql(['HEALTH', 'SKILLS']); pm.expect(byCode('GOAL_TYPE').options[0]).to.have.keys('optionCode', 'label', 'value', 'sortOrder'); });
+      pm.test('HEALTH_GOAL co dieu kien GOAL_TYPE = HEALTH', () => pm.expect(byCode('HEALTH_GOAL').conditionalRules).to.eql({ operator: 'EQ', questionCode: 'GOAL_TYPE', value: 'HEALTH' }));
+      pm.test('MOTIVATIONS co validationRules', () => pm.expect(byCode('MOTIVATIONS').validationRules.maxSelections).to.eql(3));
+      pm.test('khong lo id noi bo cua cau hoi', () => j.questions.forEach(q => pm.expect(q).to.not.have.property('id')));
+      pm.test('"Step 2 of n": danh so tren cac buoc member thay', () => { pm.expect(j.memberStepNumber).to.eql(2); pm.expect(j.memberStepCount).to.be.at.least(4); pm.expect(j.visibleToMembers).to.eql(true); });
+    language: text/javascript
+order: 2000
