@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import api from "../api/client";
+import { markOnboardingPrompted, needsOnboarding } from "../api/survey";
 import "./Login.css";
 import AuthLogo from "../components/AuthLogo";
 import ImeNotice from "../components/ImeNotice";
@@ -117,6 +118,13 @@ export default function Login() {
           role: res.data.role,
         }),
       );
+      // Member chưa hoàn thành / chưa bỏ qua khảo sát onboarding -> vào survey trước,
+      // kể cả khi có returnTo (vd vào "/" lúc chưa đăng nhập bị chuyển sang /login?returnTo=/)
+      if (res.data.role === "MEMBER" && (await needsOnboarding())) {
+        markOnboardingPrompted();
+        navigate("/survey", { replace: true });
+        return;
+      }
       const returnTo = new URLSearchParams(location.search).get("returnTo");
       const isSafeReturnTo =
         returnTo?.startsWith("/") && !returnTo.startsWith("//") && returnTo !== "/login";

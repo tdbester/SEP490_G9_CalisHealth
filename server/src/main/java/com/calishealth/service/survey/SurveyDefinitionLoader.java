@@ -44,6 +44,34 @@ public class SurveyDefinitionLoader {
 
     public SurveyDefinition load(Survey survey) {
         List<String> problems = new ArrayList<>();
+        SurveyDefinition definition = build(survey, problems);
+        if (!problems.isEmpty()) {
+            log.error("Survey {} v{} has an invalid configuration:\n - {}", survey.getSurveyCode(),
+                    survey.getVersion(), String.join("\n - ", problems));
+            throw SurveyException.configInvalid();
+        }
+        return definition;
+    }
+
+    /**
+     * Lỗi cấu hình hiện tại của survey (rỗng = hợp lệ), không log và không ném lỗi.
+     * Dùng để kiểm tra 1 thay đổi của content manager trước khi commit.
+     */
+    public List<String> findProblems(Survey survey) {
+        List<String> problems = new ArrayList<>();
+        build(survey, problems);
+        return problems;
+    }
+
+    /**
+     * Cấu hình survey KHÔNG kiểm tra lỗi: dùng cho Preview của content manager, nơi cần xem/thử cả bước
+     * DRAFT hoặc survey đang có lỗi ở chỗ khác. Không bao giờ dùng cho luồng trả lời của member.
+     */
+    public SurveyDefinition loadUnvalidated(Survey survey) {
+        return build(survey, new ArrayList<>());
+    }
+
+    private SurveyDefinition build(Survey survey, List<String> problems) {
         List<SurveyStepQuestion> links = stepQuestions.findAllBySurveyId(survey.getId());
 
         Map<Long, List<OptionDefinition>> optionsByQuestion = links.isEmpty() ? Map.of()
@@ -59,7 +87,7 @@ public class SurveyDefinitionLoader {
             String where = "Question " + q.getQuestionCode();
             QuestionDefinition question = new QuestionDefinition(
                     q.getId(), q.getQuestionCode(), q.getQuestionText(), q.getDescription(), q.getQuestionType(),
-                    q.isRequired(),
+                    link.isEffectivelyRequired(),
                     json(q.getValidationRules(), where + " validation_rules", problems),
                     json(q.getDisplayConfig(), where + " display_config", problems),
                     q.getUnit(),
@@ -78,10 +106,17 @@ public class SurveyDefinitionLoader {
                     .add(new StepQuestion(question, link.getSortOrder(), link.isActive(), conditionJson, condition));
         }
 
+        // Bước RESULT không có câu hỏi và không thuộc luồng trả lời -> không đưa vào định nghĩa phiên
         List<StepDefinition> stepDefinitions = new ArrayList<>();
         for (SurveyStep step : steps.findBySurveyIdOrderBySortOrderAsc(survey.getId())) {
+            if (step.isResult()) {
+                if (questionsByStep.containsKey(step.getId())) {
+                    problems.add("Step " + step.getStepCode() + " is a RESULT step and must not contain questions");
+                }
+                continue;
+            }
             stepDefinitions.add(new StepDefinition(step.getStepCode(), step.getStepName(), step.getDescription(),
-                    step.getSortOrder(), step.getStatus() == ConfigStatus.ACTIVE,
+                    step.getSortOrder(), step.getStatus() == SurveyStep.Status.ACTIVE,
                     questionsByStep.getOrDefault(step.getId(), List.of())));
         }
 
@@ -89,11 +124,6 @@ public class SurveyDefinitionLoader {
                 survey.getSurveyName(), survey.getDescription(), survey.getVersion(), stepDefinitions);
         if (problems.isEmpty()) {
             problems.addAll(validator.validate(definition));
-        }
-        if (!problems.isEmpty()) {
-            log.error("Survey {} v{} has an invalid configuration:\n - {}", survey.getSurveyCode(),
-                    survey.getVersion(), String.join("\n - ", problems));
-            throw SurveyException.configInvalid();
         }
         return definition;
     }

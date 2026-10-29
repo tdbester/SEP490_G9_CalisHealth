@@ -1,0 +1,27 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{newStepId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "revision": {{newStepRevision}},
+      "stepName": "{{newStepName}} (edited)",
+      "description": "   ",
+      "status": "DRAFT",
+      "questions": []
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('revision tang 1', () => pm.expect(j.step.revision).to.eql(Number(pm.collectionVariables.get('newStepRevision')) + 1));
+      pm.collectionVariables.set('newStepRevision', j.step.revision);
+      pm.test('ten da doi', () => pm.expect(j.step.stepName).to.eql(pm.collectionVariables.get('newStepName') + ' (edited)'));
+      pm.test('mo ta trang -> null', () => pm.expect(j.step.description).to.be.null);
+      pm.test('stepCode khong doi', () => pm.expect(j.step.stepCode).to.match(/^MOBILITY_CHECK_\d+$/));
+    language: text/javascript
+order: 3000

@@ -1,111 +1,68 @@
-/* Sidebar.css — chỉ sidebar styles, --sidebar-width và --topbar-height ở Topbar.css */
+/* Sidebar.css — Matching Figma screenshot */
 
 .sidebar {
   position: fixed;
   top: var(--topbar-height);
   left: 0;
   width: var(--sidebar-width);
-  height: calc(100vh - var(--topbar-height));
-  min-height: 0;
+  min-height: calc(100vh - var(--topbar-height));
   background-color: var(--sidebar-bg);
   border-right: 1px solid var(--sidebar-border);
   z-index: 1200;
   display: flex;
   flex-direction: column;
+  padding-top: 12px;
 }
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+  padding: 0 10px;
 }
 
 .sidebar-nav-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
   cursor: pointer;
   color: var(--nav-text);
-  transition: color 0.15s ease;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
   text-decoration: none;
-  margin: 10px 12px 0;
-  border-radius: 9px;
 }
 
 .sidebar-nav-item:hover {
-  color: var(--nav-text-active);
+  color: #ffffff;
+  background-color: #171135;
 }
 
 .sidebar-nav-item.active {
-  color: var(--nav-text-active);
-  background: #251A40;
-  box-shadow: inset 0 0 0 1px #3B2A6B;
+  background-color: #2e1f68;
+  border-color: #5b3ce8;
+  color: #ffffff;
+}
+
+.sidebar-nav-item.active svg path,
+.sidebar-nav-item.active svg circle,
+.sidebar-nav-item.active svg polygon {
+  stroke: #c4b5fd;
+  fill: #c4b5fd;
 }
 
 .sidebar-nav-item svg {
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
   flex-shrink: 0;
 }
 
 .sidebar-nav-item span {
-  font-size: 13.6px;
-  font-weight: 400;
+  font-size: 13.5px;
+  font-weight: 500;
   line-height: 16px;
   white-space: nowrap;
-}
-
-@media (max-width: 1024px) and (min-width: 769px) {
-  :root {
-    --sidebar-width: 190px;
-  }
-
-  .sidebar-nav-item {
-    margin-right: 8px;
-    margin-left: 8px;
-    padding-right: 10px;
-    padding-left: 12px;
-  }
-
-  .sidebar-nav-item span {
-    font-size: 12px;
-  }
-}
-
-@media (max-width: 768px) {
-  .sidebar {
-    top: auto;
-    bottom: 0;
-    width: 100%;
-    height: 64px;
-    min-height: 64px;
-    border-top: 1px solid var(--sidebar-border);
-    border-right: 0;
-  }
-
-  .sidebar-nav {
-    height: 100%;
-    flex-direction: row;
-    justify-content: space-around;
-  }
-
-  .sidebar-nav-item {
-    flex: 1;
-    flex-direction: column;
-    justify-content: center;
-    gap: 3px;
-    margin: 4px;
-    padding: 4px 2px;
-  }
-
-  .sidebar-nav-item span {
-    max-width: 100%;
-    overflow: hidden;
-    font-size: 10px;
-    line-height: 13px;
-    text-overflow: ellipsis;
-  }
 }
 
 .sidebar-nav-item.active span {

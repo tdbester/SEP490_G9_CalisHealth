@@ -1,0 +1,5 @@
+$kind: collection
+description: ""
+variables:
+  - key: json_web_token_14zb
+    secret: true

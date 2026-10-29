@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/order"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "stepIds": []
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 400', () => pm.response.to.have.status(400));
+      pm.test('code = INVALID_REQUEST', () => pm.expect(pm.response.json().code).to.eql('INVALID_REQUEST'));
+    language: text/javascript
+order: 7000

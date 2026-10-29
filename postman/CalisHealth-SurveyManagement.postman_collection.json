@@ -1,0 +1,1008 @@
+{
+  "info": {
+    "name": "CalisHealth - Survey Management API (Content Manager)",
+    "description": "Kiem thu man Survey management (Content Manager): /api/content/surveys/{surveyCode}/steps.\n\nChuan bi:\n1. Chay backend (Flyway chay V1..V4).\n2. Chay server/docs/survey-management/seed_survey_management.sql (sua @cm_email truoc).\n3. Import collection nay + environment \"CalisHealth - Local\"; dien cmEmail / cmPassword (tai khoan Content Manager) va userEmail / userPassword (tai khoan member thuong).\n\nChay bang Collection Runner TU TREN XUONG. Collection tu don dep (buoc tao ra se bi xoa, thu tu va cau hinh Result duoc tra ve nhu seed) nen chay lai bao nhieu lan cung duoc.\n\nTai lieu chuc nang: server/docs/survey-management/SURVEY_MANAGEMENT_BE.md",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{cmToken}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "bodyStepId", "value": "" },
+    { "key": "goalsStepId", "value": "" },
+    { "key": "resultStepId", "value": "" },
+    { "key": "resultStepCode", "value": "" },
+    { "key": "newStepId", "value": "" },
+    { "key": "newStepName", "value": "" },
+    { "key": "newStepRevision", "value": "0" },
+    { "key": "bodyRevision", "value": "0" },
+    { "key": "bodyOriginal", "value": "" },
+    { "key": "editBody", "value": "" },
+    { "key": "expectedCodes", "value": "" },
+    { "key": "currentStepIds", "value": "" },
+    { "key": "reorderBody", "value": "" },
+    { "key": "fallbackLevelId", "value": "null" },
+    { "key": "longSearch", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "00. Setup - dang nhap",
+      "description": "Dang nhap Content Manager (cmToken) va 1 member thuong (token, dung de thu phan quyen va API member).",
+      "item": [
+        {
+          "name": "Login Content Manager",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{cmEmail}}\",\n  \"password\": \"{{cmPassword}}\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.test('co JWT', () => pm.expect(j.token).to.be.a('string').and.not.empty);",
+            "pm.environment.set('cmToken', j.token);"
+          ] } }]
+        },
+        {
+          "name": "Login member (khong phai Content Manager)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.test('co JWT', () => pm.expect(j.token).to.be.a('string').and.not.empty);",
+            "pm.environment.set('token', j.token);"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "01. F1 - Danh sach, tim kiem, loc",
+      "item": [
+        {
+          "name": "GET danh sach buoc (tab All)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.test('thong tin survey', () => { pm.expect(j.survey.surveyCode).to.eql(pm.environment.get('surveyCode')); pm.expect(j.survey.status).to.eql('ACTIVE'); });",
+            "pm.test('it nhat 5 buoc, buoc cuoi la RESULT', () => { pm.expect(j.steps.length).to.be.at.least(5); pm.expect(j.steps[j.steps.length - 1].stepType).to.eql('RESULT'); });",
+            "pm.test('counts.all = so buoc; tong 3 tab = all', () => { pm.expect(j.counts.all).to.eql(j.steps.length); pm.expect(j.counts.active + j.counts.draft + j.counts.inactive).to.eql(j.counts.all); });",
+            "pm.test('position lien tuc 1..n', () => j.steps.forEach((s, i) => pm.expect(s.position).to.eql(i + 1)));",
+            "const body = j.steps.find(s => s.stepCode === 'BODY_INFORMATION');",
+            "const goals = j.steps.find(s => s.stepCode === 'GOALS_AND_MOTIVATION');",
+            "const result = j.steps[j.steps.length - 1];",
+            "pm.test('Body information: 4 cau hoi NUMBER + SINGLE_SELECT', () => { pm.expect(body.questionCount).to.eql(4); pm.expect(body.questionTypes).to.have.members(['SINGLE_SELECT', 'NUMBER']); pm.expect(body.updatedAt).to.be.a('string'); });",
+            "pm.test('buoc RESULT khong co cau hoi', () => pm.expect(result.questionCount).to.eql(0));",
+            "pm.collectionVariables.set('bodyStepId', body.id);",
+            "pm.collectionVariables.set('goalsStepId', goals.id);",
+            "pm.collectionVariables.set('resultStepId', result.id);",
+            "pm.collectionVariables.set('resultStepCode', result.stepCode);"
+          ] } }]
+        },
+        {
+          "name": "GET tim kiem theo ten (search=GOAL, khong phan biet hoa thuong)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps?search=GOAL" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.test('chi con buoc Goals and motivation', () => { pm.expect(j.steps).to.have.lengthOf(1); pm.expect(j.steps[0].stepCode).to.eql('GOALS_AND_MOTIVATION'); });",
+            "pm.test('giu nguyen so STEP (position = 2)', () => pm.expect(j.steps[0].position).to.eql(2));",
+            "pm.test('counts tinh theo ket qua tim kiem', () => pm.expect(j.counts.all).to.eql(1));"
+          ] } }]
+        },
+        {
+          "name": "GET loc tab Active",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps?status=ACTIVE" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.test('chi co buoc ACTIVE', () => j.steps.forEach(s => pm.expect(s.status).to.eql('ACTIVE')));",
+            "pm.test('so buoc = counts.active; counts.all van la tong', () => { pm.expect(j.steps.length).to.eql(j.counts.active); pm.expect(j.counts.all).to.be.at.least(j.counts.active); });"
+          ] } }]
+        },
+        {
+          "name": "GET loc tab Draft",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps?status=DRAFT" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.test('chi co buoc DRAFT', () => j.steps.forEach(s => pm.expect(s.status).to.eql('DRAFT')));",
+            "pm.test('so buoc = counts.draft', () => pm.expect(j.steps.length).to.eql(j.counts.draft));"
+          ] } }]
+        },
+        {
+          "name": "NEG - status khong hop le",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps?status=PUBLISHED" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+            "pm.test('code = INVALID_REQUEST', () => pm.expect(pm.response.json().code).to.eql('INVALID_REQUEST'));"
+          ] } }]
+        },
+        {
+          "name": "NEG - search qua 100 ky tu",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps?search={{longSearch}}" },
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "pm.collectionVariables.set('longSearch', 'a'.repeat(101));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('code = INVALID_REQUEST', () => pm.expect(pm.response.json().code).to.eql('INVALID_REQUEST'));"
+            ] } }
+          ]
+        },
+        {
+          "name": "NEG - survey khong ton tai",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/NOT_A_SURVEY/steps" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+            "pm.test('code = SURVEY_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('SURVEY_NOT_FOUND'));"
+          ] } }]
+        },
+        {
+          "name": "NEG - version khong ton tai",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps?version=999" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+            "pm.test('code = SURVEY_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('SURVEY_NOT_FOUND'));"
+          ] } }]
+        },
+        {
+          "name": "NEG - member thuong (khong co quyen)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 403', () => pm.response.to.have.status(403));"
+          ] } }]
+        },
+        {
+          "name": "NEG - khong co token",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "02. F2 + F5 - Chi tiet va Preview",
+      "item": [
+        {
+          "name": "GET chi tiet buoc Body information",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.test('dung buoc', () => pm.expect(j.step.stepCode).to.eql('BODY_INFORMATION'));",
+            "pm.test('co danh sach cau hoi', () => { pm.expect(j.questions.map(q => q.questionCode)).to.include.members(['GENDER', 'AGE', 'HEIGHT', 'WEIGHT']); j.questions.forEach(q => pm.expect(q).to.have.keys('questionCode', 'questionText', 'questionType', 'required', 'sortOrder', 'active', 'conditionalRules')); });",
+            "pm.test('buoc QUESTIONS khong co resultConfig', () => pm.expect(j.resultConfig).to.be.null);"
+          ] } }]
+        },
+        {
+          "name": "GET preview buoc Goals and motivation (co dieu kien hien thi)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{goalsStepId}}/preview" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "const byCode = c => j.questions.find(q => q.questionCode === c);",
+            "pm.test('cung format voi API member (co options)', () => { pm.expect(byCode('GOAL_TYPE').options.map(o => o.optionCode)).to.eql(['HEALTH', 'SKILLS']); pm.expect(byCode('GOAL_TYPE').options[0]).to.have.keys('optionCode', 'label', 'value', 'sortOrder'); });",
+            "pm.test('HEALTH_GOAL co dieu kien GOAL_TYPE = HEALTH', () => pm.expect(byCode('HEALTH_GOAL').conditionalRules).to.eql({ operator: 'EQ', questionCode: 'GOAL_TYPE', value: 'HEALTH' }));",
+            "pm.test('MOTIVATIONS co validationRules', () => pm.expect(byCode('MOTIVATIONS').validationRules.maxSelections).to.eql(3));",
+            "pm.test('khong lo id noi bo cua cau hoi', () => j.questions.forEach(q => pm.expect(q).to.not.have.property('id')));",
+            "pm.test('\"Step 2 of n\": danh so tren cac buoc member thay', () => { pm.expect(j.memberStepNumber).to.eql(2); pm.expect(j.memberStepCount).to.be.at.least(4); pm.expect(j.visibleToMembers).to.eql(true); });"
+          ] } }]
+        },
+        {
+          "name": "GET preview buoc Result",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{resultStepId}}/preview" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.test('khong co cau hoi, co resultConfig', () => { pm.expect(j.questions).to.be.empty; pm.expect(j.resultConfig).to.have.property('planDurationWeeks'); });",
+            "pm.test('buoc Result khong danh so Step n of m', () => { pm.expect(j.memberStepNumber).to.be.null; pm.expect(j.memberStepCount).to.be.null; });"
+          ] } }]
+        },
+        {
+          "name": "Preview check (Continue) - Body information: sai va thieu",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}/preview/check",
+            "body": { "mode": "raw", "raw": "{\n  \"answers\": [\n    { \"questionCode\": \"AGE\", \"value\": 150 },\n    { \"questionCode\": \"HEIGHT\", \"value\": 172.55 },\n    { \"questionCode\": \"SHOE_SIZE\", \"value\": 42 }\n  ]\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200 (check khong phai luu)', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "const codeOf = q => (j.errors.find(e => e.questionCode === q) || {}).code;",
+            "pm.test('valid = false', () => pm.expect(j.valid).to.eql(false));",
+            "pm.test('AGE vuot khoang', () => pm.expect(codeOf('AGE')).to.eql('VALUE_OUT_OF_RANGE'));",
+            "pm.test('HEIGHT qua 1 chu so thap phan', () => pm.expect(codeOf('HEIGHT')).to.eql('TOO_MANY_DECIMALS'));",
+            "pm.test('SHOE_SIZE khong thuoc buoc', () => pm.expect(codeOf('SHOE_SIZE')).to.eql('QUESTION_NOT_IN_STEP'));",
+            "pm.test('GENDER, WEIGHT bat buoc ma chua tra loi', () => { pm.expect(codeOf('GENDER')).to.eql('MISSING_REQUIRED_ANSWER'); pm.expect(codeOf('WEIGHT')).to.eql('MISSING_REQUIRED_ANSWER'); });"
+          ] } }]
+        },
+        {
+          "name": "Preview check (Continue) - Body information: hop le",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}/preview/check",
+            "body": { "mode": "raw", "raw": "{\n  \"answers\": [\n    { \"questionCode\": \"GENDER\", \"value\": \"MALE\" },\n    { \"questionCode\": \"AGE\", \"value\": 22 },\n    { \"questionCode\": \"HEIGHT\", \"value\": 170 },\n    { \"questionCode\": \"WEIGHT\", \"value\": 65 }\n  ]\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.test('valid = true, khong co loi', () => { pm.expect(j.valid).to.eql(true); pm.expect(j.errors).to.be.empty; });"
+          ] } }]
+        },
+        {
+          "name": "Preview check (Continue) - Goals: dieu kien hien thi",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{goalsStepId}}/preview/check",
+            "body": { "mode": "raw", "raw": "{\n  \"answers\": [\n    { \"questionCode\": \"GOAL_TYPE\", \"value\": \"HEALTH\" },\n    { \"questionCode\": \"TRAINING_SKILLS\", \"value\": [\"HANDSTAND\"] },\n    { \"questionCode\": \"MOTIVATIONS\", \"value\": [\"ENERGY\"] }\n  ]\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "const codeOf = q => (j.errors.find(e => e.questionCode === q) || {}).code;",
+            "pm.test('TRAINING_SKILLS bi an khi GOAL_TYPE = HEALTH', () => pm.expect(codeOf('TRAINING_SKILLS')).to.eql('QUESTION_NOT_APPLICABLE'));",
+            "pm.test('HEALTH_GOAL hien ra va bat buoc', () => pm.expect(codeOf('HEALTH_GOAL')).to.eql('MISSING_REQUIRED_ANSWER'));"
+          ] } }]
+        },
+        {
+          "name": "NEG - Preview check tren buoc Result",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{resultStepId}}/preview/check",
+            "body": { "mode": "raw", "raw": "{\n  \"answers\": []\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+            "pm.test('code = NOT_A_QUESTION_STEP', () => pm.expect(pm.response.json().code).to.eql('NOT_A_QUESTION_STEP'));"
+          ] } }]
+        },
+        {
+          "name": "NEG - buoc khong ton tai",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/999999999" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+            "pm.test('code = STEP_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('STEP_NOT_FOUND'));"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "03. F3 + F4 - Create step va Edit",
+      "item": [
+        {
+          "name": "POST tao buoc moi (tu sinh stepCode)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps",
+            "body": { "mode": "raw", "raw": "{\n  \"stepName\": \"{{newStepName}}\",\n  \"description\": \"Check joint mobility before training.\"\n}" }
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "// ten duy nhat moi lan chay de collection chay lai duoc",
+              "pm.collectionVariables.set('newStepName', 'Mobility check ' + Date.now());"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('stepCode sinh tu ten', () => pm.expect(j.step.stepCode).to.match(/^MOBILITY_CHECK_\\d+$/));",
+              "pm.test('buoc moi o DRAFT, loai QUESTIONS, chua co cau hoi', () => { pm.expect(j.step.status).to.eql('DRAFT'); pm.expect(j.step.stepType).to.eql('QUESTIONS'); pm.expect(j.questions).to.be.empty; });",
+              "pm.test('co revision (gui lai khi Save changes)', () => pm.expect(j.step.revision).to.be.a('number'));",
+              "pm.collectionVariables.set('newStepId', j.step.id);",
+              "pm.collectionVariables.set('newStepRevision', j.step.revision);"
+            ] } }
+          ]
+        },
+        {
+          "name": "GET kiem tra buoc moi nam ngay truoc Result",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const steps = pm.response.json().steps;",
+            "const newId = Number(pm.collectionVariables.get('newStepId'));",
+            "pm.test('buoc moi dung ngay truoc buoc RESULT', () => { pm.expect(steps[steps.length - 1].stepType).to.eql('RESULT'); pm.expect(steps[steps.length - 2].id).to.eql(newId); });",
+            "pm.test('counts.draft >= 1', () => pm.expect(pm.response.json().counts.draft).to.be.at.least(1));"
+          ] } }]
+        },
+        {
+          "name": "PUT sua ten va mo ta buoc moi",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{newStepId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"revision\": {{newStepRevision}},\n  \"stepName\": \"{{newStepName}} (edited)\",\n  \"description\": \"   \",\n  \"status\": \"DRAFT\",\n  \"questions\": []\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.test('revision tang 1', () => pm.expect(j.step.revision).to.eql(Number(pm.collectionVariables.get('newStepRevision')) + 1));",
+            "pm.collectionVariables.set('newStepRevision', j.step.revision);",
+            "pm.test('ten da doi', () => pm.expect(j.step.stepName).to.eql(pm.collectionVariables.get('newStepName') + ' (edited)'));",
+            "pm.test('mo ta trang -> null', () => pm.expect(j.step.description).to.be.null);",
+            "pm.test('stepCode khong doi', () => pm.expect(j.step.stepCode).to.match(/^MOBILITY_CHECK_\\d+$/));"
+          ] } }]
+        },
+        {
+          "name": "NEG - tao trung ten (khong phan biet hoa thuong)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps",
+            "body": { "mode": "raw", "raw": "{\n  \"stepName\": \"  body INFORMATION \"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+            "pm.test('code = STEP_NAME_EXISTS', () => pm.expect(pm.response.json().code).to.eql('STEP_NAME_EXISTS'));"
+          ] } }]
+        },
+        {
+          "name": "NEG - tao trung stepCode",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps",
+            "body": { "mode": "raw", "raw": "{\n  \"stepName\": \"Another step {{$timestamp}}\",\n  \"stepCode\": \"LEVEL_TEST\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+            "pm.test('code = STEP_CODE_EXISTS', () => pm.expect(pm.response.json().code).to.eql('STEP_CODE_EXISTS'));"
+          ] } }]
+        },
+        {
+          "name": "NEG - stepCode sai dinh dang",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps",
+            "body": { "mode": "raw", "raw": "{\n  \"stepName\": \"Bad code step\",\n  \"stepCode\": \"bad code\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+            "const j = pm.response.json();",
+            "pm.test('code = INVALID_REQUEST, loi o field stepCode', () => { pm.expect(j.code).to.eql('INVALID_REQUEST'); pm.expect(j.errors).to.have.property('stepCode'); });"
+          ] } }]
+        },
+        {
+          "name": "NEG - thieu stepName",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps",
+            "body": { "mode": "raw", "raw": "{\n  \"stepName\": \"   \"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+            "pm.test('loi o field stepName', () => pm.expect(pm.response.json().errors).to.have.property('stepName'));"
+          ] } }]
+        },
+        {
+          "name": "NEG - tao buoc RESULT thu hai",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps",
+            "body": { "mode": "raw", "raw": "{\n  \"stepName\": \"Second result {{$timestamp}}\",\n  \"stepType\": \"RESULT\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+            "pm.test('code = RESULT_STEP_EXISTS', () => pm.expect(pm.response.json().code).to.eql('RESULT_STEP_EXISTS'));"
+          ] } }]
+        },
+        {
+          "name": "NEG - Edit buoc Result (phai dung Configure)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{resultStepId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"revision\": 0,\n  \"stepName\": \"Result\",\n  \"status\": \"ACTIVE\",\n  \"questions\": []\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+            "pm.test('code = RESULT_STEP_NOT_EDITABLE', () => pm.expect(pm.response.json().code).to.eql('RESULT_STEP_NOT_EDITABLE'));"
+          ] } }]
+        },
+        {
+          "name": "NEG - doi ten trung voi buoc khac",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{newStepId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"revision\": {{newStepRevision}},\n  \"stepName\": \"Level test\",\n  \"status\": \"DRAFT\",\n  \"questions\": []\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+            "pm.test('code = STEP_NAME_EXISTS', () => pm.expect(pm.response.json().code).to.eql('STEP_NAME_EXISTS'));"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "03b. Update step - Save changes (cau hoi, Required, trang thai)",
+      "description": "Thao tac tren buoc Body information va tu tra ve nhu cu o request cuoi. Chi chay tren DB local/dev.",
+      "item": [
+        {
+          "name": "GET chi tiet Body information (mo pop-up)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.test('cau hoi co du thong tin cho pop-up', () => j.questions.forEach(q => pm.expect(q).to.include.keys('required', 'requiredByDefault', 'unit', 'validationRules', 'active')));",
+            "const active = j.questions.filter(q => q.active);",
+            "pm.test('co it nhat 2 cau hoi active', () => pm.expect(active.length).to.be.at.least(2));",
+            "pm.collectionVariables.set('bodyRevision', j.step.revision);",
+            "pm.collectionVariables.set('bodyOriginal', JSON.stringify({ stepName: j.step.stepName, description: j.step.description, status: j.step.status, questions: active.map(q => ({ questionCode: q.questionCode, required: q.required })) }));"
+          ] } }]
+        },
+        {
+          "name": "GET cau hoi co the them (Add question)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}/available-questions" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "const codes = j.map(q => q.questionCode);",
+            "pm.test('cau cua chinh buoc nay co inCurrentStep = true', () => pm.expect(j.find(q => q.questionCode === 'AGE').inCurrentStep).to.eql(true));",
+            "pm.test('khong co cau dang dung o buoc khac (GOAL_TYPE)', () => pm.expect(codes).to.not.include('GOAL_TYPE'));"
+          ] } }]
+        },
+        {
+          "name": "PUT Save changes: dao thu tu, tat Required WEIGHT, go GENDER",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}",
+            "body": { "mode": "raw", "raw": "{{editBody}}" }
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "const o = JSON.parse(pm.collectionVariables.get('bodyOriginal'));",
+              "const questions = o.questions.filter(q => q.questionCode !== 'GENDER').reverse()",
+              "  .map(q => ({ questionCode: q.questionCode, required: q.questionCode === 'WEIGHT' ? false : q.required }));",
+              "pm.collectionVariables.set('expectedCodes', JSON.stringify(questions.map(q => q.questionCode)));",
+              "pm.collectionVariables.set('editBody', JSON.stringify({ revision: Number(pm.collectionVariables.get('bodyRevision')), stepName: o.stepName, description: o.description, status: 'ACTIVE', questions }));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "const active = j.questions.filter(q => q.active);",
+              "pm.test('thu tu dung nhu da gui', () => pm.expect(active.map(q => q.questionCode)).to.eql(JSON.parse(pm.collectionVariables.get('expectedCodes'))));",
+              "pm.test('WEIGHT khong con bat buoc', () => pm.expect(active.find(q => q.questionCode === 'WEIGHT').required).to.eql(false));",
+              "pm.test('GENDER khong con hien voi member', () => pm.expect(active.map(q => q.questionCode)).to.not.include('GENDER'));",
+              "pm.test('revision tang 1', () => pm.expect(j.step.revision).to.eql(Number(pm.collectionVariables.get('bodyRevision')) + 1));",
+              "pm.collectionVariables.set('bodyRevision', j.step.revision);"
+            ] } }
+          ]
+        },
+        {
+          "name": "NEG - revision cu (nguoi khac vua luu)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}",
+            "body": { "mode": "raw", "raw": "{{editBody}}" }
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "const o = JSON.parse(pm.collectionVariables.get('bodyOriginal'));",
+              "pm.collectionVariables.set('editBody', JSON.stringify({ revision: Number(pm.collectionVariables.get('bodyRevision')) - 1, stepName: o.stepName, description: o.description, status: 'ACTIVE', questions: o.questions }));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "pm.test('code = STEP_MODIFIED', () => pm.expect(pm.response.json().code).to.eql('STEP_MODIFIED'));"
+            ] } }
+          ]
+        },
+        {
+          "name": "NEG - them cau hoi dang dung o buoc khac",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}",
+            "body": { "mode": "raw", "raw": "{{editBody}}" }
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "const o = JSON.parse(pm.collectionVariables.get('bodyOriginal'));",
+              "const questions = o.questions.concat([{ questionCode: 'GOAL_TYPE', required: true }, { questionCode: 'NOT_A_QUESTION', required: true }]);",
+              "pm.collectionVariables.set('editBody', JSON.stringify({ revision: Number(pm.collectionVariables.get('bodyRevision')), stepName: o.stepName, description: o.description, status: 'ACTIVE', questions }));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "const codeOf = q => (j.errors.find(e => e.questionCode === q) || {}).code;",
+              "pm.test('code = INVALID_STEP_QUESTIONS', () => pm.expect(j.code).to.eql('INVALID_STEP_QUESTIONS'));",
+              "pm.test('GOAL_TYPE dang o buoc khac', () => pm.expect(codeOf('GOAL_TYPE')).to.eql('QUESTION_IN_OTHER_STEP'));",
+              "pm.test('NOT_A_QUESTION khong ton tai', () => pm.expect(codeOf('NOT_A_QUESTION')).to.eql('QUESTION_NOT_FOUND'));"
+            ] } }
+          ]
+        },
+        {
+          "name": "NEG - buoc ACTIVE khong con cau hoi nao",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}",
+            "body": { "mode": "raw", "raw": "{{editBody}}" }
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "const o = JSON.parse(pm.collectionVariables.get('bodyOriginal'));",
+              "pm.collectionVariables.set('editBody', JSON.stringify({ revision: Number(pm.collectionVariables.get('bodyRevision')), stepName: o.stepName, description: o.description, status: 'ACTIVE', questions: [] }));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "pm.test('code = STEP_HAS_NO_QUESTIONS', () => pm.expect(pm.response.json().code).to.eql('STEP_HAS_NO_QUESTIONS'));"
+            ] } }
+          ]
+        },
+        {
+          "name": "NEG - dua ve DRAFT",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}",
+            "body": { "mode": "raw", "raw": "{{editBody}}" }
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "const o = JSON.parse(pm.collectionVariables.get('bodyOriginal'));",
+              "pm.collectionVariables.set('editBody', JSON.stringify({ revision: Number(pm.collectionVariables.get('bodyRevision')), stepName: o.stepName, description: o.description, status: 'DRAFT', questions: o.questions }));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "pm.test('code = INVALID_STATUS_TRANSITION', () => pm.expect(pm.response.json().code).to.eql('INVALID_STATUS_TRANSITION'));"
+            ] } }
+          ]
+        },
+        {
+          "name": "NEG - mo ta qua 150 ky tu, thieu revision",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}",
+            "body": { "mode": "raw", "raw": "{{editBody}}" }
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "const o = JSON.parse(pm.collectionVariables.get('bodyOriginal'));",
+              "pm.collectionVariables.set('editBody', JSON.stringify({ stepName: o.stepName, description: 'x'.repeat(151), status: 'ACTIVE', questions: o.questions }));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "pm.test('loi o description va revision', () => { pm.expect(j.code).to.eql('INVALID_REQUEST'); pm.expect(j.errors).to.have.property('description'); pm.expect(j.errors).to.have.property('revision'); });"
+            ] } }
+          ]
+        },
+        {
+          "name": "PUT tra Body information ve nhu cu",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}",
+            "body": { "mode": "raw", "raw": "{{editBody}}" }
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "const o = JSON.parse(pm.collectionVariables.get('bodyOriginal'));",
+              "pm.collectionVariables.set('editBody', JSON.stringify({ revision: Number(pm.collectionVariables.get('bodyRevision')), stepName: o.stepName, description: o.description, status: o.status, questions: o.questions }));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "const o = JSON.parse(pm.collectionVariables.get('bodyOriginal'));",
+              "const active = j.questions.filter(q => q.active);",
+              "pm.test('cau hoi va Required ve nhu ban dau', () => pm.expect(active.map(q => ({ questionCode: q.questionCode, required: q.required }))).to.eql(o.questions));",
+              "pm.collectionVariables.set('bodyRevision', j.step.revision);"
+            ] } }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04. F6 - Doi trang thai (menu ...)",
+      "description": "Luu y: buoc 'Deactivate Goals' tam an buoc nay voi member trong vai tram mili giay roi bat lai. Chi chay tren DB local/dev.",
+      "item": [
+        {
+          "name": "NEG - Activate buoc chua co cau hoi",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{newStepId}}/status",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"ACTIVE\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+            "pm.test('code = STEP_HAS_NO_QUESTIONS', () => pm.expect(pm.response.json().code).to.eql('STEP_HAS_NO_QUESTIONS'));"
+          ] } }]
+        },
+        {
+          "name": "Buoc moi: DRAFT -> INACTIVE",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{newStepId}}/status",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"INACTIVE\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "pm.test('status = INACTIVE', () => pm.expect(pm.response.json().step.status).to.eql('INACTIVE'));"
+          ] } }]
+        },
+        {
+          "name": "NEG - INACTIVE -> DRAFT (khong quay lai DRAFT)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{newStepId}}/status",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"DRAFT\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+            "pm.test('code = INVALID_STATUS_TRANSITION', () => pm.expect(pm.response.json().code).to.eql('INVALID_STATUS_TRANSITION'));"
+          ] } }]
+        },
+        {
+          "name": "Deactivate Goals and motivation",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{goalsStepId}}/status",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"INACTIVE\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "pm.test('status = INACTIVE', () => pm.expect(pm.response.json().step.status).to.eql('INACTIVE'));"
+          ] } }]
+        },
+        {
+          "name": "GET tab Inactive co Goals and motivation",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps?status=INACTIVE" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.test('co buoc Goals', () => pm.expect(j.steps.map(s => s.stepCode)).to.include('GOALS_AND_MOTIVATION'));",
+            "pm.test('counts.inactive >= 2 (Goals + buoc moi)', () => pm.expect(j.counts.inactive).to.be.at.least(2));"
+          ] } }]
+        },
+        {
+          "name": "Activate lai Goals and motivation",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{goalsStepId}}/status",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"ACTIVE\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "pm.test('status = ACTIVE', () => pm.expect(pm.response.json().step.status).to.eql('ACTIVE'));"
+          ] } }]
+        },
+        {
+          "name": "Gui lai dung trang thai hien tai (idempotent)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{goalsStepId}}/status",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"ACTIVE\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "pm.test('van ACTIVE', () => pm.expect(pm.response.json().step.status).to.eql('ACTIVE'));"
+          ] } }]
+        },
+        {
+          "name": "NEG - thieu status",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{goalsStepId}}/status",
+            "body": { "mode": "raw", "raw": "{}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+            "pm.test('loi o field status', () => pm.expect(pm.response.json().errors).to.have.property('status'));"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "05. F8 - Save order (keo tha)",
+      "item": [
+        {
+          "name": "GET lay thu tu hien tai",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const ids = pm.response.json().steps.map(s => s.id);",
+            "pm.collectionVariables.set('currentStepIds', JSON.stringify(ids));"
+          ] } }]
+        },
+        {
+          "name": "PUT doi cho buoc 1 va buoc 2",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/order",
+            "body": { "mode": "raw", "raw": "{{reorderBody}}" }
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "const ids = JSON.parse(pm.collectionVariables.get('currentStepIds'));",
+              "[ids[0], ids[1]] = [ids[1], ids[0]];",
+              "pm.collectionVariables.set('reorderBody', JSON.stringify({ stepIds: ids }));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "const expected = JSON.parse(pm.collectionVariables.get('reorderBody')).stepIds;",
+              "pm.test('thu tu moi dung nhu da gui', () => pm.expect(j.steps.map(s => s.id)).to.eql(expected));",
+              "pm.test('position duoc danh lai 1..n', () => j.steps.forEach((s, i) => pm.expect(s.position).to.eql(i + 1)));"
+            ] } }
+          ]
+        },
+        {
+          "name": "PUT tra lai thu tu ban dau",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/order",
+            "body": { "mode": "raw", "raw": "{\n  \"stepIds\": {{currentStepIds}}\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const expected = JSON.parse(pm.collectionVariables.get('currentStepIds'));",
+            "pm.test('ve lai thu tu cu', () => pm.expect(pm.response.json().steps.map(s => s.id)).to.eql(expected));"
+          ] } }]
+        },
+        {
+          "name": "NEG - dua buoc Result len dau",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/order",
+            "body": { "mode": "raw", "raw": "{{reorderBody}}" }
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "const ids = JSON.parse(pm.collectionVariables.get('currentStepIds'));",
+              "ids.unshift(ids.pop());",
+              "pm.collectionVariables.set('reorderBody', JSON.stringify({ stepIds: ids }));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('code = RESULT_STEP_MUST_BE_LAST', () => pm.expect(pm.response.json().code).to.eql('RESULT_STEP_MUST_BE_LAST'));"
+            ] } }
+          ]
+        },
+        {
+          "name": "NEG - 1 buoc xuat hien 2 lan",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/order",
+            "body": { "mode": "raw", "raw": "{{reorderBody}}" }
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "const ids = JSON.parse(pm.collectionVariables.get('currentStepIds'));",
+              "ids[0] = ids[1];",
+              "pm.collectionVariables.set('reorderBody', JSON.stringify({ stepIds: ids }));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('code = DUPLICATE_STEP', () => pm.expect(pm.response.json().code).to.eql('DUPLICATE_STEP'));"
+            ] } }
+          ]
+        },
+        {
+          "name": "NEG - danh sach thieu buoc (du lieu cu)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/order",
+            "body": { "mode": "raw", "raw": "{{reorderBody}}" }
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "const ids = JSON.parse(pm.collectionVariables.get('currentStepIds'));",
+              "pm.collectionVariables.set('reorderBody', JSON.stringify({ stepIds: ids.slice(1) }));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "pm.test('code = STEP_ORDER_STALE', () => pm.expect(pm.response.json().code).to.eql('STEP_ORDER_STALE'));"
+            ] } }
+          ]
+        },
+        {
+          "name": "NEG - stepIds rong",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/order",
+            "body": { "mode": "raw", "raw": "{\n  \"stepIds\": []\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+            "pm.test('code = INVALID_REQUEST', () => pm.expect(pm.response.json().code).to.eql('INVALID_REQUEST'));"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "06. F9 + F10 + F11 - Configure buoc Result",
+      "item": [
+        {
+          "name": "GET cau hinh Result",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{resultStepId}}/result-config" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.test('co du field config', () => pm.expect(j.config).to.have.keys('showLevelBreakdown', 'showPlanPreview', 'planDurationWeeks', 'sessionsPerWeek', 'minutesPerSession', 'fallbackFitnessLevelId'));",
+            "pm.test('co danh sach fitness level', () => pm.expect(j.fitnessLevels).to.be.an('array').that.is.not.empty);",
+            "const beginner = j.fitnessLevels.find(l => l.name === 'Beginner') || j.fitnessLevels[0];",
+            "pm.collectionVariables.set('fallbackLevelId', beginner ? String(beginner.id) : 'null');"
+          ] } }]
+        },
+        {
+          "name": "PUT luu cau hinh moi",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{resultStepId}}/result-config",
+            "body": { "mode": "raw", "raw": "{\n  \"stepName\": \"Result and recommended plan\",\n  \"description\": \"Classify the member's level and build the recommended plan.\",\n  \"config\": {\n    \"showLevelBreakdown\": false,\n    \"showPlanPreview\": true,\n    \"planDurationWeeks\": 6,\n    \"sessionsPerWeek\": 4,\n    \"minutesPerSession\": 45,\n    \"fallbackFitnessLevelId\": {{fallbackLevelId}}\n  }\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const c = pm.response.json().config;",
+            "pm.test('config da luu', () => { pm.expect(c.planDurationWeeks).to.eql(6); pm.expect(c.sessionsPerWeek).to.eql(4); pm.expect(c.showLevelBreakdown).to.eql(false); });"
+          ] } }]
+        },
+        {
+          "name": "F11 - Member GET dinh nghia khao sat thay cau hinh Result",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET", "header": [], "url": "{{baseUrl}}/api/surveys/{{surveyCode}}"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "const resultCode = pm.collectionVariables.get('resultStepCode');",
+            "pm.test('co field result voi config vua luu', () => { pm.expect(j.result.stepCode).to.eql(resultCode); pm.expect(j.result.config.planDurationWeeks).to.eql(6); });",
+            "pm.test('buoc Result KHONG nam trong steps', () => j.steps.forEach(s => pm.expect(s.stepCode).to.not.eql(resultCode)));",
+            "pm.test('buoc DRAFT/INACTIVE khong hien voi member', () => j.steps.forEach(s => pm.expect(s.stepCode).to.not.match(/^MOBILITY_CHECK_/)));"
+          ] } }]
+        },
+        {
+          "name": "PUT tra cau hinh ve nhu seed",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{resultStepId}}/result-config",
+            "body": { "mode": "raw", "raw": "{\n  \"stepName\": \"Result and recommended plan\",\n  \"description\": \"Classify the member's level and build the recommended plan.\",\n  \"config\": {\n    \"showLevelBreakdown\": true,\n    \"showPlanPreview\": true,\n    \"planDurationWeeks\": 4,\n    \"sessionsPerWeek\": 3,\n    \"minutesPerSession\": 30,\n    \"fallbackFitnessLevelId\": {{fallbackLevelId}}\n  }\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "pm.test('planDurationWeeks = 4', () => pm.expect(pm.response.json().config.planDurationWeeks).to.eql(4));"
+          ] } }]
+        },
+        {
+          "name": "NEG - gia tri vuot khoang (planDurationWeeks = 0, sessionsPerWeek = 8)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{resultStepId}}/result-config",
+            "body": { "mode": "raw", "raw": "{\n  \"stepName\": \"Result and recommended plan\",\n  \"config\": {\n    \"showLevelBreakdown\": true,\n    \"showPlanPreview\": true,\n    \"planDurationWeeks\": 0,\n    \"sessionsPerWeek\": 8,\n    \"minutesPerSession\": 30,\n    \"fallbackFitnessLevelId\": null\n  }\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+            "const j = pm.response.json();",
+            "pm.test('loi o 2 field', () => { pm.expect(j.code).to.eql('INVALID_REQUEST'); pm.expect(j.errors).to.have.property('config.planDurationWeeks'); pm.expect(j.errors).to.have.property('config.sessionsPerWeek'); });"
+          ] } }]
+        },
+        {
+          "name": "NEG - thieu config",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{resultStepId}}/result-config",
+            "body": { "mode": "raw", "raw": "{\n  \"stepName\": \"Result and recommended plan\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+            "pm.test('loi o field config', () => pm.expect(pm.response.json().errors).to.have.property('config'));"
+          ] } }]
+        },
+        {
+          "name": "NEG - fitness level khong ton tai",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{resultStepId}}/result-config",
+            "body": { "mode": "raw", "raw": "{\n  \"stepName\": \"Result and recommended plan\",\n  \"config\": {\n    \"showLevelBreakdown\": true,\n    \"showPlanPreview\": true,\n    \"planDurationWeeks\": 4,\n    \"sessionsPerWeek\": 3,\n    \"minutesPerSession\": 30,\n    \"fallbackFitnessLevelId\": 999999999\n  }\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+            "pm.test('code = FITNESS_LEVEL_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('FITNESS_LEVEL_NOT_FOUND'));"
+          ] } }]
+        },
+        {
+          "name": "NEG - Configure tren buoc khong phai Result",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}/result-config" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+            "pm.test('code = NOT_A_RESULT_STEP', () => pm.expect(pm.response.json().code).to.eql('NOT_A_RESULT_STEP'));"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "07. F7 - Delete (va don dep)",
+      "item": [
+        {
+          "name": "NEG - xoa buoc Result",
+          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{resultStepId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+            "pm.test('code = RESULT_STEP_NOT_DELETABLE', () => pm.expect(pm.response.json().code).to.eql('RESULT_STEP_NOT_DELETABLE'));"
+          ] } }]
+        },
+        {
+          "name": "NEG - xoa buoc dang ACTIVE",
+          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+            "pm.test('code = STEP_ACTIVE', () => pm.expect(pm.response.json().code).to.eql('STEP_ACTIVE'));"
+          ] } }]
+        },
+        {
+          "name": "Xoa buoc vua tao (INACTIVE, chua co cau tra loi)",
+          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{newStepId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 204', () => pm.response.to.have.status(204));"
+          ] } }]
+        },
+        {
+          "name": "NEG - xoa lai buoc da xoa",
+          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{newStepId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+            "pm.test('code = STEP_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('STEP_NOT_FOUND'));"
+          ] } }]
+        },
+        {
+          "name": "GET kiem tra sau khi xoa",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "const steps = pm.response.json().steps;",
+            "const newId = Number(pm.collectionVariables.get('newStepId'));",
+            "pm.test('buoc da bien mat', () => pm.expect(steps.map(s => s.id)).to.not.include(newId));",
+            "pm.test('thu tu lien tuc, Result van o cuoi', () => { steps.forEach((s, i) => pm.expect(s.position).to.eql(i + 1)); pm.expect(steps[steps.length - 1].stepType).to.eql('RESULT'); });"
+          ] } }]
+        }
+      ]
+    }
+  ]
+}

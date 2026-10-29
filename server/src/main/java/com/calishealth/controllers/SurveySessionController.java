@@ -4,6 +4,7 @@ import com.calishealth.dtos.SurveyDtos.SaveAnswersRequest;
 import com.calishealth.dtos.SurveyDtos.SessionResponse;
 import com.calishealth.dtos.SurveyDtos.SessionSummaryResponse;
 import com.calishealth.dtos.SurveyDtos.StartSessionRequest;
+import com.calishealth.dtos.SurveyDtos.SurveyResultResponse;
 import com.calishealth.service.SurveySessionService;
 import com.calishealth.service.SurveySessionService.StartResult;
 import jakarta.validation.Valid;
@@ -52,6 +53,12 @@ public class SurveySessionController {
     @PostMapping("/{sessionId}/complete")
     public SessionResponse complete(Authentication a, @PathVariable Long sessionId) {
         return sessions.complete(a.getName(), sessionId);
+    }
+
+    /** Level đã chấm + kế hoạch gợi ý (màn "Result and recommended plan"); chỉ cho phiên COMPLETED. */
+    @GetMapping("/{sessionId}/result")
+    public SurveyResultResponse result(Authentication a, @PathVariable Long sessionId) {
+        return sessions.result(a.getName(), sessionId);
     }
 
     @PostMapping("/{sessionId}/skip")
