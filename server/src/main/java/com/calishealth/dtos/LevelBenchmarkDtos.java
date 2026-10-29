@@ -8,6 +8,10 @@ public final class LevelBenchmarkDtos {
 
     public record ExerciseOption(String code, String name, String category) {}
 
+    /**
+     * One benchmark exercise. {@code slot} is an internal key (the code of the survey question that
+     * supplies the reps / seconds value); it is resolved by the server and never edited by content.
+     */
     public record BenchmarkExercise(
             String slot,
             String code,
@@ -15,7 +19,9 @@ public final class LevelBenchmarkDtos {
             String category,
             String unit,
             int beginnerMax,
-            int intermediateMax
+            int intermediateMax,
+            /** False when no active survey question supplies this result yet, so users cannot be levelled on it. */
+            boolean surveyQuestionReady
     ) {}
 
     public record LevelBenchmark(
@@ -35,7 +41,6 @@ public final class LevelBenchmarkDtos {
     ) {}
 
     public record BenchmarkExerciseUpdate(
-            String slot,
             String code,
             String category,
             int beginnerMax,
@@ -57,9 +62,6 @@ public final class LevelBenchmarkDtos {
 
     public record CreateLevelRequest(
             String name,
-            int scoreMin,
-            int scoreMax,
-            String status,
-            List<BenchmarkExerciseUpdate> exercises
+            String status
     ) {}
 }

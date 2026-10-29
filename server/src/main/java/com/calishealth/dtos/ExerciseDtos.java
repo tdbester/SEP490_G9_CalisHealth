@@ -26,7 +26,11 @@ public final class ExerciseDtos {
             LocalDateTime updatedAt,
             LocalDateTime submittedAt,
             String autoCheckStatus,
-            Integer defaultSets
+            Integer defaultSets,
+            /** The exercise's own flag, ignoring its level. {@code active} = selfActive && levelActive. */
+            boolean selfActive,
+            /** False when the exercise's level is inactive in Level &amp; Benchmark Criteria. */
+            boolean levelActive
     ) {}
 
     public record CreateExerciseRequest(

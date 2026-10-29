@@ -266,15 +266,14 @@ public class SurveySessionService {
     private void assignBenchmarkLevelIfPresent(SurveySession session, Map<String, JsonNode> values) {
         boolean hasLevelTest = session.getSurvey().getSurveyCode().toUpperCase(java.util.Locale.ROOT).contains("ONBOARD");
         if (!hasLevelTest) return;
-        JsonNode pushUp = values.get("PUSH_UP_MAX_REPS");
-        JsonNode squat = values.get("SQUAT_MAX_REPS");
-        JsonNode plank = values.get("PLANK_MAX_SECONDS");
-        if (pushUp == null || squat == null || plank == null
-                || !pushUp.canConvertToInt() || !squat.canConvertToInt() || !plank.canConvertToInt()) {
-            return;
+        // The benchmark exercises are configured by content (Exercises and thresholds); each one names the
+        // survey question that holds its reps / seconds answer, so no question code is hard-coded here.
+        Map<String, Integer> valuesBySlot = new HashMap<>();
+        for (String slot : levelBenchmarks.benchmarkSlots()) {
+            JsonNode value = values.get(slot);
+            if (value != null && value.canConvertToInt()) valuesBySlot.put(slot, value.intValue());
         }
-        levelBenchmarks.assignLevelFromOnboarding(
-                session.getUser().getId(), pushUp.intValue(), squat.intValue(), plank.intValue());
+        levelBenchmarks.assignLevelFromOnboarding(session.getUser().getId(), valuesBySlot);
     }
 
     /** Bỏ qua: giữ nguyên câu trả lời đã lưu. */

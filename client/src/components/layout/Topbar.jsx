@@ -4,6 +4,7 @@ import NotificationsNoneRoundedIcon from "@mui/icons-material/NotificationsNoneR
 import LocalFireDepartmentRoundedIcon from "@mui/icons-material/LocalFireDepartmentRounded";
 import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
+import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import api from "../../api/client";
 import "./Topbar.css";
 
@@ -222,7 +223,8 @@ export default function Topbar() {
             >
               {initials}
             </button>
-            <button type="button" className="topbar-login-btn" onClick={handleLogout}>
+            <button type="button" className="topbar-logout-btn" onClick={handleLogout}>
+              <LogoutRoundedIcon />
               <span>Logout</span>
             </button>
           </>

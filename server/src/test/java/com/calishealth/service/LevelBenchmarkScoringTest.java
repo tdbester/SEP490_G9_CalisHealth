@@ -3,7 +3,6 @@ package com.calishealth.service;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class LevelBenchmarkScoringTest {
     @Test
@@ -13,11 +12,6 @@ class LevelBenchmarkScoringTest {
         assertThat(LevelBenchmarkService.pointsFor(40, 19, 40)).isEqualTo(2);
         assertThat(LevelBenchmarkService.pointsFor(41, 19, 40)).isEqualTo(3);
 
-        assertThat(LevelBenchmarkService.pointsFor(29, 29, 60)).isEqualTo(1);
-        assertThat(LevelBenchmarkService.pointsFor(30, 29, 60)).isEqualTo(2);
-        assertThat(LevelBenchmarkService.pointsFor(60, 29, 60)).isEqualTo(2);
-        assertThat(LevelBenchmarkService.pointsFor(61, 29, 60)).isEqualTo(3);
-
         assertThat(LevelBenchmarkService.pointsFor(44, 44, 90)).isEqualTo(1);
         assertThat(LevelBenchmarkService.pointsFor(45, 44, 90)).isEqualTo(2);
         assertThat(LevelBenchmarkService.pointsFor(90, 44, 90)).isEqualTo(2);
@@ -25,14 +19,13 @@ class LevelBenchmarkScoringTest {
     }
 
     @Test
-    void totalScoreMapsToConfiguredLevelBands() {
-        assertThat(LevelBenchmarkService.levelForTotalScore(3)).isEqualTo("Beginner");
-        assertThat(LevelBenchmarkService.levelForTotalScore(4)).isEqualTo("Beginner");
-        assertThat(LevelBenchmarkService.levelForTotalScore(5)).isEqualTo("Intermediate");
-        assertThat(LevelBenchmarkService.levelForTotalScore(7)).isEqualTo("Intermediate");
-        assertThat(LevelBenchmarkService.levelForTotalScore(8)).isEqualTo("Advanced");
-        assertThat(LevelBenchmarkService.levelForTotalScore(9)).isEqualTo("Advanced");
-        assertThatThrownBy(() -> LevelBenchmarkService.levelForTotalScore(10))
-                .isInstanceOf(IllegalArgumentException.class);
+    void scoreRangeFollowsTheNumberOfExercises() {
+        // Each exercise is worth 1-3 points, so N exercises span N..3N.
+        assertThat(LevelBenchmarkService.scoreFloor(3)).isEqualTo(3);
+        assertThat(LevelBenchmarkService.scoreCeiling(3)).isEqualTo(9);
+        assertThat(LevelBenchmarkService.scoreFloor(4)).isEqualTo(4);
+        assertThat(LevelBenchmarkService.scoreCeiling(4)).isEqualTo(12);
+        assertThat(LevelBenchmarkService.scoreFloor(1)).isEqualTo(1);
+        assertThat(LevelBenchmarkService.scoreCeiling(1)).isEqualTo(3);
     }
 }

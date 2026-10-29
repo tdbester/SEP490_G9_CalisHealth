@@ -6,6 +6,7 @@ import com.calishealth.dtos.LevelBenchmarkDtos.UpdateBenchmarkConfiguration;
 import com.calishealth.service.LevelBenchmarkService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,6 +39,11 @@ public class LevelBenchmarkController {
             Authentication authentication
     ) {
         return benchmarks.updateConfiguration(request, authentication.getName());
+    }
+
+    @DeleteMapping("/levels/{id}")
+    public BenchmarkConfiguration deleteLevel(@PathVariable Long id, Authentication authentication) {
+        return benchmarks.deleteLevel(id, authentication.getName());
     }
 
     @PatchMapping("/levels/{level}/status")

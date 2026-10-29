@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface WorkoutRepository extends JpaRepository<WorkoutEntry, Long> {
     Optional<WorkoutEntry> findByCode(String code);
+    boolean existsByLevelIgnoreCase(String level);
 }

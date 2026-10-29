@@ -1,0 +1,1635 @@
+{
+  "info": {
+    "name": "CalisHealth - Calisthenics Level Benchmark Criteria",
+    "description": "Postman checks for the Content Manager 'Level & Benchmark Criteria' screens: list (with 3-dot actions), level detail and Update All Benchmark Levels (where levels are added with the Add level button; there is no separate Create screen). Set cmEmail/cmPassword (a CONTENT_MANAGER account) and run the whole collection in order with the Runner. Folder 1 saves a snapshot of the current levels and thresholds; folder 2 ends by adding a level called 'Postman Temp Level' that folders 3 and 4 use and delete; folder 5 restores the snapshot. Run it against a local/dev database, not production.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "cmEmail",
+      "value": "contentmanager@calishealth.com"
+    },
+    {
+      "key": "cmPassword",
+      "value": "",
+      "type": "secret"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "secret"
+    },
+    {
+      "key": "snapshot",
+      "value": ""
+    },
+    {
+      "key": "tempLevelId",
+      "value": ""
+    },
+    {
+      "key": "levelInUseId",
+      "value": ""
+    },
+    {
+      "key": "addLevelPossible",
+      "value": ""
+    },
+    {
+      "key": "removeInUsePossible",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "0. Authentication & access",
+      "item": [
+        {
+          "name": "Login as Content Manager (save JWT)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{cmEmail}}\",\n  \"password\": \"{{cmPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login succeeds', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Account is a Content Manager', function () { pm.expect(body.role).to.eql('CONTENT_MANAGER'); });",
+                  "  pm.test('Login returns a token', function () { pm.expect(body.token).to.be.a('string').and.not.empty; });",
+                  "  pm.collectionVariables.set('token', body.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Benchmark criteria rejects missing token",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Unauthenticated request is rejected', function () { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Member count rejects missing token",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/content/dashboard/member-levels",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Unauthenticated request is rejected', function () { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Screen: Level & Benchmark Criteria (list)",
+      "item": [
+        {
+          "name": "Load configuration (also saves a snapshot for cleanup)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/content/level-benchmarks"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "",
+                  "const byScore = (list, key) => [...list].sort((a, b) => a[key] - b[key]);",
+                  "function assertRanges(b) {",
+                  "  const n = b.exercises.length, floor = n, ceil = n * 3;",
+                  "  const ls = byScore(b.levels, 'scoreMin');",
+                  "  pm.expect(ls[0].scoreMin, 'first level starts at ' + floor).to.eql(floor);",
+                  "  for (let i = 1; i < ls.length; i++) pm.expect(ls[i].scoreMin, ls[i].level + ' starts after ' + ls[i - 1].level).to.eql(ls[i - 1].scoreMax + 1);",
+                  "  pm.expect(ls[ls.length - 1].scoreMax, 'last level ends at ' + ceil).to.eql(ceil);",
+                  "}",
+                  "const snapshot = () => JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "",
+                  "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  const b = pm.response.json();",
+                  "  pm.test('Response has exercises, availableExercises and levels', function () {",
+                  "    pm.expect(b.exercises).to.be.an('array');",
+                  "    pm.expect(b.availableExercises).to.be.an('array');",
+                  "    pm.expect(b.levels).to.be.an('array').and.not.empty;",
+                  "  });",
+                  "  pm.test('Between 1 and 8 benchmark exercises are configured', function () { pm.expect(b.exercises.length).to.be.within(1, 8); });",
+                  "  pm.test('Each benchmark exercise has valid thresholds', function () {",
+                  "    b.exercises.forEach(function (e) {",
+                  "      pm.expect(e.slot, 'slot').to.be.a('string').and.not.empty;",
+                  "      pm.expect(e.code, 'code').to.be.a('string').and.not.empty;",
+                  "      pm.expect(e.category, e.code + ' category').to.be.oneOf(['REPS', 'HOLD']);",
+                  "      pm.expect(e.unit, e.code + ' unit').to.eql(e.category === 'HOLD' ? 'seconds' : 'reps');",
+                  "      pm.expect(e.beginnerMax, e.code + ' beginnerMax').to.be.at.least(1);",
+                  "      pm.expect(e.intermediateMax, e.code + ' intermediateMax').to.be.above(e.beginnerMax);",
+                  "      pm.expect(e.surveyQuestionReady, e.code + ' surveyQuestionReady').to.be.a('boolean');",
+                  "    });",
+                  "  });",
+                  "  pm.test('Available exercises are REPS or HOLD only', function () {",
+                  "    b.availableExercises.forEach(function (e) { pm.expect(e.category).to.be.oneOf(['REPS', 'HOLD']); });",
+                  "  });",
+                  "  pm.test('Each level has the fields shown in the table', function () {",
+                  "    b.levels.forEach(function (l) {",
+                  "      pm.expect(l.id).to.be.a('number');",
+                  "      pm.expect(l.level).to.be.a('string').and.not.empty;",
+                  "      pm.expect(l.scoreMin).to.be.a('number');",
+                  "      pm.expect(l.scoreMax).to.be.at.least(l.scoreMin);",
+                  "      pm.expect(l.status).to.be.oneOf(['ACTIVE', 'INACTIVE']);",
+                  "      pm.expect(l).to.have.property('updatedBy');",
+                  "    });",
+                  "  });",
+                  "  pm.test('Level names are unique (case-insensitive)', function () {",
+                  "    const names = b.levels.map(l => l.level.toLowerCase());",
+                  "    pm.expect(new Set(names).size).to.eql(names.length);",
+                  "  });",
+                  "  pm.test('At least one level is active', function () { pm.expect(b.levels.some(l => l.status === 'ACTIVE')).to.eql(true); });",
+                  "  pm.test('Score ranges are contiguous from N to 3N', function () { assertRanges(b); });",
+                  "",
+                  "  pm.collectionVariables.set('snapshot', JSON.stringify({",
+                  "    exercises: b.exercises.map(e => ({ code: e.code, category: e.category, beginnerMax: e.beginnerMax, intermediateMax: e.intermediateMax })),",
+                  "    levels: b.levels.map(l => ({ id: l.id, name: l.level, scoreMin: l.scoreMin, scoreMax: l.scoreMax, status: l.status })),",
+                  "  }));",
+                  "  pm.collectionVariables.set('levelInUseId', '');",
+                  "  pm.collectionVariables.set('tempLevelId', '');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Load member counts per level (finds a level that is in use)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/content/dashboard/member-levels"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  const rows = pm.response.json();",
+                  "  pm.test('Rows have level and a non-negative memberCount', function () {",
+                  "    pm.expect(rows).to.be.an('array');",
+                  "    rows.forEach(function (r) {",
+                  "      pm.expect(r.level).to.be.a('string');",
+                  "      pm.expect(r.memberCount).to.be.a('number').and.at.least(0);",
+                  "    });",
+                  "  });",
+                  "  const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "  pm.test('Every counted level exists in the benchmark configuration', function () {",
+                  "    rows.forEach(function (r) {",
+                  "      pm.expect(snap.levels.some(l => l.name.toLowerCase() === String(r.level).toLowerCase()), r.level).to.eql(true);",
+                  "    });",
+                  "  });",
+                  "  const used = rows.find(r => r.memberCount > 0);",
+                  "  const level = used && snap.levels.find(l => l.name.toLowerCase() === String(used.level).toLowerCase());",
+                  "  pm.collectionVariables.set('levelInUseId', level ? String(level.id) : '');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Screen: Update All Benchmark Levels (ends by adding Postman Temp Level)",
+      "item": [
+        {
+          "name": "Update with a null body",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error message explains the problem', function () {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.be.a('string').and.not.empty;",
+                  "  pm.expect(m).to.match(/required/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update with no levels",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "body.levels = [];",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error message explains the problem', function () {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.be.a('string').and.not.empty;",
+                  "  pm.expect(m).to.match(/at least one benchmark level/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update with no benchmark exercises",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "body.exercises = [];",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error message explains the problem', function () {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.be.a('string').and.not.empty;",
+                  "  pm.expect(m).to.match(/between 1 and 8/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update with the same exercise twice",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "body.exercises = [body.exercises[0], body.exercises[0]];",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error message explains the problem', function () {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.be.a('string').and.not.empty;",
+                  "  pm.expect(m).to.match(/different exercise/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update with a threshold where 2-point max is not above 1-point max",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "body.exercises[0].intermediateMax = body.exercises[0].beginnerMax;",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error message explains the problem', function () {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.be.a('string').and.not.empty;",
+                  "  pm.expect(m).to.match(/intermediate maximum/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update with an unknown exercise code",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "body.exercises[0].code = 'POSTMAN-NOT-FOUND';",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error message explains the problem', function () {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.be.a('string').and.not.empty;",
+                  "  pm.expect(m).to.match(/not found/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update with a category that does not match the exercise",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "body.exercises[0].category = body.exercises[0].category === 'HOLD' ? 'REPS' : 'HOLD';",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error message explains the problem', function () {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.be.a('string').and.not.empty;",
+                  "  pm.expect(m).to.match(/category does not match/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update with an unknown level id",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "body.levels[0].id = 999999999;",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error message explains the problem', function () {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.be.a('string').and.not.empty;",
+                  "  pm.expect(m).to.match(/existing level/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update with a blank level name",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "body.levels[0].name = '   ';",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error message explains the problem', function () {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.be.a('string').and.not.empty;",
+                  "  pm.expect(m).to.match(/valid level name/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update with a duplicate level name",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "body.levels.push({ id: null, name: body.levels[0].name.toUpperCase(), scoreMin: 1, scoreMax: 1, status: 'ACTIVE' });",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 409', function () { pm.response.to.have.status(409); });",
+                  "pm.test('Error message explains the problem', function () {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.be.a('string').and.not.empty;",
+                  "  pm.expect(m).to.match(/unique/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update with every level inactive",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "body.levels.forEach(l => { l.status = 'INACTIVE'; });",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error message explains the problem', function () {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.be.a('string').and.not.empty;",
+                  "  pm.expect(m).to.match(/stay active/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update where the first level does not start at N",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "body.levels[0].scoreMin = floor + 1; body.levels[0].scoreMax = Math.max(body.levels[0].scoreMax, floor + 1);",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error message explains the problem', function () {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.be.a('string').and.not.empty;",
+                  "  pm.expect(m).to.match(/must start at/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update where the last level does not end at 3N",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "body.levels[body.levels.length - 1].scoreMax = ceil + 1;",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error message explains the problem', function () {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.be.a('string').and.not.empty;",
+                  "  pm.expect(m).to.match(/must end at/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update with a gap between two levels",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "if (body.levels.length > 1) { body.levels[1].scoreMin += 1; body.levels[1].scoreMax = Math.max(body.levels[1].scoreMax, body.levels[1].scoreMin); } else { body.levels[0].scoreMin = floor + 1; body.levels[0].scoreMax = floor + 1; }",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error message explains the problem', function () {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.be.a('string').and.not.empty;",
+                  "  pm.expect(m).to.match(/contiguous|must start at/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update that removes a level still used by members/exercises/workouts",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "",
+                  "const inUse = String(pm.collectionVariables.get('levelInUseId') || '');",
+                  "const idx = body.levels.findIndex(l => String(l.id) === inUse);",
+                  "if (!inUse || idx < 0 || body.levels.length < 2) {",
+                  "  pm.collectionVariables.set('removeInUsePossible', 'false');",
+                  "} else {",
+                  "  const removed = body.levels.splice(idx, 1)[0];",
+                  "  if (idx > 0) body.levels[idx - 1].scoreMax = removed.scoreMax; else body.levels[0].scoreMin = removed.scoreMin;",
+                  "  pm.collectionVariables.set('removeInUsePossible', 'true');",
+                  "}",
+                  "",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('removeInUsePossible') !== 'true') {",
+                  "  pm.test('Skipped: no level with members to remove (payload equals the snapshot)', function () { pm.expect(pm.response.code).to.be.oneOf([200, 400, 409]); });",
+                  "} else {",
+                  "  pm.test('Returns 409 (or 400 if it would leave no active level)', function () { pm.expect(pm.response.code).to.be.oneOf([409, 400]); });",
+                  "  pm.test('Message explains why the level is protected', function () { pm.expect(pm.response.json().message).to.match(/member|Exercises|Workouts|stay active/i); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update with the unchanged snapshot (no-op save)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "",
+                  "const byScore = (list, key) => [...list].sort((a, b) => a[key] - b[key]);",
+                  "function assertRanges(b) {",
+                  "  const n = b.exercises.length, floor = n, ceil = n * 3;",
+                  "  const ls = byScore(b.levels, 'scoreMin');",
+                  "  pm.expect(ls[0].scoreMin, 'first level starts at ' + floor).to.eql(floor);",
+                  "  for (let i = 1; i < ls.length; i++) pm.expect(ls[i].scoreMin, ls[i].level + ' starts after ' + ls[i - 1].level).to.eql(ls[i - 1].scoreMax + 1);",
+                  "  pm.expect(ls[ls.length - 1].scoreMax, 'last level ends at ' + ceil).to.eql(ceil);",
+                  "}",
+                  "const snapshot = () => JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "",
+                  "const b = pm.response.json();",
+                  "const snap = snapshot();",
+                  "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Levels keep their ids, names, ranges and statuses', function () {",
+                  "  const got = byScore(b.levels, 'scoreMin').map(l => [l.id, l.level, l.scoreMin, l.scoreMax, l.status]);",
+                  "  const want = byScore(snap.levels, 'scoreMin').map(l => [l.id, l.name, l.scoreMin, l.scoreMax, l.status]);",
+                  "  pm.expect(got).to.eql(want);",
+                  "});",
+                  "pm.test('Exercise thresholds match the snapshot', function () {",
+                  "  const got = b.exercises.map(e => [e.code, e.category, e.beginnerMax, e.intermediateMax]).sort();",
+                  "  const want = snap.exercises.map(e => [e.code, e.category, e.beginnerMax, e.intermediateMax]).sort();",
+                  "  pm.expect(got).to.eql(want);",
+                  "});",
+                  "pm.test('Score ranges are contiguous', function () { assertRanges(b); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update the thresholds of the first exercise (+1 on both limits)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "body.exercises[0].beginnerMax += 1; body.exercises[0].intermediateMax += 1;",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "",
+                  "const byScore = (list, key) => [...list].sort((a, b) => a[key] - b[key]);",
+                  "function assertRanges(b) {",
+                  "  const n = b.exercises.length, floor = n, ceil = n * 3;",
+                  "  const ls = byScore(b.levels, 'scoreMin');",
+                  "  pm.expect(ls[0].scoreMin, 'first level starts at ' + floor).to.eql(floor);",
+                  "  for (let i = 1; i < ls.length; i++) pm.expect(ls[i].scoreMin, ls[i].level + ' starts after ' + ls[i - 1].level).to.eql(ls[i - 1].scoreMax + 1);",
+                  "  pm.expect(ls[ls.length - 1].scoreMax, 'last level ends at ' + ceil).to.eql(ceil);",
+                  "}",
+                  "const snapshot = () => JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "",
+                  "const snap = snapshot();",
+                  "const first = snap.exercises[0];",
+                  "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "const e = b.exercises.find(x => x.code === first.code);",
+                  "pm.test('The exercise has the new thresholds', function () {",
+                  "  pm.expect(e.beginnerMax).to.eql(first.beginnerMax + 1);",
+                  "  pm.expect(e.intermediateMax).to.eql(first.intermediateMax + 1);",
+                  "});",
+                  "pm.test('Other exercises are unchanged', function () {",
+                  "  snap.exercises.filter(x => x.code !== first.code).forEach(function (s) {",
+                  "    const got = b.exercises.find(x => x.code === s.code);",
+                  "    pm.expect([got.beginnerMax, got.intermediateMax]).to.eql([s.beginnerMax, s.intermediateMax]);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add a level (id omitted) - creates Postman Temp Level",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "",
+                  "const widths = body.levels.map(l => l.scoreMax - l.scoreMin + 1);",
+                  "let w = -1;",
+                  "widths.forEach((x, i) => { if (x >= 2 && (w < 0 || x >= widths[w])) w = i; });",
+                  "if (w < 0) {",
+                  "  pm.collectionVariables.set('addLevelPossible', 'false');",
+                  "} else {",
+                  "  widths[w] -= 1;",
+                  "  body.levels.push({ id: null, name: 'Postman Temp Level', scoreMin: 0, scoreMax: 0, status: 'ACTIVE' });",
+                  "  widths.push(1);",
+                  "  let cursor = floor;",
+                  "  body.levels.forEach((l, i) => { l.scoreMin = cursor; l.scoreMax = cursor + widths[i] - 1; cursor = l.scoreMax + 1; });",
+                  "  pm.collectionVariables.set('addLevelPossible', 'true');",
+                  "}",
+                  "",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "",
+                  "const byScore = (list, key) => [...list].sort((a, b) => a[key] - b[key]);",
+                  "function assertRanges(b) {",
+                  "  const n = b.exercises.length, floor = n, ceil = n * 3;",
+                  "  const ls = byScore(b.levels, 'scoreMin');",
+                  "  pm.expect(ls[0].scoreMin, 'first level starts at ' + floor).to.eql(floor);",
+                  "  for (let i = 1; i < ls.length; i++) pm.expect(ls[i].scoreMin, ls[i].level + ' starts after ' + ls[i - 1].level).to.eql(ls[i - 1].scoreMax + 1);",
+                  "  pm.expect(ls[ls.length - 1].scoreMax, 'last level ends at ' + ceil).to.eql(ceil);",
+                  "}",
+                  "const snapshot = () => JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "",
+                  "const snap = snapshot();",
+                  "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "if (pm.collectionVariables.get('addLevelPossible') === 'true') {",
+                  "  pm.test('The new level was created with an id', function () {",
+                  "    const made = b.levels.find(l => l.level === 'Postman Temp Level');",
+                  "    pm.expect(made).to.be.an('object');",
+                  "    pm.expect(made.id).to.be.a('number');",
+                  "  });",
+                  "  const madeLevel = b.levels.find(l => l.level === 'Postman Temp Level');",
+                  "  if (madeLevel) pm.collectionVariables.set('tempLevelId', String(madeLevel.id));",
+                  "  pm.test('One level more than before', function () { pm.expect(b.levels.length).to.eql(snap.levels.length + 1); });",
+                  "}",
+                  "pm.test('Score ranges are contiguous', function () { assertRanges(b); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Screen: Level detail (uses Postman Temp Level)",
+      "item": [
+        {
+          "name": "Load the detail data for the new level",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/content/level-benchmarks"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "",
+                  "const byScore = (list, key) => [...list].sort((a, b) => a[key] - b[key]);",
+                  "function assertRanges(b) {",
+                  "  const n = b.exercises.length, floor = n, ceil = n * 3;",
+                  "  const ls = byScore(b.levels, 'scoreMin');",
+                  "  pm.expect(ls[0].scoreMin, 'first level starts at ' + floor).to.eql(floor);",
+                  "  for (let i = 1; i < ls.length; i++) pm.expect(ls[i].scoreMin, ls[i].level + ' starts after ' + ls[i - 1].level).to.eql(ls[i - 1].scoreMax + 1);",
+                  "  pm.expect(ls[ls.length - 1].scoreMax, 'last level ends at ' + ceil).to.eql(ceil);",
+                  "}",
+                  "const snapshot = () => JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "",
+                  "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "const id = pm.collectionVariables.get('tempLevelId');",
+                  "if (!id) { pm.test('Skipped: no temp level was created (score range is full)', function () {}); return; }",
+                  "const sorted = byScore(b.levels, 'scoreMin');",
+                  "const row = sorted.find(l => String(l.id) === String(id));",
+                  "pm.test('The level is found by id', function () { pm.expect(row).to.be.an('object'); });",
+                  "if (row) {",
+                  "  pm.test('Detail fields are present', function () {",
+                  "    pm.expect(row.level).to.eql('Postman Temp Level');",
+                  "    pm.expect(row.scoreMin).to.be.a('number');",
+                  "    pm.expect(row.scoreMax).to.be.at.least(row.scoreMin);",
+                  "    pm.expect(row).to.have.property('updatedAt');",
+                  "    pm.expect(row.updatedBy).to.be.a('string').and.not.empty;",
+                  "  });",
+                  "  pm.test('Tier is between 1 and the number of levels', function () {",
+                  "    const tier = sorted.indexOf(row) + 1;",
+                  "    pm.expect(tier).to.be.within(1, sorted.length);",
+                  "  });",
+                  "  pm.test('Score range fits inside the possible total (N to 3N)', function () {",
+                  "    pm.expect(row.scoreMin).to.be.at.least(b.exercises.length);",
+                  "    pm.expect(row.scoreMax).to.be.at.most(b.exercises.length * 3);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Load member share for the detail page",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/content/dashboard/member-levels"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+                  "const rows = pm.response.json();",
+                  "const total = rows.reduce((s, r) => s + Number(r.memberCount || 0), 0);",
+                  "const mine = rows.find(r => String(r.level).toLowerCase() === 'postman temp level');",
+                  "pm.test('A new level has no members and a 0% share', function () {",
+                  "  const count = mine ? mine.memberCount : 0;",
+                  "  pm.expect(count).to.eql(0);",
+                  "  pm.expect(total ? Math.round(count / total * 100) : 0).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Screen: list row actions (3-dot menu)",
+      "item": [
+        {
+          "name": "Deactivate the new level",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/content/level-benchmarks/levels/Postman%20Temp%20Level/status?status=INACTIVE"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('tempLevelId')) { pm.test('Skipped: the temp level was not created (score range is full)', function () {}); return; }",
+                  "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Level is now INACTIVE', function () {",
+                  "  const l = pm.response.json().levels.find(x => x.level === 'Postman Temp Level');",
+                  "  pm.expect(l.status).to.eql('INACTIVE');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Activate the new level",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/content/level-benchmarks/levels/Postman%20Temp%20Level/status?status=ACTIVE"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('tempLevelId')) { pm.test('Skipped: the temp level was not created (score range is full)', function () {}); return; }",
+                  "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Level is ACTIVE again', function () {",
+                  "  const l = pm.response.json().levels.find(x => x.level === 'Postman Temp Level');",
+                  "  pm.expect(l.status).to.eql('ACTIVE');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Change status with an invalid value",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/content/level-benchmarks/levels/Postman%20Temp%20Level/status?status=PAUSED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('tempLevelId')) { pm.test('Skipped: the temp level was not created (score range is full)', function () {}); return; }",
+                  "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error message explains the problem', function () {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.be.a('string').and.not.empty;",
+                  "  pm.expect(m).to.match(/Active or Inactive/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Change status of an unknown level",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/content/level-benchmarks/levels/Postman%20Missing%20Level/status?status=ACTIVE"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('Error message explains the problem', function () {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.be.a('string').and.not.empty;",
+                  "  pm.expect(m).to.match(/not found/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete a level that is in use (members/exercises/workouts)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/content/level-benchmarks/levels/{{levelInUseId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('levelInUseId')) {",
+                  "  pm.test('Skipped: no level has members yet', function () {});",
+                  "} else {",
+                  "  pm.test('Returns 409', function () { pm.response.to.have.status(409); });",
+                  "  pm.test('Message tells the user to deactivate or move items', function () {",
+                  "    pm.expect(pm.response.json().message).to.match(/member|Exercises|Workouts|stay active/i);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete an unknown level",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/content/level-benchmarks/levels/999999999"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('Error message explains the problem', function () {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.be.a('string').and.not.empty;",
+                  "  pm.expect(m).to.match(/not found/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete the new level",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/content/level-benchmarks/levels/{{tempLevelId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "",
+                  "const byScore = (list, key) => [...list].sort((a, b) => a[key] - b[key]);",
+                  "function assertRanges(b) {",
+                  "  const n = b.exercises.length, floor = n, ceil = n * 3;",
+                  "  const ls = byScore(b.levels, 'scoreMin');",
+                  "  pm.expect(ls[0].scoreMin, 'first level starts at ' + floor).to.eql(floor);",
+                  "  for (let i = 1; i < ls.length; i++) pm.expect(ls[i].scoreMin, ls[i].level + ' starts after ' + ls[i - 1].level).to.eql(ls[i - 1].scoreMax + 1);",
+                  "  pm.expect(ls[ls.length - 1].scoreMax, 'last level ends at ' + ceil).to.eql(ceil);",
+                  "}",
+                  "const snapshot = () => JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "",
+                  "if (!pm.collectionVariables.get('tempLevelId')) { pm.test('Skipped: no temp level was created', function () {}); return; }",
+                  "const snap = snapshot();",
+                  "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "pm.test('The level is gone', function () { pm.expect(b.levels.some(l => l.level === 'Postman Temp Level')).to.eql(false); });",
+                  "pm.test('Level count is back to the original', function () { pm.expect(b.levels.length).to.eql(snap.levels.length); });",
+                  "pm.test('Score ranges are still contiguous after the neighbour absorbs the points', function () { assertRanges(b); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete the same level again",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/content/level-benchmarks/levels/{{tempLevelId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('tempLevelId')) { pm.test('Skipped: no temp level was created', function () {}); return; }",
+                  "pm.test('Returns 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Cleanup (restore the original configuration)",
+      "item": [
+        {
+          "name": "Restore the snapshot (removes leftover levels by omission, resets thresholds)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/content/level-benchmarks",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{putBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const snap = JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "const body = JSON.parse(JSON.stringify({ exercises: snap.exercises, levels: snap.levels }));",
+                  "body.levels.sort((a, b) => a.scoreMin - b.scoreMin);",
+                  "const n = body.exercises.length, floor = n, ceil = n * 3;",
+                  "",
+                  "pm.variables.set('putBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "",
+                  "const byScore = (list, key) => [...list].sort((a, b) => a[key] - b[key]);",
+                  "function assertRanges(b) {",
+                  "  const n = b.exercises.length, floor = n, ceil = n * 3;",
+                  "  const ls = byScore(b.levels, 'scoreMin');",
+                  "  pm.expect(ls[0].scoreMin, 'first level starts at ' + floor).to.eql(floor);",
+                  "  for (let i = 1; i < ls.length; i++) pm.expect(ls[i].scoreMin, ls[i].level + ' starts after ' + ls[i - 1].level).to.eql(ls[i - 1].scoreMax + 1);",
+                  "  pm.expect(ls[ls.length - 1].scoreMax, 'last level ends at ' + ceil).to.eql(ceil);",
+                  "}",
+                  "const snapshot = () => JSON.parse(pm.collectionVariables.get('snapshot'));",
+                  "",
+                  "const b = pm.response.json();",
+                  "const snap = snapshot();",
+                  "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Levels keep their ids, names, ranges and statuses', function () {",
+                  "  const got = byScore(b.levels, 'scoreMin').map(l => [l.id, l.level, l.scoreMin, l.scoreMax, l.status]);",
+                  "  const want = byScore(snap.levels, 'scoreMin').map(l => [l.id, l.name, l.scoreMin, l.scoreMax, l.status]);",
+                  "  pm.expect(got).to.eql(want);",
+                  "});",
+                  "pm.test('Exercise thresholds match the snapshot', function () {",
+                  "  const got = b.exercises.map(e => [e.code, e.category, e.beginnerMax, e.intermediateMax]).sort();",
+                  "  const want = snap.exercises.map(e => [e.code, e.category, e.beginnerMax, e.intermediateMax]).sort();",
+                  "  pm.expect(got).to.eql(want);",
+                  "});",
+                  "pm.test('Score ranges are contiguous', function () { assertRanges(b); });",
+                  "",
+                  "pm.test('No Postman test level is left behind', function () { pm.expect(b.levels.some(l => /^postman /i.test(l.level))).to.eql(false); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

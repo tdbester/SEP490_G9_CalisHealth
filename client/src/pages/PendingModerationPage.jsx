@@ -11,17 +11,13 @@ import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import { contentManagerApi } from "../api/contentManager";
 import { useApiMutation, useApiQuery } from "../hooks";
+import { useLevelNames } from "../useLevelNames";
 import { CONTENT_PATHS, ContentPageHeader, DarkPill, SummaryCard } from "../components/ContentShared";
 import ContentDataCard, { DbSourceNote, EmptyState, HEAD_ROW_SX } from "../components/ContentDataCard";
 import { CM } from "../theme-content";
 
 function initials(value) {
   return String(value || "Unknown").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
-}
-
-function levelTone(level) {
-  const normalized = String(level || "").toLowerCase();
-  return normalized === "beginner" ? "success" : normalized === "advanced" ? "danger" : "warning";
 }
 
 function FitnessIconSmall() {
@@ -48,6 +44,7 @@ export default function PendingModerationPage() {
   const [busyCode, setBusyCode] = useState(null);
   const [search, setSearch] = useState("");
   const [level, setLevel] = useState("all");
+  const { levels: levelNames, levelTone } = useLevelNames();
   const [sort, setSort] = useState("oldest");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -199,7 +196,7 @@ export default function PendingModerationPage() {
         <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ xs: "stretch", md: "center" }} sx={{ p: 1.5, borderBottom: `1px solid ${CM.border}` }}>
           <TextField size="small" fullWidth value={search} onChange={resetPage(setSearch)} placeholder="Search exercise or submitter" inputProps={{ "aria-label": "Search exercise or submitter" }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" color="disabled" /></InputAdornment> }} sx={{ flex: 1, minWidth: 200 }} />
           <TextField select size="small" value={level} onChange={resetPage(setLevel)} SelectProps={{ SelectDisplayProps: { "aria-label": "Filter by level" } }} sx={{ minWidth: 150 }}>
-            <MenuItem value="all">All levels</MenuItem><MenuItem value="beginner">Beginner</MenuItem><MenuItem value="intermediate">Intermediate</MenuItem><MenuItem value="advanced">Advanced</MenuItem>
+            <MenuItem value="all">All levels</MenuItem>{levelNames.map((name) => <MenuItem key={name} value={name.toLowerCase()}>{name}</MenuItem>)}
           </TextField>
           <TextField select size="small" value={sort} onChange={resetPage(setSort)} SelectProps={{ SelectDisplayProps: { "aria-label": "Sort submissions" } }} sx={{ minWidth: 145 }}>
             <MenuItem value="oldest">Oldest first</MenuItem><MenuItem value="newest">Newest first</MenuItem>
@@ -222,12 +219,12 @@ export default function PendingModerationPage() {
             <TableContainer>
               <Table size="small" sx={{ minWidth: 900 }}>
                 <TableHead><TableRow sx={HEAD_ROW_SX}>
-                  <TableCell>Exercise</TableCell><TableCell>Uploaded by</TableCell><TableCell>Muscle group</TableCell><TableCell>Level</TableCell><TableCell>Submitted</TableCell><TableCell align="center">Action</TableCell>
+                  <TableCell sx={{ textAlign: "left !important", pl: 3 }}>Exercise</TableCell><TableCell>Uploaded by</TableCell><TableCell>Muscle group</TableCell><TableCell>Level</TableCell><TableCell>Submitted</TableCell><TableCell align="center">Action</TableCell>
                 </TableRow></TableHead>
                 <TableBody>{visibleRows.map((row) => {
                   return (
                     <TableRow key={row.code} hover>
-                      <TableCell><Stack direction="row" spacing={1.25} alignItems="center"><Box sx={{ width: 32, height: 32, borderRadius: 1.5, display: "grid", placeItems: "center", flexShrink: 0, bgcolor: "rgba(168,155,208,0.14)", color: CM.textMuted }}><FitnessIconSmall /></Box><Box sx={{ minWidth: 0 }}><Typography variant="body2" fontWeight={600} sx={{ color: "#fff" }}>{row.name}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>{row.code}</Typography></Box></Stack></TableCell>
+                      <TableCell sx={{ textAlign: "left !important", pl: 3, "& > .MuiStack-root": { justifyContent: "flex-start" } }}><Stack direction="row" spacing={1.25} alignItems="center"><Box sx={{ width: 32, height: 32, borderRadius: 1.5, display: "grid", placeItems: "center", flexShrink: 0, bgcolor: "rgba(168,155,208,0.14)", color: CM.textMuted }}><FitnessIconSmall /></Box><Box sx={{ minWidth: 0, textAlign: "left" }}><Typography variant="body2" fontWeight={600} sx={{ color: "#fff" }}>{row.name}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>{row.code}</Typography></Box></Stack></TableCell>
                       <TableCell><Stack direction="row" spacing={1} alignItems="center"><Avatar sx={{ width: 28, height: 28, fontSize: 11, fontWeight: 700, bgcolor: "rgba(65,201,173,0.2)", color: "#8dd8c5" }}>{initials(row.createdByName)}</Avatar><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.createdByName || "Unknown"}</Typography></Stack></TableCell>
                       <TableCell><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.muscleGroup || "—"}</Typography></TableCell>
                       <TableCell><DarkPill tone={levelTone(row.level)}>{row.level || "—"}</DarkPill></TableCell>

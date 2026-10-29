@@ -46,11 +46,10 @@ export default function App() {
           <Route path="surveys" element={<ContentManagerSectionPage section="surveys" />} />
           <Route path="exercises" element={<ExerciseListPage />} />
           <Route path="progression-rules" element={<ContentManagerSectionPage section="progressionRules" />} />
-          <Route path="level-criteria" element={<LevelBenchmarkCriteriaPage />} />
-          <Route path="level-criteria/create" element={<LevelBenchmarkFormPage />} />
-          <Route path="level-criteria/edit" element={<LevelBenchmarkFormPage />} />
-          <Route path="level-criteria/:id/edit" element={<LevelBenchmarkFormPage />} />
-          <Route path="level-criteria/:id" element={<LevelBenchmarkDetailPage />} />
+          <Route path="benchmark-criteria" element={<LevelBenchmarkCriteriaPage />} />
+          <Route path="benchmark-criteria/edit" element={<LevelBenchmarkFormPage />} />
+          <Route path="benchmark-criteria/:id/edit" element={<LevelBenchmarkFormPage />} />
+          <Route path="benchmark-criteria/:id" element={<LevelBenchmarkDetailPage />} />
           <Route path="exercises/pending-moderation" element={<PendingModerationPage />} />
           <Route path="exercises/approval-history" element={<ExerciseApprovalHistoryPage />} />
           <Route path="exercises/moderation/:code" element={<ExerciseModerationDetailPage />} />

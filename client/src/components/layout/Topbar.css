@@ -227,6 +227,42 @@
   line-height: 17px;
 }
 
+/* Logout button: same look as the Content Manager top bar (outlined, icon + label). */
+.topbar-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-sizing: border-box;
+  padding: 4px 12px;
+  border: 1px solid rgba(160, 132, 255, 0.32);
+  border-radius: 12px;
+  background-color: rgba(139, 92, 246, 0.08);
+  color: #FFFFFF;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.75;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.topbar-logout-btn svg {
+  width: 16px;
+  height: 16px;
+  margin-left: -2px;
+}
+
+.topbar-logout-btn:hover {
+  border-color: #A78BFA;
+  background-color: rgba(139, 92, 246, 0.18);
+}
+
+.topbar-logout-btn:focus-visible {
+  outline: 2px solid #A78BFA;
+  outline-offset: 2px;
+}
+
 .topbar-popover {
   position: absolute;
   top: calc(var(--topbar-height) - 2px);

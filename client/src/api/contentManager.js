@@ -82,11 +82,11 @@ export const contentManagerApi = {
   levelBenchmarkConfiguration: () =>
     contentApi.get("/content/level-benchmarks").then((r) => r.data).catch((error) => { throw requestError(error); }),
 
-  createLevelBenchmark: (data) =>
-    contentApi.post("/content/level-benchmarks", data).then((r) => r.data).catch((error) => { throw requestError(error); }),
-
   updateLevelBenchmarkConfiguration: (data) =>
     contentApi.put("/content/level-benchmarks", data).then((r) => r.data).catch((error) => { throw requestError(error); }),
+
+  deleteLevelBenchmark: (id) =>
+    contentApi.delete(`/content/level-benchmarks/levels/${encodeURIComponent(id)}`).then((r) => r.data).catch((error) => { throw requestError(error); }),
 
   updateLevelBenchmarkStatus: (level, status) =>
     contentApi.patch(`/content/level-benchmarks/levels/${encodeURIComponent(level)}/status`, null, { params: { status } })

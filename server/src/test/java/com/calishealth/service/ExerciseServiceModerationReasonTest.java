@@ -29,7 +29,8 @@ class ExerciseServiceModerationReasonTest {
     private final JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
     private final ExerciseVideoStorageService videoStorage = mock(ExerciseVideoStorageService.class);
     private final ExerciseService service = new ExerciseService(
-            exercises, moderationHistory, muscleGroups, users, jdbcTemplate, videoStorage
+            exercises, moderationHistory, muscleGroups, users, jdbcTemplate, videoStorage,
+            mock(com.calishealth.repository.FitnessLevelRepository.class)
     );
 
     @Test
