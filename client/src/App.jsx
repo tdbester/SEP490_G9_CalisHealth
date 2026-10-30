@@ -2,6 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "./components/layout/AdminLayout";
 import RoleHomeRoute from "./components/RoleHomeRoute";
 import ContentManagerLayout from "./components/layout/ContentManagerLayout";
+import AdminAreaLayout from "./components/layout/AdminAreaLayout";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminSectionPage from "./pages/AdminSectionPage";
 import Dashboard from "./pages/Dashboard";
 import HealthTracking from "./pages/HealthTracking";
 import WorkoutHistory from "./pages/WorkoutHistory";
@@ -90,6 +93,17 @@ export default function App() {
           <Route path="create" element={<ExerciseFormPage />} />
           <Route path="library" element={<Navigate to="/content/exercises" replace />} />
           <Route path="*" element={<Navigate to="/content/dashboard" replace />} />
+        </Route>
+
+        {/* Admin area (role ADMIN) - the guard reads /auth/me, same pattern as /content. */}
+        <Route path="/admin" element={<AdminAreaLayout />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="users" element={<AdminSectionPage title="Users" />} />
+          <Route path="notifications" element={<AdminSectionPage title="Notifications" />} />
+          <Route path="storage" element={<AdminSectionPage title="Media storage & infrastructure" />} />
+          <Route path="maintenance" element={<AdminSectionPage title="Create maintenance schedule" />} />
+          <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
         <Route path="/" element={<RoleHomeRoute />} />

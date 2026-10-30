@@ -87,6 +87,9 @@ export default function Login() {
   if (existingRole === "CONTENT_MANAGER") {
     return <Navigate to="/content/dashboard" replace />;
   }
+  if (existingRole === "ADMIN") {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -128,12 +131,13 @@ export default function Login() {
       const returnTo = new URLSearchParams(location.search).get("returnTo");
       const isSafeReturnTo =
         returnTo?.startsWith("/") && !returnTo.startsWith("//") && returnTo !== "/login";
-      const destination =
-        res.data.role === "CONTENT_MANAGER"
-          ? "/content/dashboard"
-          : isSafeReturnTo
-            ? returnTo
-            : "/";
+      let destination = isSafeReturnTo ? returnTo : "/";
+      if (res.data.role === "CONTENT_MANAGER") {
+        destination = "/content/dashboard";
+      } else if (res.data.role === "ADMIN") {
+        // Admins only land inside the admin area; honour returnTo only when it points there.
+        destination = isSafeReturnTo && returnTo.startsWith("/admin") ? returnTo : "/admin/dashboard";
+      }
       navigate(destination, { replace: true });
     } catch (err) {
       const msg =

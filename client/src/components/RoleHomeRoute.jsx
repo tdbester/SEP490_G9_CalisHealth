@@ -8,7 +8,8 @@ import Dashboard from "../pages/Dashboard";
 /**
  * Trang chủ theo vai trò:
  * - CONTENT_MANAGER -> /content/dashboard (khu quản trị nội dung)
- * - còn lại (MEMBER/ADMIN) -> Dashboard của member
+ * - ADMIN -> /admin/dashboard (khu quản trị hệ thống)
+ * - còn lại (MEMBER) -> Dashboard của member
  *
  * Dùng /auth/me thay vì chỉ đọc localStorage vì cache "user" của phiên cũ
  * không có trường role.
@@ -56,6 +57,10 @@ export default function RoleHomeRoute() {
 
   if (state.role === "CONTENT_MANAGER") {
     return <Navigate to="/content/dashboard" replace />;
+  }
+
+  if (state.role === "ADMIN") {
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   return (

@@ -36,7 +36,7 @@ import contentApi from "../../api/contentManager";
 import { CONTENT_PATHS } from "../ContentShared";
 import contentTheme, { CM } from "../../theme-content";
 
-const DRAWER_WIDTH = 248;
+export const DRAWER_WIDTH = 248;
 
 /** Main navigation of the Content Manager area. */
 export const CONTENT_LINKS = [
@@ -95,7 +95,7 @@ function useContentManagerGuard() {
   return { status, user };
 }
 
-const drawerPaperSx = {
+export const drawerPaperSx = {
   width: DRAWER_WIDTH,
   bgcolor: CM.sidebar,
   backgroundImage: "linear-gradient(180deg, #170D31 0%, #130A27 45%, #120823 100%)",
@@ -104,7 +104,7 @@ const drawerPaperSx = {
   "& .MuiDivider-root": { borderColor: CM.sidebarBorder },
 };
 
-function navItemSx(active) {
+export function navItemSx(active) {
   return {
     borderRadius: 10,
     mx: 1.5,
@@ -144,11 +144,10 @@ function BrandMark() {
   );
 }
 
-function SidebarContent({ onNavigate }) {
-  const { pathname } = useLocation();
-
+/** Logo + "CalisHealth" header of the sidebar, shared by Content Manager and Admin. */
+export function SidebarBrand() {
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <>
       <Toolbar sx={{ px: 2.5, gap: 1.25, minHeight: "66px !important" }}>
         <BrandMark />
         <Typography variant="subtitle1" fontWeight={800} letterSpacing={-0.4} color="#fff">
@@ -166,6 +165,16 @@ function SidebarContent({ onNavigate }) {
         </Typography>
       </Toolbar>
       <Divider />
+    </>
+  );
+}
+
+function SidebarContent({ onNavigate }) {
+  const { pathname } = useLocation();
+
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <SidebarBrand />
 
       <List sx={{ pt: 1.5, pb: 1 }} aria-label="Content manager menu">
         {CONTENT_LINKS.map(({ to, label, icon: Icon }) => {
@@ -195,7 +204,7 @@ function SidebarContent({ onNavigate }) {
 }
 
 /** Same avatar treatment as the member top bar: gradient circle with initials. */
-function AccountMenu({ user, logout }) {
+export function AccountMenu({ user, logout, fallbackName = "Content Manager" }) {
   const [anchor, setAnchor] = useState(null);
   const initials =
     user?.fullName
@@ -244,7 +253,7 @@ function AccountMenu({ user, logout }) {
       >
         <Box sx={{ px: 2, py: 1, minWidth: 200 }}>
           <Typography variant="body2" fontWeight={700} sx={{ color: "#fff" }} noWrap>
-            {user?.fullName || "Content Manager"}
+            {user?.fullName || fallbackName}
           </Typography>
           <Typography variant="caption" sx={{ color: CM.textDim }} noWrap display="block">
             {user?.email || ""}
@@ -261,6 +270,32 @@ function AccountMenu({ user, logout }) {
         </MenuItem>
       </Menu>
     </>
+  );
+}
+
+/** Sticky top bar style shared by Content Manager and Admin. */
+export const topbarSx = {
+  minHeight: 66,
+  px: { xs: 1.5, sm: 3 },
+  borderBottom: `1px solid ${CM.border}`,
+  backgroundColor: "rgba(21,12,43,0.86)",
+  backdropFilter: "blur(14px)",
+  position: "sticky",
+  top: 0,
+  zIndex: 10,
+};
+
+export function LogoutButton({ logout }) {
+  return (
+    <Button
+      size="small"
+      variant="outlined"
+      startIcon={<LogoutRoundedIcon sx={{ fontSize: 16 }} />}
+      onClick={logout}
+      sx={{ py: 0.5, px: 1.5, fontSize: 12.5, borderRadius: "12px" }}
+    >
+      Logout
+    </Button>
   );
 }
 
@@ -304,16 +339,7 @@ function ContentShell({ user, logout, children }) {
           direction="row"
           alignItems="center"
           spacing={1.5}
-          sx={{
-            minHeight: 66,
-            px: { xs: 1.5, sm: 3 },
-            borderBottom: `1px solid ${CM.border}`,
-            backgroundColor: "rgba(21,12,43,0.86)",
-            backdropFilter: "blur(14px)",
-            position: "sticky",
-            top: 0,
-            zIndex: 10,
-          }}
+          sx={topbarSx}
         >
           {!isDesktop && (
             <IconButton
@@ -360,15 +386,7 @@ function ContentShell({ user, logout, children }) {
 
           <AccountMenu user={user} logout={logout} />
 
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<LogoutRoundedIcon sx={{ fontSize: 16 }} />}
-            onClick={logout}
-            sx={{ py: 0.5, px: 1.5, fontSize: 12.5, borderRadius: "12px" }}
-          >
-            Logout
-          </Button>
+          <LogoutButton logout={logout} />
         </Stack>
 
         <Box component="main" sx={{ flex: 1, pb: 5 }}>
