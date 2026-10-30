@@ -12,6 +12,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { keyframes } from "@mui/material/styles";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
@@ -27,21 +28,34 @@ import {
   validateExerciseUpload,
 } from "./ExerciseFormPage";
 
+const rise = keyframes`
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+const enter = (delay = 0) => ({
+  animation: `${rise} .45s ease-out ${delay}ms both`,
+  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+});
+
 function DetailField({ label, value, full, sx }) {
   return (
     <Grid item xs={12} sm={full ? 12 : 4} sx={sx}>
       <Box
         sx={{
+          position: "relative",
+          overflow: "hidden",
           border: `1px solid ${CM.border}`,
-          bgcolor: "rgba(19,10,39,0.6)",
-          borderRadius: 1.5,
-          p: { xs: 1.5, sm: 1.25 },
+          bgcolor: CM.surfaceSoft,
+          borderRadius: "14px",
+          p: { xs: 1.5, sm: 1.5 },
           height: "100%",
+          transition: "all .2s ease",
+          "&:hover": { borderColor: CM.borderStrong },
         }}
       >
         <Typography
           variant="caption"
-          sx={{ color: CM.textDim, textTransform: "uppercase", letterSpacing: "0.07em", fontSize: 10, fontWeight: 700 }}
+          sx={{ color: CM.textDim, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 10, fontWeight: 700 }}
         >
           {label}
         </Typography>
@@ -312,8 +326,8 @@ export default function SystemExerciseDetailPage() {
           </Stack>
         </Box>
       ) : (
-      <Card sx={{ mt: 2.5 }}>
-        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+      <Card sx={{ mt: 2.5, overflow: "hidden", ...enter(150) }}>
+        <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
           <Typography variant="subtitle2" fontWeight={700} sx={{ color: "#fff" }}>
             Demo video
           </Typography>

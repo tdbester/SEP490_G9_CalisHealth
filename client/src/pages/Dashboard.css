@@ -32,7 +32,6 @@
   background: linear-gradient(90deg, #8B5CF6 0%, #A855F7 100%);
   border: none;
   color: #FFFFFF;
-  box-shadow: 0 6px 18px rgba(139, 92, 246, 0.35);
 }
 
 .dash-btn-primary:hover {

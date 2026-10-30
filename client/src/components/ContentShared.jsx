@@ -93,7 +93,6 @@ export function SummaryCard({ label, count, detail, tone = "primary" }) {
         border: `1px solid ${CM.border}`,
         borderRadius: "14px",
         bgcolor: CM.surface,
-        backgroundImage: `radial-gradient(120px 80px at 100% 0%, ${colors.glow}, transparent 70%)`,
         px: 2,
         py: 1.75,
         transition: "border-color .16s ease, transform .16s ease",
@@ -109,7 +108,6 @@ export function SummaryCard({ label, count, detail, tone = "primary" }) {
               borderRadius: "50%",
               bgcolor: colors.dot,
               flexShrink: 0,
-              boxShadow: `0 0 12px ${colors.dot}`,
             }}
           />
           <Typography

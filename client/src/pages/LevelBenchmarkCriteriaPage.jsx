@@ -2,25 +2,41 @@ import { useMemo, useState } from "react";
 import { Link as RouterLink, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Alert, Box, Button, Card, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
-  IconButton, InputAdornment, Menu, MenuItem,
+  Divider, IconButton, InputAdornment, Menu, MenuItem,
   Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Typography,
 } from "@mui/material";
+import { keyframes } from "@mui/material/styles";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import DragIndicatorRoundedIcon from "@mui/icons-material/DragIndicatorRounded";
+import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
+import LayersRoundedIcon from "@mui/icons-material/LayersRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
+import RuleRoundedIcon from "@mui/icons-material/RuleRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import StarRoundedIcon from "@mui/icons-material/StarRounded";
+import TimerRoundedIcon from "@mui/icons-material/TimerRounded";
+import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import { contentManagerApi } from "../api/contentManager";
 import { useApiMutation, useApiQuery } from "../hooks";
 import { buildLevelToneMap } from "../useLevelNames";
-import { CONTENT_PATHS, ContentPageHeader, DarkPill, formatDate } from "../components/ContentShared";
+import { CONTENT_PATHS, ContentPageHeader, DarkPill, SummaryCard, formatDate } from "../components/ContentShared";
 import { CM } from "../theme-content";
+
+const rise = keyframes`
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+const enter = (delay = 0) => ({
+  animation: `${rise} .45s ease-out ${delay}ms both`,
+  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+});
 
 const MAX_EXERCISES = 8;
 const unitOf = (category) => category === "HOLD" ? "seconds" : "reps";
@@ -179,7 +195,28 @@ function Heading({ title, description, action, breadcrumb = BREADCRUMB }) {
 
 function SummaryMetric({ label, count, caption, tone }) {
   const color = tone === "success" ? CM.green : tone === "warning" ? CM.amber : CM.violetBright;
-  return <Box sx={{ px: 2, py: 1.6, border: `1px solid ${CM.border}`, borderRadius: 1.5, bgcolor: CM.surface, textAlign: "center" }}><Stack direction="row" spacing={0.75} alignItems="center" justifyContent="center"><Box sx={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, bgcolor: color, boxShadow: `0 0 10px ${color}` }} /><Typography variant="caption" sx={{ color: CM.textMuted, fontWeight: 600 }}>{label}</Typography></Stack><Typography sx={{ color: "#fff", fontSize: 36, fontWeight: 800, lineHeight: 1.15 }}>{count}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>{caption}</Typography></Box>;
+  const glow = tone === "success" ? "rgba(120,232,136,0.22)" : tone === "warning" ? "rgba(248,200,88,0.22)" : "rgba(139,92,246,0.25)";
+  return (
+    <Box sx={{
+      position: "relative",
+      overflow: "hidden",
+      px: 2,
+      py: 1.75,
+      border: `1px solid ${CM.border}`,
+      borderRadius: "14px",
+      bgcolor: CM.surface,
+      textAlign: "center",
+      transition: "border-color .2s ease, transform .2s ease, box-shadow .2s ease",
+      "&:hover": { borderColor: CM.borderStrong },
+    }}>
+      <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="center">
+        <Box sx={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, bgcolor: color }} />
+        <Typography variant="caption" sx={{ color: CM.textDim, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 10.5 }}>{label}</Typography>
+      </Stack>
+      <Typography sx={{ color: "#fff", fontSize: 36, fontWeight: 800, lineHeight: 1.15, mt: 0.5 }}>{count}</Typography>
+      <Typography variant="caption" sx={{ color: CM.textMuted }}>{caption}</Typography>
+    </Box>
+  );
 }
 
 export default function LevelBenchmarkCriteriaPage() {
@@ -215,29 +252,51 @@ export default function LevelBenchmarkCriteriaPage() {
   if (query.error) return <Box sx={{ p: 3 }}><Heading title="Benchmark criteria unavailable" description={query.error.message} /><Button onClick={query.refetch} sx={{ mt: 2 }} variant="outlined">Retry</Button></Box>;
 
   return <Box sx={{ maxWidth: 1440, mx: "auto", px: { xs: 2, sm: 3, xl: 4 }, py: 2.5 }}>
-    <Heading title="Calisthenics Level Benchmark Criteria" description="Manage levels and the shared exercise thresholds used by the Onboarding Level Test." />
-    <Box sx={{ mt: 2.5, display: "grid", gap: 1.25, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" } }}><SummaryMetric label="Total Levels" count={levels.length} caption="configured levels" /><SummaryMetric label="Active" count={levels.filter((x) => x.status === "ACTIVE").length} caption="live levels" tone="success" /><SummaryMetric label="Inactive" count={levels.filter((x) => x.status === "INACTIVE").length} caption="hidden levels" tone="warning" /></Box>
+    <Heading
+      title="Calisthenics Level Benchmark Criteria"
+      description="Manage levels and the shared exercise thresholds used by the Onboarding Level Test."
+      action={<Button component={RouterLink} to={`${CONTENT_PATHS.levelCriteria}/edit`} variant="contained" startIcon={<RuleRoundedIcon />}>Update criteria</Button>}
+    />
+    <Box sx={{ mt: 2.5, display: "grid", gap: 1.25, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" } }}>
+      <Box sx={enter(0)}><SummaryMetric label="Total Levels" count={levels.length} caption="configured levels" /></Box>
+      <Box sx={enter(80)}><SummaryMetric label="Active" count={levels.filter((x) => x.status === "ACTIVE").length} caption="live levels" tone="success" /></Box>
+      <Box sx={enter(160)}><SummaryMetric label="Inactive" count={levels.filter((x) => x.status === "INACTIVE").length} caption="hidden levels" tone="warning" /></Box>
+    </Box>
     {location.state?.successMessage && <Alert sx={{ mt: 2 }} severity="success" onClose={() => navigate(location.pathname, { replace: true, state: null })}>{location.state.successMessage}</Alert>}
     {notice && <Alert sx={{ mt: 2 }} severity="success" onClose={() => setNotice("")}>{notice}</Alert>}
-    <Card sx={{ mt: 2.25, overflow: "hidden" }}>
+    <Card sx={{ mt: 2.25, overflow: "hidden", ...enter(220) }}>
       <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: "stretch", md: "center" }} sx={{ p: 2, borderBottom: `1px solid ${CM.border}` }}>
         <Stack direction={{ xs: "column", lg: "row" }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: "stretch", lg: "center" }} sx={{ width: "100%" }}>
-          <Box><Typography sx={{ color: "#fff", fontWeight: 700 }}>Benchmark Criteria</Typography><Typography variant="caption" sx={{ color: CM.textMuted }}>Each exercise contributes 1, 2, or 3 points to the total score.</Typography></Box>
+          <Stack direction="row" spacing={1.25} alignItems="center">
+            <Box sx={{ width: 36, height: 36, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}` }}>
+              <LayersRoundedIcon sx={{ color: CM.violetBright, fontSize: 20 }} />
+            </Box>
+            <Box>
+              <Typography sx={{ color: "#fff", fontWeight: 700 }}>Benchmark Criteria</Typography>
+              <Typography variant="caption" sx={{ color: CM.textMuted }}>Each exercise contributes 1, 2, or 3 points to the total score.</Typography>
+            </Box>
+          </Stack>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "center" }}>
-            <TextField size="small" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} placeholder="Search level or benchmark" sx={{ width: { xs: "100%", sm: 460, md: 560, lg: 640 } }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" /></InputAdornment> }} />
-            <TextField select size="small" value={status} onChange={(e) => { setStatus(e.target.value); setPage(0); }} sx={{ minWidth: 145 }}><MenuItem value="all">All Status</MenuItem><MenuItem value="active">Active</MenuItem><MenuItem value="inactive">Inactive</MenuItem></TextField>
-            <Button component={RouterLink} to={`${CONTENT_PATHS.levelCriteria}/edit`} variant="contained" size="small">Update</Button>
-            <Tooltip title="Refresh"><span><IconButton onClick={query.refetch} disabled={query.isFetching} sx={{ border: `1px solid ${CM.border}`, borderRadius: 1.25 }}>{query.isFetching ? <CircularProgress size={17} /> : <RefreshRoundedIcon />}</IconButton></span></Tooltip>
+            <TextField size="small" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} placeholder="Search level or benchmark" sx={{ width: { xs: "100%", sm: 360, lg: 460 } }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" /></InputAdornment> }} />
+            <TextField select size="small" value={status} onChange={(e) => { setStatus(e.target.value); setPage(0); }} sx={{ minWidth: 145 }}>
+              <MenuItem value="all">All Status</MenuItem><MenuItem value="active">Active</MenuItem><MenuItem value="inactive">Inactive</MenuItem>
+            </TextField>
+            <Tooltip title="Refresh"><span><IconButton onClick={query.refetch} disabled={query.isFetching} sx={{ border: `1px solid ${CM.border}`, borderRadius: 1.25, transition: "all .2s ease", "&:hover": { borderColor: CM.violetBright, bgcolor: "rgba(139,92,246,0.1)" } }}>{query.isFetching ? <CircularProgress size={17} /> : <RefreshRoundedIcon />}</IconButton></span></Tooltip>
           </Stack>
         </Stack>
       </Stack>
-      <TableContainer><Table size="small" sx={{ minWidth: 900 }}><TableHead><TableRow><TableCell>Level / Tier</TableCell><TableCell>Score Range</TableCell><TableCell>Scoring Formula</TableCell><TableCell>Status</TableCell><TableCell>Updated</TableCell><TableCell align="center">Action</TableCell></TableRow></TableHead><TableBody>{visible.map((row, index) => <TableRow hover key={row.id}><TableCell><Stack spacing={0.5} alignItems="center"><DarkPill tone={levelTone(row.name || row.level)}>{row.name || row.level}</DarkPill><Typography variant="caption" sx={{ color: CM.textDim }}>TIER {currentPage * PAGE_SIZE + index + 1}</Typography></Stack></TableCell><TableCell><Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 20, lineHeight: 1.2 }}>{scoreRange(row)}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>Total score</Typography></TableCell><TableCell><Typography variant="body2" sx={{ color: "#fff" }}>Exercise points sum</Typography><Typography variant="caption" sx={{ color: CM.textMuted }}>{rules.length ? rules.map((rule) => rule.name).join(" + ") : "No exercise configured"}</Typography></TableCell><TableCell><DarkPill tone={statusTone(row.status)}>{statusText(row.status)}</DarkPill></TableCell><TableCell><Typography variant="caption" display="block" sx={{ color: CM.textMuted }}>{formatDate(row.updatedAt)}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>by {row.updatedBy || "System"}</Typography></TableCell><TableCell align="center"><Stack direction="row" justifyContent="center" alignItems="center"><Button component={RouterLink} to={`${CONTENT_PATHS.levelCriteria}/${row.id}`} size="small" variant="outlined">View</Button><IconButton size="small" onClick={(e) => setMenu({ anchor: e.currentTarget, entry: row })}><MoreVertRoundedIcon fontSize="small" /></IconButton></Stack></TableCell></TableRow>)}{!visible.length && <TableRow><TableCell colSpan={6} align="center" sx={{ py: 6 }}>No benchmark levels match the current filters.</TableCell></TableRow>}</TableBody></Table></TableContainer>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1.5, borderTop: `1px solid ${CM.border}` }}><Typography variant="caption" sx={{ color: CM.textMuted }}>Showing {filtered.length ? currentPage * PAGE_SIZE + 1 : 0}-{Math.min((currentPage + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}</Typography><Stack direction="row"><IconButton disabled={currentPage === 0} onClick={() => setPage((x) => x - 1)}><ChevronLeftRoundedIcon /></IconButton><IconButton disabled={!pages || currentPage >= pages - 1} onClick={() => setPage((x) => x + 1)}><ChevronRightRoundedIcon /></IconButton></Stack></Stack>
+      <TableContainer><Table size="small" sx={{ minWidth: 900 }}><TableHead><TableRow><TableCell>Level / Tier</TableCell><TableCell>Score Range</TableCell><TableCell>Scoring Formula</TableCell><TableCell>Status</TableCell><TableCell>Updated</TableCell><TableCell align="center">Action</TableCell></TableRow></TableHead><TableBody>{visible.map((row, index) => <TableRow hover key={row.id} sx={{ transition: "all .2s ease", "&:hover": { bgcolor: "rgba(139,92,246,0.06)" }, ...enter(260 + index * 40) }}><TableCell><Stack spacing={0.5} alignItems="center"><DarkPill tone={levelTone(row.name || row.level)}>{row.name || row.level}</DarkPill><Typography variant="caption" sx={{ color: CM.textDim, fontWeight: 700 }}>TIER {currentPage * PAGE_SIZE + index + 1}</Typography></Stack></TableCell><TableCell><Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 20, lineHeight: 1.2 }}>{scoreRange(row)}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>Total score</Typography></TableCell><TableCell><Typography variant="body2" sx={{ color: "#fff" }}>Exercise points sum</Typography><Typography variant="caption" sx={{ color: CM.textMuted }}>{rules.length ? rules.map((rule) => rule.name).join(" + ") : "No exercise configured"}</Typography></TableCell><TableCell><DarkPill tone={statusTone(row.status)}>{statusText(row.status)}</DarkPill></TableCell><TableCell><Typography variant="caption" display="block" sx={{ color: CM.textMuted }}>{formatDate(row.updatedAt)}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>by {row.updatedBy || "System"}</Typography></TableCell><TableCell align="center"><Stack direction="row" justifyContent="center" alignItems="center" spacing={0.5}><Button component={RouterLink} to={`${CONTENT_PATHS.levelCriteria}/${row.id}`} size="small" variant="outlined">View</Button><IconButton size="small" onClick={(e) => setMenu({ anchor: e.currentTarget, entry: row })}><MoreVertRoundedIcon fontSize="small" /></IconButton></Stack></TableCell></TableRow>)}{!visible.length && <TableRow><TableCell colSpan={6} align="center" sx={{ py: 6 }}><Stack alignItems="center" spacing={1}><RuleRoundedIcon sx={{ fontSize: 44, color: CM.textDim, opacity: 0.4 }} /><Typography sx={{ color: CM.textMuted }}>No benchmark levels match the current filters.</Typography></Stack></TableCell></TableRow>}</TableBody></Table></TableContainer>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1.5, borderTop: `1px solid ${CM.border}` }}><Typography variant="caption" sx={{ color: CM.textMuted }}>Showing {filtered.length ? currentPage * PAGE_SIZE + 1 : 0}-{Math.min((currentPage + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}</Typography><Stack direction="row" spacing={0.5}><IconButton disabled={currentPage === 0} onClick={() => setPage((x) => x - 1)}><ChevronLeftRoundedIcon /></IconButton><IconButton disabled={!pages || currentPage >= pages - 1} onClick={() => setPage((x) => x + 1)}><ChevronRightRoundedIcon /></IconButton></Stack></Stack>
     </Card>
-    <Card sx={{ mt: 2.25, overflow: "hidden" }}>
-      <Box sx={{ p: 2, borderBottom: `1px solid ${CM.border}` }}>
-        <Typography sx={{ color: "#fff", fontWeight: 700 }}>Exercise point rules</Typography>
-        <Typography variant="caption" sx={{ color: CM.textMuted }}>Every level is decided by the same {rules.length || ""} exercise{rules.length === 1 ? "" : "s"}. Each one scores 1, 2, or 3 points from the member's survey result; the total picks the level.</Typography>
+    <Card sx={{ mt: 2.25, overflow: "hidden", ...enter(300) }}>
+      <Box sx={{ p: 2, borderBottom: `1px solid ${CM.border}`, display: "flex", alignItems: "center", gap: 1.5 }}>
+        <Box sx={{ width: 36, height: 36, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}` }}>
+          <FitnessCenterRoundedIcon sx={{ color: CM.violetBright, fontSize: 20 }} />
+        </Box>
+        <Box>
+          <Typography sx={{ color: "#fff", fontWeight: 700 }}>Exercise point rules</Typography>
+          <Typography variant="caption" sx={{ color: CM.textMuted }}>Every level is decided by the same {rules.length || ""} exercise{rules.length === 1 ? "" : "s"}. Each one scores 1, 2, or 3 points from the member's survey result; the total picks the level.</Typography>
+        </Box>
       </Box>
       <PointRules rules={rules} />
     </Card>
@@ -262,7 +321,7 @@ export function LevelBenchmarkDetailPage() {
   const row = query.data?.levels?.find((x) => String(x.id) === String(id));
   const rules = query.data?.exercises || [];
   const memberLevels = useApiQuery(() => contentManagerApi.memberLevels());
-  if (!row) return <Box sx={{ p: 3 }}><Heading title={query.isLoading ? "Loading…" : "Benchmark not found"} description="" /><Button component={RouterLink} to={CONTENT_PATHS.levelCriteria} variant="outlined">Back</Button></Box>;
+  if (!row) return <Box sx={{ p: 3 }}><Heading title={query.isLoading ? "Loading…" : "Benchmark not found"} description="" /><Button component={RouterLink} to={CONTENT_PATHS.levelCriteria} variant="outlined" startIcon={<ArrowBackRoundedIcon />}>Back</Button></Box>;
   const sorted = [...(query.data?.levels || [])].sort((a, b) => a.scoreMin - b.scoreMin);
   const tier = sorted.findIndex((x) => String(x.id) === String(id)) + 1;
   const name = row.name || row.level;
@@ -279,26 +338,32 @@ export function LevelBenchmarkDetailPage() {
   return <Box sx={{ maxWidth: 1100, mx: "auto", px: 3, py: 2.5 }}>
     <Heading breadcrumb={[...BREADCRUMB.slice(0, -1), { label: "Level & Benchmark Criteria", to: CONTENT_PATHS.levelCriteria }, { label: name }]} title={name} description="Benchmark level details" action={actions} />
     <Box sx={{ mt: 2.5, display: "grid", gap: 1.25, gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" } }}>
-      <Detail label="Tier" value={`Tier ${tier} of ${sorted.length}`} />
-      <Detail label="Score range" value={scoreRange(row)} />
-      <Detail label="Members" value={memberLevels.isLoading ? "…" : memberCount.toLocaleString()} hint={memberLevels.error ? "Unavailable" : `${memberShare}% of all members`} />
-      <Detail label="Last updated" value={formatDate(row.updatedAt)} hint={`by ${row.updatedBy || "System"}`} />
+      <Box sx={enter(0)}><Detail icon={LayersRoundedIcon} label="Tier" value={`Tier ${tier} of ${sorted.length}`} /></Box>
+      <Box sx={enter(70)}><Detail icon={StarRoundedIcon} label="Score range" value={scoreRange(row)} /></Box>
+      <Box sx={enter(140)}><Detail icon={FitnessCenterRoundedIcon} label="Members" value={memberLevels.isLoading ? "…" : memberCount.toLocaleString()} hint={memberLevels.error ? "Unavailable" : `${memberShare}% of all members`} /></Box>
+      <Box sx={enter(210)}><Detail icon={TimerRoundedIcon} label="Last updated" value={formatDate(row.updatedAt)} hint={`by ${row.updatedBy || "System"}`} /></Box>
     </Box>
-    <Card sx={{ mt: 2.25, overflow: "hidden" }}>
-      <Box sx={{ p: 2, borderBottom: `1px solid ${CM.border}` }}>
+    <Card sx={{ mt: 2.25, overflow: "hidden", ...enter(260) }}>
+      <Box sx={{ p: 2.5, borderBottom: `1px solid ${CM.border}`, }}>
         <Typography sx={{ color: "#fff", fontWeight: 700 }}>How a member reaches {name}</Typography>
         {rules.length ? <>
           <Stack direction="row" spacing={1.25} alignItems="baseline" flexWrap="wrap" useFlexGap sx={{ mt: 1.25 }}>
-            <Typography sx={{ color: CM.violetBright, fontSize: 28, fontWeight: 800, lineHeight: 1 }}>{row.scoreMin} – {row.scoreMax} pts</Typography>
+            <Typography sx={{ color: CM.violetBright, fontSize: 32, fontWeight: 800, lineHeight: 1 }}>{row.scoreMin} – {row.scoreMax} pts</Typography>
             <Typography variant="body2" sx={{ color: CM.textMuted }}>total score out of {maxTotal}</Typography>
           </Stack>
           <Typography variant="body2" sx={{ color: CM.textMuted, mt: 0.75 }}>
             Each of the {rules.length} exercise{rules.length === 1 ? "" : "s"} below scores 1, 2, or 3 points. Add them up: a member whose total is {row.scoreMin}–{row.scoreMax} is placed in {name}.
           </Typography>
-          <Box sx={{ mt: 1.5, display: "flex", gap: 0.5, flexWrap: "wrap" }} role="img" aria-label={`Total scores ${minTotal} to ${maxTotal}; ${name} covers ${row.scoreMin} to ${row.scoreMax}`}>
+          <Box sx={{ mt: 2, display: "flex", gap: 0.6, flexWrap: "wrap" }} role="img" aria-label={`Total scores ${minTotal} to ${maxTotal}; ${name} covers ${row.scoreMin} to ${row.scoreMax}`}>
             {totals.map((total) => {
               const inLevel = total >= row.scoreMin && total <= row.scoreMax;
-              return <Box key={total} sx={{ minWidth: 34, px: 0.75, py: 0.5, textAlign: "center", borderRadius: 1, fontSize: 13, fontWeight: 700, color: inLevel ? "#fff" : CM.textDim, bgcolor: inLevel ? CM.violetBright : "transparent", border: `1px solid ${inLevel ? CM.violetBright : CM.border}` }}>{total}</Box>;
+              return <Box key={total} sx={{
+                minWidth: 36, px: 1, py: 0.6, textAlign: "center", borderRadius: "8px", fontSize: 13, fontWeight: 700,
+                color: inLevel ? "#fff" : CM.textDim,
+                bgcolor: inLevel ? CM.violet : "rgba(139,92,246,0.06)",
+                border: `1px solid ${inLevel ? CM.violetBright : CM.border}`,
+                transition: "all .2s ease",
+              }}>{total}</Box>;
             })}
           </Box>
         </> : <Typography variant="caption" sx={{ color: CM.textMuted }}>No benchmark exercise is configured yet.</Typography>}
@@ -318,7 +383,12 @@ function LevelEditor({ levels, floor, ceiling, canRemove, removeHint, onChange, 
       data-level-row
       onDragOver={(e) => { if (dragIndex === null) return; e.preventDefault(); setOverIndex(index); }}
       onDrop={(e) => { e.preventDefault(); if (dragIndex !== null) onMove(dragIndex, index); endDrag(); }}
-      sx={{ display: "grid", gap: 1, alignItems: "start", gridTemplateColumns: { xs: "1fr", md: "auto 1.4fr 1fr 1fr 1fr auto" }, p: 1.5, border: `1px solid ${overIndex === index && dragIndex !== null && dragIndex !== index ? CM.violetBright : CM.border}`, borderRadius: 1, opacity: dragIndex === index ? 0.5 : 1 }}
+      sx={{
+        display: "grid", gap: 1, alignItems: "start", gridTemplateColumns: { xs: "1fr", md: "auto 1.4fr 1fr 1fr 1fr auto" },
+        p: 1.5, border: `1px solid ${overIndex === index && dragIndex !== null && dragIndex !== index ? CM.violetBright : CM.border}`,
+        borderRadius: "12px", bgcolor: CM.surfaceSoft, opacity: dragIndex === index ? 0.5 : 1,
+        transition: "all .2s ease", "&:hover": { borderColor: CM.borderStrong },
+      }}
     >
       <Stack direction="row" alignItems="center" spacing={0.25} sx={{ pt: 0.75 }}>
         <Tooltip title="Drag to reorder"><Box
@@ -334,16 +404,15 @@ function LevelEditor({ levels, floor, ceiling, canRemove, removeHint, onChange, 
           <IconButton size="small" aria-label={`Move ${level.name || "level"} down`} disabled={isLast} onClick={() => onMove(index, index + 1)} sx={{ p: 0 }}><KeyboardArrowDownRoundedIcon fontSize="small" /></IconButton>
         </Stack>
       </Stack>
-      <TextField label="Level name" value={level.name} helperText=" " onChange={(e) => onChange(level.id, "name", e.target.value)} />
-      <TextField disabled type="number" label="Minimum score" value={level.scoreMin} helperText={index === 0 ? `Always starts at ${floor}` : "Previous maximum + 1"} />
-      <TextField disabled={isLast} type="number" label="Maximum score" value={level.scoreMax} onChange={(e) => onChange(level.id, "scoreMax", e.target.value)} helperText={isLast ? `Always ends at ${ceiling}` : " "} inputProps={{ min: level.scoreMin, max: ceiling }} />
-      <TextField select label="Status" value={level.status} onChange={(e) => onChange(level.id, "status", e.target.value)}><MenuItem value="ACTIVE">Active</MenuItem><MenuItem value="INACTIVE">Inactive</MenuItem></TextField>
-      <Tooltip title={canRemove ? "Remove level" : removeHint}><span><IconButton size="small" color="error" aria-label={`Remove level ${index + 1}`} disabled={!canRemove} onClick={() => onRemove(level.id)} sx={{ mt: 0.75 }}><DeleteOutlineRoundedIcon fontSize="small" /></IconButton></span></Tooltip>
+      <TextField size="small" label="Level name" value={level.name} helperText=" " onChange={(e) => onChange(level.id, "name", e.target.value)} />
+      <TextField size="small" disabled type="number" label="Minimum score" value={level.scoreMin} helperText={index === 0 ? `Always starts at ${floor}` : "Previous maximum + 1"} />
+      <TextField size="small" disabled={isLast} type="number" label="Maximum score" value={level.scoreMax} onChange={(e) => onChange(level.id, "scoreMax", e.target.value)} helperText={isLast ? `Always ends at ${ceiling}` : " "} inputProps={{ min: level.scoreMin, max: ceiling }} />
+      <TextField size="small" select label="Status" value={level.status} onChange={(e) => onChange(level.id, "status", e.target.value)}><MenuItem value="ACTIVE">Active</MenuItem><MenuItem value="INACTIVE">Inactive</MenuItem></TextField>
+      <Tooltip title={canRemove ? "Remove level" : removeHint}><span><IconButton size="small" color="error" aria-label={`Remove level ${index + 1}`} disabled={!canRemove} onClick={() => onRemove(level.id)} sx={{ mt: 0.5 }}><DeleteOutlineRoundedIcon fontSize="small" /></IconButton></span></Tooltip>
     </Box>;
   })}</Stack>;
 }
-// The same exercises and cut-offs score every member whichever level they end up in, so the fields are named
-// by points (1 / 2 / 3), never by level.
+
 function ExerciseEditor({ rules, exerciseOptions, canAdd, canRemove, minExercises, floor, ceiling, errors, onAdd, onRemove, onChooseExercise, onChange }) {
   return <Box sx={{ mt: 3 }}>
     <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", sm: "center" }} spacing={1}>
@@ -363,16 +432,16 @@ function ExerciseEditor({ rules, exerciseOptions, canAdd, canRemove, minExercise
       const threePointsFrom = rule.intermediateMax !== "" && rule.intermediateMax != null && Number.isFinite(twoPoints) && twoPoints >= 1 ? twoPoints + 1 : "";
       const picked = exerciseOptions.find((x) => x.code === rule.code);
       const sameCategory = exerciseOptions.filter((x) => !rule.category || x.category === rule.category || x.code === rule.code);
-      return <Box key={rule.rowKey} sx={{ p: 1.5, border: `1px solid ${CM.border}`, borderRadius: 1 }}>
+      return <Box key={rule.rowKey} sx={{ p: 1.75, border: `1px solid ${CM.border}`, borderRadius: "14px", bgcolor: CM.surfaceSoft, transition: "all .2s ease", "&:hover": { borderColor: CM.borderStrong } }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-          <Typography variant="caption" sx={{ color: CM.textDim, fontWeight: 700 }}>EXERCISE {index + 1}{picked ? ` - ${picked.category === "HOLD" ? "HOLD (seconds)" : "REPS"}` : ""}</Typography>
+          <Typography variant="caption" sx={{ color: CM.violetBright, fontWeight: 700, letterSpacing: "0.06em" }}>EXERCISE {index + 1}{picked ? ` · ${picked.category === "HOLD" ? "HOLD (seconds)" : "REPS"}` : ""}</Typography>
           <Tooltip title={canRemove ? "Remove exercise" : `Keep at least ${minExercises} exercise${minExercises === 1 ? "" : "s"} so every level can keep a score`}><span><IconButton size="small" color="error" aria-label={`Remove exercise ${index + 1}`} disabled={!canRemove} onClick={() => onRemove(rule.rowKey)}><DeleteOutlineRoundedIcon fontSize="small" /></IconButton></span></Tooltip>
         </Stack>
-        <TextField select fullWidth label="Exercise" value={rule.code || ""} onChange={(e) => onChooseExercise(rule.rowKey, e.target.value)} sx={{ mb: 1.5 }}>{sameCategory.map((x) => <MenuItem key={x.code} value={x.code}>{x.name}</MenuItem>)}</TextField>
-        <Box sx={{ display: "grid", gap: 1, gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" } }}>
+        <TextField size="small" select fullWidth label="Exercise" value={rule.code || ""} onChange={(e) => onChooseExercise(rule.rowKey, e.target.value)} sx={{ mb: 1.5 }}>{sameCategory.map((x) => <MenuItem key={x.code} value={x.code}>{x.name}</MenuItem>)}</TextField>
+        <Box sx={{ display: "grid", gap: 1.25, gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" } }}>
           {POINT_COLUMNS.map((column, bandIndex) => {
             const from = bandIndex === 0 ? 1 : bandIndex === 1 ? twoPointsFrom : threePointsFrom;
-            return <Box key={column.label} sx={{ p: 1.25, border: `1px solid ${CM.border}`, borderLeft: `3px solid ${column.color}`, borderRadius: 1 }}>
+            return <Box key={column.label} sx={{ p: 1.25, border: `1px solid ${CM.border}`, borderLeft: `3px solid ${column.color}`, borderRadius: "10px", bgcolor: "rgba(12,8,27,0.3)" }}>
               <Typography variant="caption" sx={{ color: column.color, fontWeight: 800 }}>{column.label.toUpperCase()}</Typography>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.75 }}>
                 <Typography variant="body2" sx={{ color: "#fff", whiteSpace: "nowrap" }}>From <b>{from === "" ? "…" : from}</b> {bandIndex < 2 ? "to" : unit}</Typography>
@@ -387,11 +456,19 @@ function ExerciseEditor({ rules, exerciseOptions, canAdd, canRemove, minExercise
     })}</Stack>
   </Box>;
 }
-function Detail({ label, value, hint }) {
-  return <Box sx={{ p: 1.5, border: `1px solid ${CM.border}`, borderRadius: 1.5, bgcolor: CM.surface, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-    <Typography variant="caption" sx={{ color: CM.textMuted, fontWeight: 600, display: "block", mb: 0.5 }}>{label}</Typography>
-    {typeof value === "string" ? <Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 22, lineHeight: 1.25 }}>{value}</Typography> : value}
-    {hint && <Typography variant="caption" sx={{ color: CM.textDim, display: "block" }}>{hint}</Typography>}
+function Detail({ label, value, hint, icon: Icon }) {
+  return <Box sx={{
+    position: "relative", overflow: "hidden", p: 1.75, border: `1px solid ${CM.border}`, borderRadius: "14px", bgcolor: CM.surface,
+    textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+    transition: "border-color .2s ease, transform .2s ease, box-shadow .2s ease",
+    "&:hover": { borderColor: CM.borderStrong },
+  }}>
+    <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="center" sx={{ mb: 0.5 }}>
+      {Icon && <Icon sx={{ fontSize: 15, color: CM.violetBright }} aria-hidden />}
+      <Typography variant="caption" sx={{ color: CM.textDim, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", fontSize: 10.5 }}>{label}</Typography>
+    </Stack>
+    {typeof value === "string" ? <Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 24, lineHeight: 1.25 }}>{value}</Typography> : value}
+    {hint && <Typography variant="caption" sx={{ color: CM.textMuted, display: "block", mt: 0.25 }}>{hint}</Typography>}
   </Box>;
 }
 
@@ -405,20 +482,17 @@ export function LevelBenchmarkFormPage() {
   const data = query.data;
   if (query.isLoading || !data) return <Box sx={{ py: 10, display: "grid", placeItems: "center" }}><CircularProgress /></Box>;
   const currentRules = rules || data.exercises.map((x) => ({ ...x, rowKey: x.code }));
-  // N exercises give a total score of N..3N, so adding or removing an exercise moves the level ranges.
   const floor = scoreFloor(currentRules.length);
   const ceiling = scoreCeiling(currentRules.length);
   const currentLevels = levels || normalizeLevels([...data.levels].sort((a, b) => a.scoreMin - b.scoreMin).map((x) => ({ ...x, name: x.name || x.level })), floor, ceiling);
   const exerciseOptions = data.availableExercises || [];
   const setLevel = (idValue, field, value) => setLevels(normalizeLevels(currentLevels.map((x) => x.id === idValue ? { ...x, [field]: value } : x), floor, ceiling));
   const reorderLevel = (from, to) => setLevels(normalizeLevels(moveLevel(currentLevels, from, to, floor), floor, ceiling));
-  // N exercises give 2N+1 distinct scores and every level needs at least one of them.
   const totalPoints = ceiling - floor + 1;
   const canAddLevel = currentLevels.length < totalPoints;
   const canRemoveLevel = currentLevels.length > 1;
   const addLevel = () => setLevels(addLevelRow(currentLevels, `new-level-${Date.now()}`, floor, ceiling));
   const removeLevel = (idValue) => setLevels(removeLevelRow(currentLevels, idValue, floor, ceiling));
-  // Rows that are already saved ask for confirmation first; rows added in this session are dropped straight away.
   const askRemoveLevel = (idValue) => {
     const level = currentLevels.find((x) => x.id === idValue);
     if (!level) return;
@@ -430,7 +504,6 @@ export function LevelBenchmarkFormPage() {
     const option = exerciseOptions.find((x) => x.code === code);
     setRule(rowKey, { code, name: option?.name, category: option?.category });
   };
-  // Changes the exercise list and re-fits the level ranges to the new N..3N span.
   const changeRules = (next) => {
     setRules(next);
     setLevels(refitLevels(currentLevels, scoreFloor(next.length), scoreCeiling(next.length)));
@@ -472,7 +545,6 @@ export function LevelBenchmarkFormPage() {
       </>,
     };
   })();
-  // N exercises give N..3N = 2N+1 distinct scores and every level needs at least one, so 2N+1 >= number of levels.
   const minExercises = Math.max(1, Math.ceil((currentLevels.length - 1) / 2));
   const canRemove = currentRules.length > minExercises;
   const canAdd = currentRules.length < MAX_EXERCISES;
@@ -487,13 +559,27 @@ export function LevelBenchmarkFormPage() {
       levels: currentLevels.map((x) => ({ id: x.isNew ? null : x.id, name: x.name, scoreMin: Number(x.scoreMin), scoreMax: Number(x.scoreMax), status: x.status })),
     });
   };
-  return <Box sx={{ maxWidth: 1120, mx: "auto", px: 3, py: 2.5 }}><Heading breadcrumb={[...BREADCRUMB.slice(0, -1), { label: "Level & Benchmark Criteria", to: CONTENT_PATHS.levelCriteria }, { label: "Update" }]} title="Update All Benchmark Levels" description="Edit levels and the shared exercise thresholds. Drag levels (or use the arrows) to reorder them; each minimum score follows the previous maximum. Adding or removing an exercise changes the total score range." /><Card component="form" onSubmit={submit} sx={{ mt: 2.5, p: 2.5 }}>{save.error && <Alert severity="error" sx={{ mb: 2 }}>{save.error.message}</Alert>}<Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", sm: "center" }} spacing={1}>
-    <Box>
-      <Typography sx={{ color: "#fff", fontWeight: 700 }}>Levels</Typography>
-      <Typography variant="caption" sx={{ color: CM.textMuted }}>{currentLevels.length} level{currentLevels.length === 1 ? "" : "s"} share the {floor}-{ceiling} point range. Adding or removing a level re-balances the ranges automatically; adjust them afterwards.</Typography>
-    </Box>
-    <Tooltip title={canAddLevel ? "" : `No score points left: at most ${totalPoints} levels fit in ${floor}-${ceiling}. Add an exercise to make room.`}><Box component="span" sx={{ flexShrink: 0, alignSelf: { xs: "flex-start", sm: "center" } }}><Button variant="outlined" size="small" startIcon={<AddRoundedIcon fontSize="small" />} disabled={!canAddLevel} onClick={addLevel} sx={{ whiteSpace: "nowrap", py: 0.25, px: 1.25, minWidth: 0, fontSize: 13 }}>Add level</Button></Box></Tooltip>
-  </Stack>{scoreErrors.map((error) => <Alert key={error} severity="error" sx={{ mt: 1.5 }}>{error}</Alert>)}<LevelEditor levels={currentLevels} floor={floor} ceiling={ceiling} canRemove={canRemoveLevel} removeHint="Keep at least one level" onChange={setLevel} onMove={reorderLevel} onRemove={askRemoveLevel} /><ExerciseEditor rules={currentRules} exerciseOptions={exerciseOptions} canAdd={canAdd} canRemove={canRemove} minExercises={minExercises} floor={floor} ceiling={ceiling} errors={thresholdErrors} onAdd={addRule} onRemove={askRemoveRule} onChooseExercise={chooseExercise} onChange={setRule} /><Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 3 }}><Button component={RouterLink} to={CONTENT_PATHS.levelCriteria} variant="outlined">Cancel</Button><Button type="submit" variant="contained" disabled={save.isPending || validationErrors.length > 0}>{save.isPending ? "Saving…" : "Save All Changes"}</Button></Stack></Card>
+  return <Box sx={{ maxWidth: 1120, mx: "auto", px: 3, py: 2.5 }}>
+    <Heading breadcrumb={[...BREADCRUMB.slice(0, -1), { label: "Level & Benchmark Criteria", to: CONTENT_PATHS.levelCriteria }, { label: "Update" }]} title="Update All Benchmark Levels" description="Edit levels and the shared exercise thresholds. Drag levels (or use the arrows) to reorder them; each minimum score follows the previous maximum. Adding or removing an exercise changes the total score range." />
+    <Card component="form" onSubmit={submit} sx={{ mt: 2.5, overflow: "hidden" }}>
+      <Box sx={{ p: 2.5 }}>
+        {save.error && <Alert severity="error" sx={{ mb: 2 }}>{save.error.message}</Alert>}
+        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", sm: "center" }} spacing={1}>
+          <Box>
+            <Typography sx={{ color: "#fff", fontWeight: 700 }}>Levels</Typography>
+            <Typography variant="caption" sx={{ color: CM.textMuted }}>{currentLevels.length} level{currentLevels.length === 1 ? "" : "s"} share the {floor}-{ceiling} point range. Adding or removing a level re-balances the ranges automatically; adjust them afterwards.</Typography>
+          </Box>
+          <Tooltip title={canAddLevel ? "" : `No score points left: at most ${totalPoints} levels fit in ${floor}-${ceiling}. Add an exercise to make room.`}><Box component="span" sx={{ flexShrink: 0, alignSelf: { xs: "flex-start", sm: "center" } }}><Button variant="outlined" size="small" startIcon={<AddRoundedIcon fontSize="small" />} disabled={!canAddLevel} onClick={addLevel} sx={{ whiteSpace: "nowrap", py: 0.25, px: 1.25, minWidth: 0, fontSize: 13 }}>Add level</Button></Box></Tooltip>
+        </Stack>
+        {scoreErrors.map((error) => <Alert key={error} severity="error" sx={{ mt: 1.5 }}>{error}</Alert>)}
+        <LevelEditor levels={currentLevels} floor={floor} ceiling={ceiling} canRemove={canRemoveLevel} removeHint="Keep at least one level" onChange={setLevel} onMove={reorderLevel} onRemove={askRemoveLevel} />
+        <ExerciseEditor rules={currentRules} exerciseOptions={exerciseOptions} canAdd={canAdd} canRemove={canRemove} minExercises={minExercises} floor={floor} ceiling={ceiling} errors={thresholdErrors} onAdd={addRule} onRemove={askRemoveRule} onChooseExercise={chooseExercise} onChange={setRule} />
+        <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 3 }}>
+          <Button component={RouterLink} to={CONTENT_PATHS.levelCriteria} variant="outlined">Cancel</Button>
+          <Button type="submit" variant="contained" disabled={save.isPending || validationErrors.length > 0}>{save.isPending ? "Saving…" : "Save All Changes"}</Button>
+        </Stack>
+      </Box>
+    </Card>
     <Dialog open={Boolean(pendingRemoval)} onClose={() => setPendingRemoval(null)}>
       <DialogTitle>{removalDialog.title}</DialogTitle>
       <DialogContent>{removalDialog.body}</DialogContent>
