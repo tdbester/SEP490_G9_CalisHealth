@@ -5,6 +5,8 @@ import ContentManagerLayout from "./components/layout/ContentManagerLayout";
 import AdminAreaLayout from "./components/layout/AdminAreaLayout";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminSectionPage from "./pages/AdminSectionPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminCreateStaffPage from "./pages/AdminCreateStaffPage";
 import Dashboard from "./pages/Dashboard";
 import HealthTracking from "./pages/HealthTracking";
 import WorkoutHistory from "./pages/WorkoutHistory";
@@ -30,6 +32,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import VerifyResetPassword from "./pages/VerifyResetPassword";
 import ResetPassword from "./pages/ResetPassword";
+import ChangePassword from "./pages/ChangePassword";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SurveyFlow, { SurveyEntry } from "./pages/survey/SurveyFlow";
 import SurveyStepPage from "./pages/survey/SurveyStepPage";
@@ -46,6 +49,7 @@ export default function App() {
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/verify-reset-password" element={<VerifyResetPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/change-password" element={<ChangePassword />} />
 
         {/* Onboarding survey của member (sau khi đăng nhập); URL theo Figma: /survey/body-information … */}
         <Route
@@ -99,7 +103,9 @@ export default function App() {
         <Route path="/admin" element={<AdminAreaLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="users" element={<AdminSectionPage title="Users" />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="users/create" element={<AdminCreateStaffPage />} />
+          <Route path="create" element={<Navigate to="/admin/users/create" replace />} />
           <Route path="notifications" element={<AdminSectionPage title="Notifications" />} />
           <Route path="storage" element={<AdminSectionPage title="Media storage & infrastructure" />} />
           <Route path="maintenance" element={<AdminSectionPage title="Create maintenance schedule" />} />

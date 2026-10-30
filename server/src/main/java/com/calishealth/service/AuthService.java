@@ -57,7 +57,7 @@ public class AuthService {
     public void register(RegisterRequest r) {
         String email = r.email().trim().toLowerCase();
         User u = users.findByEmail(email).orElseGet(User::new);
-        if (u.getId() != null && u.isEnabled())
+        if (u.getId() != null && (u.isEnabled() || u.isBlocked()))
             throw err(HttpStatus.BAD_REQUEST, "Email is already registered");
         u.setEmail(email);
         u.setFullName(r.fullName().trim());
@@ -98,15 +98,21 @@ public class AuthService {
                 .orElseThrow(() -> err(HttpStatus.UNAUTHORIZED, "Incorrect email or password"));
         if (!encoder.matches(r.password(), u.getPassword()))
             throw err(HttpStatus.UNAUTHORIZED, "Incorrect email or password");
+        if (u.isBlocked())
+            throw err(HttpStatus.FORBIDDEN, "Your account has been blocked");
         if (!u.isEnabled())
             throw err(HttpStatus.FORBIDDEN, "Account email is not verified. Please check your inbox");
-        return new AuthResponse(jwt.generate(u.getEmail()), u.getEmail(), u.getFullName(), u.getRole().name());
+        return new AuthResponse(jwt.generate(u.getEmail()), u.getEmail(), u.getFullName(), u.getRole().name(),
+                u.isMustChangePassword());
     }
 
     // 4. Quên mật khẩu -> chỉ gửi link reset cho tài khoản đã xác thực email
     @Transactional
     public void forgotPassword(ForgotRequest r) {
         users.findByEmail(r.email().trim().toLowerCase()).ifPresent(u -> {
+            if (u.isBlocked()) {
+                throw err(HttpStatus.FORBIDDEN, "Your account has been blocked");
+            }
             if (!u.isEnabled()) {
                 throw err(HttpStatus.FORBIDDEN,
                         "Email is not verified. Please verify your email before using forgot password.");
@@ -123,11 +129,16 @@ public class AuthService {
     public void resetPassword(ResetRequest r) {
         AuthToken t = validToken(r.token(), TokenType.RESET_PASSWORD);
         User u = t.getUser();
+        if (u.isBlocked()) {
+            tokens.delete(t);
+            throw err(HttpStatus.FORBIDDEN, "Your account has been blocked");
+        }
         if (!u.isEnabled()) {
             tokens.delete(t);
             throw err(HttpStatus.FORBIDDEN, "Account email is not verified. Please verify your email before resetting your password.");
         }
         u.setPassword(encoder.encode(r.newPassword()));
+        u.setMustChangePassword(false);
         users.save(u);
         tokens.delete(t);
     }
@@ -140,7 +151,10 @@ public class AuthService {
             if (!encoder.matches(r.oldPassword(), u.getPassword()))
                 throw err(HttpStatus.BAD_REQUEST, "Incorrect old password");
         }
+        if (u.isMustChangePassword() && encoder.matches(r.newPassword(), u.getPassword()))
+            throw err(HttpStatus.BAD_REQUEST, "The new password must be different from the default password");
         u.setPassword(encoder.encode(r.newPassword()));
+        u.setMustChangePassword(false);
         users.save(u);
     }
 
