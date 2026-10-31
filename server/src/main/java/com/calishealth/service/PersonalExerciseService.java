@@ -37,19 +37,34 @@ public class PersonalExerciseService {
     private final ContentModerationService moderation;
     private final ExerciseVideoStorageService videoStorage;
 
-    @Transactional
     public PersonalExerciseResponseDTO createPersonalExercise(
             String memberEmail,
             CreatePersonalExerciseRequestDTO request,
             MultipartFile videoFile
     ) {
+        return createPersonalExercise(memberEmail, request, videoFile, null);
+    }
+
+    @Transactional
+    public PersonalExerciseResponseDTO createPersonalExercise(
+            String memberEmail,
+            CreatePersonalExerciseRequestDTO request,
+            MultipartFile videoFile,
+            MultipartFile anatomyImageFile
+    ) {
         User member = requireMember(memberEmail);
-            videoStorage.validateVideoFile(videoFile, true);
-            String textReason = moderation.checkText(request.title(), request.description(), request.guideSteps());
-            String videoReason = moderation.checkVideo(videoFile);
-            ContentModerationService.ModerationResult result = moderation.combine(textReason, videoReason);
-            String videoUrl = videoReason == null ? videoStorage.store(videoFile) : null;
+        String textReason = moderation.checkText(
+                request.title(), request.description(), request.guideSteps(), request.targetMuscle());
+        if (textReason != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, textReason);
+        }
+        videoStorage.validateVideoFile(videoFile, true);
+        String videoReason = moderation.checkVideo(videoFile);
+        ContentModerationService.ModerationResult result = moderation.combine(textReason, videoReason);
+        String videoUrl = videoReason == null ? videoStorage.store(videoFile) : null;
+        String anatomyImageUrl = null;
         try {
+            anatomyImageUrl = storeAnatomyImage(anatomyImageFile);
             Exercise exercise = new Exercise();
             exercise.setCode("PER-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase(Locale.ROOT));
             exercise.setName(request.title().trim());
@@ -71,11 +86,13 @@ public class PersonalExerciseService {
             exercise.setGuide(exercise.getGuideSteps());
             exercise.setVideoUrl(videoUrl);
             exercise.setDemoVideoUrl(videoUrl);
+            exercise.setAnatomyImageUrl(anatomyImageUrl);
             exercise.setShareWithCommunity(Boolean.TRUE.equals(request.shareWithCommunity()));
             exercise.setSaveCount(0);
             return toResponse(exercises.save(exercise));
         } catch (RuntimeException exception) {
             videoStorage.delete(videoUrl);
+            videoStorage.deleteAnatomyImage(anatomyImageUrl);
             throw exception;
         }
     }
@@ -124,12 +141,22 @@ public class PersonalExerciseService {
         return toResponse(exercise);
     }
 
-    @Transactional
     public PersonalExerciseResponseDTO resubmitPersonalExercise(
             String memberEmail,
             Long exerciseId,
             CreatePersonalExerciseRequestDTO request,
             MultipartFile videoFile
+    ) {
+        return resubmitPersonalExercise(memberEmail, exerciseId, request, videoFile, null);
+    }
+
+    @Transactional
+    public PersonalExerciseResponseDTO resubmitPersonalExercise(
+            String memberEmail,
+            Long exerciseId,
+            CreatePersonalExerciseRequestDTO request,
+            MultipartFile videoFile,
+            MultipartFile anatomyImageFile
     ) {
         User member = requireMember(memberEmail);
         Exercise exercise = exercises.findByIdAndAuthor_IdAndSystemFalse(exerciseId, member.getId())
@@ -138,7 +165,11 @@ public class PersonalExerciseService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Only rejected exercises can be resubmitted");
         }
 
-        String textReason = moderation.checkText(request.title(), request.description(), request.guideSteps());
+        String textReason = moderation.checkText(
+                request.title(), request.description(), request.guideSteps(), request.targetMuscle());
+        if (textReason != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, textReason);
+        }
         boolean hasNewVideo = videoFile != null && !videoFile.isEmpty();
         if (hasNewVideo) {
             videoStorage.validateVideoFile(videoFile, true);
@@ -159,6 +190,8 @@ public class PersonalExerciseService {
         }
 
         String previousVideoUrl = exercise.getVideoUrl();
+        String replacementAnatomyUrl = storeAnatomyImage(anatomyImageFile);
+        String previousAnatomyUrl = exercise.getAnatomyImageUrl();
         try {
             exercise.setName(request.title().trim());
             exercise.setDescription(request.description() == null ? "" : request.description().trim());
@@ -170,6 +203,9 @@ public class PersonalExerciseService {
             if (replacementVideoUrl != null) {
                 exercise.setVideoUrl(replacementVideoUrl);
                 exercise.setDemoVideoUrl(replacementVideoUrl);
+            }
+            if (replacementAnatomyUrl != null) {
+                exercise.setAnatomyImageUrl(replacementAnatomyUrl);
             }
             if (request.shareWithCommunity() != null) {
                 exercise.setShareWithCommunity(request.shareWithCommunity());
@@ -183,11 +219,24 @@ public class PersonalExerciseService {
             if (replacementVideoUrl != null && previousVideoUrl != null) {
                 deleteVideoAfterCommit(previousVideoUrl);
             }
+            if (replacementAnatomyUrl != null && previousAnatomyUrl != null) {
+                deleteAnatomyImageAfterCommit(previousAnatomyUrl);
+            }
             return toResponse(saved);
         } catch (RuntimeException exception) {
             videoStorage.delete(replacementVideoUrl);
+            videoStorage.deleteAnatomyImage(replacementAnatomyUrl);
             throw exception;
         }
+    }
+
+    public PersonalExerciseResponseDTO updateAcceptedPersonalExercise(
+            String memberEmail,
+            Long exerciseId,
+            CreatePersonalExerciseRequestDTO request,
+            MultipartFile videoFile
+    ) {
+        return updateAcceptedPersonalExercise(memberEmail, exerciseId, request, videoFile, null);
     }
 
     @Transactional
@@ -195,7 +244,8 @@ public class PersonalExerciseService {
             String memberEmail,
             Long exerciseId,
             CreatePersonalExerciseRequestDTO request,
-            MultipartFile videoFile
+            MultipartFile videoFile,
+            MultipartFile anatomyImageFile
     ) {
         User member = requireMember(memberEmail);
         Exercise exercise = exercises.findByIdAndAuthor_IdAndSystemFalse(exerciseId, member.getId())
@@ -204,7 +254,11 @@ public class PersonalExerciseService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Only accepted exercises can be edited here");
         }
 
-        String textReason = moderation.checkText(request.title(), request.description(), request.guideSteps());
+        String textReason = moderation.checkText(
+                request.title(), request.description(), request.guideSteps(), request.targetMuscle());
+        if (textReason != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, textReason);
+        }
         boolean hasNewVideo = videoFile != null && !videoFile.isEmpty();
         if (hasNewVideo) {
             videoStorage.validateVideoFile(videoFile, true);
@@ -220,6 +274,8 @@ public class PersonalExerciseService {
         }
 
         String previousVideoUrl = exercise.getVideoUrl();
+        String replacementAnatomyUrl = storeAnatomyImage(anatomyImageFile);
+        String previousAnatomyUrl = exercise.getAnatomyImageUrl();
         try {
             exercise.setName(request.title().trim());
             exercise.setDescription(request.description() == null ? "" : request.description().trim());
@@ -232,21 +288,28 @@ public class PersonalExerciseService {
                 exercise.setVideoUrl(replacementVideoUrl);
                 exercise.setDemoVideoUrl(replacementVideoUrl);
             }
+            if (replacementAnatomyUrl != null) {
+                exercise.setAnatomyImageUrl(replacementAnatomyUrl);
+            }
             if (request.shareWithCommunity() != null) {
                 exercise.setShareWithCommunity(request.shareWithCommunity());
             }
             exercise.setStatus(rejectionReason == null
-                    ? Exercise.EntryStatus.PENDING
+                    ? Exercise.EntryStatus.ACCEPTED
                     : Exercise.EntryStatus.REJECTED);
-            exercise.setActive(false);
+            exercise.setActive(rejectionReason == null);
             exercise.setRejectionReason(rejectionReason);
             Exercise saved = exercises.save(exercise);
             if (replacementVideoUrl != null && previousVideoUrl != null) {
                 deleteVideoAfterCommit(previousVideoUrl);
             }
+            if (replacementAnatomyUrl != null && previousAnatomyUrl != null) {
+                deleteAnatomyImageAfterCommit(previousAnatomyUrl);
+            }
             return toResponse(saved);
         } catch (RuntimeException exception) {
             videoStorage.delete(replacementVideoUrl);
+            videoStorage.deleteAnatomyImage(replacementAnatomyUrl);
             throw exception;
         }
     }
@@ -259,6 +322,9 @@ public class PersonalExerciseService {
         exercises.delete(exercise);
         if (exercise.getVideoUrl() != null) {
             deleteVideoAfterCommit(exercise.getVideoUrl());
+        }
+        if (exercise.getAnatomyImageUrl() != null) {
+            deleteAnatomyImageAfterCommit(exercise.getAnatomyImageUrl());
         }
     }
 
@@ -316,6 +382,7 @@ public class PersonalExerciseService {
                 exercise.getLevel() == null ? null : levelLabel(exercise.getLevel()),
                 steps,
                 exercise.getVideoUrl(),
+                exercise.getAnatomyImageUrl(),
                 exercise.getStatus(),
                 exercise.getRejectionReason(),
                 exercise.getMuscleGroup(),
@@ -339,6 +406,25 @@ public class PersonalExerciseService {
                     videoStorage.delete(videoUrl);
                 } catch (RuntimeException exception) {
                     log.error("Could not remove unused personal exercise video {}", videoUrl, exception);
+                }
+            }
+        });
+    }
+
+    private String storeAnatomyImage(MultipartFile imageFile) {
+        return imageFile == null || imageFile.isEmpty()
+                ? null
+                : videoStorage.storeAnatomyImage(imageFile);
+    }
+
+    private void deleteAnatomyImageAfterCommit(String imageUrl) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    videoStorage.deleteAnatomyImage(imageUrl);
+                } catch (RuntimeException exception) {
+                    log.error("Could not remove unused personal exercise anatomy image {}", imageUrl, exception);
                 }
             }
         });

@@ -446,6 +446,7 @@ public class ExerciseService {
         exercise.setStatus(active
                 ? "ACCEPTED"
                 : (SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource()) ? "REJECTED" : "ACCEPTED"));
+        exercise.setRejectionReason(active ? null : rejectionReason.trim());
         ExerciseResponse response = toResponse(exercises.saveAndFlush(exercise));
         if (SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource())) {
             moderationHistory.insert(exercise.getCode(), exercise.getName(), exercise.getType(),
@@ -519,6 +520,7 @@ public class ExerciseService {
         Map<String, Boolean> activity = levelActivity();
         return exercises.findAll().stream()
                 .filter(exercise -> SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource())
+                        && Exercise.EntryStatus.PENDING.name().equalsIgnoreCase(exercise.getStatus())
                         && !exercise.isActive()
                         && !STATUS_REJECTED.equalsIgnoreCase(exercise.getModerationStatus()))
                 .sorted((first, second) -> second.getUpdatedAt().compareTo(first.getUpdatedAt()))

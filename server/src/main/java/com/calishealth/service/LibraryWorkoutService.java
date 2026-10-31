@@ -367,27 +367,27 @@ public class LibraryWorkoutService {
 
     private void validateItems(List<WorkoutItemDTO> items) {
         if (items == null || items.isEmpty()) {
-            throw new RequestValidationException("items", "Giáo trình phải chứa ít nhất 1 bài tập");
+            throw new RequestValidationException("items", "A workout must contain at least one exercise");
         }
         if (items.stream().anyMatch(item -> item == null)) {
-            throw new RequestValidationException("items", "Bài tập trong giáo trình không được để trống");
+            throw new RequestValidationException("items", "Workout exercises cannot be null");
         }
         Set<Integer> indexes = items.stream().map(WorkoutItemDTO::orderIndex).collect(Collectors.toSet());
         if (indexes.size() != items.size() || indexes.stream().anyMatch(index -> index < 0)) {
-            throw new RequestValidationException("items", "Thứ tự bài tập phải duy nhất và không âm");
+            throw new RequestValidationException("items", "Exercise order must be unique and non-negative");
         }
         for (int index = 0; index < items.size(); index++) {
             WorkoutItemDTO item = items.get(index);
             String countBy = normalizedCountBy(item);
             if (item.sets() < 1 || item.sets() > 100
-                    || item.restSeconds() < 10 || item.restSeconds() > 120
+                    || item.restSeconds() < 10 || item.restSeconds() > 180
                     || (item.reps() != null && item.reps() < 1)
                     || (item.duration() != null && item.duration() < 1)
                     || ("REPS".equals(countBy) && item.reps() == null)
                     || ("SECONDS".equals(countBy) && item.duration() == null)) {
                 throw new RequestValidationException(
                         "items[" + index + "]",
-                        "Cấu hình bài tập không hợp lệ: số hiệp từ 1 đến 100, số lần/thời lượng tối thiểu 1 và thời gian nghỉ từ 10 đến 120 giây"
+                        "Invalid exercise configuration: sets must be from 1 to 100, reps/duration must be at least 1, and rest time must be from 10 to 180 seconds"
                 );
             }
         }

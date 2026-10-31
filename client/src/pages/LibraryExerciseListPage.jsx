@@ -339,7 +339,7 @@ export default function ExerciseListPage() {
   const [selectedMuscles, setSelectedMuscles] = useState(["All"]);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 6;
+  const pageSize = 5;
 
   const [loading, setLoading] = useState(true);
   const [exercises, setExercises] = useState([]);

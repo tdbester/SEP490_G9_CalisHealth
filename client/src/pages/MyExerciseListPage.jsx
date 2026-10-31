@@ -305,7 +305,7 @@ export default function MyExerciseListPage() {
   const [searchInput, setSearchInput] = useState("");
   const [selectedLevel, setSelectedLevel] = useState("All levels");
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 3;
+  const pageSize = 5;
   const [exercises, setExercises] = useState([]);
   const [statusCounts, setStatusCounts] = useState({ pending: 0, rejected: 0, accepted: 0 });
   const [totalElements, setTotalElements] = useState(0);

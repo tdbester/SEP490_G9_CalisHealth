@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { getMemberExercises, createMemberExercise } from "../api/library";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 import "./MemberExerciseListPage.css";
 
 // SVG Icons
@@ -92,7 +93,7 @@ export default function MemberExerciseListPage() {
   const [selectedMuscles, setSelectedMuscles] = useState(["All"]);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 6;
+  const pageSize = 5;
 
   const [loading, setLoading] = useState(true);
   const [exercises, setExercises] = useState([]);
@@ -101,6 +102,7 @@ export default function MemberExerciseListPage() {
 
   // Modal Create Exercise State
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [createForm, setCreateForm] = useState({
     name: "",
@@ -425,12 +427,12 @@ export default function MemberExerciseListPage() {
 
       {/* Modal Tạo Bài Tập Mới (Dedicated Member Feature) */}
       {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+        <div className="modal-overlay" onClick={() => setConfirmCancel(true)}>
           <div className="modal-content modal-form" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               className="modal-close-btn"
-              onClick={() => setShowCreateModal(false)}
+              onClick={() => setConfirmCancel(true)}
               aria-label="Close"
             >
               &times;
@@ -523,7 +525,7 @@ export default function MemberExerciseListPage() {
                 <button
                   type="button"
                   className="btn-cancel"
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => setConfirmCancel(true)}
                 >
                   Cancel
                 </button>
@@ -539,6 +541,17 @@ export default function MemberExerciseListPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmCancel}
+        title="Discard this exercise?"
+        message="Are you sure you want to close the form? Your unsaved exercise details will be lost."
+        confirmLabel="Discard"
+        onCancel={() => setConfirmCancel(false)}
+        onConfirm={() => {
+          setConfirmCancel(false);
+          setShowCreateModal(false);
+        }}
+      />
 
       {/* Modal Detail Preview */}
       {selectedExercise && (

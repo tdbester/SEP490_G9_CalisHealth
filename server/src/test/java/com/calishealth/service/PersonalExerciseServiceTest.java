@@ -16,8 +16,10 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -53,30 +55,53 @@ class PersonalExerciseServiceTest {
     @Test
     void createsValidSubmissionAsPendingAndStoresVideo() {
         var response = service.createPersonalExercise(
-                "member@example.com", request("Tempo push-up"), validMp4());
+                "member@example.com", request("Tempo push-up"), validMp4(), validPng());
 
         assertThat(response.id()).isEqualTo(31L);
         assertThat(response.status()).isEqualTo("PENDING");
         assertThat(response.rejectionReason()).isNull();
         assertThat(response.guideSteps()).containsExactly("Brace your core", "Lower with control");
         assertThat(response.videoUrl()).startsWith("/media/exercise-demos/");
+        assertThat(response.anatomyImageUrl()).startsWith("/media/exercise-anatomy/");
 
         var captor = org.mockito.ArgumentCaptor.forClass(Exercise.class);
         verify(exercises).save(captor.capture());
         Exercise saved = captor.getValue();
         assertThat(saved.isSystem()).isFalse();
         assertThat(saved.getAuthor().getId()).isEqualTo(7L);
+        assertThat(saved.getAnatomyImageUrl()).isEqualTo(response.anatomyImageUrl());
         assertThat(saved.isShareWithCommunity()).isFalse();
     }
 
     @Test
-    void rejectsBlockedTextAndRetainsAValidVideoForResubmission() {
-        var response = service.createPersonalExercise(
-                "member@example.com", request("Stupid push-up"), validMp4());
+    void blocksProfanityBeforeCreatingOrStoringExercise() {
+        assertThatThrownBy(() -> service.createPersonalExercise(
+                "member@example.com", request("Stupid push-up"), validMp4()))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+                .hasMessageContaining("Exercise content contains inappropriate language");
+        verify(exercises, never()).save(any(Exercise.class));
+    }
 
-        assertThat(response.status()).isEqualTo("REJECTED");
-        assertThat(response.rejectionReason()).contains("Text check", "stupid");
-        assertThat(response.videoUrl()).startsWith("/media/exercise-demos/");
+    @Test
+    void screensGuideInstructionsAndTargetMuscleText() {
+        ContentModerationService moderation = new ContentModerationService();
+
+        assertThat(moderation.checkText("Squat", "Controlled movement", List.of("Move slowly"), "Legs"))
+                .isNull();
+        assertThat(moderation.checkText("Classic squat", "Build muscle", List.of("Use proper form"), "Legs"))
+                .isNull();
+        assertThat(moderation.checkText("Squat", "Pass through the assigned class", List.of(), "Legs"))
+                .isNull();
+        assertThat(moderation.checkText("Assisted squat", "Controlled movement", List.of(), "Legs"))
+                .isNull();
+        assertThat(moderation.checkText("Squat", "This is an ass.", List.of(), "Legs"))
+                .contains("Exercise content contains inappropriate language");
+        assertThat(moderation.checkText("Squat", "Controlled movement", List.of("ASS"), "Legs"))
+                .contains("Exercise content contains inappropriate language");
+        assertThat(moderation.checkText("Squat", "Controlled movement", List.of("Đồ khốn"), "Legs"))
+                .contains("Exercise content contains inappropriate language");
+        assertThat(moderation.checkText("Squat", "Controlled movement", List.of("Move slowly"), "fuck"))
+                .contains("Exercise content contains inappropriate language");
     }
 
     @Test
@@ -124,7 +149,7 @@ class PersonalExerciseServiceTest {
     }
 
     @Test
-    void editsAcceptedExerciseAndSendsItBackToPendingReview() {
+    void editsAcceptedExerciseAndKeepsItApprovedWhenContentPasses() {
         User member = new User();
         member.setId(7L);
         Exercise accepted = new Exercise();
@@ -160,7 +185,8 @@ class PersonalExerciseServiceTest {
                         null),
                 null);
 
-        assertThat(response.status()).isEqualTo("PENDING");
+        assertThat(response.status()).isEqualTo("ACCEPTED");
+        assertThat(accepted.isActive()).isTrue();
         assertThat(response.rejectionReason()).isNull();
         assertThat(response.videoUrl()).isEqualTo("/media/exercise-demos/current.mp4");
         verify(exercises).save(accepted);
@@ -225,5 +251,13 @@ class PersonalExerciseServiceTest {
                 0, 0, 0, 24, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm', 0, 0, 0, 0
         };
         return new MockMultipartFile("videoFile", "exercise.mp4", "video/mp4", bytes);
+    }
+
+    private MockMultipartFile validPng() {
+        return new MockMultipartFile(
+                "anatomyImageFile",
+                "anatomy.png",
+                "image/png",
+                new byte[]{1, 2, 3});
     }
 }

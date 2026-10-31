@@ -88,7 +88,8 @@ export default function App() {
           <Route path="/" element={<RoleHomeRoute />} />
           <Route path="/dashboard" element={<Navigate to="/" replace />} />
           <Route path="/day-streak" element={memberPage(<DayStreak />)} />
-          <Route
+          {/* Onboarding survey của member (sau khi đăng nhập); URL theo Figma: /survey/body-information … */}
+        <Route
           path="/survey"
           element={
             <ProtectedRoute>
@@ -112,6 +113,7 @@ export default function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<ContentManagerDashboard />} />
           <Route path="surveys" element={<SurveyManagement />} />
+          {/* URL cũ của màn Survey management */}
           <Route path="survey" element={<Navigate to="/content/surveys" replace />} />
           <Route path="exercises" element={<ExerciseListPage />} />
           <Route path="progression-rules" element={<ProgressionRulesPage />} />

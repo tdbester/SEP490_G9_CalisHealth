@@ -27,10 +27,12 @@ public class PersonalExerciseController {
     public ResponseEntity<PersonalExerciseResponseDTO> create(
             @Valid @RequestPart("data") CreatePersonalExerciseRequestDTO request,
             @RequestPart("videoFile") MultipartFile videoFile,
+            @RequestPart(value = "anatomyImageFile", required = false) MultipartFile anatomyImageFile,
             Authentication authentication
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(personalExercises.createPersonalExercise(authentication.getName(), request, videoFile));
+                .body(personalExercises.createPersonalExercise(
+                        authentication.getName(), request, videoFile, anatomyImageFile));
     }
 
     @GetMapping
@@ -64,10 +66,11 @@ public class PersonalExerciseController {
             @PathVariable Long id,
             @Valid @RequestPart("data") CreatePersonalExerciseRequestDTO request,
             @RequestPart(value = "videoFile", required = false) MultipartFile videoFile,
+            @RequestPart(value = "anatomyImageFile", required = false) MultipartFile anatomyImageFile,
             Authentication authentication
     ) {
         return ResponseEntity.ok(personalExercises.resubmitPersonalExercise(
-                authentication.getName(), id, request, videoFile));
+                authentication.getName(), id, request, videoFile, anatomyImageFile));
     }
 
     @PutMapping(path = "/{id}/edit", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -75,10 +78,11 @@ public class PersonalExerciseController {
             @PathVariable Long id,
             @Valid @RequestPart("data") CreatePersonalExerciseRequestDTO request,
             @RequestPart(value = "videoFile", required = false) MultipartFile videoFile,
+            @RequestPart(value = "anatomyImageFile", required = false) MultipartFile anatomyImageFile,
             Authentication authentication
     ) {
         return ResponseEntity.ok(personalExercises.updateAcceptedPersonalExercise(
-                authentication.getName(), id, request, videoFile));
+                authentication.getName(), id, request, videoFile, anatomyImageFile));
     }
 
     @DeleteMapping("/{id}")

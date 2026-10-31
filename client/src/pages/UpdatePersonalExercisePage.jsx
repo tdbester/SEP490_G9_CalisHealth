@@ -1,16 +1,29 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 import {
   getApiErrorMessage,
   validatePersonalExercise,
   validateVideoFile,
 } from './libraryFormValidation';
+import { LIBRARY_TEXT_WARNING, scanLibraryText } from './libraryTextModeration';
 import {
   getPersonalExercise,
   resubmitPersonalExercise,
   updateAcceptedPersonalExercise,
 } from '../api/library';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+
+function libraryMediaUrl(value) {
+  if (!value) return null;
+  try {
+    return new URL(value, new URL(API_URL, window.location.origin)).toString();
+  } catch {
+    return value;
+  }
+}
 
 /* Icons */
 function BarbellIcon({ className = 'h-5 w-5 text-[#9d7aff]' }) {
@@ -39,11 +52,39 @@ function CheckCircleIcon({ className = 'w-3.5 h-3.5' }) {
   );
 }
 
+function parseMuscleGroups(value) {
+  const knownGroups = new Map([
+    ['chest', 'Chest'],
+    ['back', 'Back'],
+    ['shoulders', 'Shoulders'],
+    ['arms', 'Arms'],
+    ['biceps', 'Arms'],
+    ['triceps', 'Arms'],
+    ['forearms', 'Arms'],
+    ['core', 'Core'],
+    ['abs', 'Core'],
+    ['legs', 'Legs'],
+    ['quads', 'Legs'],
+    ['hamstrings', 'Legs'],
+    ['glutes', 'Legs'],
+    ['calves', 'Legs'],
+    ['full body', 'Full Body'],
+  ]);
+  return [...new Set(
+    String(value || 'Full Body')
+      .split(/[,;|]/)
+      .map((group) => group.trim())
+      .filter(Boolean)
+      .map((group) => knownGroups.get(group.toLowerCase()) || group),
+  )];
+}
+
 export default function UpdatePersonalExercisePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const fileInputRef = useRef(null);
+  const anatomyInputRef = useRef(null);
   const submissionLock = useRef(false);
 
   const [exercise, setExercise] = useState(null);
@@ -55,6 +96,10 @@ export default function UpdatePersonalExercisePage() {
   const [video, setVideo] = useState(null);
   const [replaceVideo, setReplaceVideo] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
+  const [targetMuscles, setTargetMuscles] = useState([]);
+  const [anatomyImageFile, setAnatomyImageFile] = useState(null);
+  const [anatomyPreview, setAnatomyPreview] = useState('');
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -62,6 +107,16 @@ export default function UpdatePersonalExercisePage() {
   const [isDragging, setIsDragging] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [touchedFields, setTouchedFields] = useState({});
+
+  useEffect(() => {
+    if (!anatomyImageFile) {
+      setAnatomyPreview('');
+      return undefined;
+    }
+    const previewUrl = URL.createObjectURL(anatomyImageFile);
+    setAnatomyPreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [anatomyImageFile]);
 
   useEffect(() => {
     let active = true;
@@ -77,6 +132,7 @@ export default function UpdatePersonalExercisePage() {
         level: mockExercise.level || 'Beginner',
         guide: initialGuide,
         video: mockExercise.video || null,
+        targetMuscles: parseMuscleGroups(mockExercise.targetMuscle),
       };
       setExercise({
         ...mockExercise,
@@ -88,6 +144,7 @@ export default function UpdatePersonalExercisePage() {
       setLevel(initialState.level);
       setGuide(initialState.guide);
       setVideo(initialState.video);
+      setTargetMuscles(initialState.targetMuscles);
       setBaseline(JSON.stringify(initialState));
       return () => {
         active = false;
@@ -108,6 +165,7 @@ export default function UpdatePersonalExercisePage() {
           video: currentExercise.videoUrl
             ? { name: currentExercise.videoUrl.split('/').pop(), size: 'Uploaded' }
             : null,
+          targetMuscles: parseMuscleGroups(currentExercise.targetMuscle),
         };
         setExercise({
           ...currentExercise,
@@ -119,6 +177,7 @@ export default function UpdatePersonalExercisePage() {
         setLevel(initialState.level);
         setGuide(initialState.guide);
         setVideo(initialState.video);
+        setTargetMuscles(initialState.targetMuscles);
         setBaseline(JSON.stringify(initialState));
       })
       .catch((error) => {
@@ -133,9 +192,9 @@ export default function UpdatePersonalExercisePage() {
     };
   }, [id, location.state]);
 
-  const currentState = JSON.stringify({ title, description, level, guide, video });
+  const currentState = JSON.stringify({ title, description, level, guide, video, targetMuscles });
   const isDirty = baseline !== '' && (
-    currentState !== baseline || uploadedFile !== null
+    currentState !== baseline || uploadedFile !== null || anatomyImageFile !== null
   );
   const validationErrors = validatePersonalExercise({
     title,
@@ -173,11 +232,6 @@ export default function UpdatePersonalExercisePage() {
   const handleRemoveStep = (idx) => setGuide((g) => g.filter((_, i) => i !== idx));
 
   const handleVideoReplace = () => setReplaceVideo(true);
-  const handleVideoRemove = () => {
-    setVideo(null);
-    setReplaceVideo(false);
-    setUploadedFile(null);
-  };
 
   const handleFileSelect = (e) => {
     markFieldTouched('video');
@@ -185,7 +239,6 @@ export default function UpdatePersonalExercisePage() {
     if (file) {
       setErrorMessage('');
       setUploadedFile(file);
-      setVideo({ name: file.name, size: `${(file.size / (1024 * 1024)).toFixed(1)} MB` });
       const fileError = validateVideoFile(file);
       if (fileError) toast.error(fileError);
     }
@@ -206,10 +259,29 @@ export default function UpdatePersonalExercisePage() {
     if (file) {
       setErrorMessage('');
       setUploadedFile(file);
-      setVideo({ name: file.name, size: `${(file.size / (1024 * 1024)).toFixed(1)} MB` });
       const fileError = validateVideoFile(file);
       if (fileError) toast.error(fileError);
     }
+  };
+
+  const toggleMuscleGroup = (muscleGroup) => {
+    setTargetMuscles((current) => {
+      const selected = current.includes(muscleGroup)
+        ? current.filter((value) => value !== muscleGroup)
+        : [...current.filter((value) => value !== 'Full Body'), muscleGroup];
+      return selected;
+    });
+  };
+
+  const handleAnatomyImageSelect = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024) {
+      toast.error('Choose a JPG, PNG, or WebP image up to 10 MB.');
+      event.target.value = '';
+      return;
+    }
+    setAnatomyImageFile(file);
   };
 
   const charCount = (str, max) => `${str.length}/${max}`;
@@ -221,9 +293,14 @@ export default function UpdatePersonalExercisePage() {
     }
     if (!isDirty || !exercise || submissionLock.current) return;
     setHasSubmitted(true);
-    if (Object.keys(validationErrors).length > 0) {
+    if (Object.keys(validationErrors).length > 0 || targetMuscles.length === 0) {
       toast.warning("Please fill in all required fields correctly.");
       focusFirstInvalidField(validationErrors);
+      return;
+    }
+    if (scanLibraryText([title, description, ...guide, ...targetMuscles])) {
+      setErrorMessage(LIBRARY_TEXT_WARNING);
+      toast.error(LIBRARY_TEXT_WARNING, { style: { fontFamily: "Arial, sans-serif" } });
       return;
     }
 
@@ -237,7 +314,7 @@ export default function UpdatePersonalExercisePage() {
         description: description.trim(),
         level: level.toUpperCase(),
         guideSteps: guide.filter((step) => step.trim()),
-        targetMuscle: exercise.targetMuscle || "Full body",
+        targetMuscle: targetMuscles.join(', '),
         defaultSets: exercise.defaultSets || 3,
         defaultReps: exercise.defaultReps ?? null,
         defaultDuration: exercise.defaultDuration ?? null,
@@ -268,8 +345,8 @@ export default function UpdatePersonalExercisePage() {
 
       const isAcceptedEdit = exercise.status === 'ACCEPTED';
       const updatedExercise = isAcceptedEdit
-        ? await updateAcceptedPersonalExercise(id, request, uploadedFile)
-        : await resubmitPersonalExercise(id, request, uploadedFile);
+        ? await updateAcceptedPersonalExercise(id, request, uploadedFile, anatomyImageFile)
+        : await resubmitPersonalExercise(id, request, uploadedFile, anatomyImageFile);
       if (updatedExercise.status === 'REJECTED') {
         toast.error(updatedExercise.rejectionReason || "The exercise did not pass the checks.");
         navigate('/library/personal?status=rejected');
@@ -277,7 +354,9 @@ export default function UpdatePersonalExercisePage() {
         toast.success("Exercise resubmitted for review!");
         navigate('/library/personal?status=pending');
       } else if (updatedExercise.status === 'ACCEPTED') {
-        toast.success("Changes saved successfully!");
+        toast.success(isAcceptedEdit ? "Update Successful" : "Exercise approved successfully.", {
+          style: { fontFamily: "Arial, sans-serif" },
+        });
         navigate('/library/personal?status=accepted');
       } else {
         toast.success("Exercise resubmitted for review!");
@@ -286,10 +365,10 @@ export default function UpdatePersonalExercisePage() {
     } catch (error) {
       const responseData = error?.response?.data;
       const errorMsg = error?.response?.status === 401
-        ? "Phiên đăng nhập hết hạn hoặc bạn không có quyền sửa bài tập này!"
+        ? "Your session has expired or you are not allowed to edit this exercise."
         : typeof responseData === "string"
           ? responseData
-          : responseData?.message || getApiErrorMessage(error, "Lưu thất bại");
+          : responseData?.message || getApiErrorMessage(error, "Could not save the exercise.");
       console.error("Edit exercise failed:", error?.response || error);
       toast.error(errorMsg);
       setErrorMessage(errorMsg);
@@ -303,7 +382,7 @@ export default function UpdatePersonalExercisePage() {
   if (!exercise && !errorMessage) return null;
 
   return (
-    <div className="create-personal-exercise-page w-full max-w-5xl mx-auto space-y-6 pb-12 text-white">
+    <div className="create-personal-exercise-page w-full max-w-5xl mx-auto space-y-6 pb-12 text-white" style={{ fontFamily: 'Arial, sans-serif' }}>
       <header className="mb-2">
         <h1 className="text-2xl font-bold text-white tracking-tight">Update personal exercise</h1>
         <p className="text-xs text-slate-400 mt-1">
@@ -368,6 +447,58 @@ export default function UpdatePersonalExercisePage() {
             className={`w-full rounded-xl border ${showFieldError('description') && validationErrors.description ? 'border-rose-500 focus:border-rose-500' : 'border-[#493b79] focus:border-[#9d7aff]'} bg-[#0d0922] p-4 text-sm text-white placeholder-slate-500 h-28 resize-none focus:outline-none transition-colors leading-relaxed`}
           />
           {showFieldError('description') && validationErrors.description && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.description}</p>}
+        </div>
+        <fieldset className="m-0 min-w-0 rounded-2xl border-0 bg-[#0c0820]/70 p-4 ring-1 ring-[#2b2257]">
+          <legend className="mb-1 flex w-full flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-200">
+            Primary &amp; secondary muscle groups
+            <span className="rounded-full border border-[#3b2c70] bg-[#17102f] px-2.5 py-1 text-[10px] font-semibold text-violet-200">
+              {targetMuscles.length} selected
+            </span>
+          </legend>
+          <p className="mb-3 text-[11px] leading-relaxed text-slate-500">Choose all muscle groups this exercise targets.</p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            {['Chest', 'Back', 'Shoulders', 'Arms', 'Core', 'Legs', 'Full Body'].map((muscleGroup) => (
+              <label key={muscleGroup} className="group cursor-pointer">
+                <input type="checkbox" checked={targetMuscles.includes(muscleGroup)} onChange={() => toggleMuscleGroup(muscleGroup)} className="peer sr-only" />
+                <span className={`flex min-h-11 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-xs font-medium transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-violet-400 ${
+                  targetMuscles.includes(muscleGroup)
+                    ? 'border-violet-500/70 bg-violet-500/15 text-violet-100'
+                    : 'border-[#2b2257] bg-[#100b24] text-slate-300 group-hover:border-[#59458f] group-hover:bg-[#17102f]'
+                }`}>
+                  <span aria-hidden="true" className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-md border text-[10px] leading-none transition-colors ${
+                    targetMuscles.includes(muscleGroup)
+                      ? 'border-violet-400 bg-violet-500 text-white'
+                      : 'border-slate-600 bg-[#0c0820] text-transparent'
+                  }`}>✓</span>
+                  {muscleGroup}
+                </span>
+              </label>
+            ))}
+          </div>
+          {targetMuscles.length === 0 && <p className="mt-1 text-[11px] text-rose-400">Choose at least one muscle group.</p>}
+        </fieldset>
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold text-slate-300" htmlFor="exercise-anatomy-image">Anatomy image (optional)</label>
+          <input
+            ref={anatomyInputRef}
+            id="exercise-anatomy-image"
+            type="file"
+            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+            onChange={handleAnatomyImageSelect}
+            className="block w-full text-xs text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-[#211844] file:px-3 file:py-2 file:text-xs file:font-semibold file:text-violet-200"
+          />
+          {anatomyImageFile ? (
+            <div className="mt-3 flex items-center gap-3">
+              <img src={anatomyPreview} alt="Anatomy preview" className="h-20 w-20 rounded-lg border border-[#44366f] object-cover" />
+              <div className="min-w-0">
+                <p className="truncate text-xs text-slate-200">{anatomyImageFile.name}</p>
+                <button type="button" onClick={() => { setAnatomyImageFile(null); if (anatomyInputRef.current) anatomyInputRef.current.value = ''; }} className="mt-1 text-xs text-rose-300 hover:text-rose-200">Remove replacement</button>
+              </div>
+            </div>
+          ) : exercise?.anatomyImageUrl ? (
+            <img src={exercise.anatomyImageUrl} alt="Current anatomy" className="mt-3 h-20 w-20 rounded-lg border border-[#44366f] object-cover" />
+          ) : null}
+          <p className="mt-1 text-[11px] text-slate-500">JPG, PNG, or WebP · up to 10 MB</p>
         </div>
         <div>
           <label className="block text-xs text-slate-400 mb-2">Level</label>
@@ -470,7 +601,30 @@ export default function UpdatePersonalExercisePage() {
           onChange={handleFileSelect}
           className="hidden"
         />
-        {replaceVideo ? (
+        {video && exercise?.videoUrl && (
+          <div className="rounded-2xl border border-[#493b79] bg-[#0d0922] p-3">
+            <p className="mb-2 text-xs font-semibold text-slate-200">Current video · {video.name}</p>
+            <video
+              src={libraryMediaUrl(exercise.videoUrl)}
+              controls
+              preload="metadata"
+              className="max-h-80 w-full rounded-xl bg-black object-contain"
+              aria-label={`Current demo video for ${exercise.title || 'exercise'}`}
+            />
+          </div>
+        )}
+        {video && !exercise?.videoUrl && (
+          <div className="rounded-2xl border border-[#493b79] bg-[#0d0922] p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <BarbellIcon className="h-5 w-5 text-[#9d7aff]" />
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold text-white">{video.name}</span>
+                <span className="text-[11px] text-slate-400">{video.size} · current video</span>
+              </div>
+            </div>
+          </div>
+        )}
+        {replaceVideo && (
           <div
             id="exercise-video"
             tabIndex={-1}
@@ -478,7 +632,7 @@ export default function UpdatePersonalExercisePage() {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className={`rounded-2xl border border-dashed p-8 flex flex-col items-center justify-center cursor-pointer transition-all select-none ${
+            className={`rounded-2xl border border-dashed p-6 flex flex-col items-center justify-center cursor-pointer transition-all select-none ${
               isDragging
                 ? 'border-[#a855f7] bg-[#22174c]/60'
                 : 'border-[#5b32e8]/60 bg-[#161036]/40 hover:bg-[#1a1340]/60'
@@ -492,45 +646,37 @@ export default function UpdatePersonalExercisePage() {
               </svg>
             </div>
             <h3 className="text-xs font-semibold text-white">
-              {uploadedFile ? uploadedFile.name : 'Click to upload a replacement video'}
+              {uploadedFile ? `Replacement selected: ${uploadedFile.name}` : 'Click or drop a replacement video here'}
             </h3>
             <p className="text-[11px] text-slate-400 mt-1 text-center">
               {uploadedFile
-                ? `${(uploadedFile.size / (1024 * 1024)).toFixed(1)} MB · Click to choose a different video`
+                ? `${(uploadedFile.size / (1024 * 1024)).toFixed(1)} MB · Select another file to change it`
                 : 'MP4, MOV or WebM · up to 50 MB · keep your whole body in frame'}
             </p>
           </div>
-        ) : video ? (
-          <div className="rounded-2xl border border-[#493b79] bg-[#0d0922] p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <BarbellIcon className="h-5 w-5 text-[#9d7aff]" />
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold text-white">{video.name}</span>
-                <span className="text-[11px] text-slate-400">{video.size} · current video</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <button
-                type="button"
-                onClick={handleVideoReplace}
-                className="rounded-lg border border-[#59477f] bg-[#211844] px-4 py-2 text-sm font-semibold text-violet-200 hover:border-[#9d7aff] hover:bg-[#30215f] hover:text-white transition-colors cursor-pointer"
-              >
-                Replace
-              </button>
-              <button
-                type="button"
-                onClick={handleVideoRemove}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-800/70 bg-rose-950/50 text-rose-300 hover:border-rose-500 hover:bg-rose-900/70 hover:text-white transition-colors cursor-pointer"
-                aria-label="Remove current video"
-              >
-                <XIcon className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        ) : (
+        )}
+        {!replaceVideo && (
           <button type="button" onClick={handleVideoReplace} className="rounded-xl border border-dashed border-[#59477f] bg-[#211844] px-4 py-3 text-sm font-medium text-violet-200 hover:border-[#9d7aff] hover:bg-[#30215f]">
-            + Add demo video
+            {video ? 'Replace video' : '+ Add demo video'}
           </button>
+        )}
+        {replaceVideo && (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] text-slate-400">
+              The current video stays in place until you save a selected replacement.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setUploadedFile(null);
+                setReplaceVideo(false);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+              }}
+              className="shrink-0 rounded-lg border border-violet-400/60 bg-[#100b24] px-3 py-1.5 text-xs font-semibold text-violet-100 transition-colors hover:border-violet-300 hover:bg-[#211844] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+            >
+              Cancel replacement
+            </button>
+          </div>
         )}
         {showFieldError('video') && validationErrors.video && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.video}</p>}
         <p className="text-[11px] text-slate-500">
@@ -568,13 +714,13 @@ export default function UpdatePersonalExercisePage() {
           {isDirty ? 'Unsaved changes' : 'No changes yet'}
         </span>
         <div className="flex items-center gap-3">
-          <button type="button" onClick={() => { toast.info("Action cancelled"); navigate(-1); }} className="rounded-xl border border-[#493b79] bg-[#17112f] hover:border-[#8065ff] hover:bg-[#241a46] text-slate-200 hover:text-white text-sm font-semibold px-6 py-2.5 transition-colors cursor-pointer">
+          <button type="button" onClick={() => setConfirmCancel(true)} className="rounded-xl border border-[#493b79] bg-[#17112f] hover:border-[#8065ff] hover:bg-[#241a46] text-slate-200 hover:text-white text-sm font-semibold px-6 py-2.5 transition-colors cursor-pointer">
             Cancel
           </button>
           <button
             type="button"
             onClick={handleSave}
-            disabled={!isDirty || saving || Object.keys(validationErrors).length > 0}
+            disabled={!isDirty || saving || Object.keys(validationErrors).length > 0 || targetMuscles.length === 0}
             className="rounded-xl border border-[#8065ff] bg-[#643bf6] hover:bg-[#7554ff] text-white text-sm font-semibold px-7 py-2.5 shadow-md shadow-purple-950/40 active:scale-95 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {saving && <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />}
@@ -582,6 +728,14 @@ export default function UpdatePersonalExercisePage() {
           </button>
         </div>
       </footer>
+      <ConfirmDialog
+        open={confirmCancel}
+        title="Discard your changes?"
+        message="Are you sure you want to cancel? Any unsaved changes will be lost."
+        confirmLabel="Discard"
+        onCancel={() => setConfirmCancel(false)}
+        onConfirm={() => navigate(-1)}
+      />
     </div>
   );
 }

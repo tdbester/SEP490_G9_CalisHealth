@@ -1,4 +1,4 @@
--- V19: Activity logs behind the admin "User Detail & Activity Log" screen.
+-- V20: Activity logs behind the admin "User Detail & Activity Log" screen.
 --   user_activity_logs : events of one account (sign-in, account changes, and later
 --                        notification / maintenance / storage / moderation events).
 --   admin_action_logs  : what an admin did to another account (create, activate, deactivate).

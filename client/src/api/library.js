@@ -30,10 +30,11 @@ export const getMemberExerciseList = async (params = {}) => {
   return response.data;
 };
 
-const toPersonalExerciseFormData = (data, videoFile) => {
+const toPersonalExerciseFormData = (data, videoFile, anatomyImageFile) => {
   const formData = new FormData();
   formData.append("data", new Blob([JSON.stringify(data)], { type: "application/json" }));
   if (videoFile) formData.append("videoFile", videoFile);
+  if (anatomyImageFile) formData.append("anatomyImageFile", anatomyImageFile);
   return formData;
 };
 
@@ -51,10 +52,10 @@ const personalExerciseFormConfig = () => {
   };
 };
 
-export const createPersonalExercise = async (data, videoFile) => {
+export const createPersonalExercise = async (data, videoFile, anatomyImageFile) => {
   const response = await api.post(
     "/v1/library/personal-exercises",
-    toPersonalExerciseFormData(data, videoFile),
+    toPersonalExerciseFormData(data, videoFile, anatomyImageFile),
     personalExerciseFormConfig()
   );
   return response.data;
@@ -75,20 +76,20 @@ export const getPersonalExerciseCounts = async () => {
   return response.data;
 };
 
-export const resubmitPersonalExercise = async (id, data, videoFile) => {
+export const resubmitPersonalExercise = async (id, data, videoFile, anatomyImageFile) => {
   const response = await api.put(
     `/v1/library/personal-exercises/${id}/resubmit`,
-    toPersonalExerciseFormData(data, videoFile),
+    toPersonalExerciseFormData(data, videoFile, anatomyImageFile),
     personalExerciseFormConfig()
   );
   return response.data;
 };
 
-export const updateAcceptedPersonalExercise = async (id, data, videoFile) => {
+export const updateAcceptedPersonalExercise = async (id, data, videoFile, anatomyImageFile) => {
   const config = personalExerciseFormConfig();
   const response = await api.put(
     `/v1/library/personal-exercises/${id}/edit`,
-    toPersonalExerciseFormData(data, videoFile),
+    toPersonalExerciseFormData(data, videoFile, anatomyImageFile),
     config
   );
   return response.data;

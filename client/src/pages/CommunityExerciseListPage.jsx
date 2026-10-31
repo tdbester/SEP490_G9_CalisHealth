@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { createMemberExercise, getMemberExerciseList } from "../api/library";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 
 // Mock data matching mockup 100%
 const INITIAL_COMMUNITY_EXERCISES = [
@@ -218,7 +219,7 @@ export default function CommunityExerciseListPage() {
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
-  const pageSize = 6;
+  const pageSize = 5;
 
   useEffect(() => {
     let active = true;
@@ -284,6 +285,7 @@ export default function CommunityExerciseListPage() {
   // Modal Create Exercise State
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [formSuccess, setFormSuccess] = useState(null);
   const [createForm, setCreateForm] = useState({
     title: "",
@@ -615,7 +617,7 @@ export default function CommunityExerciseListPage() {
               </h2>
               <button
                 type="button"
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => setConfirmCancel(true)}
                 className="w-8 h-8 rounded-full bg-[#1e1548] text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
                 aria-label="Close modal"
               >
@@ -749,7 +751,7 @@ export default function CommunityExerciseListPage() {
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#231b46]">
                 <button
                   type="button"
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => setConfirmCancel(true)}
                   className="rounded-xl border border-[#2b2257] bg-[#161133] hover:bg-[#20174a] text-slate-300 text-xs font-semibold px-4 py-2 transition-all cursor-pointer"
                 >
                   Cancel
@@ -766,6 +768,17 @@ export default function CommunityExerciseListPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmCancel}
+        title="Discard this exercise?"
+        message="Are you sure you want to close the form? Your unsaved exercise details will be lost."
+        confirmLabel="Discard"
+        onCancel={() => setConfirmCancel(false)}
+        onConfirm={() => {
+          setConfirmCancel(false);
+          setShowCreateModal(false);
+        }}
+      />
     </div>
   );
 }

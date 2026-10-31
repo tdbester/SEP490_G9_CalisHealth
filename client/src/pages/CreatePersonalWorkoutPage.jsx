@@ -9,6 +9,7 @@ import {
 } from "./libraryFormValidation";
 import { createMyWorkout, getAvailableWorkoutExercises } from "../api/library";
 import useUndoDelete from "../hooks/useUndoDelete";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
 
 function DumbbellIcon({ size = "h-4 w-4" }) {
@@ -65,10 +66,29 @@ function LevelBadge({ level }) {
   );
 }
 
+function getPaginationItems(currentPage, pageCount) {
+  if (pageCount <= 5) {
+    return Array.from({ length: pageCount }, (_, index) => index + 1);
+  }
+
+  const pages = [...new Set([1, currentPage - 1, currentPage, currentPage + 1, pageCount])]
+    .filter((page) => page >= 1 && page <= pageCount)
+    .sort((first, second) => first - second);
+
+  return pages.flatMap((page, index) => {
+    const previousPage = pages[index - 1];
+    if (previousPage && page - previousPage > 1) {
+      return [`ellipsis-${previousPage}-${page}`, page];
+    }
+    return [page];
+  });
+}
+
 export default function CreatePersonalWorkoutPage() {
   const navigate = useNavigate();
   const submissionLock = useRef(false);
   const { requestDelete, confirmationModal } = useUndoDelete();
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   const [availableExercises, setAvailableExercises] = useState([]);
   const [exercisePage, setExercisePage] = useState(1);
@@ -118,6 +138,11 @@ export default function CreatePersonalWorkoutPage() {
   [availableExercises, search, levelFilter]);
   const exercisePageSize = 6;
   const exercisePageCount = Math.max(1, Math.ceil(filteredExercises.length / exercisePageSize));
+  const paginationItems = getPaginationItems(exercisePage, exercisePageCount);
+  const firstVisibleExercise = filteredExercises.length
+    ? (exercisePage - 1) * exercisePageSize + 1
+    : 0;
+  const lastVisibleExercise = Math.min(exercisePage * exercisePageSize, filteredExercises.length);
   const visibleExercises = filteredExercises.slice(
     (exercisePage - 1) * exercisePageSize,
     exercisePage * exercisePageSize
@@ -380,40 +405,57 @@ export default function CreatePersonalWorkoutPage() {
             )}
           </div>
           {filteredExercises.length > 0 && (
-            <div className="flex items-center justify-between border-t border-[#231b46] pt-3">
-              <button
-                type="button"
-                onClick={() => setExercisePage((page) => Math.max(1, page - 1))}
-                disabled={exercisePage === 1}
-                className="rounded-lg border border-[#2b2257] bg-[#161133] px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Previous
-              </button>
-              <div className="flex items-center gap-1.5">
-                {Array.from({ length: exercisePageCount }, (_, index) => index + 1).map((page) => (
-                  <button
-                    key={page}
-                    type="button"
-                    onClick={() => setExercisePage(page)}
-                    aria-current={page === exercisePage ? "page" : undefined}
-                    className={`h-8 min-w-8 rounded-lg px-2 text-xs ${
-                      page === exercisePage
-                        ? "bg-[#643bf6] font-semibold text-white"
-                        : "border border-[#2b2257] bg-[#161133] text-slate-300 hover:text-white"
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => setExercisePage((page) => Math.min(exercisePageCount, page + 1))}
-                disabled={exercisePage === exercisePageCount}
-                className="rounded-lg border border-[#2b2257] bg-[#161133] px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Next
-              </button>
+            <div className="flex flex-col gap-3 border-t border-[#231b46] pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-center text-[11px] text-slate-400 sm:text-left">
+                Showing <span className="font-semibold text-slate-200">{firstVisibleExercise}–{lastVisibleExercise}</span>
+                {" "}of <span className="font-semibold text-slate-200">{filteredExercises.length}</span> accepted exercises
+              </p>
+              <nav aria-label="Accepted exercises pages" className="flex items-center justify-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setExercisePage((page) => Math.max(1, page - 1))}
+                  disabled={exercisePage === 1}
+                  aria-label="Previous page"
+                  className="inline-flex h-9 items-center gap-1 rounded-lg border border-[#2b2257] bg-[#0d0922] px-2.5 text-xs font-medium text-slate-300 transition-colors hover:border-violet-500/60 hover:bg-[#181238] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M12.78 4.22a.75.75 0 010 1.06L8.06 10l4.72 4.72a.75.75 0 11-1.06 1.06l-5.25-5.25a.75.75 0 010-1.06l5.25-5.25a.75.75 0 011.06 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="hidden sm:inline">Previous</span>
+                </button>
+                <div className="flex items-center gap-1">
+                  {paginationItems.map((item) => typeof item === "number" ? (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setExercisePage(item)}
+                      aria-current={item === exercisePage ? "page" : undefined}
+                      aria-label={`Page ${item}`}
+                      className={`h-9 min-w-9 rounded-lg border px-2 text-xs font-semibold transition-colors ${
+                        item === exercisePage
+                          ? "border-violet-400 bg-[#643bf6] text-white shadow-sm shadow-violet-950/50"
+                          : "border-transparent bg-transparent text-slate-400 hover:border-[#2b2257] hover:bg-[#161133] hover:text-white"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ) : (
+                    <span key={item} aria-hidden="true" className="flex h-9 w-5 items-center justify-center text-xs text-slate-500">…</span>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setExercisePage((page) => Math.min(exercisePageCount, page + 1))}
+                  disabled={exercisePage === exercisePageCount}
+                  aria-label="Next page"
+                  className="inline-flex h-9 items-center gap-1 rounded-lg border border-[#2b2257] bg-[#0d0922] px-2.5 text-xs font-medium text-slate-300 transition-colors hover:border-violet-500/60 hover:bg-[#181238] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M7.22 15.78a.75.75 0 010-1.06L11.94 10 7.22 5.28a.75.75 0 011.06-1.06l5.25 5.25a.75.75 0 010 1.06l-5.25 5.25a.75.75 0 01-1.06 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </nav>
             </div>
           )}
         </div>
@@ -491,7 +533,7 @@ export default function CreatePersonalWorkoutPage() {
                   )}
                   <div>
                     <label className="block text-[10px] text-slate-400 mb-1">Rest (sec)</label>
-                    <input id={`workout-rest-${idx}`} type="number" min="10" max="120" step="5" value={ex.restSec}
+                    <input id={`workout-rest-${idx}`} type="number" min="10" max="180" step="5" value={ex.restSec}
                       onChange={(e) => {
                         updateField(idx, "restSec", e.target.value);
                       }}
@@ -522,7 +564,7 @@ export default function CreatePersonalWorkoutPage() {
           {totalExercises} {totalExercises === 1 ? "exercise" : "exercises"} in this workout
         </span>
         <div className="flex items-center gap-3">
-          <button type="button" onClick={() => { toast.info("Action cancelled"); navigate(-1); }}
+          <button type="button" onClick={() => setConfirmCancel(true)}
             className="rounded-xl border border-[#2b2257] bg-[#141030] px-6 py-2.5 text-xs font-semibold text-slate-300 hover:bg-[#1f1847] transition-colors">
             Cancel
           </button>
@@ -534,6 +576,14 @@ export default function CreatePersonalWorkoutPage() {
         </div>
       </div>
       {confirmationModal}
+      <ConfirmDialog
+        open={confirmCancel}
+        title="Discard this workout?"
+        message="Are you sure you want to cancel? Your unsaved workout will be lost."
+        confirmLabel="Discard"
+        onCancel={() => setConfirmCancel(false)}
+        onConfirm={() => navigate(-1)}
+      />
     </div>
   );
 }

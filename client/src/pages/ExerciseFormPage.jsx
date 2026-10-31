@@ -33,6 +33,7 @@ import { useApiMutation, useApiQuery } from "../hooks";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { CONTENT_PATHS, ContentPageHeader, DarkPill, TONE_STYLES } from "../components/ContentShared";
 import { CM } from "../theme-content";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 
 const rise = keyframes`
   from { opacity: 0; transform: translateY(8px); }
@@ -1032,6 +1033,7 @@ export default function ExerciseFormPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const kind = searchParams.get("type") === "workout" ? "workout" : "exercise";
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   const [exercise, setExercise] = useState(EMPTY_EXERCISE);
   const [selectedMuscles, setSelectedMuscles] = useState([]);
@@ -1348,6 +1350,10 @@ export default function ExerciseFormPage() {
           component={RouterLink}
           to={kind === "exercise" ? CONTENT_PATHS.exercises : CONTENT_PATHS.workouts}
           variant="outlined"
+          onClick={(event) => {
+            event.preventDefault();
+            setConfirmCancel(true);
+          }}
         >
           Cancel
         </Button>
@@ -1361,6 +1367,14 @@ export default function ExerciseFormPage() {
           {isSaving ? "Creating…" : `Create ${kind}`}
         </Button>
       </Stack>
+      <ConfirmDialog
+        open={confirmCancel}
+        title={`Discard this ${kind}?`}
+        message={`Are you sure you want to cancel? Your unsaved ${kind} details will be lost.`}
+        confirmLabel="Discard"
+        onCancel={() => setConfirmCancel(false)}
+        onConfirm={() => navigate(kind === "exercise" ? CONTENT_PATHS.exercises : CONTENT_PATHS.workouts)}
+      />
     </Box>
   );
 }

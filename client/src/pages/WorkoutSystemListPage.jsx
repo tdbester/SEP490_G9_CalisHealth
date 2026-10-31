@@ -6,7 +6,7 @@ import "./ExerciseListPage.css";
 
 const MUSCLE_GROUPS = ["All", "Full body", "Chest", "Back", "Arms", "Core", "Legs"];
 const LEVEL_OPTIONS = ["All levels", "Beginner", "Intermediate", "Advanced"];
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 5;
 
 function toNumberOrNull(value) {
   if (value == null) return null;
@@ -477,13 +477,23 @@ export default function WorkoutSystemListPage() {
     setLoading(true);
     setErrorMessage("");
     try {
-      const response = await getSystemWorkouts({
+      const firstPage = await getSystemWorkouts({
         type: activeTab === "skills" ? "SKILL" : "HEALTH",
         page: 0,
-        size: 100,
+        size: 5,
       });
-      const apiWorkouts = Array.isArray(response?.content)
-        ? response.content.map((workout) => normalizeWorkout({
+      const remainingPages = await Promise.all(
+        Array.from({ length: Math.max(0, firstPage.totalPages - 1) }, (_, index) =>
+          getSystemWorkouts({
+            type: activeTab === "skills" ? "SKILL" : "HEALTH",
+            page: index + 1,
+            size: 5,
+          }),
+        ),
+      );
+      const allWorkouts = [firstPage, ...remainingPages].flatMap((response) => response?.content || []);
+      const apiWorkouts = Array.isArray(allWorkouts)
+        ? allWorkouts.map((workout) => normalizeWorkout({
             ...workout,
             type: activeTab,
           }))

@@ -1,5 +1,5 @@
 import { Link as RouterLink, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Component, useEffect, useState } from "react";
 import {
   Alert,
   Box,
@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import { keyframes } from "@mui/material/styles";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
@@ -22,6 +23,7 @@ import { useApiMutation, useApiQuery } from "../hooks";
 import { useLevelNames } from "../useLevelNames";
 import { CONTENT_PATHS, ContentPageHeader } from "../components/ContentShared";
 import { CM } from "../theme-content";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 import {
   ExerciseFields,
   validateExerciseUpload,
@@ -118,7 +120,58 @@ export function GuideSteps({ guide }) {
 }
 
 const MUSCLE_OPTIONS = ["Chest", "Back", "Shoulders", "Arms", "Core", "Legs", "Glutes"];
-export default function SystemExerciseDetailPage() {
+
+class ExerciseDetailErrorBoundary extends Component {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, info) {
+    console.error("Exercise detail page failed to render", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Box sx={{ maxWidth: 960, mx: "auto", px: { xs: 2, sm: 3 }, py: 4 }}>
+          <ContentPageHeader
+            breadcrumb={[
+              { label: "Content manager", to: CONTENT_PATHS.dashboard },
+              { label: "Exercise & Workout Management", to: CONTENT_PATHS.exercises },
+              { label: "Exercise details" },
+            ]}
+            title="Exercise details unavailable"
+          />
+          <Alert
+            severity="error"
+            sx={{ mt: 2 }}
+            action={
+              <Button color="inherit" size="small" onClick={() => this.setState({ hasError: false })}>
+                Try again
+              </Button>
+            }
+          >
+            An unexpected error prevented this exercise from being displayed.
+          </Alert>
+          <Button
+            component={RouterLink}
+            to={CONTENT_PATHS.exercises}
+            sx={{ mt: 2 }}
+            startIcon={<ArrowBackRoundedIcon />}
+          >
+            Back to exercise list
+          </Button>
+        </Box>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+function SystemExerciseDetailContent() {
   const { code = "" } = useParams();
   const { levels: LEVEL_OPTIONS } = useLevelNames();
   const { data: entry, isLoading, error, refetch } = useApiQuery(
@@ -126,6 +179,7 @@ export default function SystemExerciseDetailPage() {
     { enabled: Boolean(code), deps: [code] },
   );
   const [editing, setEditing] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [form, setForm] = useState(null);
   const [video, setVideo] = useState(null);
   const [image, setImage] = useState(null);
@@ -146,7 +200,9 @@ export default function SystemExerciseDetailPage() {
       value: entry.category === "HOLD" ? (entry.duration ?? "") : (entry.defaultReps ?? ""),
       defaultSets: entry.defaultSets ?? 3,
       level: entry.level || "",
-      muscleGroup: (entry.muscleGroup || "").split(" · ").filter(Boolean),
+      muscleGroup: typeof entry.muscleGroup === "string"
+        ? entry.muscleGroup.split(" · ").filter(Boolean)
+        : [],
       guide: entry.guide || "",
     });
   }, [entry]);
@@ -192,7 +248,9 @@ export default function SystemExerciseDetailPage() {
         value: entry.category === "HOLD" ? (entry.duration ?? "") : (entry.defaultReps ?? ""),
         defaultSets: entry.defaultSets ?? 3,
         level: entry.level || "",
-        muscleGroup: (entry.muscleGroup || "").split(" · ").filter(Boolean),
+        muscleGroup: typeof entry.muscleGroup === "string"
+          ? entry.muscleGroup.split(" · ").filter(Boolean)
+          : [],
         guide: entry.guide || "",
       });
     }
@@ -356,7 +414,7 @@ export default function SystemExerciseDetailPage() {
           {saveError && <Alert severity="error" sx={{ mt: 2 }}>{saveError}</Alert>}
           <Divider sx={{ mt: 3 }} />
           <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ pt: 1.5 }}>
-            <Button startIcon={<CloseRoundedIcon />} onClick={cancelEditing}>Cancel</Button>
+            <Button startIcon={<CloseRoundedIcon />} onClick={() => setConfirmCancel(true)}>Cancel</Button>
             <Button type="submit" form="edit-exercise-form" variant="contained" startIcon={<SaveRoundedIcon />} disabled={saveMutation.isPending}>
               {saveMutation.isPending ? "Saving…" : "Save changes"}
             </Button>
@@ -522,6 +580,27 @@ export default function SystemExerciseDetailPage() {
         </CardContent>
       </Card>
       )}
+      <ConfirmDialog
+        open={confirmCancel}
+        title="Discard your changes?"
+        message="Are you sure you want to cancel? Any unsaved exercise changes will be lost."
+        confirmLabel="Discard"
+        onCancel={() => setConfirmCancel(false)}
+        onConfirm={() => {
+          setConfirmCancel(false);
+          cancelEditing();
+        }}
+      />
     </Box>
+  );
+}
+
+export default function SystemExerciseDetailPage() {
+  const { code = "" } = useParams();
+
+  return (
+    <ExerciseDetailErrorBoundary key={code}>
+      <SystemExerciseDetailContent />
+    </ExerciseDetailErrorBoundary>
   );
 }

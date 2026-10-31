@@ -1,7 +1,7 @@
--- V20: Demo data for the admin "User Detail & Activity Log" screen, so every team member sees the
+-- V21: Demo data for the admin "User Detail & Activity Log" screen, so every team member sees the
 -- same three example accounts after pulling the branch and starting the backend.
 --
---   ADMIN            admin@calishealth.com         Test@123  (account from V15, only gets log rows here)
+--   ADMIN            admin@calishealth.com         Test@123  (account from V16, only gets log rows here)
 --   CONTENT_MANAGER  demo.content@calishealth.com  Test@123  (still the default password -> "Default" chip)
 --   MEMBER           demo.member@calishealth.com   Test@123
 --

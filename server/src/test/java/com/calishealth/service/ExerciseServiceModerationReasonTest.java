@@ -52,6 +52,7 @@ class ExerciseServiceModerationReasonTest {
 
         service.updateStatus(exercise.getCode(), false, "  Unsafe execution form  ");
 
+        assertEquals("Unsafe execution form", exercise.getRejectionReason());
         verify(moderationHistory).insert(
                 eq(exercise.getCode()),
                 eq(exercise.getName()),

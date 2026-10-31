@@ -35,9 +35,9 @@ const TREE_DATA = {
         state: "current",
         muscleGroups: ["Chest", "Triceps", "Core"],
         prerequisiteIds: ["knee-push-up"],
-        nextExerciseIds: ["diamond-push-up", "pike-push-up"],
+        nextExerciseIds: ["diamond-push-up", "pike-push-up", "pseudo-planche-push-up"],
         previous: ["Knee push-up"],
-        next: ["Diamond push-up", "Pike push-up"],
+        next: ["Diamond push-up", "Pike push-up", "Pseudo Planche Push-up"],
         col: 1,
         row: 0,
       },
@@ -116,6 +116,21 @@ const TREE_DATA = {
         next: [],
         col: 3,
         row: 1,
+      },
+      {
+        id: "pseudo-planche-push-up",
+        name: "Pseudo Planche Push-up",
+        level: "Lv 4",
+        levelNumber: 4,
+        difficulty: "Advanced",
+        state: "locked",
+        muscleGroups: ["Chest", "Shoulders", "Triceps"],
+        prerequisiteIds: ["push-up"],
+        nextExerciseIds: [],
+        previous: ["Push-up"],
+        next: [],
+        col: 3,
+        row: 2,
       },
     ],
   },
@@ -495,7 +510,8 @@ const CARD_WIDTH = 144;
 const CARD_HEIGHT = 144;
 const GAP_X = 48;
 const GAP_Y = 48;
-const GRID_WIDTH = 5 * CARD_WIDTH + 4 * GAP_X;
+const LEVEL_COUNT = 5;
+const GRID_WIDTH = LEVEL_COUNT * CARD_WIDTH + (LEVEL_COUNT - 1) * GAP_X;
 export default function CalisthenicsExerciseTreePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -680,6 +696,11 @@ export default function CalisthenicsExerciseTreePage() {
 
     // Stable level-and-ID ordering defines coordinates independently of arrow direction.
     const levelOf = (node) => {
+      const normalizedName = normalizeExerciseName(node.name);
+      if (selectedGroup === "Push") {
+        if (normalizedName === "push up" || normalizedName === "standard push up") return 2;
+        if (normalizedName === "pseudo planche push up") return 4;
+      }
       const parsed = Number.parseInt(String(node.level ?? node.levelNumber ?? ""), 10);
       return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
     };
@@ -713,12 +734,32 @@ export default function CalisthenicsExerciseTreePage() {
     const rowsById = new Map();
     const nodes = uniqueNodes.map((node) => {
       const level = levelOf(node);
-      const prerequisiteIds = [...new Set((node.prerequisiteIds || [])
+      let prerequisiteIds = [...new Set((node.prerequisiteIds || [])
           .map((id) => nodeIdAliases.get(String(id)) || String(id))
           .filter((id) => id !== String(node.id)))];
-      const nextExerciseIds = [...new Set((node.nextExerciseIds || [])
+      let nextExerciseIds = [...new Set((node.nextExerciseIds || [])
           .map((id) => nodeIdAliases.get(String(id)) || String(id))
           .filter((id) => id !== String(node.id)))];
+      if (selectedGroup === "Push") {
+        const normalizedName = normalizeExerciseName(node.name);
+        const isStandardPushUp = normalizedName === "push up" || normalizedName === "standard push up";
+        const isPseudoPlanchePushUp = normalizedName === "pseudo planche push up";
+        const pseudoPlanche = sortedNodes.find(
+            (candidate) => normalizeExerciseName(candidate.name) === "pseudo planche push up",
+        );
+        const standardPushUp = sortedNodes.find((candidate) => {
+          const candidateName = normalizeExerciseName(candidate.name);
+          return candidateName === "push up" || candidateName === "standard push up";
+        });
+        if (isStandardPushUp && pseudoPlanche) {
+          const pseudoId = nodeIdAliases.get(String(pseudoPlanche.id)) || String(pseudoPlanche.id);
+          nextExerciseIds = [...new Set([...nextExerciseIds, pseudoId])];
+        }
+        if (isPseudoPlanchePushUp && standardPushUp) {
+          const pushUpId = nodeIdAliases.get(String(standardPushUp.id)) || String(standardPushUp.id);
+          prerequisiteIds = [...new Set([...prerequisiteIds, pushUpId])];
+        }
+      }
       const occupiedRows = rowsByLevel.get(level) || new Set();
       const parentRows = prerequisiteIds
           .map((id) => rowsById.get(String(id)))
@@ -929,11 +970,20 @@ export default function CalisthenicsExerciseTreePage() {
 
   const treeEdges = useMemo(() => {
     const visibleNodeById = new Map(visibleNodes.map((node) => [String(node.id), node]));
-    return visibleNodes.flatMap((node) =>
-        (node.nextExerciseIds || [])
-            .map((nextId) => ({ from: node, to: visibleNodeById.get(String(nextId)) }))
-            .filter((edge) => edge.to && visibleNodeIds.has(String(edge.to.id)))
-    );
+    const edgesByPair = new Map();
+    visibleNodes.forEach((node) => {
+      (node.nextExerciseIds || []).forEach((nextId) => {
+        const target = visibleNodeById.get(String(nextId));
+        if (!target || !visibleNodeIds.has(String(target.id))) return;
+        const sourceLevel = Number(node.levelNumber) || 1;
+        const targetLevel = Number(target.levelNumber) || 1;
+        const from = sourceLevel <= targetLevel ? node : target;
+        const to = sourceLevel <= targetLevel ? target : node;
+        const pairKey = [String(from.id), String(to.id)].sort().join(":");
+        if (!edgesByPair.has(pairKey)) edgesByPair.set(pairKey, { from, to });
+      });
+    });
+    return [...edgesByPair.values()];
   }, [visibleNodes, visibleNodeIds]);
 
   const handleNodeClick = (node) => {
@@ -967,27 +1017,36 @@ export default function CalisthenicsExerciseTreePage() {
     navigate(`/library/exercise/${slug}`);
   };
 
-  // Sorting changes only edge flow; node order and X/Y positions stay fixed.
+  // Reverse sorting changes displayed columns while edges still follow progression.
   const isReverse = direction === "Hard → Easy";
 
-  const getNodeX = (col) => col * (CARD_WIDTH + GAP_X);
+  const getVisualColumn = (node) => isReverse
+      ? LEVEL_COUNT - 1 - node.col
+      : node.col;
+  const getNodeX = (node) => getVisualColumn(node) * (CARD_WIDTH + GAP_X);
   const getNodeY = (row) => row * (CARD_HEIGHT + GAP_Y);
   const getEdgePath = ({ from, to }) => {
-    const fromX = getNodeX(from.col);
+    const fromX = getNodeX(from);
     const fromY = getNodeY(from.row);
-    const toX = getNodeX(to.col);
+    const toX = getNodeX(to);
     const toY = getNodeY(to.row);
     const fromCenterY = fromY + CARD_HEIGHT / 2;
     const toCenterY = toY + CARD_HEIGHT / 2;
+    const movesRight = toX >= fromX;
+    const movesDown = toY >= fromY;
     let points;
-    if (from.row === to.row) {
-      const movesRight = to.col >= from.col;
+    if (fromX === toX) {
+      const centerX = fromX + CARD_WIDTH / 2;
+      points = [
+        { x: centerX, y: fromY + (movesDown ? CARD_HEIGHT : 0) },
+        { x: centerX, y: toY + (movesDown ? 0 : CARD_HEIGHT) },
+      ];
+    } else if (from.row === to.row) {
       points = [
         { x: fromX + (movesRight ? CARD_WIDTH : 0), y: fromCenterY },
         { x: toX + (movesRight ? 0 : CARD_WIDTH), y: toCenterY },
       ];
     } else {
-      const movesRight = to.col >= from.col;
       const sourceX = fromX + (movesRight ? CARD_WIDTH : 0);
       const targetX = toX + (movesRight ? 0 : CARD_WIDTH);
       const elbowX = (sourceX + targetX) / 2;
@@ -999,7 +1058,6 @@ export default function CalisthenicsExerciseTreePage() {
       ];
     }
 
-    if (isReverse) points.reverse();
     return points.map((point, index) =>
         `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`,
     ).join(" ");
@@ -1008,6 +1066,10 @@ export default function CalisthenicsExerciseTreePage() {
   return (
       <div className="exercise-tree-page w-full max-w-7xl mx-auto text-white pb-12">
         <style>{`
+        .exercise-tree-page,
+        .exercise-tree-page * {
+          font-family: Arial, sans-serif;
+        }
         .exercise-tree-page button {
           outline: none;
         }
@@ -1087,17 +1149,37 @@ export default function CalisthenicsExerciseTreePage() {
                 {treeError}
               </p>
           )}
-          <div
-              className="relative mx-auto grid select-none"
-              style={{
-                width: `${GRID_WIDTH}px`,
-                height: `${gridHeight}px`,
-                gridTemplateColumns: `repeat(5, ${CARD_WIDTH}px)`,
-                gridTemplateRows: `repeat(${Math.max(1, maxRow + 1)}, ${CARD_HEIGHT}px)`,
-                columnGap: `${GAP_X}px`,
-                rowGap: `${GAP_Y}px`,
-              }}
-          >
+          <div className="mx-auto" style={{ width: `${GRID_WIDTH}px` }}>
+            <div
+                className="mb-4 grid select-none"
+                style={{
+                  gridTemplateColumns: `repeat(${LEVEL_COUNT}, ${CARD_WIDTH}px)`,
+                  columnGap: `${GAP_X}px`,
+                }}
+            >
+              {Array.from({ length: LEVEL_COUNT }, (_, index) => {
+                const level = isReverse ? LEVEL_COUNT - index : index + 1;
+                return (
+                  <div
+                      key={level}
+                      className="rounded-lg border border-[#382b68] bg-[#120d29] px-3 py-2 text-center text-xs font-bold text-violet-200"
+                  >
+                    Level {level}
+                  </div>
+                );
+              })}
+            </div>
+            <div
+                className="relative grid select-none"
+                style={{
+                  width: `${GRID_WIDTH}px`,
+                  height: `${gridHeight}px`,
+                  gridTemplateColumns: `repeat(${LEVEL_COUNT}, ${CARD_WIDTH}px)`,
+                  gridTemplateRows: `repeat(${Math.max(1, maxRow + 1)}, ${CARD_HEIGHT}px)`,
+                  columnGap: `${GAP_X}px`,
+                  rowGap: `${GAP_Y}px`,
+                }}
+            >
             {/* SVG Connection Lines & Arrows */}
             <svg
                 className="absolute inset-0 z-0 pointer-events-none"
@@ -1113,7 +1195,7 @@ export default function CalisthenicsExerciseTreePage() {
                     refY="5"
                     markerWidth="6"
                     markerHeight="6"
-                    orient="auto-start-reverse"
+                    orient="auto"
                 >
                   <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#806bb8" />
                 </marker>
@@ -1145,7 +1227,7 @@ export default function CalisthenicsExerciseTreePage() {
                       key={node.id}
                       onClick={() => handleNodeClick(node)}
                       style={{
-                        gridColumn: node.col + 1,
+                        gridColumn: getVisualColumn(node) + 1,
                         gridRow: node.row + 1,
                         width: `${CARD_WIDTH}px`,
                         height: `${CARD_HEIGHT}px`,
@@ -1198,7 +1280,7 @@ export default function CalisthenicsExerciseTreePage() {
                     </div>
 
                     {/* Exercise Name */}
-                    <div className="text-xs font-bold text-white text-center tracking-tight leading-snug px-1">
+                    <div className="line-clamp-3 break-words text-xs font-bold text-white text-center tracking-tight leading-snug px-1">
                       {node.name}
                     </div>
 
@@ -1213,6 +1295,7 @@ export default function CalisthenicsExerciseTreePage() {
                   </div>
               );
             })}
+            </div>
           </div>
 
           {/* Footer Legend */}
@@ -1233,7 +1316,7 @@ export default function CalisthenicsExerciseTreePage() {
             </div>
 
             <div className="text-slate-500 italic">
-              {isReverse ? "Arrows point to easier exercises" : "Arrows point to harder exercises"}
+              {isReverse ? "Progression arrows point from right to left" : "Progression arrows point from left to right"}
             </div>
           </div>
         </section>
