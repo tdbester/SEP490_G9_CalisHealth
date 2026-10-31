@@ -18,6 +18,14 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
+    // Admin-issued temporary password: every API except /auth/me and change-password is refused.
+    if (
+      err.response?.status === 403 &&
+      err.response?.data?.code === "PASSWORD_CHANGE_REQUIRED" &&
+      window.location.pathname !== "/change-password"
+    ) {
+      window.location.href = "/change-password";
+    }
     const isLoginRequest = err.config?.url?.includes("/auth/login");
     if (err.response?.status === 401 && !isLoginRequest) {
       localStorage.removeItem("token");

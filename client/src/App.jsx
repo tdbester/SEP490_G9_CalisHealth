@@ -1,17 +1,23 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+﻿import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "./components/layout/AdminLayout";
 import RoleHomeRoute from "./components/RoleHomeRoute";
 import ContentManagerLayout from "./components/layout/ContentManagerLayout";
 import AdminAreaLayout from "./components/layout/AdminAreaLayout";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminSectionPage from "./pages/AdminSectionPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminCreateStaffPage from "./pages/AdminCreateStaffPage";
+import AdminUserDetailPage from "./pages/AdminUserDetailPage";
 import Dashboard from "./pages/Dashboard";
 import HealthTracking from "./pages/HealthTracking";
 import WorkoutHistory from "./pages/WorkoutHistory";
 import PerformanceAnalytics from "./pages/PerformanceAnalytics";
 import DayStreak from "./pages/DayStreak";
 import ContentManagerDashboard from "./pages/ContentManagerDashboard";
-import ContentManagerSectionPage from "./pages/ContentManagerSectionPage";
+import ProgressionRulesPage, {
+  ProgressionRuleDetailPage,
+  ProgressionRuleFormPage,
+} from "./pages/ProgressionRulesPage";
 import ExerciseListPage from "./pages/ExerciseListPage";
 import SystemExerciseDetailPage from "./pages/SystemExerciseDetailPage";
 import ExerciseFormPage from "./pages/ExerciseFormPage";
@@ -30,6 +36,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import VerifyResetPassword from "./pages/VerifyResetPassword";
 import ResetPassword from "./pages/ResetPassword";
+import ChangePassword from "./pages/ChangePassword";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SurveyFlow, { SurveyEntry } from "./pages/survey/SurveyFlow";
 import SurveyStepPage from "./pages/survey/SurveyStepPage";
@@ -46,8 +53,9 @@ export default function App() {
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/verify-reset-password" element={<VerifyResetPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/change-password" element={<ChangePassword />} />
 
-        {/* Onboarding survey của member (sau khi đăng nhập); URL theo Figma: /survey/body-information … */}
+        {/* Onboarding survey cá»§a member (sau khi Ä‘Äƒng nháº­p); URL theo Figma: /survey/body-information â€¦ */}
         <Route
           path="/survey"
           element={
@@ -76,10 +84,13 @@ export default function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<ContentManagerDashboard />} />
           <Route path="surveys" element={<SurveyManagement />} />
-          {/* URL cũ của màn Survey management */}
+          {/* URL cÅ© cá»§a mÃ n Survey management */}
           <Route path="survey" element={<Navigate to="/content/surveys" replace />} />
           <Route path="exercises" element={<ExerciseListPage />} />
-          <Route path="progression-rules" element={<ContentManagerSectionPage section="progressionRules" />} />
+          <Route path="progression-rules" element={<ProgressionRulesPage />} />
+          <Route path="progression-rules/new" element={<ProgressionRuleFormPage />} />
+          <Route path="progression-rules/:id/edit" element={<ProgressionRuleFormPage />} />
+          <Route path="progression-rules/:id" element={<ProgressionRuleDetailPage />} />
           <Route path="benchmark-criteria" element={<LevelBenchmarkCriteriaPage />} />
           <Route path="benchmark-criteria/edit" element={<LevelBenchmarkFormPage />} />
           <Route path="benchmark-criteria/:id/edit" element={<LevelBenchmarkFormPage />} />
@@ -99,7 +110,10 @@ export default function App() {
         <Route path="/admin" element={<AdminAreaLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="users" element={<AdminSectionPage title="Users" />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="users/create" element={<AdminCreateStaffPage />} />
+          <Route path="users/:id" element={<AdminUserDetailPage />} />
+          <Route path="create" element={<Navigate to="/admin/users/create" replace />} />
           <Route path="notifications" element={<AdminSectionPage title="Notifications" />} />
           <Route path="storage" element={<AdminSectionPage title="Media storage & infrastructure" />} />
           <Route path="maintenance" element={<AdminSectionPage title="Create maintenance schedule" />} />

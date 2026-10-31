@@ -94,6 +94,25 @@ export const contentManagerApi = {
 
   memberLevels: () => contentApi.get("/content/dashboard/member-levels").then((r) => r.data),
 
+  progressionRules: () =>
+    contentApi.get("/content/progression-rules").then((r) => r.data).catch((error) => { throw requestError(error); }),
+
+  progressionRule: (id) =>
+    contentApi.get(`/content/progression-rules/${encodeURIComponent(id)}`).then((r) => r.data).catch((error) => { throw requestError(error); }),
+
+  createProgressionRule: (data) =>
+    contentApi.post("/content/progression-rules", data).then((r) => r.data).catch((error) => { throw requestError(error); }),
+
+  updateProgressionRule: (id, data) =>
+    contentApi.put(`/content/progression-rules/${encodeURIComponent(id)}`, data).then((r) => r.data).catch((error) => { throw requestError(error); }),
+
+  updateProgressionRuleStatus: (id, status) =>
+    contentApi.patch(`/content/progression-rules/${encodeURIComponent(id)}/status`, null, { params: { status } })
+      .then((r) => r.data).catch((error) => { throw requestError(error); }),
+
+  deleteProgressionRule: (id) =>
+    contentApi.delete(`/content/progression-rules/${encodeURIComponent(id)}`).catch((error) => { throw requestError(error); }),
+
   exercise: (code) =>
     contentApi.get(`/content/exercises/${encodeURIComponent(code)}`).then((r) => r.data),
 

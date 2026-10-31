@@ -55,6 +55,10 @@ export default function Login() {
     let cancelled = false;
     api.get("/auth/me").then(({ data }) => {
       if (cancelled) return;
+      if (data.mustChangePassword) {
+        navigate("/change-password", { replace: true });
+        return;
+      }
       setExistingRole(data.role);
       localStorage.setItem(
         "user",
@@ -121,6 +125,10 @@ export default function Login() {
           role: res.data.role,
         }),
       );
+      if (res.data.mustChangePassword) {
+        navigate("/change-password", { replace: true });
+        return;
+      }
       // Member chưa hoàn thành / chưa bỏ qua khảo sát onboarding -> vào survey trước,
       // kể cả khi có returnTo (vd vào "/" lúc chưa đăng nhập bị chuyển sang /login?returnTo=/)
       if (res.data.role === "MEMBER" && (await needsOnboarding())) {

@@ -115,7 +115,6 @@
   border-radius: 16px;
   border: 1px solid #4B3A9E;
   background:
-    radial-gradient(120% 140% at 0% 50%, rgba(162, 89, 255, 0.18) 0%, transparent 55%),
     linear-gradient(90deg, #22163F 0%, #1A1438 55%, #171A3D 100%);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }

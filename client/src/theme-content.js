@@ -64,8 +64,6 @@ const contentTheme = createTheme({
         body: {
           backgroundColor: CM.bg,
           color: CM.text,
-          backgroundImage:
-            "radial-gradient(900px 420px at 18% -8%, rgba(139,92,246,0.16), transparent 70%), radial-gradient(760px 380px at 100% 0%, rgba(192,38,211,0.12), transparent 65%)",
           backgroundAttachment: "fixed",
         },
         "::selection": { background: "rgba(167,139,250,0.35)" },
@@ -80,11 +78,8 @@ const contentTheme = createTheme({
       styleOverrides: {
         root: {
           backgroundColor: CM.surface,
-          backgroundImage:
-            "linear-gradient(160deg, rgba(139,92,246,0.10) 0%, rgba(139,92,246,0) 42%)",
           border: `1px solid ${CM.border}`,
           borderRadius: 16,
-          boxShadow: "0 18px 40px rgba(8,3,22,0.45)",
         },
       },
     },
@@ -94,10 +89,10 @@ const contentTheme = createTheme({
         contained: {
           backgroundImage: CM.buttonGradient,
           color: "#FFFFFF",
-          boxShadow: "0 10px 24px rgba(139,92,246,0.35)",
+          boxShadow: "none",
           "&:hover": {
             backgroundImage: "linear-gradient(135deg, #9B6BFF 0%, #D135E0 100%)",
-            boxShadow: "0 12px 28px rgba(139,92,246,0.45)",
+            boxShadow: "none",
           },
         },
         outlined: {

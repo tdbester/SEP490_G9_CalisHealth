@@ -1,6 +1,11 @@
 /* SurveyManagement.css — Survey management (Content Manager), Figma: survey-management
    Cùng tông với các trang member: nền #0F0C1B, card #15102A, viền #2D2550, nhấn tím #8B7CF6 */
 
+@keyframes smRise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .survey-mgmt {
   display: flex;
   flex-direction: column;
@@ -12,6 +17,7 @@
   box-sizing: border-box;
   color: #FFFFFF;
   font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+  animation: smRise .45s ease-out both;
 }
 
 .survey-mgmt h1,
@@ -21,7 +27,9 @@
 }
 
 .sm-card {
-  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
   border: 1px solid #2D2550;
   background: #15102A;
 }
@@ -140,19 +148,21 @@
   align-items: center;
   gap: 6px;
   height: 36px;
-  padding: 0 14px;
+  padding: 0 16px;
   border-radius: 10px;
-  border: 1px solid #5B3CE8;
-  background: #2E1F68;
+  border: none;
+  background: linear-gradient(135deg, #8B5CF6 0%, #C026D3 100%);
   color: #FFFFFF;
   font: inherit;
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .sm-link-btn:hover {
-  background: #3A2783;
+  background: linear-gradient(135deg, #9B6BFF 0%, #D135E0 100%);
+  transform: translateY(-1px);
 }
 
 .sm-link-btn svg {
@@ -175,14 +185,16 @@
   gap: 16px;
   min-height: 84px;
   padding: 12px 16px 12px 10px;
-  border-radius: 12px;
+  border-radius: 14px;
   border: 1px solid #2D2550;
   background: #1A1433;
-  transition: border-color 0.15s ease, opacity 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .sm-row:hover {
-  border-color: #4B3A9E;
+  border-color: #5B3CE8;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .sm-row.dragging {

@@ -51,10 +51,7 @@ export default function RoleHomeRoute() {
     );
   }
 
-  if (state.status === "guest") {
-    return <Navigate to="/login" replace />;
-  }
-
+  // Guests get the public dashboard (Dashboard/Topbar already render a guest view with "Log in").
   if (state.role === "CONTENT_MANAGER") {
     return <Navigate to="/content/dashboard" replace />;
   }
