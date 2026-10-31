@@ -83,6 +83,10 @@ export default function Login() {
     setImeWarn({ email: hasNonAscii(email.value), password: hasNonAscii(password.value) });
   };
 
+  if (existingRole === "ADMIN") {
+    return <Navigate to="/admin/notifications" replace />;
+  }
+
   if (existingRole === "CONTENT_MANAGER") {
     return <Navigate to="/content/dashboard" replace />;
   }
@@ -121,11 +125,13 @@ export default function Login() {
       const isSafeReturnTo =
         returnTo?.startsWith("/") && !returnTo.startsWith("//") && returnTo !== "/login";
       const destination =
-        res.data.role === "CONTENT_MANAGER"
+        res.data.role === "ADMIN"
+          ? "/admin/notifications"
+          : res.data.role === "CONTENT_MANAGER"
           ? "/content/dashboard"
           : isSafeReturnTo
             ? returnTo
-            : "/";
+            : "/dashboard";
       navigate(destination, { replace: true });
     } catch (err) {
       const msg =

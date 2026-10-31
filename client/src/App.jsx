@@ -38,6 +38,9 @@ import ForgotPassword from "./pages/ForgotPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import VerifyResetPassword from "./pages/VerifyResetPassword";
 import ResetPassword from "./pages/ResetPassword";
+import NotificationListPage from "./pages/NotificationListPage";
+import CreateNotificationPage from "./pages/CreateNotificationPage";
+import EditNotificationPage from "./pages/EditNotificationPage";
 
 function RootRoute() {
   const token = localStorage.getItem("token")?.trim();
@@ -48,6 +51,11 @@ export default function App() {
   const memberPage = (page) => (
     <ProtectedRoute>
       <AdminLayout>{page}</AdminLayout>
+    </ProtectedRoute>
+  );
+  const adminNotificationPage = (page) => (
+    <ProtectedRoute>
+      <AdminNotificationAccess>{page}</AdminNotificationAccess>
     </ProtectedRoute>
   );
 
@@ -72,6 +80,9 @@ export default function App() {
           <Route path="/" element={<RootRoute />} />
           <Route path="/dashboard" element={<ProtectedRoute><RoleHomeRoute /></ProtectedRoute>} />
           <Route path="/day-streak" element={memberPage(<DayStreak />)} />
+          <Route path="/admin/notifications" element={adminNotificationPage(<NotificationListPage />)} />
+          <Route path="/admin/notifications/new" element={adminNotificationPage(<CreateNotificationPage />)} />
+          <Route path="/admin/notifications/:id" element={adminNotificationPage(<EditNotificationPage />)} />
 
           <Route path="/content" element={<ContentManagerLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
@@ -132,4 +143,17 @@ export default function App() {
       </BrowserRouter>
     </>
   );
+}
+
+function AdminNotificationAccess({ children }) {
+  let user = null;
+  try {
+    user = JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    user = null;
+  }
+  if (user?.role !== "ADMIN") {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <AdminLayout>{children}</AdminLayout>;
 }
