@@ -18,16 +18,30 @@ import {
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
+import { keyframes } from "@mui/material/styles";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
+import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
+import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import VideoLibraryRoundedIcon from "@mui/icons-material/VideoLibraryRounded";
+import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
 import { contentManagerApi } from "../api/contentManager";
 import { useLevelNames } from "../useLevelNames";
 import { useApiMutation, useApiQuery } from "../hooks";
-import { CONTENT_PATHS, ContentPageHeader } from "../components/ContentShared";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
-import { DarkPill, TONE_STYLES } from "../components/ContentShared";
+import { CONTENT_PATHS, ContentPageHeader, DarkPill, TONE_STYLES } from "../components/ContentShared";
+import { CM } from "../theme-content";
+
+const rise = keyframes`
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+const enter = (delay = 0) => ({
+  animation: `${rise} .45s ease-out ${delay}ms both`,
+  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+});
 
 const MUSCLE_OPTIONS = ["Chest", "Back", "Shoulders", "Arms", "Core", "Legs", "Glutes"];
 const CATEGORY_OPTIONS = ["REPS", "HOLD"];
@@ -156,17 +170,19 @@ function FileDropField({ label, hint, accept, file, error, onChange, preview }) 
   return (
     <Box
       sx={{
-        border: 1,
-        borderStyle: "dashed",
-        borderColor: error ? "error.main" : "divider",
-        borderRadius: 2,
-        p: 2,
+        border: "1px dashed",
+        borderColor: error ? "error.main" : CM.borderStrong,
+        borderRadius: "14px",
+        p: 2.25,
+        bgcolor: "rgba(139,92,246,0.03)",
+        transition: "all .2s ease",
+        "&:hover": { borderColor: CM.violetBright, bgcolor: "rgba(139,92,246,0.06)" },
       }}
     >
-      <Typography variant="body2" fontWeight={600}>
+      <Typography variant="body2" fontWeight={700} sx={{ color: "#fff" }}>
         {label}
       </Typography>
-      <Typography variant="caption" color="text.secondary" display="block">
+      <Typography variant="caption" sx={{ color: CM.textMuted }} display="block">
         {hint}
       </Typography>
       <Button
@@ -174,7 +190,7 @@ function FileDropField({ label, hint, accept, file, error, onChange, preview }) 
         variant="outlined"
         size="small"
         startIcon={<CloudUploadRoundedIcon />}
-        sx={{ mt: 1.5 }}
+        sx={{ mt: 1.5, borderColor: CM.borderStrong, bgcolor: "rgba(139,92,246,0.1)", transition: "all .2s ease", "&:hover": { borderColor: CM.violetBright, bgcolor: "rgba(139,92,246,0.2)" } }}
       >
         Choose file
         <input
@@ -187,7 +203,7 @@ function FileDropField({ label, hint, accept, file, error, onChange, preview }) 
         />
       </Button>
       {file && (
-        <Typography variant="caption" color="success.dark" display="block" sx={{ mt: 1 }}>
+        <Typography variant="caption" sx={{ color: CM.green, fontWeight: 600, mt: 1, display: "block" }}>
           Selected: {file.name} ({fileSizeMb(file)} MB)
         </Typography>
       )}
@@ -257,12 +273,17 @@ export function ExerciseFields({
 }) {
   const { levels: LEVELS, activeLevels } = useLevelNames();
   return (
-    <Stack spacing={2}>
-      <Card variant="outlined">
-        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
-          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
-            Exercise details
-          </Typography>
+    <Stack spacing={2.5}>
+      <Card sx={{ overflow: "hidden", position: "relative" }}>
+        <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
+          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 2 }}>
+            <Box sx={{ width: 34, height: 34, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}` }}>
+              <FitnessCenterRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
+            </Box>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
+              Exercise details
+            </Typography>
+          </Stack>
           <Stack spacing={2}>
             <TextField
               label="Title"
@@ -416,22 +437,37 @@ export function ExerciseFields({
         </CardContent>
       </Card>
 
-      <Card variant="outlined">
-        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
-          <Typography variant="subtitle2" fontWeight={700}>
-            Guide
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Add one action step at a time, in order.
-          </Typography>
+      <Card sx={{ overflow: "hidden" }}>
+        <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
+          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1 }}>
+            <Box sx={{ width: 34, height: 34, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}` }}>
+              <MenuBookRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
+            </Box>
+            <Box>
+              <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
+                Guide
+              </Typography>
+              <Typography variant="caption" sx={{ color: CM.textMuted }}>
+                Add one action step at a time, in order.
+              </Typography>
+            </Box>
+          </Stack>
           <GuideEditor value={value.guide} onChange={(guide) => onChange({ ...value, guide })} />
         </CardContent>
       </Card>
 
-      <Card variant="outlined">
-        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+      <Card sx={{ overflow: "hidden" }}>
+        <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
+          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.5 }}>
+            <Box sx={{ width: 34, height: 34, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}` }}>
+              <VideoLibraryRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
+            </Box>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
+              Demo video
+            </Typography>
+          </Stack>
           <FileDropField
-            label="Demo video"
+            label="Upload video file"
             hint="MP4, MOV or WebM · up to 50 MB"
             accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
             file={demoVideo}
@@ -441,10 +477,18 @@ export function ExerciseFields({
         </CardContent>
       </Card>
 
-      <Card variant="outlined">
-        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+      <Card sx={{ overflow: "hidden" }}>
+        <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
+          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.5 }}>
+            <Box sx={{ width: 34, height: 34, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}` }}>
+              <ImageRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
+            </Box>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
+              Muscle anatomy image
+            </Typography>
+          </Stack>
           <FileDropField
-            label="Muscle anatomy image"
+            label="Upload anatomy image"
             hint="JPG, PNG or WebP · up to 10 MB"
             accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
             file={anatomyImage}
@@ -629,12 +673,17 @@ export function WorkoutFields({
       (!isDailyPlan && value.exerciseCodes.length === 0));
 
   return (
-    <Stack spacing={2}>
-      <Card variant="outlined">
-        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
-          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
-            Workout details
-          </Typography>
+    <Stack spacing={2.5}>
+      <Card sx={{ overflow: "hidden", position: "relative" }}>
+        <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
+          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 2 }}>
+            <Box sx={{ width: 34, height: 34, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}` }}>
+              <FitnessCenterRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
+            </Box>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
+              Workout details
+            </Typography>
+          </Stack>
           <Stack spacing={2}>
             <TextField
               label="Title"
@@ -1168,17 +1217,36 @@ export default function ExerciseFormPage() {
         value={kind}
         onChange={(_, next) => next && changeKind(next)}
         aria-label="Content type"
-        sx={{ mt: 2 }}
+        sx={{
+          mt: 2.5,
+          p: 0.5,
+          bgcolor: CM.surfaceSoft,
+          borderRadius: "12px",
+          border: `1px solid ${CM.border}`,
+          "& .MuiToggleButton-root": {
+            borderRadius: "8px !important",
+            border: "none !important",
+            px: 3,
+            py: 0.75,
+            fontSize: 13,
+            fontWeight: 600,
+            color: CM.textMuted,
+            "&.Mui-selected": {
+              background: CM.buttonGradient,
+              color: "#fff",
+            },
+          },
+        }}
       >
-        <ToggleButton value="exercise" sx={{ px: 3, fontSize: 13 }}>
+        <ToggleButton value="exercise">
           Exercise
         </ToggleButton>
-        <ToggleButton value="workout" sx={{ px: 3, fontSize: 13 }}>
+        <ToggleButton value="workout">
           Workout
         </ToggleButton>
       </ToggleButtonGroup>
 
-      <Box component="form" id="create-content-form" onSubmit={submit} sx={{ mt: 2 }}>
+      <Box component="form" id="create-content-form" onSubmit={submit} sx={{ mt: 2.5, ...enter(100) }}>
         {kind === "exercise" ? (
           <ExerciseFields
             value={exercise}
@@ -1288,6 +1356,7 @@ export default function ExerciseFormPage() {
           form="create-content-form"
           variant="contained"
           disabled={isSaving}
+          sx={{ minWidth: 140 }}
         >
           {isSaving ? "Creating…" : `Create ${kind}`}
         </Button>

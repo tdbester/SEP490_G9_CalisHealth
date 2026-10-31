@@ -37,27 +37,21 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    const status = err.response?.status;
-    const requestPath = err.config?.url || "";
-    const isLoginRequest = /\/auth\/login(?:\?|$)/i.test(requestPath);
-    const { token } = getStoredAuthToken();
-
-    if (status === 401 || status === 403) {
-      const requestUrl = err.config?.baseURL
-        ? `${err.config.baseURL.replace(/\/$/, "")}/${(err.config.url || "").replace(/^\//, "")}`
-        : err.config?.url || "unknown URL";
-      console.error("[API Auth Error]", {
-        status: err.response.status,
-        url: requestUrl,
-        method: err.config?.method?.toUpperCase() || "UNKNOWN",
-        error: err,
-      });
-
-      if (token && !isLoginRequest) {
-        localStorage.clear();
-        if (window.location.pathname !== "/login") {
-          window.location.href = "/login";
-        }
+    // Admin-issued temporary password: every API except /auth/me and change-password is refused.
+    if (
+      err.response?.status === 403 &&
+      err.response?.data?.code === "PASSWORD_CHANGE_REQUIRED" &&
+      window.location.pathname !== "/change-password"
+    ) {
+      window.location.href = "/change-password";
+    }
+    const isLoginRequest = /\/auth\/login(?:\?|$)/i.test(err.config?.url || "");
+    if (err.response?.status === 401 && !isLoginRequest) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      if (window.location.pathname !== "/login") {
+        const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        window.location.href = `/login?returnTo=${encodeURIComponent(returnTo)}`;
       }
     }
     return Promise.reject(err);

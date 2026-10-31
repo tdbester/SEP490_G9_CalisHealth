@@ -22,6 +22,7 @@ import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.MemberProfileRepository;
 import com.calishealth.repository.UserRepository;
 import com.calishealth.repository.WorkoutRepository;
+import com.calishealth.service.survey.BenchmarkSurveySync;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -75,6 +76,7 @@ public class LevelBenchmarkService {
     private final UserRepository users;
     private final MemberProfileRepository memberProfiles;
     private final WorkoutRepository workouts;
+    private final BenchmarkSurveySync surveySync;
 
     @Transactional(readOnly = true)
     public BenchmarkConfiguration getConfiguration() {
@@ -83,7 +85,7 @@ public class LevelBenchmarkService {
                 .map(entry -> toExercise(entry.getKey(), entry.getValue(), numberQuestions))
                 .toList();
         List<ExerciseOption> availableExercises = exercises.findAll().stream()
-                .filter(exercise -> isBenchmarkCategory(exercise.getCategory()))
+                .filter(exercise -> isBenchmarkCategory(exercise.getCategory()) && isSystemExercise(exercise))
                 .sorted(Comparator.comparing(Exercise::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(exercise -> new ExerciseOption(exercise.getCode(), exercise.getName(), categoryOf(exercise)))
                 .toList();
@@ -106,6 +108,7 @@ public class LevelBenchmarkService {
         // Resolve every slot before the old rows are removed, so an exercise that stays keeps its survey question.
         Map<String, String> slotByExerciseCode = new LinkedHashMap<>();
         benchmarkRowsBySlot().forEach((slot, rows) -> slotByExerciseCode.putIfAbsent(rows.get(0).getExercise().getCode(), slot));
+        Set<String> previousSlots = new LinkedHashSet<>(slotByExerciseCode.values());
         Map<String, Exercise> chosen = new LinkedHashMap<>();
         Map<String, String> slots = new LinkedHashMap<>();
         Set<String> usedSlots = new LinkedHashSet<>();
@@ -156,7 +159,14 @@ public class LevelBenchmarkService {
 
         // The holders depend on which levels are left, so they are resolved last.
         saveThresholds(thresholds, thresholdHolderLevels());
-        return getConfiguration();
+        criteria.flush();
+
+        // The survey's Level test step mirrors this table: add questions for new exercises, retire removed ones.
+        BenchmarkConfiguration saved = getConfiguration();
+        Set<String> removedSlots = new LinkedHashSet<>(previousSlots);
+        saved.exercises().forEach(exercise -> removedSlots.remove(exercise.slot()));
+        surveySync.sync(saved.exercises(), removedSlots, actor);
+        return saved;
     }
 
     private void applyLevel(FitnessLevel level, LevelUpdate update, User actor) {
@@ -454,6 +464,15 @@ public class LevelBenchmarkService {
         return "REPS".equalsIgnoreCase(category) || "HOLD".equalsIgnoreCase(category);
     }
 
+    /** Same rule as the exercise library: an explicit source wins, otherwise no creator means a system exercise. */
+    private static boolean isSystemExercise(Exercise exercise) {
+        String source = exercise.getSource();
+        if (source != null && !source.isBlank()) {
+            return ExerciseService.SOURCE_SYSTEM.equalsIgnoreCase(source.trim());
+        }
+        return exercise.getCreatedBy() == null;
+    }
+
     private static String categoryOf(Exercise exercise) {
         return exercise.getCategory() == null ? "" : exercise.getCategory().toUpperCase();
     }
@@ -577,6 +596,9 @@ public class LevelBenchmarkService {
                     .orElseThrow(() -> bad("Selected benchmark exercise was not found"));
             if (!isBenchmarkCategory(exercise.getCategory())) {
                 throw bad(exercise.getName() + " must be a REPS or HOLD exercise");
+            }
+            if (!isSystemExercise(exercise)) {
+                throw bad(exercise.getName() + " is not a system exercise; benchmark exercises must come from the system library");
             }
             if (update.category() == null || !update.category().equalsIgnoreCase(exercise.getCategory())) {
                 throw bad(exercise.getName() + " category does not match the selected exercise");

@@ -5,6 +5,7 @@ import {
   TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow,
   TextField, Typography,
 } from "@mui/material";
+import { keyframes } from "@mui/material/styles";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import { contentManagerApi } from "../api/contentManager";
@@ -14,6 +15,15 @@ import { CONTENT_PATHS, ContentPageHeader, DarkPill, formatDateTime, SummaryCard
 import ContentDataCard, { DbSourceNote, EmptyState, HEAD_ROW_SX } from "../components/ContentDataCard";
 import { CM } from "../theme-content";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+
+const rise = keyframes`
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+const enter = (delay = 0) => ({
+  animation: `${rise} .45s ease-out ${delay}ms both`,
+  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+});
 
 function initials(value) {
   return String(value || "Unknown").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
@@ -102,12 +112,12 @@ export default function ExerciseApprovalHistoryPage() {
       />
 
       <Box component="section" aria-label="Approval history summary" sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" } }}>
-        <SummaryCard label="Total decisions" count={totalDecisions} detail="exercises" />
-        <SummaryCard label="Approved" tone="success" count={approvedCount} detail="exercises" />
-        <SummaryCard label="Rejected" tone="warning" count={rejectedCount} detail="exercises" />
+        <Box sx={enter(0)}><SummaryCard label="Total decisions" count={totalDecisions} detail="exercises" /></Box>
+        <Box sx={enter(80)}><SummaryCard label="Approved" tone="success" count={approvedCount} detail="exercises" /></Box>
+        <Box sx={enter(160)}><SummaryCard label="Rejected" tone="warning" count={rejectedCount} detail="exercises" /></Box>
       </Box>
 
-      <Card sx={{ mt: 2 }}>
+      <Card sx={{ mt: 2.5, overflow: "hidden", ...enter(220) }}>
         <Tabs value={decision} onChange={(_, value) => { setDecision(value); setPage(0); }} variant="scrollable" scrollButtons="auto" sx={{ px: 1.5, borderBottom: `1px solid ${CM.border}`, "& .MuiTab-root": { minHeight: 48, textTransform: "none", fontWeight: 600 } }}>
           {DECISION_TABS.map((tab) => <Tab key={tab.value} value={tab.value} label={tab.label} />)}
         </Tabs>
@@ -128,8 +138,12 @@ export default function ExerciseApprovalHistoryPage() {
                   <TableHead><TableRow sx={HEAD_ROW_SX}>
                     <TableCell sx={{ textAlign: "left !important", pl: 3 }}>Exercise</TableCell><TableCell>Uploaded by</TableCell><TableCell>Muscle group</TableCell><TableCell>Level</TableCell><TableCell>Decision</TableCell><TableCell>Reviewed</TableCell><TableCell align="center">Action</TableCell>
                   </TableRow></TableHead>
-                  <TableBody>{visibleRows.map((row) => (
-                    <TableRow key={row.id} hover>
+                  <TableBody>{visibleRows.map((row, idx) => (
+                    <TableRow key={row.id} hover sx={{
+                      transition: "all .2s ease",
+                      "&:hover": { bgcolor: "rgba(139,92,246,0.06)" },
+                      ...enter(240 + idx * 25),
+                    }}>
                       <TableCell sx={{ textAlign: "left !important", pl: 3, "& > .MuiStack-root": { justifyContent: "flex-start" } }}><Stack direction="row" spacing={1.25} alignItems="center"><Box sx={{ width: 32, height: 32, borderRadius: 1.5, display: "grid", placeItems: "center", flexShrink: 0, bgcolor: "rgba(168,155,208,0.14)", color: CM.textMuted }}><FitnessIconSmall /></Box><Box sx={{ minWidth: 0, textAlign: "left" }}><Typography variant="body2" fontWeight={600} sx={{ color: "#fff" }}>{row.name}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>{row.code}</Typography></Box></Stack></TableCell>
                       <TableCell><Stack direction="row" spacing={1} alignItems="center"><Avatar sx={{ width: 28, height: 28, fontSize: 11, fontWeight: 700, bgcolor: "rgba(65,201,173,0.2)", color: "#8dd8c5" }}>{initials(row.createdByName)}</Avatar><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.createdByName || "Unknown"}</Typography></Stack></TableCell>
                       <TableCell><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.muscleGroup || "—"}</Typography></TableCell>

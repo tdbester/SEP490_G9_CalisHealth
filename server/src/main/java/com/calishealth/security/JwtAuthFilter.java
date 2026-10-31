@@ -26,6 +26,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserRepository users;
 
+    private static boolean isAllowedWhilePasswordChangePending(HttpServletRequest req) {
+        String path = req.getRequestURI();
+        return "OPTIONS".equalsIgnoreCase(req.getMethod())
+                || path.equals("/api/auth/change-password")
+                || path.equals("/api/auth/me");
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
@@ -33,20 +40,28 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith("Bearer ")) {
             try {
                 String email = jwtService.extractEmail(header.substring(7));
-                users.findByEmail(email).ifPresentOrElse(user -> {
-                    if (!user.isEnabled()) {
-                        logger.warn("Rejected JWT for disabled account");
-                        return;
-                    }
+                User user = users.findByEmail(email).orElse(null);
+                if (user == null) {
+                    logger.warn("Rejected JWT because its subject is not a registered account");
+                } else if (!user.isActive()) {
+                    logger.warn("Rejected JWT for disabled or blocked account");
+                } else if (user.isMustChangePassword() && !isAllowedWhilePasswordChangePending(req)) {
+                    // Temporary password issued by an admin: only /me and change-password work until it is replaced.
+                    res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    res.setContentType("application/json");
+                    res.getWriter().write("{\"code\":\"PASSWORD_CHANGE_REQUIRED\","
+                            + "\"message\":\"You must change your temporary password before continuing\"}");
+                    return;
+                } else {
                     SecurityContextHolder.getContext().setAuthentication(
-                                new UsernamePasswordAuthenticationToken(
-                                        email,
-                                        null,
-                                        List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
-                                ));
+                            new UsernamePasswordAuthenticationToken(
+                                    email,
+                                    null,
+                                    List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
+                            ));
                     logger.info("JWT authenticated request: method={}, path={}, role={}",
                             req.getMethod(), req.getRequestURI(), user.getRole());
-                }, () -> logger.warn("Rejected JWT because its subject is not a registered account"));
+                }
             } catch (io.jsonwebtoken.ExpiredJwtException exception) {
                 logger.warn("Rejected expired JWT");
             } catch (io.jsonwebtoken.security.SignatureException exception) {

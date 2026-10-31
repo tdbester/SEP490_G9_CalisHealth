@@ -4,7 +4,12 @@ import "react-toastify/dist/ReactToastify.css";
 import AdminLayout from "./components/layout/AdminLayout";
 import RoleHomeRoute from "./components/RoleHomeRoute";
 import ContentManagerLayout from "./components/layout/ContentManagerLayout";
-import Dashboard from "./pages/Dashboard";
+import AdminAreaLayout from "./components/layout/AdminAreaLayout";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminSectionPage from "./pages/AdminSectionPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminCreateStaffPage from "./pages/AdminCreateStaffPage";
+import AdminUserDetailPage from "./pages/AdminUserDetailPage";
 import HealthTracking from "./pages/HealthTracking";
 import WorkoutHistory from "./pages/WorkoutHistory";
 import PerformanceAnalytics from "./pages/PerformanceAnalytics";
@@ -26,7 +31,10 @@ import WorkoutSystemListPage from "./pages/WorkoutSystemListPage";
 import SystemWorkoutDetailPage from "./pages/SystemWorkoutDetailPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ContentManagerDashboard from "./pages/ContentManagerDashboard";
-import ContentManagerSectionPage from "./pages/ContentManagerSectionPage";
+import ProgressionRulesPage, {
+  ProgressionRuleDetailPage,
+  ProgressionRuleFormPage,
+} from "./pages/ProgressionRulesPage";
 import ExerciseListPage from "./pages/ExerciseListPage";
 import SystemExerciseDetailPage from "./pages/SystemExerciseDetailPage";
 import ExerciseFormPage from "./pages/ExerciseFormPage";
@@ -45,15 +53,11 @@ import ForgotPassword from "./pages/ForgotPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import VerifyResetPassword from "./pages/VerifyResetPassword";
 import ResetPassword from "./pages/ResetPassword";
+import ChangePassword from "./pages/ChangePassword";
 import SurveyFlow, { SurveyEntry } from "./pages/survey/SurveyFlow";
 import SurveyStepPage from "./pages/survey/SurveyStepPage";
 import SurveyResult from "./pages/survey/SurveyResult";
 import SurveyManagement from "./pages/content/SurveyManagement";
-
-function RootRoute() {
-  const token = localStorage.getItem("token")?.trim();
-  return <Navigate to={token ? "/dashboard" : "/login"} replace />;
-}
 
 export default function App() {
   const memberPage = (page) => (
@@ -79,9 +83,10 @@ export default function App() {
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/verify-reset-password" element={<VerifyResetPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/change-password" element={<ChangePassword />} />
 
-          <Route path="/" element={<RootRoute />} />
-          <Route path="/dashboard" element={<ProtectedRoute><RoleHomeRoute /></ProtectedRoute>} />
+          <Route path="/" element={<RoleHomeRoute />} />
+          <Route path="/dashboard" element={<Navigate to="/" replace />} />
           <Route path="/day-streak" element={memberPage(<DayStreak />)} />
           <Route
           path="/survey"
@@ -109,8 +114,10 @@ export default function App() {
           <Route path="surveys" element={<SurveyManagement />} />
           <Route path="survey" element={<Navigate to="/content/surveys" replace />} />
           <Route path="exercises" element={<ExerciseListPage />} />
-          <Route path="level-criteria" element={<ContentManagerSectionPage section="levelCriteria" />} />
-          <Route path="progression-rules" element={<ContentManagerSectionPage section="progressionRules" />} />
+          <Route path="progression-rules" element={<ProgressionRulesPage />} />
+          <Route path="progression-rules/new" element={<ProgressionRuleFormPage />} />
+          <Route path="progression-rules/:id/edit" element={<ProgressionRuleFormPage />} />
+          <Route path="progression-rules/:id" element={<ProgressionRuleDetailPage />} />
           <Route path="benchmark-criteria" element={<LevelBenchmarkCriteriaPage />} />
           <Route path="benchmark-criteria/edit" element={<LevelBenchmarkFormPage />} />
           <Route path="benchmark-criteria/:id/edit" element={<LevelBenchmarkFormPage />} />
@@ -158,6 +165,21 @@ export default function App() {
         <Route path="/library/custom-workouts/:id" element={memberPage(<CustomWorkoutDetailPage />)} />
         <Route path="/library/skills/tree" element={memberPage(<CalisthenicsExerciseTreePage />)} />
         <Route path="/explore" element={memberPage(<CalisthenicsExerciseTreePage />)} />
+
+        {/* Admin area (role ADMIN) - the guard reads /auth/me, same pattern as /content. */}
+        <Route path="/admin" element={<AdminAreaLayout />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="users/create" element={<AdminCreateStaffPage />} />
+          <Route path="users/:id" element={<AdminUserDetailPage />} />
+          <Route path="create" element={<Navigate to="/admin/users/create" replace />} />
+          <Route path="notifications" element={<AdminSectionPage title="Notifications" />} />
+          <Route path="storage" element={<AdminSectionPage title="Media storage & infrastructure" />} />
+          <Route path="maintenance" element={<AdminSectionPage title="Create maintenance schedule" />} />
+          <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+        </Route>
+
         <Route
           path="/tracking"
           element={memberPage(<HealthTracking />)}

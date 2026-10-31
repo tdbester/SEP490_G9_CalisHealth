@@ -16,41 +16,61 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { keyframes } from "@mui/material/styles";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import TimerRoundedIcon from "@mui/icons-material/TimerRounded";
+import LayersRoundedIcon from "@mui/icons-material/LayersRounded";
 import { contentManagerApi } from "../api/contentManager";
 import { useApiMutation, useApiQuery } from "../hooks";
 import {
   CONTENT_PATHS,
   ContentPageHeader,
+  DarkPill,
 } from "../components/ContentShared";
 import { CM } from "../theme-content";
 import { WorkoutFields } from "./ExerciseFormPage";
-import { getLevelBadgeStyle } from "../utils/levelBadge";
+
+const rise = keyframes`
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+const enter = (delay = 0) => ({
+  animation: `${rise} .45s ease-out ${delay}ms both`,
+  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+});
 
 const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-function Detail({ label, value, full }) {
+function Detail({ label, value, full, icon: Icon }) {
   return (
     <Grid item xs={12} sm={full ? 12 : 6}>
       <Box
         sx={{
+          position: "relative",
+          overflow: "hidden",
           border: `1px solid ${CM.border}`,
-          bgcolor: "rgba(19,10,39,0.6)",
-          borderRadius: 1.5,
-          p: 1.75,
+          bgcolor: CM.surfaceSoft,
+          borderRadius: "14px",
+          p: 2,
           height: "100%",
+          transition: "all .2s ease",
+          "&:hover": { borderColor: CM.borderStrong },
         }}
       >
-        <Typography
-          variant="caption"
-          sx={{ color: CM.textDim, textTransform: "uppercase", letterSpacing: "0.07em", fontSize: 10, fontWeight: 700 }}
-        >
-          {label}
-        </Typography>
-        <Typography variant="body2" fontWeight={600} sx={{ mt: 0.5, whiteSpace: "pre-line", color: "#fff" }}>
+        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 0.5 }}>
+          {Icon && <Icon sx={{ fontSize: 14, color: CM.violetBright }} />}
+          <Typography
+            variant="caption"
+            sx={{ color: CM.textDim, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 10, fontWeight: 700 }}
+          >
+            {label}
+          </Typography>
+        </Stack>
+        <Typography variant="body1" fontWeight={600} sx={{ whiteSpace: "pre-line", color: "#fff" }}>
           {value || "—"}
         </Typography>
       </Box>
@@ -202,8 +222,8 @@ export default function WorkoutDetailPage() {
         }
       />
 
-      <Card sx={{ mt: 2.5 }}>
-        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+      <Card sx={{ mt: 2.5, overflow: "hidden", ...enter(150) }}>
+        <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
           {editing && form ? (
             <Stack spacing={2}>
               {exerciseLoadError && <Alert severity="error">Could not load exercises: {exerciseLoadError.message}</Alert>}
@@ -339,10 +359,12 @@ export default function WorkoutDetailPage() {
                       alignItems="center"
                       sx={{
                         border: `1px solid ${CM.border}`,
-                        bgcolor: "rgba(19,10,39,0.6)",
-                        borderRadius: 1.5,
-                        px: 1.5,
-                        py: 1,
+                        bgcolor: CM.surfaceSoft,
+                        borderRadius: "14px",
+                        px: 2,
+                        py: 1.25,
+                        transition: "all .2s ease",
+                        "&:hover": { borderColor: CM.borderStrong, bgcolor: "rgba(139,92,246,0.06)", transform: "translateX(3px)" },
                       }}
                     >
                       <Box
@@ -394,15 +416,8 @@ export default function WorkoutDetailPage() {
               )}
               <Divider sx={{ my: 2.5 }} />
               <Grid container spacing={1.5}>
-                <Detail
-                  label="Level"
-                  value={
-                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${getLevelBadgeStyle(workout.level)}`}>
-                      {workout.level || "Intermediate"}
-                    </span>
-                  }
-                />
-                <Detail label="Rest" value={`${workout.restSeconds ?? 60} seconds`} />
+                <Detail icon={LayersRoundedIcon} label="Level" value={workout.level} />
+                <Detail icon={TimerRoundedIcon} label="Rest" value={`${workout.restSeconds ?? 60} seconds`} />
               </Grid>
             </>
           )}

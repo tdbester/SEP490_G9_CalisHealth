@@ -15,7 +15,8 @@ function clearAuthState() {
 /**
  * Trang chủ theo vai trò:
  * - CONTENT_MANAGER -> /content/dashboard (khu quản trị nội dung)
- * - còn lại (MEMBER/ADMIN) -> Dashboard của member
+ * - ADMIN -> /admin/dashboard (khu quản trị hệ thống)
+ * - còn lại (MEMBER) -> Dashboard của member
  *
  * Dùng /auth/me thay vì chỉ đọc localStorage vì cache "user" của phiên cũ
  * không có trường role.
@@ -72,12 +73,13 @@ export default function RoleHomeRoute() {
     );
   }
 
-  if (state.status === "guest") {
-    return <Navigate to="/login" replace />;
-  }
-
+  // Guests get the public dashboard (Dashboard/Topbar already render a guest view with "Log in").
   if (state.role === "CONTENT_MANAGER") {
     return <Navigate to="/content/dashboard" replace />;
+  }
+
+  if (state.role === "ADMIN") {
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   return (

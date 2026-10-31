@@ -1,4 +1,4 @@
--- V15: Init Library & Exercise schema for CalisHealth
+-- V22: Init Library module schema and seed data for CalisHealth
 -- Hỗ trợ chức năng Library & Exercise cho Member và Content Manager
 -- Chiến lược cuốn gói: Kế thừa V1 (users, auth_tokens), tạo các bảng phục vụ bài tập, nhóm cơ, video và kế hoạch tập.
 
@@ -89,39 +89,8 @@ PREPARE add_media_uploader_fk FROM @sql;
 EXECUTE add_media_uploader_fk;
 DEALLOCATE PREPARE add_media_uploader_fk;
 
--- ============================================================
--- 3. EXERCISES (ERD Exercise Model & Member-created Exercises)
--- ============================================================
-CREATE TABLE IF NOT EXISTS exercises (
-    id               BIGINT NOT NULL AUTO_INCREMENT,
-    name             VARCHAR(100) NOT NULL,
-    code             VARCHAR(50) DEFAULT NULL,
-    type             VARCHAR(20) NOT NULL DEFAULT 'EXERCISE',
-    category         VARCHAR(20) NOT NULL DEFAULT 'STRENGTH',
-    difficulty_level TINYINT UNSIGNED DEFAULT NULL,
-    instructions     TEXT DEFAULT NULL,
-    execution_steps  TEXT DEFAULT NULL,
-    safety_tips      TEXT DEFAULT NULL,
-    anatomy_theory   TEXT DEFAULT NULL,
-    video_url        VARCHAR(255) DEFAULT NULL,
-    demo_media_id    BIGINT DEFAULT NULL,
-    default_sets     TINYINT UNSIGNED DEFAULT NULL,
-    default_reps     SMALLINT UNSIGNED DEFAULT NULL,
-    default_rest     SMALLINT UNSIGNED DEFAULT NULL,
-    source           VARCHAR(20) NOT NULL DEFAULT 'SYSTEM',
-    created_by       BIGINT NOT NULL,
-    status           VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
-    updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    UNIQUE KEY uk_exercises_name (name),
-    KEY fk_exercises_demo_media (demo_media_id),
-    KEY fk_exercises_creator (created_by),
-    CONSTRAINT fk_exercises_creator FOREIGN KEY (created_by) REFERENCES users (id),
-    CONSTRAINT fk_exercises_demo_media FOREIGN KEY (demo_media_id) REFERENCES media_files (id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- V5 merged exercises into the canonical exercises table. Add only the
--- Library-specific attributes to that shared table.
+-- V3/V5 own the canonical exercises table. Add only Library-specific columns
+-- that are missing from the shared schema.
 SET @exercise_columns := (
     SELECT GROUP_CONCAT(
         CONCAT('ADD COLUMN `', required.column_name, '` ', required.column_definition)
@@ -149,6 +118,8 @@ SET @exercise_columns := (
         UNION ALL SELECT 'save_count', 'INT NOT NULL DEFAULT 0', 19
         UNION ALL SELECT 'rejection_reason', 'TEXT NULL', 20
         UNION ALL SELECT 'share_with_community', 'BOOLEAN NOT NULL DEFAULT FALSE', 21
+        UNION ALL SELECT 'video_url', 'VARCHAR(1000) NULL', 22
+        UNION ALL SELECT 'anatomy_image_url', 'VARCHAR(1000) NULL', 23
     ) required
     LEFT JOIN information_schema.COLUMNS existing
       ON existing.TABLE_SCHEMA = DATABASE()
@@ -1268,6 +1239,42 @@ SET video_url = CASE
     END
 WHERE is_system = TRUE;
 
+-- Self-contained target-group illustrations avoid depending on fragile image
+-- hosts. Existing uploaded anatomy images are preserved.
+SET @anatomy_push := 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 220 260%22%3E%3Crect width=%22220%22 height=%22260%22 rx=%2216%22 fill=%22%230b0c10%22/%3E%3Ccircle cx=%22110%22 cy=%2232%22 r=%2217%22 fill=%22%237563a8%22/%3E%3Cpath d=%22M94 55h32l14 25-9 58-8 22 8 61h-19l-12-52-12 52H69l8-61-8-22-9-58zM94 65 65 78 44 131l14 7 28-42m40-31 29 13 21 53-14 7-28-42%22 fill=%22%237563a8%22/%3E%3Cellipse cx=%22110%22 cy=%2284%22 rx=%2227%22 ry=%2211%22 fill=%22%23ef4f91%22/%3E%3Ctext x=%22110%22 y=%22242%22 text-anchor=%22middle%22 fill=%22%23c4b5fd%22 font-family=%22Arial%22 font-size=%2212%22%3EPUSH%3C/text%3E%3C/svg%3E';
+SET @anatomy_pull := 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 220 260%22%3E%3Crect width=%22220%22 height=%22260%22 rx=%2216%22 fill=%22%230b0c10%22/%3E%3Ccircle cx=%22110%22 cy=%2232%22 r=%2217%22 fill=%22%237563a8%22/%3E%3Cpath d=%22M94 55h32l14 25-9 58-8 22 8 61h-19l-12-52-12 52H69l8-61-8-22-9-58zM94 65 65 78 44 131l14 7 28-42m40-31 29 13 21 53-14 7-28-42%22 fill=%22%237563a8%22/%3E%3Cpath d=%22M84 67q26-13 52 0l-7 54q-19 10-38 0z%22 fill=%22%234f9cf9%22/%3E%3Ctext x=%22110%22 y=%22242%22 text-anchor=%22middle%22 fill=%22%23c4b5fd%22 font-family=%22Arial%22 font-size=%2212%22%3EPULL%3C/text%3E%3C/svg%3E';
+SET @anatomy_core := 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 220 260%22%3E%3Crect width=%22220%22 height=%22260%22 rx=%2216%22 fill=%22%230b0c10%22/%3E%3Ccircle cx=%22110%22 cy=%2232%22 r=%2217%22 fill=%22%237563a8%22/%3E%3Cpath d=%22M94 55h32l14 25-9 58-8 22 8 61h-19l-12-52-12 52H69l8-61-8-22-9-58zM94 65 65 78 44 131l14 7 28-42m40-31 29 13 21 53-14 7-28-42%22 fill=%22%237563a8%22/%3E%3Cpath d=%22M94 104q16 8 32 0l-4 42q-12 7-24 0z%22 fill=%22%23f59e0b%22/%3E%3Ctext x=%22110%22 y=%22242%22 text-anchor=%22middle%22 fill=%22%23c4b5fd%22 font-family=%22Arial%22 font-size=%2212%22%3ECORE%3C/text%3E%3C/svg%3E';
+SET @anatomy_legs := 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 220 260%22%3E%3Crect width=%22220%22 height=%22260%22 rx=%2216%22 fill=%22%230b0c10%22/%3E%3Ccircle cx=%22110%22 cy=%2232%22 r=%2217%22 fill=%22%237563a8%22/%3E%3Cpath d=%22M94 55h32l14 25-9 58-8 22 8 61h-19l-12-52-12 52H69l8-61-8-22-9-58zM94 65 65 78 44 131l14 7 28-42m40-31 29 13 21 53-14 7-28-42%22 fill=%22%237563a8%22/%3E%3Cpath d=%22m82 157 27 3-10 57H77zm29 3 27-3 5 57h-22z%22 fill=%22%2322c55e%22/%3E%3Ctext x=%22110%22 y=%22242%22 text-anchor=%22middle%22 fill=%22%23c4b5fd%22 font-family=%22Arial%22 font-size=%2212%22%3ELEGS%3C/text%3E%3C/svg%3E';
+SET @anatomy_full_body := 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 220 260%22%3E%3Crect width=%22220%22 height=%22260%22 rx=%2216%22 fill=%22%230b0c10%22/%3E%3Ccircle cx=%22110%22 cy=%2232%22 r=%2217%22 fill=%22%23a855f7%22/%3E%3Cpath d=%22M94 55h32l14 25-9 58-8 22 8 61h-19l-12-52-12 52H69l8-61-8-22-9-58zM94 65 65 78 44 131l14 7 28-42m40-31 29 13 21 53-14 7-28-42%22 fill=%22%23a855f7%22/%3E%3Ctext x=%22110%22 y=%22242%22 text-anchor=%22middle%22 fill=%22%23c4b5fd%22 font-family=%22Arial%22 font-size=%2212%22%3EFULL BODY%3C/text%3E%3C/svg%3E';
+
+UPDATE exercises
+SET anatomy_image_url = CASE
+        WHEN LOWER(muscle_group) LIKE '%leg%' OR LOWER(muscle_group) LIKE '%glute%'
+            OR LOWER(muscle_group) LIKE '%quad%' OR LOWER(name) LIKE '%squat%'
+            OR LOWER(name) LIKE '%lunge%'
+            THEN @anatomy_legs
+        WHEN LOWER(muscle_group) LIKE '%core%' OR LOWER(muscle_group) LIKE '%ab%'
+            OR LOWER(name) LIKE '%plank%' OR LOWER(name) LIKE '%hollow%'
+            OR LOWER(name) LIKE '%l-sit%' OR LOWER(name) LIKE '%l sit%'
+            OR LOWER(name) LIKE '%dragon flag%'
+            THEN @anatomy_core
+        WHEN LOWER(muscle_group) LIKE '%back%' OR LOWER(muscle_group) LIKE '%lat%'
+            OR LOWER(name) LIKE '%pull-up%' OR LOWER(name) LIKE '%pull up%'
+            OR LOWER(name) LIKE '%front lever%'
+            THEN @anatomy_pull
+        WHEN LOWER(muscle_group) LIKE '%chest%' OR LOWER(muscle_group) LIKE '%shoulder%'
+            OR LOWER(name) LIKE '%push-up%' OR LOWER(name) LIKE '%push up%'
+            OR LOWER(name) LIKE '%dip%' OR LOWER(name) LIKE '%handstand%'
+            THEN @anatomy_push
+        WHEN movement_group = 'LEGS' THEN @anatomy_legs
+        WHEN movement_group = 'CORE' THEN @anatomy_core
+        WHEN movement_group = 'PULL' THEN @anatomy_pull
+        WHEN movement_group = 'PUSH' THEN @anatomy_push
+        ELSE @anatomy_full_body
+    END
+WHERE is_system = TRUE
+  AND (anatomy_image_url IS NULL OR TRIM(anatomy_image_url) = '');
+
 -- Give any otherwise disconnected node a parent in the nearest easier level.
 INSERT IGNORE INTO exercise_tree_edges (parent_exercise_id, child_exercise_id)
 SELECT parent.id, child.id
@@ -1291,8 +1298,6 @@ WHERE child.is_system = TRUE
       WHERE existing.child_exercise_id = child.id
   );
 
--- difficulty_level is an ordinal TINYINT in this schema; normalize its
--- string counterparts instead of applying UPPER() to a numeric column.
 UPDATE exercises
 SET level = UPPER(TRIM(level))
 WHERE level IS NOT NULL;

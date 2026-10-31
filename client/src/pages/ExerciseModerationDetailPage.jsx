@@ -4,6 +4,7 @@ import {
   Alert, Box, Button, Card, CardContent, CircularProgress, Dialog, DialogActions,
   DialogContent, DialogContentText, DialogTitle, Divider, Grid, Stack, TextField, Typography,
 } from "@mui/material";
+import { keyframes } from "@mui/material/styles";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import { contentManagerApi, mediaUrl } from "../api/contentManager";
 import { useApiMutation, useApiQuery } from "../hooks";
@@ -11,11 +12,30 @@ import { CONTENT_PATHS, ContentPageHeader, DarkPill, formatDateTime } from "../c
 import { CM } from "../theme-content";
 import { GuideSteps } from "./SystemExerciseDetailPage";
 
+const rise = keyframes`
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+const enter = (delay = 0) => ({
+  animation: `${rise} .45s ease-out ${delay}ms both`,
+  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+});
+
 function DetailField({ label, value, full = false, sx }) {
   return (
     <Grid item xs={12} sm={full ? 12 : 4} sx={sx}>
-      <Box sx={{ border: `1px solid ${CM.border}`, bgcolor: "rgba(19,10,39,0.6)", borderRadius: 1.5, p: { xs: 1.5, sm: 1.25 }, height: "100%" }}>
-        <Typography variant="caption" sx={{ color: CM.textDim, textTransform: "uppercase", letterSpacing: "0.07em", fontSize: 10, fontWeight: 700 }}>{label}</Typography>
+      <Box sx={{
+        position: "relative",
+        overflow: "hidden",
+        border: `1px solid ${CM.border}`,
+        bgcolor: CM.surfaceSoft,
+        borderRadius: "14px",
+        p: { xs: 1.5, sm: 1.5 },
+        height: "100%",
+        transition: "all .2s ease",
+        "&:hover": { borderColor: CM.borderStrong },
+      }}>
+        <Typography variant="caption" sx={{ color: CM.textDim, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 10, fontWeight: 700 }}>{label}</Typography>
         <Typography variant="body2" fontWeight={600} sx={{ mt: 0.5, whiteSpace: "pre-line", color: "#fff", overflowWrap: "anywhere" }}>{value || "—"}</Typography>
       </Box>
     </Grid>
@@ -99,8 +119,8 @@ export default function ExerciseModerationDetailPage() {
       {isHistoryView && <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1.5 }}><DarkPill tone={historyRow.decision === "APPROVED" ? "success" : "danger"}>{historyRow.decision === "APPROVED" ? "Approved" : "Rejected"}</DarkPill>{historyRow.decision === "REJECTED" && <Button size="small" color="error" variant="text" onClick={() => setReasonOpen(true)} sx={{ py: 0.25, px: 1, fontSize: 11.5 }}>View reason</Button>}</Stack>}
       {isHistoryOnly && <Alert severity="info" sx={{ mt: 2 }}>This exercise was deleted before its status could be updated. The details below are the information retained in the moderation history.</Alert>}
       {actionError && <Alert severity="error" sx={{ mt: 2 }}>{actionError}</Alert>}
-      <Card sx={{ mt: 2.5 }}>
-        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+      <Card sx={{ mt: 2.5, overflow: "hidden", ...enter(150) }}>
+        <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
           <Typography variant="subtitle2" fontWeight={700} sx={{ color: "#fff" }}>Demo video</Typography>
           {entry.demoVideoUrl ? (
             <Box component="video" src={mediaUrl(entry.demoVideoUrl)} controls aria-label={`${entry.name} demo video`} sx={{ mt: 1.5, width: "100%", maxHeight: 420, borderRadius: 2, bgcolor: "#000", display: "block" }} />
