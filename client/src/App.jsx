@@ -2,6 +2,12 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "./components/layout/AdminLayout";
 import RoleHomeRoute from "./components/RoleHomeRoute";
 import ContentManagerLayout from "./components/layout/ContentManagerLayout";
+import AdminAreaLayout from "./components/layout/AdminAreaLayout";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminSectionPage from "./pages/AdminSectionPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminCreateStaffPage from "./pages/AdminCreateStaffPage";
+import AdminUserDetailPage from "./pages/AdminUserDetailPage";
 import Dashboard from "./pages/Dashboard";
 import HealthTracking from "./pages/HealthTracking";
 import WorkoutHistory from "./pages/WorkoutHistory";
@@ -27,6 +33,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import VerifyResetPassword from "./pages/VerifyResetPassword";
 import ResetPassword from "./pages/ResetPassword";
+import ChangePassword from "./pages/ChangePassword";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SurveyFlow, { SurveyEntry } from "./pages/survey/SurveyFlow";
 import SurveyStepPage from "./pages/survey/SurveyStepPage";
@@ -43,6 +50,7 @@ export default function App() {
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/verify-reset-password" element={<VerifyResetPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/change-password" element={<ChangePassword />} />
 
         {/* Onboarding survey của member (sau khi đăng nhập); URL theo Figma: /survey/body-information … */}
         <Route
@@ -90,6 +98,20 @@ export default function App() {
           <Route path="create" element={<ExerciseFormPage />} />
           <Route path="library" element={<Navigate to="/content/exercises" replace />} />
           <Route path="*" element={<Navigate to="/content/dashboard" replace />} />
+        </Route>
+
+        {/* Admin area (role ADMIN) - the guard reads /auth/me, same pattern as /content. */}
+        <Route path="/admin" element={<AdminAreaLayout />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="users/create" element={<AdminCreateStaffPage />} />
+          <Route path="users/:id" element={<AdminUserDetailPage />} />
+          <Route path="create" element={<Navigate to="/admin/users/create" replace />} />
+          <Route path="notifications" element={<AdminSectionPage title="Notifications" />} />
+          <Route path="storage" element={<AdminSectionPage title="Media storage & infrastructure" />} />
+          <Route path="maintenance" element={<AdminSectionPage title="Create maintenance schedule" />} />
+          <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
         <Route path="/" element={<RoleHomeRoute />} />

@@ -55,6 +55,10 @@ export default function Login() {
     let cancelled = false;
     api.get("/auth/me").then(({ data }) => {
       if (cancelled) return;
+      if (data.mustChangePassword) {
+        navigate("/change-password", { replace: true });
+        return;
+      }
       setExistingRole(data.role);
       localStorage.setItem(
         "user",
@@ -87,6 +91,9 @@ export default function Login() {
   if (existingRole === "CONTENT_MANAGER") {
     return <Navigate to="/content/dashboard" replace />;
   }
+  if (existingRole === "ADMIN") {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -118,6 +125,10 @@ export default function Login() {
           role: res.data.role,
         }),
       );
+      if (res.data.mustChangePassword) {
+        navigate("/change-password", { replace: true });
+        return;
+      }
       // Member chưa hoàn thành / chưa bỏ qua khảo sát onboarding -> vào survey trước,
       // kể cả khi có returnTo (vd vào "/" lúc chưa đăng nhập bị chuyển sang /login?returnTo=/)
       if (res.data.role === "MEMBER" && (await needsOnboarding())) {
@@ -128,12 +139,13 @@ export default function Login() {
       const returnTo = new URLSearchParams(location.search).get("returnTo");
       const isSafeReturnTo =
         returnTo?.startsWith("/") && !returnTo.startsWith("//") && returnTo !== "/login";
-      const destination =
-        res.data.role === "CONTENT_MANAGER"
-          ? "/content/dashboard"
-          : isSafeReturnTo
-            ? returnTo
-            : "/";
+      let destination = isSafeReturnTo ? returnTo : "/";
+      if (res.data.role === "CONTENT_MANAGER") {
+        destination = "/content/dashboard";
+      } else if (res.data.role === "ADMIN") {
+        // Admins only land inside the admin area; honour returnTo only when it points there.
+        destination = isSafeReturnTo && returnTo.startsWith("/admin") ? returnTo : "/admin/dashboard";
+      }
       navigate(destination, { replace: true });
     } catch (err) {
       const msg =
