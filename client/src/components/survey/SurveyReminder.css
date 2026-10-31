@@ -1,0 +1,60 @@
+/* SurveyReminder.css — nút làm survey onboarding trên trang Tracking (cùng tông thẻ #1A1230, nhấn #8B5CF6) */
+
+.survey-reminder {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.survey-reminder-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.survey-reminder-text {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #C4B5FD;
+}
+
+.survey-reminder-btn {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #8B5CF6 0%, #A855F7 100%);
+  box-shadow: 0 6px 18px rgba(139, 92, 246, 0.35);
+  color: #FFFFFF;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.survey-reminder-btn:hover {
+  filter: brightness(1.08);
+}
+
+.survey-reminder-btn:focus-visible {
+  outline: 2px solid #A78BFA;
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .survey-reminder {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -61,6 +61,7 @@ export const HEAD_ROW_SX = {
     textTransform: "uppercase",
     letterSpacing: 0.6,
     whiteSpace: "nowrap",
+    textAlign: "center",
   },
 };
 

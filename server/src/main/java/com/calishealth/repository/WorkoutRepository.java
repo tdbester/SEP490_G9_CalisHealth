@@ -23,4 +23,5 @@ public interface WorkoutRepository extends JpaRepository<WorkoutEntry, Long>, Jp
             WHERE w.isSystem = false AND w.authorId = :authorId AND UPPER(w.type) = 'CUSTOM'
             """)
     long countCustomWorkoutsByAuthorId(@Param("authorId") Long authorId);
+    boolean existsByLevelIgnoreCase(String level);
 }

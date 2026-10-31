@@ -1,6 +1,7 @@
 package com.calishealth.service;
 
 import com.calishealth.dtos.SurveyDtos.AnswerItem;
+import com.calishealth.dtos.SurveyDtos.LevelAssessment;
 import com.calishealth.dtos.SurveyDtos.SaveAnswersRequest;
 import com.calishealth.dtos.SurveyDtos.SessionResponse;
 import com.calishealth.exception.SurveyException;
@@ -17,6 +18,7 @@ import com.calishealth.service.survey.SurveyDefinitionLoader;
 import com.calishealth.service.survey.SurveyFixtures;
 import com.calishealth.service.survey.definition.StepQuestion;
 import com.calishealth.service.survey.definition.SurveyDefinition;
+import com.calishealth.service.survey.level.LevelAssessmentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -31,8 +33,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SurveySessionServiceTest {
@@ -44,6 +49,7 @@ class SurveySessionServiceTest {
     private final UserRepository users = mock(UserRepository.class);
     private final SurveyService surveys = mock(SurveyService.class);
     private final SurveyDefinitionLoader loader = mock(SurveyDefinitionLoader.class);
+    private final LevelAssessmentService levels = mock(LevelAssessmentService.class);
     private final SurveyDefinition definition = SurveyFixtures.onboarding();
     private final List<AssessmentAnswer> store = new ArrayList<>();
 
@@ -52,7 +58,8 @@ class SurveySessionServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new SurveySessionService(sessions, answers, questions, users, surveys, loader, SurveyFixtures.registry());
+        service = new SurveySessionService(sessions, answers, questions, users, surveys, loader, SurveyFixtures.registry(),
+                mock(LevelBenchmarkService.class), levels);
 
         User user = user(1L, EMAIL);
         Survey survey = new Survey();
@@ -229,10 +236,27 @@ class SurveySessionServiceTest {
         assertThat(error.getErrors()).singleElement().extracting(SurveyException.ErrorItem::code)
                 .isEqualTo("ANSWER_NOT_APPLICABLE");
 
+        verify(levels, never()).assess(any(), any(), any());
+
         save("GOALS_AND_MOTIVATION", "HEALTH_GOAL", "null");
         SessionResponse completed = service.complete(EMAIL, 10L);
         assertThat(completed.status()).isEqualTo("COMPLETED");
         assertThat(session.getCompletedAt()).isNotNull();
+        verify(levels).assess(eq(session), eq(definition), any());
+    }
+
+    @Test
+    void resultIsOnlyAvailableForCompletedSessions() {
+        assertThat(surveyError(() -> service.result(EMAIL, 10L)).getCode()).isEqualTo("SESSION_NOT_COMPLETED");
+
+        answerBodyStep();
+        save("GOALS_AND_MOTIVATION", "GOAL_TYPE", "\"HEALTH\"", "HEALTH_GOAL", "\"STAY_FIT\"");
+        service.complete(EMAIL, 10L);
+        LevelAssessment stored = new LevelAssessment("NONE", "NO_RULE_SET", null, List.of(), null, null,
+                true, true, List.of(), null, LocalDateTime.now());
+        when(levels.find(session)).thenReturn(Optional.of(stored));
+
+        assertThat(service.result(EMAIL, 10L).assessment()).isSameAs(stored);
     }
 
     @Test

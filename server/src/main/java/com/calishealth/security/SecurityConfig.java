@@ -34,6 +34,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // lỗi chưa có handler được Spring chuyển sang /error: không mở thì mọi lỗi thành 401 (FE tự logout)
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/auth/change-password", "/api/auth/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/dashboard").authenticated()
                         .requestMatchers(

@@ -154,7 +154,14 @@ const contentTheme = createTheme({
     MuiTable: { styleOverrides: { root: { borderCollapse: "separate", borderSpacing: 0 } } },
     MuiTableCell: {
       styleOverrides: {
-        root: { borderBottom: `1px solid rgba(150,124,255,0.10)`, paddingBlock: 10 },
+        // Every cell (header and body) is centred so column titles sit directly above their data.
+        root: {
+          borderBottom: `1px solid rgba(150,124,255,0.10)`,
+          paddingBlock: 10,
+          textAlign: "center",
+          verticalAlign: "middle",
+          "& > .MuiStack-root": { justifyContent: "center", alignItems: "center" },
+        },
         head: {
           backgroundColor: "rgba(19,10,39,0.85)",
           color: CM.textMuted,

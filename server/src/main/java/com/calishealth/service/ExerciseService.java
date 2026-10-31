@@ -11,8 +11,10 @@ import com.calishealth.models.Exercise;
 import com.calishealth.models.ExerciseMuscleGroup;
 import com.calishealth.models.ExerciseMuscleGroupId;
 import com.calishealth.models.ExerciseTreeEdge;
+import com.calishealth.models.FitnessLevel;
 import com.calishealth.models.MuscleGroup;
 import com.calishealth.repository.ExerciseRepository;
+import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.ExerciseModerationHistoryRepository;
 import com.calishealth.repository.ExerciseTreeEdgeRepository;
 import com.calishealth.repository.MuscleGroupRepository;
@@ -24,17 +26,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.ArrayList;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -61,6 +62,7 @@ public class ExerciseService {
     private final JdbcTemplate jdbcTemplate;
     private final ExerciseVideoStorageService videoStorage;
     private final ExerciseTreeEdgeRepository treeEdges;
+    private final FitnessLevelRepository fitnessLevels;
 
     @Transactional(readOnly = true)
     public PageResponseDTO<ExerciseItemResponseDTO> getSystemExercises(ExerciseFilterRequestDTO filter) {
@@ -116,7 +118,8 @@ public class ExerciseService {
         if (steps.size() == 1) {
             steps = List.of(
                     "Set up for " + exercise.getName() + " with " + nullToDefault(exercise.getMuscleGroup(), "the target muscles") + " engaged.",
-                    "Brace your core and move through a controlled range of motion.",
+                    "Brace your core and keep the " + nullToDefault(exercise.getMuscleGroup(), "target muscles")
+                            + " engaged while moving through a controlled range of motion.",
                     steps.get(0),
                     "Return to the starting position with control and repeat.");
         }
@@ -192,12 +195,47 @@ public class ExerciseService {
         return value == null || value.isBlank() ? fallback : value;
     }
 
+    /** Levels are managed by content (fitness_levels), so any level that exists there is valid. */
+    private String resolveLevelName(String level) {
+        if (level == null || level.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a valid exercise level");
+        }
+        return fitnessLevels.findByNameIgnoreCase(level.trim())
+                .map(FitnessLevel::getName)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a valid exercise level"));
+    }
+
+    /** Resolves the level and refuses it when it is inactive (exercises cannot be created at an inactive level). */
+    private String resolveActiveLevelName(String level) {
+        String name = resolveLevelName(level);
+        if (!isLevelActive(name, levelActivity())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Level " + name + " is inactive. Choose an active level or activate it in Level & Benchmark Criteria");
+        }
+        return name;
+    }
+
+    /** Lower-cased level name -> is the level active. */
+    private Map<String, Boolean> levelActivity() {
+        Map<String, Boolean> activity = new HashMap<>();
+        for (FitnessLevel level : fitnessLevels.findAll()) {
+            activity.put(level.getName().toLowerCase(Locale.ROOT), "ACTIVE".equalsIgnoreCase(level.getStatus()));
+        }
+        return activity;
+    }
+
+    /** A level that is not configured at all is not treated as inactive. */
+    private static boolean isLevelActive(String levelName, Map<String, Boolean> activity) {
+        return levelName == null || activity.getOrDefault(levelName.trim().toLowerCase(Locale.ROOT), true);
+    }
+
     @Transactional(readOnly = true)
     public List<ExerciseResponse> findAll() {
+        Map<String, Boolean> activity = levelActivity();
         return exercises.findAll().stream()
                 .filter(exercise -> !STATUS_DELETED.equalsIgnoreCase(exercise.getModerationStatus()))
                 .sorted((first, second) -> second.getUpdatedAt().compareTo(first.getUpdatedAt()))
-                .map(this::toResponse)
+                .map(exercise -> toResponse(exercise, activity))
                 .toList();
     }
 
@@ -249,9 +287,7 @@ public class ExerciseService {
         if (request.muscleGroup() == null || request.muscleGroup().isBlank() || request.muscleGroup().length() > 120) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select one or more muscle groups");
         }
-        if (request.level() == null || !List.of("Beginner", "Intermediate", "Advanced").contains(request.level())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a valid exercise level");
-        }
+        resolveActiveLevelName(request.level());
         if (!Set.of("REPS", "HOLD").contains(request.category())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a repetition-count or hold exercise category");
         }
@@ -275,7 +311,7 @@ public class ExerciseService {
         exercise.setDefaultSets(request.defaultSets());
         exercise.setDefaultReps(request.defaultReps());
         exercise.setDuration(request.duration());
-        exercise.setDifficultyLevel(request.level().trim());
+        exercise.setDifficultyLevel(resolveActiveLevelName(request.level()));
         exercise.setInstructions(request.description());
         exercise.setExecutionSteps(request.guide());
         exercise.setVideoUrl(demoVideoUrl);
@@ -323,8 +359,10 @@ public class ExerciseService {
         if (request.muscleGroup() == null || request.muscleGroup().isBlank() || request.muscleGroup().length() > 120) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select one or more muscle groups");
         }
-        if (request.level() == null || !List.of("Beginner", "Intermediate", "Advanced").contains(request.level())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a valid exercise level");
+        // Keeping the current level is always allowed; moving an exercise to an inactive level is not.
+        String requestedLevel = resolveLevelName(request.level());
+        if (!requestedLevel.equalsIgnoreCase(exercise.getDifficultyLevel())) {
+            resolveActiveLevelName(requestedLevel);
         }
         String type = request.type() == null ? "" : request.type().trim().toUpperCase(Locale.ROOT);
         if (!Set.of("HEALTH", "SKILL").contains(type)) {
@@ -343,7 +381,7 @@ public class ExerciseService {
         exercise.setDefaultSets(request.defaultSets());
         exercise.setDefaultReps(request.defaultReps());
         exercise.setDuration(request.duration());
-        exercise.setDifficultyLevel(request.level().trim());
+        exercise.setDifficultyLevel(requestedLevel);
         exercise.setInstructions(request.description());
         exercise.setExecutionSteps(request.guide());
         if (demoVideoUrl != null) exercise.setVideoUrl(demoVideoUrl);
@@ -397,6 +435,10 @@ public class ExerciseService {
         }
         Exercise exercise = exercises.findByCode(code)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Exercise or skill not found"));
+        if (active && !isLevelActive(exercise.getDifficultyLevel(), levelActivity())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Level " + exercise.getDifficultyLevel() + " is inactive, so its exercises stay inactive. Activate the level first");
+        }
         exercise.setActive(active);
         exercise.setModerationStatus(active
                 ? STATUS_ACTIVE
@@ -474,12 +516,13 @@ public class ExerciseService {
 
     @Transactional(readOnly = true)
     public List<ExerciseResponse> findPendingModeration() {
+        Map<String, Boolean> activity = levelActivity();
         return exercises.findAll().stream()
                 .filter(exercise -> SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource())
                         && !exercise.isActive()
                         && !STATUS_REJECTED.equalsIgnoreCase(exercise.getModerationStatus()))
                 .sorted((first, second) -> second.getUpdatedAt().compareTo(first.getUpdatedAt()))
-                .map(exercise -> toResponse(exercise))
+                .map(exercise -> toResponse(exercise, activity))
                 .toList();
     }
 
@@ -505,6 +548,12 @@ public class ExerciseService {
     }
 
     private ExerciseResponse toResponse(Exercise exercise) {
+        return toResponse(exercise, levelActivity());
+    }
+
+    /** {@code active} is the effective status: the exercise is active AND its level is active. */
+    private ExerciseResponse toResponse(Exercise exercise, Map<String, Boolean> activity) {
+        boolean levelActive = isLevelActive(exercise.getDifficultyLevel(), activity);
         String type = "SKILL".equalsIgnoreCase(exercise.getType()) ? "Skill" : "Health";
         String source = responseSource(exercise);
         return new ExerciseResponse(
@@ -523,11 +572,13 @@ public class ExerciseService {
                 exercise.getCreatedBy() == null ? null : exercise.getCreatedBy().getFullName(),
                 exercise.getDefaultReps(),
                 exercise.getDuration(),
-                exercise.isActive(),
+                exercise.isActive() && levelActive,
                 exercise.getUpdatedAt(),
                 exercise.getUpdatedAt(),
                 autoCheckStatus(exercise),
-                exercise.getDefaultSets()
+                exercise.getDefaultSets(),
+                exercise.isActive(),
+                levelActive
         );
     }
 }

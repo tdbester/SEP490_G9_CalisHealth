@@ -1,0 +1,926 @@
+/* Survey.css — luồng onboarding của member (Figma CalisHealth > PC screen: Survey - …)
+   Nền tối #0D071B, thẻ #151028, nhấn tím #8B7CF6. Khung trình duyệt giả trong Figma không dựng lại. */
+
+.survey-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 40px 16px 32px;
+  background: linear-gradient(180deg, #0d071b 0%, #0a0618 100%);
+  color: #ffffff;
+  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+}
+
+.survey-page--center {
+  align-items: center;
+}
+
+.survey-page h1,
+.survey-page h2,
+.survey-page h3,
+.survey-page p {
+  margin: 0;
+}
+
+.survey-column {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.survey-page--intro .survey-column {
+  max-width: 488px;
+}
+
+.survey-column--result {
+  max-width: 560px;
+}
+
+/* ── Tiến độ ──────────────────────────────────────────────────── */
+.survey-progress-label {
+  text-align: right;
+  font-size: 13px;
+  color: #a39ec4;
+}
+
+.survey-progress-bar {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.survey-progress-bar span {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: #2a2440;
+  transition: background-color 0.4s ease;
+}
+
+.survey-progress-bar span.is-done {
+  background: #8b7cf6;
+}
+
+.survey-page--intro .survey-progress-label {
+  font-size: 17px;
+  color: #b4a0e5;
+}
+
+.survey-page--intro .survey-progress-bar span {
+  height: 7px;
+}
+
+.survey-page--intro .survey-progress-bar span.is-done {
+  background: #a78bfa;
+}
+
+/* ── Tiêu đề bước ─────────────────────────────────────────────── */
+.survey-header {
+  margin-top: 28px;
+}
+
+.survey-header-label {
+  font-size: 14px;
+  color: #9b8fd8;
+}
+
+.survey-header-title {
+  margin-top: 8px !important;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.survey-header-subtitle {
+  margin-top: 10px !important;
+  font-size: 15px;
+  line-height: 1.4;
+  color: #a39ec4;
+}
+
+.survey-page--intro .survey-header {
+  margin-top: 20px;
+}
+
+.survey-page--intro .survey-header-label {
+  font-size: 19px;
+  color: #b4a0e5;
+}
+
+.survey-page--intro .survey-header-title {
+  margin-top: 2px !important;
+  font-size: 34px;
+}
+
+.survey-page--intro .survey-header-subtitle {
+  margin-top: 6px !important;
+  font-size: 19px;
+  color: #b4a0e5;
+}
+
+/* ── Danh sách câu hỏi ────────────────────────────────────────── */
+.survey-questions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.survey-question + .survey-question {
+  margin-top: 12px;
+}
+
+.survey-question-title {
+  margin-bottom: 14px !important;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.survey-question-hint {
+  margin: -8px 0 12px !important;
+  font-size: 13px;
+  color: #8a85a8;
+}
+
+.survey-field-error {
+  margin-top: 8px !important;
+  font-size: 13px;
+  color: #fb7185;
+}
+
+.survey-form-error {
+  margin-top: 20px !important;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 113, 133, 0.4);
+  background: rgba(251, 113, 133, 0.1);
+  color: #fecdd3;
+  font-size: 14px;
+}
+
+/* ── Thẻ có icon: number / select ─────────────────────────────── */
+.survey-icon-card {
+  padding: 14px 20px 14px;
+  border-radius: 12px;
+  border: 1.6px solid #3c2a67;
+  background: #171128;
+}
+
+.survey-icon-card.has-error {
+  border-color: rgba(251, 113, 133, 0.6);
+}
+
+.survey-icon-card-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.survey-icon-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #7850f4 0%, #5c3ce0 100%);
+  color: #ffffff;
+}
+
+.survey-icon-card-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.survey-icon-card-title {
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.survey-icon-card-hint {
+  font-size: 13px;
+  color: #a39ec4;
+}
+
+/* Level test: thẻ gọn hơn (icon 36px, có dòng phụ) */
+.survey-icon-card--compact {
+  padding: 14px 18px 16px;
+  border-width: 1.5px;
+  border-color: #2f2850;
+  background: #151028;
+}
+
+.survey-icon-card--compact .survey-icon-card-head {
+  gap: 12px;
+}
+
+.survey-icon-card--compact .survey-icon-tile {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #6d4cf5 0%, #5739e6 100%);
+}
+
+.survey-icon-card--compact .survey-icon-card-title {
+  font-size: 17px;
+}
+
+.survey-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 30px;
+  margin-top: 10px;
+  padding: 0 16px;
+  border-radius: 6px;
+  background: #2b1f4b;
+  cursor: text;
+}
+
+.survey-icon-card--compact .survey-input {
+  height: 34px;
+  margin-top: 12px;
+}
+
+.survey-input:focus-within {
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.55);
+}
+
+.survey-input input,
+.survey-input select,
+.survey-input textarea {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 15px;
+}
+
+.survey-input input::placeholder {
+  color: #6b6785;
+}
+
+/* bỏ nút tăng/giảm của input number */
+.survey-input input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.survey-input input::-webkit-outer-spin-button,
+.survey-input input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.survey-input-unit {
+  flex-shrink: 0;
+  margin-left: 8px;
+  font-size: 15px;
+  color: #a69ac2;
+}
+
+.survey-icon-card--compact .survey-input-unit {
+  font-size: 14px;
+  color: #9b8fd8;
+}
+
+.survey-input--select {
+  padding-right: 0;
+  cursor: pointer;
+}
+
+.survey-input--select select {
+  padding-right: 40px;
+  appearance: none;
+  cursor: pointer;
+}
+
+.survey-input--select select.is-placeholder {
+  color: #6b6785;
+}
+
+.survey-input--select option {
+  background: #1b1435;
+  color: #ffffff;
+}
+
+.survey-input-chevron {
+  position: absolute;
+  right: 16px;
+  display: flex;
+  pointer-events: none;
+}
+
+.survey-input--text {
+  height: auto;
+  min-height: 40px;
+  padding: 8px 14px;
+}
+
+.survey-input--text textarea {
+  resize: vertical;
+}
+
+/* ── Thẻ chọn hướng tập (For health / For skills) ─────────────── */
+.survey-path-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.survey-path-cards button {
+  height: 104px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 12px;
+  border: 1.5px solid #2a2545;
+  background: #110d20;
+  color: #ffffff;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.survey-path-cards button:hover {
+  border-color: #3a3358;
+}
+
+.survey-path-cards button.is-selected {
+  border-color: #8b7cf6;
+  background: #211a45;
+}
+
+.survey-path-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+}
+
+.survey-path-card-label {
+  font-size: 16px;
+}
+
+/* ── Hàng lựa chọn có icon (health goal) ──────────────────────── */
+.survey-option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.survey-option-list button {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 20px;
+  border-radius: 10px;
+  border: 1.5px solid #232038;
+  background: #121224;
+  color: #d1d5db;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.survey-option-list button.is-selected {
+  border-color: #8b7cf6;
+  background: #171330;
+  color: #ffffff;
+}
+
+.survey-option-list-icon {
+  display: flex;
+  width: 24px;
+  justify-content: center;
+  color: #7c7593;
+}
+
+.survey-option-list button.is-selected .survey-option-list-icon {
+  color: #a78bfa;
+}
+
+/* ── Chips (skills / motivations) ─────────────────────────────── */
+.survey-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.survey-chips button {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px solid #2a2545;
+  background: #110d20;
+  color: #e5e3f0;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.survey-chips button:hover {
+  border-color: #3a3358;
+}
+
+.survey-chips button.is-selected {
+  border-color: #8b7cf6;
+  background: #2d2358;
+  color: #ffffff;
+}
+
+/* ── Ô chọn (experience / minutes) và dãy số (days per week) ──── */
+.survey-tiles,
+.survey-scale {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.survey-scale {
+  gap: 12px;
+}
+
+/* Figma "Survey - Current training routine": ô kinh nghiệm / phút dạng viên, ô số bo góc;
+   đang chọn = nền tím nhạt + viền tím (giống chips) */
+.survey-tiles button,
+.survey-scale button {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px solid #2a2545;
+  background: #110d20;
+  color: #e5e3f0;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.survey-scale button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+.survey-tiles button:hover,
+.survey-scale button:hover {
+  border-color: #3a3358;
+}
+
+.survey-tiles button.is-selected,
+.survey-scale button.is-selected {
+  border-color: #8b7cf6;
+  background: #2d2358;
+  color: #ffffff;
+}
+
+.survey-path-cards button:focus-visible,
+.survey-option-list button:focus-visible,
+.survey-chips button:focus-visible,
+.survey-tiles button:focus-visible,
+.survey-scale button:focus-visible,
+.survey-btn:focus-visible,
+.survey-skip:focus-visible,
+.survey-link:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 2px;
+}
+
+/* ── Nút ──────────────────────────────────────────────────────── */
+.survey-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 50px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s ease, opacity 0.15s ease;
+}
+
+.survey-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.survey-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.survey-btn--primary {
+  border-color: #a594f9;
+  background: #8b7cf6;
+  color: #ffffff;
+}
+
+.survey-btn--ghost {
+  border-color: #3a3266;
+  background: #151029;
+  color: #e4e1f5;
+}
+
+.survey-btn--gradient {
+  width: 100%;
+  height: 58px;
+  border-radius: 10px;
+  border: 0;
+  background: linear-gradient(90deg, #c52edb 0%, #8855eb 52%, #3c7df3 100%);
+  color: #ffffff;
+  font-size: 20px;
+}
+
+.survey-intro-actions {
+  margin-top: 20px;
+}
+
+.survey-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 36px;
+  padding-top: 22px;
+  border-top: 1px solid #2a2545;
+}
+
+.survey-actions .survey-btn--ghost {
+  width: 130px;
+  flex-shrink: 0;
+}
+
+.survey-actions .survey-btn--primary {
+  flex: 1;
+}
+
+.survey-skip {
+  align-self: center;
+  margin-top: 20px;
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  color: #b4a0e5;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.survey-skip:hover:not(:disabled) {
+  color: #ffffff;
+}
+
+.survey-skip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.survey-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #b3afd0;
+  font-family: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.survey-link:hover {
+  color: #ffffff;
+}
+
+/* ── Trạng thái tải / lỗi ─────────────────────────────────────── */
+.survey-status {
+  font-size: 15px;
+  color: #c9c4e8;
+  text-align: center;
+}
+
+.survey-status-box {
+  max-width: 420px;
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid #2a2545;
+  background: #14102a;
+}
+
+.survey-status-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+/* ── Màn Result ───────────────────────────────────────────────── */
+.result-card {
+  margin-top: 28px;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1.5px solid #2a2545;
+  background: #14102a;
+}
+
+.result-level {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.result-icon-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  border: 1px solid #3a3070;
+  background: #251e4d;
+  color: #a78bfa;
+}
+
+.result-level-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.result-muted {
+  font-size: 13px;
+  color: #8a85a8;
+}
+
+.result-level-name {
+  margin-top: 2px !important;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.result-badge {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(124, 108, 240, 0.45);
+  background: rgba(124, 108, 240, 0.18);
+  color: #c9b8ff;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.result-body {
+  margin-top: 14px !important;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #b3afd0;
+}
+
+.result-ladder {
+  margin-top: 20px;
+}
+
+.result-ladder-bars,
+.result-ladder-labels {
+  display: flex;
+  gap: 8px;
+}
+
+.result-ladder-bars span {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: #2a2545;
+}
+
+.result-ladder-bars span.is-reached {
+  background: #a78bfa;
+}
+
+.result-ladder-labels {
+  margin-top: 8px;
+}
+
+.result-ladder-labels span {
+  flex: 1;
+  font-size: 12px;
+  color: #8a85a8;
+}
+
+.result-ladder-labels span.is-reached {
+  color: #a78bfa;
+}
+
+.result-section {
+  margin-top: 32px;
+}
+
+.result-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.result-section-title {
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.result-scores {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.result-score {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1.5px solid #2a2545;
+  background: #14102a;
+}
+
+.result-score-label {
+  font-size: 13px;
+  color: #b3afd0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.result-score-value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 6px !important;
+}
+
+.result-score-value strong {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.result-score-value span {
+  font-size: 13px;
+  color: #8a85a8;
+}
+
+.result-score-band {
+  margin-top: 6px !important;
+  font-size: 12px;
+  color: #a78bfa;
+}
+
+.result-plan {
+  margin-top: 24px;
+}
+
+.result-plan-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #a78bfa;
+}
+
+.result-plan-name {
+  margin-top: 8px !important;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.result-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.result-chips span {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #3a3070;
+  background: #251e4d;
+  color: #b3afd0;
+  font-size: 13px;
+}
+
+.result-divider {
+  height: 1px;
+  margin-top: 20px;
+  background: #2a2545;
+}
+
+.result-rhythm-title {
+  margin-top: 20px !important;
+  font-size: 14px;
+  font-weight: 600;
+  color: #b3afd0;
+}
+
+.result-rhythm {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result-rhythm li {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #1d1740;
+}
+
+.result-rhythm li span {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #a78bfa;
+}
+
+.result-rhythm li p {
+  margin-top: 2px !important;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.result-note {
+  margin-top: 16px !important;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #8a85a8;
+}
+
+.result-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.result-retake {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+@media (max-width: 480px) {
+  .survey-page {
+    padding-top: 24px;
+  }
+
+  .survey-header-title,
+  .survey-page--intro .survey-header-title {
+    font-size: 26px;
+  }
+
+  .survey-path-cards {
+    gap: 12px;
+  }
+
+  .survey-scale {
+    gap: 8px;
+  }
+
+  .survey-scale button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .result-scores,
+  .result-rhythm {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

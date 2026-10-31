@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{resultStepId}}/result-config"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('co du field config', () => pm.expect(j.config).to.have.keys('showLevelBreakdown', 'showPlanPreview', 'planDurationWeeks', 'sessionsPerWeek', 'minutesPerSession', 'fallbackFitnessLevelId'));
+      pm.test('co danh sach fitness level', () => pm.expect(j.fitnessLevels).to.be.an('array').that.is.not.empty);
+      const beginner = j.fitnessLevels.find(l => l.name === 'Beginner') || j.fitnessLevels[0];
+      pm.collectionVariables.set('fallbackLevelId', beginner ? String(beginner.id) : 'null');
+    language: text/javascript
+order: 1000

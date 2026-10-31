@@ -24,8 +24,8 @@ public class MemberLevelStatsRepository {
                     ON u.id = mp.user_id
                     AND u.enabled = TRUE
                     AND u.role = 'MEMBER'
-                GROUP BY fl.id, fl.name
-                ORDER BY fl.id
+                GROUP BY fl.id, fl.name, fl.score_min
+                ORDER BY fl.score_min, fl.id
                 """,
                 (resultSet, rowNumber) -> new MemberLevelStat(
                         resultSet.getString("level_name"),

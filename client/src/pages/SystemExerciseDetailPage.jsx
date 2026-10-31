@@ -18,6 +18,7 @@ import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import { contentManagerApi, mediaUrl } from "../api/contentManager";
 import { useApiMutation, useApiQuery } from "../hooks";
+import { useLevelNames } from "../useLevelNames";
 import { CONTENT_PATHS, ContentPageHeader } from "../components/ContentShared";
 import { CM } from "../theme-content";
 import {
@@ -103,10 +104,9 @@ export function GuideSteps({ guide }) {
 }
 
 const MUSCLE_OPTIONS = ["Chest", "Back", "Shoulders", "Arms", "Core", "Legs", "Glutes"];
-const LEVEL_OPTIONS = ["Beginner", "Intermediate", "Advanced"];
-
 export default function SystemExerciseDetailPage() {
   const { code = "" } = useParams();
+  const { levels: LEVEL_OPTIONS } = useLevelNames();
   const { data: entry, isLoading, error, refetch } = useApiQuery(
     () => contentManagerApi.exercise(code),
     { enabled: Boolean(code), deps: [code] },
@@ -131,7 +131,7 @@ export default function SystemExerciseDetailPage() {
       category: entry.category || "REPS",
       value: entry.category === "HOLD" ? (entry.duration ?? "") : (entry.defaultReps ?? ""),
       defaultSets: entry.defaultSets ?? 3,
-      level: entry.level || "Beginner",
+      level: entry.level || "",
       muscleGroup: (entry.muscleGroup || "").split(" · ").filter(Boolean),
       guide: entry.guide || "",
     });
@@ -177,7 +177,7 @@ export default function SystemExerciseDetailPage() {
         category: entry.category || "REPS",
         value: entry.category === "HOLD" ? (entry.duration ?? "") : (entry.defaultReps ?? ""),
         defaultSets: entry.defaultSets ?? 3,
-        level: entry.level || "Beginner",
+        level: entry.level || "",
         muscleGroup: (entry.muscleGroup || "").split(" · ").filter(Boolean),
         guide: entry.guide || "",
       });

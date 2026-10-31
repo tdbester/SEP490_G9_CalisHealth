@@ -30,6 +30,7 @@ import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import { contentManagerApi } from "../api/contentManager";
 import { useApiMutation, useApiQuery } from "../hooks";
+import { useLevelNames } from "../useLevelNames";
 import ContentListToolbar from "../components/ContentListToolbar";
 import {
   CONTENT_PATHS,
@@ -48,8 +49,13 @@ const BREADCRUMB = [
   { label: "Workout list" },
 ];
 
-function LevelChip({ level }) {
+function LevelChip({ level, toneOf }) {
   const displayLevel = level || "Intermediate";
+  const isStandardLevel = ["BEGINNER", "INTERMEDIATE", "ADVANCED"]
+    .includes(String(displayLevel).trim().toUpperCase());
+  if (!isStandardLevel) {
+    return <DarkPill tone={toneOf(level)}>{level || "—"}</DarkPill>;
+  }
   return (
     <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${getLevelBadgeStyle(displayLevel)}`}>
       {displayLevel}
@@ -84,6 +90,8 @@ export default function WorkoutListPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [source, setSource] = useState("all");
+  const [level, setLevel] = useState("all");
+  const { levels: levelNames, levelTone } = useLevelNames();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [menu, setMenu] = useState({ anchor: null, workout: null });
@@ -134,9 +142,11 @@ export default function WorkoutListPage() {
       const workoutSource = String(workout.source || "").toLowerCase();
       const matchesSource =
         source === "all" || workoutSource === source;
-      return matchesSearch && matchesStatus && matchesSource;
+      const matchesLevel =
+        level === "all" || String(workout.level || "").toLowerCase() === level;
+      return matchesSearch && matchesStatus && matchesSource && matchesLevel;
     });
-  }, [workouts, search, status, source]);
+  }, [workouts, search, status, source, level]);
 
   const rows = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   const closeMenu = () => setMenu({ anchor: null, workout: null });
@@ -235,6 +245,22 @@ export default function WorkoutListPage() {
           <TextField
             select
             size="small"
+            value={level}
+            onChange={(event) => {
+              setLevel(event.target.value);
+              setPage(0);
+            }}
+            SelectProps={{ SelectDisplayProps: { "aria-label": "Filter by level" } }}
+            sx={{ minWidth: 125 }}
+          >
+            <MenuItem value="all">All levels</MenuItem>
+            {levelNames.map((name) => (
+              <MenuItem key={name} value={name.toLowerCase()}>{name}</MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            size="small"
             value={source}
             onChange={(event) => {
               setSource(event.target.value);
@@ -297,7 +323,7 @@ export default function WorkoutListPage() {
               <Table size="small" sx={{ minWidth: { xs: 760, md: 900 }, "& th, & td": { textAlign: "center" } }}>
                 <TableHead>
                   <TableRow sx={{ "& th": { bgcolor: "rgba(19,10,39,0.85)", color: CM.textMuted, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, whiteSpace: "nowrap", py: 1.5 } }}>
-                    <TableCell align="center">Workout</TableCell>
+                    <TableCell sx={{ textAlign: "left !important", pl: 3 }}>Workout</TableCell>
                     <TableCell align="center">Source</TableCell>
                     <TableCell align="center">Level</TableCell>
                     <TableCell align="center">Exercises</TableCell>
@@ -309,12 +335,12 @@ export default function WorkoutListPage() {
                 <TableBody>
                   {rows.map((workout) => (
                     <TableRow key={workout.code} hover sx={{ "& td": { borderColor: CM.border, py: 1.5 } }}>
-                      <TableCell align="center" sx={{ width: 280 }}>
-                        <Stack direction="row" spacing={1.25} alignItems="center" justifyContent="flex-start" sx={{ width: "100%", textAlign: "left" }}>
+                      <TableCell sx={{ width: 300, textAlign: "left !important", pl: 3, "& > .MuiStack-root": { justifyContent: "flex-start" } }}>
+                        <Stack direction="row" spacing={1.25} alignItems="center" justifyContent="flex-start" sx={{ width: "100%" }}>
                           <Box className="workout-row-mark" aria-hidden="true">
                             <FitnessCenterRoundedIcon />
                           </Box>
-                          <Box sx={{ minWidth: 0 }}>
+                          <Box sx={{ minWidth: 0, textAlign: "left" }}>
                             <Typography variant="body2" fontWeight={600} noWrap sx={{ color: "#fff" }}>
                               {workout.name}
                             </Typography>
@@ -330,10 +356,10 @@ export default function WorkoutListPage() {
                         </DarkPill>
                       </TableCell>
                       <TableCell align="center">
-                        <LevelChip level={workout.level} />
+                        <LevelChip level={workout.level} toneOf={levelTone} />
                       </TableCell>
                       <TableCell align="center">
-                        <Typography variant="body2" sx={{ color: CM.textMuted }}>
+                        <Typography sx={{ color: "#fff", fontSize: 18, fontWeight: 700, lineHeight: 1.2 }}>
                           {Array.isArray(workout.exercises) ? workout.exercises.length : 0}
                         </Typography>
                       </TableCell>

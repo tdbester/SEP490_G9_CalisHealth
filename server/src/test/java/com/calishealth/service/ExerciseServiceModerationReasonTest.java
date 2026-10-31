@@ -4,6 +4,8 @@ import com.calishealth.dtos.ExerciseDtos.ExerciseModerationHistoryResponse;
 import com.calishealth.models.Exercise;
 import com.calishealth.repository.ExerciseModerationHistoryRepository;
 import com.calishealth.repository.ExerciseRepository;
+import com.calishealth.repository.ExerciseTreeEdgeRepository;
+import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.MuscleGroupRepository;
 import com.calishealth.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -29,7 +31,9 @@ class ExerciseServiceModerationReasonTest {
     private final JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
     private final ExerciseVideoStorageService videoStorage = mock(ExerciseVideoStorageService.class);
     private final ExerciseService service = new ExerciseService(
-            exercises, moderationHistory, muscleGroups, users, jdbcTemplate, videoStorage
+            exercises, moderationHistory, muscleGroups, users, jdbcTemplate, videoStorage,
+            mock(ExerciseTreeEdgeRepository.class),
+            mock(FitnessLevelRepository.class)
     );
 
     @Test

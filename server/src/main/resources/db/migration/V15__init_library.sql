@@ -1,4 +1,4 @@
--- V8: Init Library & Exercise schema for CalisHealth
+-- V15: Init Library & Exercise schema for CalisHealth
 -- Hỗ trợ chức năng Library & Exercise cho Member và Content Manager
 -- Chiến lược cuốn gói: Kế thừa V1 (users, auth_tokens), tạo các bảng phục vụ bài tập, nhóm cơ, video và kế hoạch tập.
 

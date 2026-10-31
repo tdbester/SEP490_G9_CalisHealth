@@ -6,6 +6,7 @@ import com.calishealth.models.Exercise;
 import com.calishealth.repository.ExerciseModerationHistoryRepository;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.ExerciseTreeEdgeRepository;
+import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.MuscleGroupRepository;
 import com.calishealth.repository.UserRepository;
 import com.calishealth.service.ExerciseVideoStorageService;
@@ -34,7 +35,8 @@ class SystemExerciseDetailTest {
                 mock(UserRepository.class),
                 mock(JdbcTemplate.class),
                 mock(ExerciseVideoStorageService.class),
-                mock(ExerciseTreeEdgeRepository.class));
+                mock(ExerciseTreeEdgeRepository.class),
+                mock(FitnessLevelRepository.class));
     }
 
     @Test

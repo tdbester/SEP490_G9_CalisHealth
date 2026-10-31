@@ -23,13 +23,14 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import { contentManagerApi } from "../api/contentManager";
+import { useLevelNames } from "../useLevelNames";
 import { useApiMutation, useApiQuery } from "../hooks";
 import { CONTENT_PATHS, ContentPageHeader } from "../components/ContentShared";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { DarkPill, TONE_STYLES } from "../components/ContentShared";
 
 const MUSCLE_OPTIONS = ["Chest", "Back", "Shoulders", "Arms", "Core", "Legs", "Glutes"];
 const CATEGORY_OPTIONS = ["REPS", "HOLD"];
-const LEVELS = ["Beginner", "Intermediate", "Advanced"];
 const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
@@ -52,7 +53,8 @@ const EMPTY_EXERCISE = {
   category: "REPS",
   value: 10,
   defaultSets: 3,
-  level: "Beginner",
+  // Filled with the first configured level once levels load (see ExerciseFormPage).
+  level: "",
   guide: "",
 };
 
@@ -61,7 +63,7 @@ const EMPTY_WORKOUT = {
   description: "",
   restSeconds: 60,
   type: "WORKOUT",
-  level: "Beginner",
+  level: "",
   exerciseCodes: [],
   planItems: [],
 };
@@ -253,6 +255,7 @@ export function ExerciseFields({
   onAnatomyImageChange,
   anatomyImagePreview,
 }) {
+  const { levels: LEVELS, activeLevels } = useLevelNames();
   return (
     <Stack spacing={2}>
       <Card variant="outlined">
@@ -366,11 +369,15 @@ export function ExerciseFields({
                   "& .MuiToggleButton-root": invalid.level ? { borderColor: "error.main" } : undefined,
                 }}
               >
-                {LEVELS.map((level) => (
-                  <ToggleButton key={level} value={level} sx={{ fontSize: 12.5 }}>
-                    {level}
-                  </ToggleButton>
-                ))}
+                {LEVELS.map((level) => {
+                  // An inactive level cannot receive exercises; an exercise already at one keeps showing it.
+                  const unavailable = !activeLevels.includes(level) && value.level !== level;
+                  return (
+                    <ToggleButton key={level} value={level} disabled={unavailable} sx={{ fontSize: 12.5 }}>
+                      {unavailable ? `${level} (inactive)` : level}
+                    </ToggleButton>
+                  );
+                })}
               </ToggleButtonGroup>
             </Box>
 
@@ -485,7 +492,17 @@ function PlanLevelInputs({ label, sets, reps, onSetsChange, onRepsChange }) {
   );
 }
 
-function ExercisePickerRow({ entry, onAdd }) {
+/** Small dot in the level's own colour, shown next to level names in menus. */
+function LevelDot({ tone }) {
+  const color = (TONE_STYLES[tone] ?? TONE_STYLES.neutral).color;
+  return <Box component="span" aria-hidden="true" sx={{ display: "inline-block", width: 8, height: 8, mr: 1, borderRadius: "50%", bgcolor: color, flexShrink: 0 }} />;
+}
+
+function ExercisePickerRow({ entry, onAdd, toneOf }) {
+  const level = entry.level || entry.difficultyLevel || "Intermediate";
+  const isStandardLevel = ["BEGINNER", "INTERMEDIATE", "ADVANCED"]
+    .includes(String(level).trim().toUpperCase());
+
   return (
     <Stack
       direction="row"
@@ -498,9 +515,19 @@ function ExercisePickerRow({ entry, onAdd }) {
           <Typography variant="body2" fontWeight={600} noWrap>
             {entry.name}
           </Typography>
-          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${getLevelBadgeStyle(entry.level || entry.difficultyLevel)}`}>
-            {entry.level || entry.difficultyLevel || "Intermediate"}
-          </span>
+          <Chip
+            size="small"
+            label={String(entry.type).toUpperCase() === "SKILL" ? "Skill" : "Health"}
+            color={String(entry.type).toUpperCase() === "SKILL" ? "secondary" : "info"}
+            sx={{ height: 18, fontSize: 10, fontWeight: 700 }}
+          />
+          {isStandardLevel ? (
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${getLevelBadgeStyle(level)}`}>
+              {level}
+            </span>
+          ) : (
+            <DarkPill tone={toneOf(level)} sx={{ height: 18, fontSize: 10 }}>{level}</DarkPill>
+          )}
         </Stack>
         <Typography variant="caption" color="text.secondary" noWrap display="block">
           {entry.muscleGroup}
@@ -535,6 +562,7 @@ export function WorkoutFields({
   selectedDay,
   onSelectedDayChange,
 }) {
+  const { levels: LEVELS, activeLevels, levelTone } = useLevelNames();
   const isDailyPlan = value.type === "DAILY_TRAINING_PLAN";
   const dayItems = value.planItems.filter((item) => item.dayOfWeek === selectedDay);
   const entryByCode = useMemo(() => {
@@ -641,11 +669,16 @@ export function WorkoutFields({
                 value={value.level}
                 onChange={(event) => onChange({ ...value, level: event.target.value })}
               >
-                {LEVELS.map((item) => (
-                  <MenuItem key={item} value={item}>
-                    {item}
-                  </MenuItem>
-                ))}
+                {LEVELS.map((item) => {
+                  // An inactive level cannot receive workouts; a workout already at one keeps showing it.
+                  const unavailable = !activeLevels.includes(item) && value.level !== item;
+                  return (
+                    <MenuItem key={item} value={item} disabled={unavailable}>
+                      <LevelDot tone={levelTone(item)} />
+                      {unavailable ? `${item} (inactive)` : item}
+                    </MenuItem>
+                  );
+                })}
               </TextField>
               <TextField
                 label="Rest between sets"
@@ -843,6 +876,7 @@ export function WorkoutFields({
               <MenuItem value="all">All levels</MenuItem>
               {LEVELS.map((item) => (
                 <MenuItem key={item} value={item.toLowerCase()}>
+                  <LevelDot tone={levelTone(item)} />
                   {item}
                 </MenuItem>
               ))}
@@ -863,6 +897,7 @@ export function WorkoutFields({
                 <ExercisePickerRow
                   key={entry.code}
                   entry={entry}
+                  toneOf={levelTone}
                   onAdd={() => addExercise(entry)}
                 />
               ))
@@ -962,6 +997,17 @@ export default function ExerciseFormPage() {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [error, setError] = useState(null);
   const [invalidFields, setInvalidFields] = useState([]);
+  const { levels: LEVELS, activeLevels } = useLevelNames();
+
+  // Default to the first configured level (lowest score range) until the user picks one. New exercises
+  // can only use active levels.
+  useEffect(() => {
+    if (LEVELS.length === 0) return;
+    if (activeLevels.length > 0) {
+      setExercise((current) => (activeLevels.includes(current.level) ? current : { ...current, level: activeLevels[0] }));
+    }
+    setWorkout((current) => (LEVELS.includes(current.level) ? current : { ...current, level: LEVELS[0] }));
+  }, [LEVELS, activeLevels]);
 
   const {
     data: systemExercises,
@@ -969,8 +1015,9 @@ export default function ExerciseFormPage() {
     error: exerciseLoadError,
   } = useApiQuery(() => contentManagerApi.exercises(), { enabled: kind === "workout" });
 
+  // Workouts are built from the system library only; user-submitted (CUSTOM) exercises are excluded.
   const allExercises = useMemo(
-    () => (Array.isArray(systemExercises) ? systemExercises : []),
+    () => (Array.isArray(systemExercises) ? systemExercises : []).filter((entry) => entry.source === "SYSTEM"),
     [systemExercises],
   );
 
@@ -1026,7 +1073,7 @@ export default function ExerciseFormPage() {
       const invalid = [];
       if (!exercise.name.trim() || exercise.name.length > 120) invalid.push("title");
       if (!["HEALTH", "SKILL"].includes(exercise.type)) invalid.push("type");
-      if (!LEVELS.includes(exercise.level)) invalid.push("level");
+      if (!activeLevels.includes(exercise.level)) invalid.push("level");
       if (selectedMuscles.length === 0) invalid.push("muscles");
       const exerciseValue = exercise.value === "" ? NaN : Number(exercise.value);
       if (!Number.isInteger(exerciseValue) || exerciseValue < 1 || exerciseValue > 3600) invalid.push("value");
@@ -1069,6 +1116,10 @@ export default function ExerciseFormPage() {
 
     if (!workout.name.trim() || !workout.description.trim()) {
       setError("Enter a workout title and description.");
+      return;
+    }
+    if (!activeLevels.includes(workout.level)) {
+      setError("Choose an active workout level.");
       return;
     }
     if (!Number.isInteger(workout.restSeconds) || workout.restSeconds < 0 || workout.restSeconds > 3600) {

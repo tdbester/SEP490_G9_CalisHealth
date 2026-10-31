@@ -2,9 +2,11 @@ package com.calishealth.service;
 
 import com.calishealth.dtos.ExerciseDtos.CreateWorkoutRequest;
 import com.calishealth.models.Exercise;
+import com.calishealth.models.FitnessLevel;
 import com.calishealth.models.User;
 import com.calishealth.models.WorkoutEntry;
 import com.calishealth.repository.ExerciseRepository;
+import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.UserRepository;
 import com.calishealth.repository.WorkoutRepository;
 import org.junit.jupiter.api.Test;
@@ -26,6 +28,7 @@ class WorkoutServiceTest {
     @Mock private WorkoutRepository workouts;
     @Mock private ExerciseRepository exercises;
     @Mock private UserRepository users;
+    @Mock private FitnessLevelRepository fitnessLevels;
     @InjectMocks private WorkoutService service;
 
     @Test
@@ -34,6 +37,9 @@ class WorkoutServiceTest {
         member.setId(1L);
         member.setEmail("member@example.test");
         when(users.findByEmail(member.getEmail())).thenReturn(Optional.of(member));
+        FitnessLevel level = new FitnessLevel();
+        level.setName("Beginner");
+        when(fitnessLevels.findByNameIgnoreCase("Beginner")).thenReturn(Optional.of(level));
 
         Exercise exercise = new Exercise();
         exercise.setCode("PUSH_UP");

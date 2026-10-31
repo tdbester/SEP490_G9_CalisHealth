@@ -5,6 +5,9 @@ import AdminLayout from "./components/layout/AdminLayout";
 import RoleHomeRoute from "./components/RoleHomeRoute";
 import ContentManagerLayout from "./components/layout/ContentManagerLayout";
 import Dashboard from "./pages/Dashboard";
+import HealthTracking from "./pages/HealthTracking";
+import WorkoutHistory from "./pages/WorkoutHistory";
+import PerformanceAnalytics from "./pages/PerformanceAnalytics";
 import DayStreak from "./pages/DayStreak";
 import Library from "./pages/Library";
 import LibraryExerciseListPage from "./pages/LibraryExerciseListPage";
@@ -32,12 +35,20 @@ import WorkoutDetailPage from "./pages/WorkoutDetailPage";
 import PendingModerationPage from "./pages/PendingModerationPage";
 import ExerciseModerationDetailPage from "./pages/ExerciseModerationDetailPage";
 import ExerciseApprovalHistoryPage from "./pages/ExerciseApprovalHistoryPage";
+import LevelBenchmarkCriteriaPage, {
+  LevelBenchmarkDetailPage,
+  LevelBenchmarkFormPage,
+} from "./pages/LevelBenchmarkCriteriaPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import VerifyResetPassword from "./pages/VerifyResetPassword";
 import ResetPassword from "./pages/ResetPassword";
+import SurveyFlow, { SurveyEntry } from "./pages/survey/SurveyFlow";
+import SurveyStepPage from "./pages/survey/SurveyStepPage";
+import SurveyResult from "./pages/survey/SurveyResult";
+import SurveyManagement from "./pages/content/SurveyManagement";
 
 function RootRoute() {
   const token = localStorage.getItem("token")?.trim();
@@ -72,14 +83,38 @@ export default function App() {
           <Route path="/" element={<RootRoute />} />
           <Route path="/dashboard" element={<ProtectedRoute><RoleHomeRoute /></ProtectedRoute>} />
           <Route path="/day-streak" element={memberPage(<DayStreak />)} />
+          <Route
+          path="/survey"
+          element={
+            <ProtectedRoute>
+              <SurveyFlow />
+            </ProtectedRoute>
+          }
+          >
+          <Route index element={<SurveyEntry />} />
+          <Route path=":stepSlug" element={<SurveyStepPage />} />
+          </Route>
+          <Route
+          path="/survey/result"
+          element={
+            <ProtectedRoute>
+              <SurveyResult />
+            </ProtectedRoute>
+          }
+          />
 
           <Route path="/content" element={<ContentManagerLayout />}>
-            <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<ContentManagerDashboard />} />
-            <Route path="surveys" element={<ContentManagerSectionPage section="surveys" />} />
-            <Route path="exercises" element={<ExerciseListPage />} />
-          <Route path="progression-rules" element={<ContentManagerSectionPage section="progressionRules" />} />
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<ContentManagerDashboard />} />
+          <Route path="surveys" element={<SurveyManagement />} />
+          <Route path="survey" element={<Navigate to="/content/surveys" replace />} />
+          <Route path="exercises" element={<ExerciseListPage />} />
           <Route path="level-criteria" element={<ContentManagerSectionPage section="levelCriteria" />} />
+          <Route path="progression-rules" element={<ContentManagerSectionPage section="progressionRules" />} />
+          <Route path="benchmark-criteria" element={<LevelBenchmarkCriteriaPage />} />
+          <Route path="benchmark-criteria/edit" element={<LevelBenchmarkFormPage />} />
+          <Route path="benchmark-criteria/:id/edit" element={<LevelBenchmarkFormPage />} />
+          <Route path="benchmark-criteria/:id" element={<LevelBenchmarkDetailPage />} />
           <Route path="exercises/pending-moderation" element={<PendingModerationPage />} />
           <Route path="exercises/approval-history" element={<ExerciseApprovalHistoryPage />} />
           <Route path="exercises/moderation/:code" element={<ExerciseModerationDetailPage />} />
@@ -123,7 +158,18 @@ export default function App() {
         <Route path="/library/custom-workouts/:id" element={memberPage(<CustomWorkoutDetailPage />)} />
         <Route path="/library/skills/tree" element={memberPage(<CalisthenicsExerciseTreePage />)} />
         <Route path="/explore" element={memberPage(<CalisthenicsExerciseTreePage />)} />
-        <Route path="/tracking" element={memberPage(<DayStreak />)} />
+        <Route
+          path="/tracking"
+          element={memberPage(<HealthTracking />)}
+        />
+        <Route
+          path="/tracking/workout-history"
+          element={memberPage(<WorkoutHistory />)}
+        />
+        <Route
+          path="/tracking/assessment"
+          element={memberPage(<PerformanceAnalytics />)}
+        />
         <Route path="/profile" element={<Navigate to="/" replace />} />
         <Route path="/settings" element={<Navigate to="/" replace />} />
 
