@@ -5,6 +5,7 @@ import com.calishealth.models.AuthToken;
 import com.calishealth.models.AuthToken.TokenType;
 import com.calishealth.models.User;
 import com.calishealth.repository.TokenRepository;
+import com.calishealth.repository.UserActivityRepository;
 import com.calishealth.repository.UserRepository;
 import com.calishealth.security.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class AuthService {
     private final PasswordEncoder encoder;
     private final JwtService jwt;
     private final EmailService mail;
+    private final UserActivityRepository activity;
 
     @Value("${app.frontend-url}") private String frontendUrl;
 
@@ -96,12 +98,15 @@ public class AuthService {
     public AuthResponse login(LoginRequest r) {
         User u = users.findByEmail(r.email().trim().toLowerCase())
                 .orElseThrow(() -> err(HttpStatus.UNAUTHORIZED, "Incorrect email or password"));
-        if (!encoder.matches(r.password(), u.getPassword()))
+        if (!encoder.matches(r.password(), u.getPassword())) {
+            activity.logEvent(u.getId(), "LOGIN", "Failed sign-in attempt (wrong password)", "FAILED");
             throw err(HttpStatus.UNAUTHORIZED, "Incorrect email or password");
+        }
         if (u.isBlocked())
             throw err(HttpStatus.FORBIDDEN, "Your account has been blocked");
         if (!u.isEnabled())
             throw err(HttpStatus.FORBIDDEN, "Account email is not verified. Please check your inbox");
+        activity.logEvent(u.getId(), "LOGIN", "Signed in successfully", "SUCCESS");
         return new AuthResponse(jwt.generate(u.getEmail()), u.getEmail(), u.getFullName(), u.getRole().name(),
                 u.isMustChangePassword());
     }

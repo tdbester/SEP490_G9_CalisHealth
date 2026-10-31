@@ -115,6 +115,8 @@ const headCellSx = {
   whiteSpace: "nowrap",
 };
 const bodyCellSx = { borderBottom: `1px solid ${CM.border}`, fontSize: 13.5 };
+// The theme centres every table cell; the name column is left-aligned so avatar, name and USR id line up.
+const userCellSx = { ...bodyCellSx, textAlign: "left" };
 
 /** Admin user management (Figma users-list 1, node 710:520). */
 export default function AdminUsersPage() {
@@ -199,16 +201,6 @@ export default function AdminUsersPage() {
       const res = await adminUsersApi.setActive(ids, active);
       setToast(`${res.affected} user(s) ${active ? "activated" : "deactivated"}.`);
       setSelected(new Set());
-      load();
-    } catch (err) {
-      setError(apiErrorMessage(err));
-    }
-  };
-
-  const rowToggleStatus = async (u) => {
-    try {
-      await adminUsersApi.setActive([u.id], !u.active);
-      setToast(`${u.fullName} ${u.active ? "deactivated" : "activated"}.`);
       load();
     } catch (err) {
       setError(apiErrorMessage(err));
@@ -428,12 +420,12 @@ export default function AdminUsersPage() {
                   inputProps={{ "aria-label": "Select all users on this page" }}
                 />
               </TableCell>
-              <TableCell sx={headCellSx}>USER / ATHLETE</TableCell>
+              <TableCell sx={{ ...headCellSx, textAlign: "left" }}>USER / ATHLETE</TableCell>
               <TableCell sx={headCellSx}>CONTACT EMAIL</TableCell>
               <TableCell sx={headCellSx}>ROLE</TableCell>
               <TableCell sx={headCellSx}>STATUS</TableCell>
               <TableCell sx={headCellSx}>JOINED DATE</TableCell>
-              <TableCell sx={headCellSx} align="right">ACTIONS</TableCell>
+              <TableCell sx={headCellSx}>ACTIONS</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -457,8 +449,8 @@ export default function AdminUsersPage() {
                           inputProps={{ "aria-label": `Select ${u.fullName}` }}
                         />
                       </TableCell>
-                      <TableCell sx={bodyCellSx}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                      <TableCell sx={userCellSx}>
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 1.5 }}>
                           <Box
                             aria-hidden
                             sx={{
@@ -476,8 +468,8 @@ export default function AdminUsersPage() {
                           >
                             {initials(u.fullName)}
                           </Box>
-                          <Box sx={{ minWidth: 0 }}>
-                            <Typography sx={{ fontSize: 14, fontWeight: 600 }} noWrap>
+                          <Box sx={{ minWidth: 0, display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                            <Typography sx={{ fontSize: 14, fontWeight: 600, textAlign: "left", maxWidth: "100%" }} noWrap>
                               {u.fullName}
                             </Typography>
                             <Box sx={{ mt: 0.25 }}>
@@ -502,15 +494,15 @@ export default function AdminUsersPage() {
                         )}
                       </TableCell>
                       <TableCell sx={{ ...bodyCellSx, color: CM.textMuted }}>{fmtDate(u.createdAt)}</TableCell>
-                      <TableCell sx={bodyCellSx} align="right">
+                      <TableCell sx={bodyCellSx}>
                         <Button
                           size="small"
                           variant="outlined"
-                          color={u.active ? "secondary" : "primary"}
-                          onClick={() => rowToggleStatus(u)}
-                          sx={{ borderRadius: "8px" }}
+                          onClick={() => navigate(`/admin/users/${u.id}`)}
+                          aria-label={`View details of ${u.fullName}`}
+                          sx={{ borderRadius: "8px", minWidth: 84 }}
                         >
-                          {u.active ? "Deactivate" : "Activate"}
+                          Details
                         </Button>
                       </TableCell>
                     </TableRow>

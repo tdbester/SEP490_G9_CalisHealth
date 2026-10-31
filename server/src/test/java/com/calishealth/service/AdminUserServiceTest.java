@@ -3,6 +3,7 @@ package com.calishealth.service;
 import com.calishealth.dtos.AdminUserDtos.*;
 import com.calishealth.models.User;
 import com.calishealth.models.UserRole;
+import com.calishealth.repository.UserActivityRepository;
 import com.calishealth.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,7 +18,8 @@ import static org.mockito.Mockito.*;
 class AdminUserServiceTest {
     private final UserRepository users = mock(UserRepository.class);
     private final PasswordEncoder encoder = mock(PasswordEncoder.class);
-    private final AdminUserService service = new AdminUserService(users, encoder);
+    private final UserActivityRepository activity = mock(UserActivityRepository.class);
+    private final AdminUserService service = new AdminUserService(users, encoder, activity);
 
     private static User user(long id, String email, boolean enabled) {
         User u = new User();
@@ -41,7 +43,7 @@ class AdminUserServiceTest {
             u.setId(7L);
             return u;
         });
-        service.create(new CreateUserRequest("Staff", email, role));
+        service.create("admin@calishealth.com", new CreateUserRequest("Staff", email, role));
         var saved = org.mockito.ArgumentCaptor.forClass(User.class);
         verify(users).saveAndFlush(saved.capture());
         return saved.getValue();
@@ -50,7 +52,7 @@ class AdminUserServiceTest {
     @Test
     void createRejectsMemberRole() {
         var req = new CreateUserRequest("Bob", "bob@x.com", UserRole.MEMBER);
-        assertThrows(ResponseStatusException.class, () -> service.create(req));
+        assertThrows(ResponseStatusException.class, () -> service.create("admin@calishealth.com", req));
         verify(users, never()).saveAndFlush(any());
     }
 
@@ -58,7 +60,7 @@ class AdminUserServiceTest {
     void createRejectsDuplicateEmail() {
         when(users.existsByEmail("bob@x.com")).thenReturn(true);
         var req = new CreateUserRequest("Bob", " Bob@X.com ", UserRole.ADMIN);
-        assertThrows(ResponseStatusException.class, () -> service.create(req));
+        assertThrows(ResponseStatusException.class, () -> service.create("admin@calishealth.com", req));
     }
 
     @Test
@@ -84,7 +86,7 @@ class AdminUserServiceTest {
         when(encoder.encode("Test@123")).thenReturn("HASH");
         when(users.saveAndFlush(any(User.class)))
                 .thenThrow(new org.springframework.dao.DataIntegrityViolationException("dup"));
-        var ex = assertThrows(ResponseStatusException.class, () -> service.create(
+        var ex = assertThrows(ResponseStatusException.class, () -> service.create("admin@calishealth.com", 
                 new CreateUserRequest("Cm", "cm@x.com", UserRole.CONTENT_MANAGER)));
         assertEquals(409, ex.getStatusCode().value());
     }
@@ -143,5 +145,84 @@ class AdminUserServiceTest {
     @Test
     void invalidSortIsRejected() {
         assertThrows(ResponseStatusException.class, () -> service.list(null, null, null, null, "bogus", 0, 10));
+    }
+
+    // ---- user detail & activity log ----
+
+    private static User withRole(long id, String email, UserRole role, boolean enabled) {
+        User u = user(id, email, enabled);
+        u.setRole(role);
+        return u;
+    }
+
+    @Test
+    void creatingAccountAndTogglingStatusAreLoggedAsAdminActions() {
+        User admin = withRole(1, "admin@calishealth.com", UserRole.ADMIN, true);
+        when(users.findByEmail("admin@calishealth.com")).thenReturn(java.util.Optional.of(admin));
+        createAndCapture("new@x.com", UserRole.ADMIN);
+        verify(activity).logAdminAction(1L, 7L, AdminActionType.CREATE_ACCOUNT);
+
+        when(users.findAllById(List.of(2L, 3L)))
+                .thenReturn(List.of(user(2, "a@x.com", true), user(3, "b@x.com", false)));
+        service.setActive("admin@calishealth.com", new BulkStatusRequest(List.of(2L, 3L), false));
+        // Only the user whose state really changed is logged.
+        verify(activity).logAdminAction(1L, 2L, AdminActionType.DEACTIVATE);
+        verify(activity, never()).logAdminAction(eq(1L), eq(3L), any());
+    }
+
+    @Test
+    void detailOfUnknownUserIsNotFound() {
+        when(users.findById(99L)).thenReturn(java.util.Optional.empty());
+        var ex = assertThrows(ResponseStatusException.class, () -> service.detail("admin@calishealth.com", 99L));
+        assertEquals(404, ex.getStatusCode().value());
+    }
+
+    @Test
+    void detailFlagsOwnAccountAndDefaultPassword() {
+        User admin = withRole(1, "admin@calishealth.com", UserRole.ADMIN, true);
+        admin.setPassword("HASH");
+        when(users.findById(1L)).thenReturn(java.util.Optional.of(admin));
+        when(encoder.matches("Test@123", "HASH")).thenReturn(true);
+        when(activity.findAdminInfo(1L)).thenReturn(new AdminInfo(6, 12, 4, 9, 3, 5));
+
+        UserDetail own = service.detail("Admin@calishealth.com", 1L);
+        assertTrue(own.self());
+        assertEquals("DEFAULT", own.passwordState());
+        assertEquals("USR-00001", own.userCode());
+        assertEquals(12, own.admin().usersDeactivated());
+        assertNull(own.member());
+        assertNull(own.content());
+
+        assertFalse(service.detail("other@calishealth.com", 1L).self());
+    }
+
+    @Test
+    void memberDetailHasNoPasswordState() {
+        User member = withRole(5, "m@x.com", UserRole.MEMBER, true);
+        when(users.findById(5L)).thenReturn(java.util.Optional.of(member));
+        when(activity.findMemberInfo(5L)).thenReturn(java.util.Optional.empty());
+
+        UserDetail d = service.detail("admin@calishealth.com", 5L);
+        assertNull(d.passwordState());
+        assertNull(d.member());
+        verify(encoder, never()).matches(any(), any());
+    }
+
+    @Test
+    void roleSpecificActivityRejectsOtherRoles() {
+        when(users.findById(5L)).thenReturn(java.util.Optional.of(withRole(5, "m@x.com", UserRole.MEMBER, true)));
+        assertThrows(ResponseStatusException.class, () -> service.adminActions(5L, null, null, 0, 5));
+        assertThrows(ResponseStatusException.class, () -> service.contentActivity(5L, null, null, 0, 5));
+
+        when(users.findById(6L)).thenReturn(java.util.Optional.of(withRole(6, "a@x.com", UserRole.ADMIN, true)));
+        assertThrows(ResponseStatusException.class, () -> service.workoutActivity(6L, null, null, null, null, null, 0, 5));
+        verifyNoInteractions(activity);
+    }
+
+    @Test
+    void activityPagingIsClamped() {
+        when(users.findById(5L)).thenReturn(java.util.Optional.of(withRole(5, "m@x.com", UserRole.MEMBER, true)));
+        service.workoutActivity(5L, null, null, null, null, null, -3, 5000);
+        verify(activity).findWorkoutActivity(5L, null, null, null, null, null, 0, AdminUserService.MAX_PAGE_SIZE);
     }
 }

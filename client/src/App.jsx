@@ -7,6 +7,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminSectionPage from "./pages/AdminSectionPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminCreateStaffPage from "./pages/AdminCreateStaffPage";
+import AdminUserDetailPage from "./pages/AdminUserDetailPage";
 import Dashboard from "./pages/Dashboard";
 import HealthTracking from "./pages/HealthTracking";
 import WorkoutHistory from "./pages/WorkoutHistory";
@@ -105,6 +106,7 @@ export default function App() {
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="users/create" element={<AdminCreateStaffPage />} />
+          <Route path="users/:id" element={<AdminUserDetailPage />} />
           <Route path="create" element={<Navigate to="/admin/users/create" replace />} />
           <Route path="notifications" element={<AdminSectionPage title="Notifications" />} />
           <Route path="storage" element={<AdminSectionPage title="Media storage & infrastructure" />} />

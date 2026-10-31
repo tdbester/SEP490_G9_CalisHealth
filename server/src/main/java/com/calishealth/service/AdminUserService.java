@@ -3,6 +3,7 @@ package com.calishealth.service;
 import com.calishealth.dtos.AdminUserDtos.*;
 import com.calishealth.models.User;
 import com.calishealth.models.UserRole;
+import com.calishealth.repository.UserActivityRepository;
 import com.calishealth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -37,6 +38,7 @@ public class AdminUserService {
 
     private final UserRepository users;
     private final PasswordEncoder encoder;
+    private final UserActivityRepository activity;
 
     public static String userCode(Long id) {
         return String.format("USR-%05d", id);
@@ -119,7 +121,7 @@ public class AdminUserService {
     }
 
     @Transactional
-    public UserItem create(CreateUserRequest r) {
+    public UserItem create(String actingEmail, CreateUserRequest r) {
         if (r.role() == UserRole.MEMBER)
             throw err(HttpStatus.BAD_REQUEST, "Only Admin or Content Manager accounts can be created here");
         String email = r.email().trim().toLowerCase(Locale.ROOT);
@@ -134,12 +136,16 @@ public class AdminUserService {
         u.setBlocked(false);
         // Only content managers must replace the default password on first login; admins keep it.
         u.setMustChangePassword(r.role() == UserRole.CONTENT_MANAGER);
+        User saved;
         try {
-            return toItem(users.saveAndFlush(u));
+            saved = users.saveAndFlush(u);
         } catch (DataIntegrityViolationException e) {
             // Two admins created the same email at the same time; the unique index caught it.
             throw err(HttpStatus.CONFLICT, "Email is already registered");
         }
+        users.findByEmail(actingEmail.toLowerCase(Locale.ROOT)).ifPresent(admin ->
+                activity.logAdminAction(admin.getId(), saved.getId(), AdminActionType.CREATE_ACCOUNT));
+        return toItem(saved);
     }
 
     /** Activate (unblock) or deactivate (block) users. An admin cannot deactivate their own account. */
@@ -152,6 +158,8 @@ public class AdminUserService {
         if (!r.active() && found.stream().anyMatch(u -> u.getEmail().equalsIgnoreCase(actingEmail)))
             throw err(HttpStatus.BAD_REQUEST, "You cannot deactivate your own account");
 
+        Long adminId = users.findByEmail(actingEmail.toLowerCase(Locale.ROOT)).map(User::getId).orElse(null);
+        AdminActionType action = r.active() ? AdminActionType.ACTIVATE : AdminActionType.DEACTIVATE;
         int affected = 0;
         for (User u : found) {
             if (u.isActive() != r.active()) {
@@ -162,9 +170,70 @@ public class AdminUserService {
                     u.setBlocked(true);
                 }
                 affected++;
+                activity.logAdminAction(adminId, u.getId(), action);
             }
         }
         users.saveAll(found);
         return new BulkResult(affected);
+    }
+
+    // ---------------------------------------------------------------------------------
+    // User detail & activity log
+    // ---------------------------------------------------------------------------------
+
+    private User requireUser(Long id) {
+        return users.findById(id).orElseThrow(() -> err(HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+    private User requireRole(Long id, UserRole... allowed) {
+        User u = requireUser(id);
+        for (UserRole r : allowed) if (u.getRole() == r) return u;
+        throw err(HttpStatus.BAD_REQUEST, "This activity is not available for " + u.getRole().name() + " accounts");
+    }
+
+    private static int clampSize(int size) {
+        return Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+    }
+
+    @Transactional(readOnly = true)
+    public UserDetail detail(String actingEmail, Long id) {
+        User u = requireUser(id);
+        boolean staff = u.getRole() != UserRole.MEMBER;
+        String passwordState = staff
+                ? (encoder.matches(DEFAULT_STAFF_PASSWORD, u.getPassword()) ? "DEFAULT" : "CHANGED")
+                : null;
+        MemberInfo member = u.getRole() == UserRole.MEMBER ? activity.findMemberInfo(id).orElse(null) : null;
+        ContentInfo content = u.getRole() == UserRole.CONTENT_MANAGER ? activity.findContentInfo(id) : null;
+        AdminInfo admin = u.getRole() == UserRole.ADMIN ? activity.findAdminInfo(id) : null;
+        return new UserDetail(u.getId(), userCode(u.getId()), u.getFullName(), u.getEmail(), u.getRole().name(),
+                u.isActive(), u.getEmail().equalsIgnoreCase(actingEmail), u.getCreatedAt(),
+                activity.findLastActiveAt(id), passwordState, member, content, admin);
+    }
+
+    @Transactional(readOnly = true)
+    public ActivityPage<WorkoutActivityItem> workoutActivity(Long id, String q, ActivityKind kind, String level,
+                                                             ActivityStatus status, LocalDate date, int page, int size) {
+        requireRole(id, UserRole.MEMBER);
+        return activity.findWorkoutActivity(id, q, kind, level, status, date, Math.max(page, 0), clampSize(size));
+    }
+
+    @Transactional(readOnly = true)
+    public ActivityPage<SystemLogItem> systemLogs(Long id, LogEventType type, LocalDate date, int page, int size) {
+        requireUser(id);
+        return activity.findSystemLogs(id, type, date, Math.max(page, 0), clampSize(size));
+    }
+
+    @Transactional(readOnly = true)
+    public ActivityPage<AdminActionItem> adminActions(Long id, AdminActionType action, LocalDate date,
+                                                      int page, int size) {
+        requireRole(id, UserRole.ADMIN);
+        return activity.findAdminActions(id, action, date, Math.max(page, 0), clampSize(size));
+    }
+
+    @Transactional(readOnly = true)
+    public ActivityPage<ContentActivityItem> contentActivity(Long id, ContentItemType type, ContentActionType action,
+                                                             int page, int size) {
+        requireRole(id, UserRole.CONTENT_MANAGER);
+        return activity.findContentActivity(id, type, action, Math.max(page, 0), clampSize(size));
     }
 }
