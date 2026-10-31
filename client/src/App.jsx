@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+﻿import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "./components/layout/AdminLayout";
 import RoleHomeRoute from "./components/RoleHomeRoute";
 import ContentManagerLayout from "./components/layout/ContentManagerLayout";
@@ -55,7 +55,7 @@ export default function App() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/change-password" element={<ChangePassword />} />
 
-        {/* Onboarding survey của member (sau khi đăng nhập); URL theo Figma: /survey/body-information … */}
+        {/* Onboarding survey cá»§a member (sau khi Ä‘Äƒng nháº­p); URL theo Figma: /survey/body-information â€¦ */}
         <Route
           path="/survey"
           element={
@@ -84,7 +84,7 @@ export default function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<ContentManagerDashboard />} />
           <Route path="surveys" element={<SurveyManagement />} />
-          {/* URL cũ của màn Survey management */}
+          {/* URL cÅ© cá»§a mÃ n Survey management */}
           <Route path="survey" element={<Navigate to="/content/surveys" replace />} />
           <Route path="exercises" element={<ExerciseListPage />} />
           <Route path="progression-rules" element={<ProgressionRulesPage />} />

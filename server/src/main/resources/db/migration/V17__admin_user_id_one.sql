@@ -1,7 +1,7 @@
--- V16: Move the seeded ADMIN account (admin@calishealth.com) to id = 1.
+-- V17: Move the seeded ADMIN account (admin@calishealth.com) to id = 1.
 -- Every user whose id is lower than the admin's id is shifted up by 1 (keeping their relative order),
 -- so nobody is swapped and no account is deleted. Users above the admin's id are untouched.
--- V15 is left untouched (it is already applied; editing it would break Flyway checksum validation).
+-- V16 is left untouched (it is already applied; editing it would break Flyway checksum validation).
 --
 -- Example: admin 13, others 1,2,3,4,5,11,12  ->  admin 1, others 2,3,4,5,6,12,13.
 --

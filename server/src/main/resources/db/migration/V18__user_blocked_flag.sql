@@ -1,4 +1,4 @@
--- V17: Separate "blocked by an admin" from "email not verified yet".
+-- V18: Separate "blocked by an admin" from "email not verified yet".
 -- Until now users.enabled meant both, so login could not tell the two cases apart.
 --   enabled = email verified (or created by an admin)
 --   blocked = an admin deactivated the account
