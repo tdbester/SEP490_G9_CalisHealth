@@ -32,6 +32,9 @@ public class SessionExerciseResult {
     @Column(name = "active_seconds", nullable = false)
     private Integer activeSeconds;
 
+    @Column(name = "clean_seconds", nullable = false)
+    private Integer cleanSeconds = 0;
+
     @Column(name = "workout_session_id", nullable = false)
     private Long workoutSessionId;
 

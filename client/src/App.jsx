@@ -14,7 +14,10 @@ import WorkoutHistory from "./pages/WorkoutHistory";
 import PerformanceAnalytics from "./pages/PerformanceAnalytics";
 import DayStreak from "./pages/DayStreak";
 import ContentManagerDashboard from "./pages/ContentManagerDashboard";
-import ContentManagerSectionPage from "./pages/ContentManagerSectionPage";
+import ProgressionRulesPage, {
+  ProgressionRuleDetailPage,
+  ProgressionRuleFormPage,
+} from "./pages/ProgressionRulesPage";
 import ExerciseListPage from "./pages/ExerciseListPage";
 import SystemExerciseDetailPage from "./pages/SystemExerciseDetailPage";
 import ExerciseFormPage from "./pages/ExerciseFormPage";
@@ -84,7 +87,10 @@ export default function App() {
           {/* URL cũ của màn Survey management */}
           <Route path="survey" element={<Navigate to="/content/surveys" replace />} />
           <Route path="exercises" element={<ExerciseListPage />} />
-          <Route path="progression-rules" element={<ContentManagerSectionPage section="progressionRules" />} />
+          <Route path="progression-rules" element={<ProgressionRulesPage />} />
+          <Route path="progression-rules/new" element={<ProgressionRuleFormPage />} />
+          <Route path="progression-rules/:id/edit" element={<ProgressionRuleFormPage />} />
+          <Route path="progression-rules/:id" element={<ProgressionRuleDetailPage />} />
           <Route path="benchmark-criteria" element={<LevelBenchmarkCriteriaPage />} />
           <Route path="benchmark-criteria/edit" element={<LevelBenchmarkFormPage />} />
           <Route path="benchmark-criteria/:id/edit" element={<LevelBenchmarkFormPage />} />

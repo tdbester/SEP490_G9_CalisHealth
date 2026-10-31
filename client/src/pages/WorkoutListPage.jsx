@@ -22,6 +22,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { keyframes } from "@mui/material/styles";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
@@ -42,6 +43,15 @@ import {
 import { CM } from "../theme-content";
 import "./WorkoutListPage.css";
 
+const rise = keyframes`
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+const enter = (delay = 0) => ({
+  animation: `${rise} .45s ease-out ${delay}ms both`,
+  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+});
+
 const BREADCRUMB = [
   { label: "Content manager", to: CONTENT_PATHS.dashboard },
   { label: "Exercise & Workout Management", to: CONTENT_PATHS.exercises },
@@ -61,7 +71,6 @@ function StatusDot({ active }) {
           height: 7,
           borderRadius: "50%",
           bgcolor: active ? CM.green : CM.pink,
-          boxShadow: `0 0 9px ${active ? CM.green : CM.pink}`,
         }}
       />
       <Typography variant="caption" sx={{ color: active ? CM.green : CM.pink, fontWeight: 600 }}>
@@ -174,22 +183,22 @@ export default function WorkoutListPage() {
           gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" },
         }}
       >
-        <SummaryCard label="All workouts" count={workouts.length} detail="workouts" />
-        <SummaryCard
+        <Box sx={enter(0)}><SummaryCard label="All workouts" count={workouts.length} detail="workouts" /></Box>
+        <Box sx={enter(80)}><SummaryCard
           label="Active"
           tone="success"
           count={activeCount}
           detail="workouts"
-        />
-        <SummaryCard
+        /></Box>
+        <Box sx={enter(160)}><SummaryCard
           label="Inactive"
           tone="error"
           count={workouts.length - activeCount}
           detail="workouts"
-        />
+        /></Box>
       </Box>
 
-      <Card className="workout-list-table-card" sx={{ mt: 2 }}>
+      <Card className="workout-list-table-card" sx={{ mt: 2.5, overflow: "hidden", ...enter(220) }}>
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={1.5}
@@ -268,7 +277,7 @@ export default function WorkoutListPage() {
                 onClick={() => refetch()}
                 disabled={isFetching}
                 aria-label="Refresh workout list"
-                sx={{ border: 1, borderColor: "divider", borderRadius: 2 }}
+                sx={{ border: 1, borderColor: "divider", borderRadius: 2, transition: "all .2s ease", "&:hover": { borderColor: CM.violetBright, bgcolor: "rgba(139,92,246,0.1)" } }}
               >
                 {isFetching ? <CircularProgress size={18} /> : <RefreshRoundedIcon fontSize="small" />}
               </IconButton>
@@ -322,8 +331,13 @@ export default function WorkoutListPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {rows.map((workout) => (
-                    <TableRow key={workout.code} hover sx={{ "& td": { borderColor: CM.border, py: 1.5 } }}>
+                  {rows.map((workout, idx) => (
+                    <TableRow key={workout.code} hover sx={{
+                      "& td": { borderColor: CM.border, py: 1.5 },
+                      transition: "all .2s ease",
+                      "&:hover": { bgcolor: "rgba(139,92,246,0.06)" },
+                      ...enter(240 + idx * 25),
+                    }}>
                       <TableCell sx={{ width: 300, textAlign: "left !important", pl: 3, "& > .MuiStack-root": { justifyContent: "flex-start" } }}>
                         <Stack direction="row" spacing={1.25} alignItems="center" justifyContent="flex-start" sx={{ width: "100%" }}>
                           <Box className="workout-row-mark" aria-hidden="true">
@@ -387,12 +401,15 @@ export default function WorkoutListPage() {
                   ))}
                   {rows.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} sx={{ py: 6, textAlign: "center" }}>
-                        <Typography variant="body2" color="text.secondary">
-                          {workouts.length
-                            ? "No workouts match this search."
-                            : "No workouts yet. Create your first workout to get started."}
-                        </Typography>
+                      <TableCell colSpan={7} sx={{ py: 6, textAlign: "center" }}>
+                        <Stack alignItems="center" spacing={1}>
+                          <FitnessCenterRoundedIcon sx={{ fontSize: 44, color: CM.textDim, opacity: 0.4 }} />
+                          <Typography variant="body2" color="text.secondary">
+                            {workouts.length
+                              ? "No workouts match this search."
+                              : "No workouts yet. Create your first workout to get started."}
+                          </Typography>
+                        </Stack>
                       </TableCell>
                     </TableRow>
                   )}
