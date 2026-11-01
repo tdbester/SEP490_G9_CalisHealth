@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { createPersonalExercise } from "../api/library";
+import { checkPersonalExerciseText, createPersonalExercise } from "../api/library";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import {
   getApiErrorMessage,
   validatePersonalExercise,
   validateVideoFile,
 } from "./libraryFormValidation";
-import { LIBRARY_TEXT_WARNING, scanLibraryText } from "./libraryTextModeration";
 
 export default function CreatePersonalExercisePage() {
   const navigate = useNavigate();
@@ -54,6 +53,8 @@ export default function CreatePersonalExercisePage() {
 
   // Content Check states (System automated scanning)
   const [textCheckStatus, setTextCheckStatus] = useState("idle"); // 'idle' | 'checking' | 'passed' | 'failed'
+  const [flaggedWords, setFlaggedWords] = useState([]);
+  const [textCheckError, setTextCheckError] = useState("");
   const [videoCheckStatus, setVideoCheckStatus] = useState("idle"); // 'idle' | 'checking' | 'passed' | 'failed'
   const [isCreating, setIsCreating] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -72,6 +73,27 @@ export default function CreatePersonalExercisePage() {
     Boolean((hasSubmitted || touchedFields[field]) && validationErrors[field]);
   const markFieldTouched = (field) =>
     setTouchedFields((current) => ({ ...current, [field]: true }));
+  const resetTextCheck = () => {
+    setTextCheckStatus("idle");
+    setFlaggedWords([]);
+    setTextCheckError("");
+  };
+  const getTextCheckErrorMessage = (error) => {
+    const status = error?.response?.status;
+    if (!error?.response) {
+      return "Cannot reach the text-check API. Make sure the backend is running, then try again.";
+    }
+    if (status === 404) {
+      return "The text-check API is not available. Restart the backend so it loads the latest endpoint and database migration.";
+    }
+    const responseData = error.response.data;
+    const detail = typeof responseData === "string"
+      ? responseData
+      : responseData?.message;
+    return detail
+      ? `Text check failed (HTTP ${status}): ${detail}`
+      : `Text check failed (HTTP ${status}). Please check the backend and try again.`;
+  };
   const focusFirstInvalidField = (errors) => {
     if (targetMuscles.length === 0) {
       const muscleGroupField = document.getElementById("exercise-muscle-groups");
@@ -93,17 +115,20 @@ export default function CreatePersonalExercisePage() {
 
   // Step handlers
   const handleStepChange = (index, value) => {
+    resetTextCheck();
     setGuideSteps((prev) =>
       prev.map((step, idx) => (idx === index ? value : step))
     );
   };
 
   const handleAddStep = () => {
+    resetTextCheck();
     setGuideSteps((prev) => [...prev, ""]);
   };
 
   const handleRemoveStep = (index) => {
     if (guideSteps.length <= 1) return;
+    resetTextCheck();
     setGuideSteps((prev) => prev.filter((_, idx) => idx !== index));
   };
 
@@ -153,6 +178,7 @@ export default function CreatePersonalExercisePage() {
   };
 
   const toggleMuscleGroup = (muscleGroup) => {
+    resetTextCheck();
     setTargetMuscles((current) => {
       const selected = current.includes(muscleGroup)
         ? current.filter((value) => value !== muscleGroup)
@@ -175,18 +201,27 @@ export default function CreatePersonalExercisePage() {
       focusFirstInvalidField(validationErrors);
       return;
     }
-    if (scanLibraryText([title, description, ...guideSteps, ...targetMuscles])) {
-      setErrorMessage(LIBRARY_TEXT_WARNING);
-      toast.error(LIBRARY_TEXT_WARNING, { style: { fontFamily: "Arial, sans-serif" } });
-      return;
-    }
     submissionLock.current = true;
     setErrorMessage("");
+    setTextCheckError("");
     setIsCreating(true);
     setTextCheckStatus("checking");
-    setVideoCheckStatus("checking");
 
+    let textScanComplete = false;
     try {
+      const textCheck = await checkPersonalExerciseText({
+        title,
+        description,
+        guideSteps,
+        targetMuscle: targetMuscles.join(", "),
+      });
+      textScanComplete = true;
+      const matches = Array.isArray(textCheck.flaggedWords) ? textCheck.flaggedWords : [];
+      setFlaggedWords(matches);
+      setTextCheckStatus(matches.length > 0 ? "failed" : "passed");
+      if (matches.length > 0) return;
+
+      setVideoCheckStatus("checking");
       const created = await createPersonalExercise({
         title: title.trim(),
         description: description.trim(),
@@ -217,12 +252,23 @@ export default function CreatePersonalExercisePage() {
         navigate("/library/personal?status=pending");
       }, 1000);
     } catch (err) {
-      setTextCheckStatus("failed");
-      setVideoCheckStatus("failed");
+      if (!textScanComplete) {
+        setTextCheckStatus("failed");
+        setTextCheckError(getTextCheckErrorMessage(err));
+        return;
+      }
       const responseData = err?.response?.data;
       const errorMsg = typeof responseData === "string"
         ? responseData
         : responseData?.message || getApiErrorMessage(err, "Could not save the exercise.");
+      const flaggedWordsMatch = errorMsg.match(/Flagged words:\s*(.+)$/i);
+      if (flaggedWordsMatch) {
+        setFlaggedWords(flaggedWordsMatch[1].split(",").map((word) => word.trim()).filter(Boolean));
+        setTextCheckStatus("failed");
+        setVideoCheckStatus("idle");
+        return;
+      }
+      setVideoCheckStatus("failed");
       console.error("Create exercise failed:", err?.response || err);
       setErrorMessage(errorMsg);
       toast.error(errorMsg);
@@ -294,6 +340,7 @@ export default function CreatePersonalExercisePage() {
             maxLength={50}
             value={title}
             onChange={(e) => {
+              resetTextCheck();
               setTitle(e.target.value);
             }}
             onBlur={() => {
@@ -321,6 +368,7 @@ export default function CreatePersonalExercisePage() {
             maxLength={300}
             value={description}
             onChange={(e) => {
+              resetTextCheck();
               setDescription(e.target.value);
             }}
             onBlur={() => {
@@ -756,6 +804,10 @@ export default function CreatePersonalExercisePage() {
                 </div>
               ) : textCheckStatus === "checking" ? (
                 <div className="w-4 h-4 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+              ) : textCheckStatus === "failed" ? (
+                <div className="flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-white">
+                  <span className="text-[10px] font-bold leading-none">!</span>
+                </div>
               ) : (
                 <div className="w-4 h-4 rounded-full border-2 border-[#9d7aff] bg-[#1b1438] shadow-[0_0_0_3px_rgba(100,59,246,0.14)]" />
               )}
@@ -774,11 +826,36 @@ export default function CreatePersonalExercisePage() {
                     Passed
                   </span>
                 )}
+                {textCheckStatus === "failed" && (
+                  <span className="text-[10px] text-rose-300 font-semibold">
+                    {textCheckError ? "Check unavailable" : "Needs revision"}
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5">
                 Title, description and guide are scanned for inappropriate
                 words.
               </p>
+              {flaggedWords.length > 0 && (
+                <div role="alert" className="mt-2 rounded-lg border border-rose-800/70 bg-rose-950/40 p-2.5 text-[11px] text-rose-200">
+                  <p className="font-semibold">Banned words found — remove or replace these words:</p>
+                  <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                    {flaggedWords.map((word) => (
+                      <li
+                        key={word}
+                        className="rounded-md border border-rose-700/70 bg-rose-900/50 px-2 py-1 font-bold text-rose-100"
+                      >
+                        {word}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {textCheckError && (
+                <p role="alert" className="mt-1.5 text-[11px] text-rose-300">
+                  {textCheckError}
+                </p>
+              )}
             </div>
           </div>
 
@@ -830,10 +907,9 @@ export default function CreatePersonalExercisePage() {
           </div>
         </div>
 
-        {/* Ghi chú */}
         <p className="text-[11px] text-slate-500">
-          Both checks run when you press Create. Passing submissions are sent
-          to the review queue.
+          Text and video checks run when you press Create. Passing submissions
+          are sent to the review queue.
         </p>
       </section>
 

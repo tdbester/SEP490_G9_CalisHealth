@@ -1,6 +1,8 @@
 package com.calishealth.controllers;
 
 import com.calishealth.dtos.CreatePersonalExerciseRequestDTO;
+import com.calishealth.dtos.ContentTextCheckRequestDTO;
+import com.calishealth.dtos.ContentTextCheckResponseDTO;
 import com.calishealth.dtos.PageResponseDTO;
 import com.calishealth.dtos.PersonalExerciseResponseDTO;
 import com.calishealth.dtos.SubmissionCountsDTO;
@@ -22,6 +24,13 @@ import org.springframework.web.multipart.MultipartFile;
 @PreAuthorize("hasRole('MEMBER')")
 public class PersonalExerciseController {
     private final PersonalExerciseService personalExercises;
+
+    @PostMapping("/text-check")
+    public ResponseEntity<ContentTextCheckResponseDTO> checkText(
+            @Valid @RequestBody ContentTextCheckRequestDTO request
+    ) {
+        return ResponseEntity.ok(personalExercises.checkText(request));
+    }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PersonalExerciseResponseDTO> create(

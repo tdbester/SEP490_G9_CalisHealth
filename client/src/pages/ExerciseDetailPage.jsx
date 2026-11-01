@@ -4,12 +4,26 @@ import { getExerciseDetail, getSystemExerciseDetail } from "../api/library";
 import { mockSystemWorkouts } from "./WorkoutSystemListPage";
 import { getAnatomyImage } from "../utils/anatomyImages";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
-import {
-  getExerciseDemoSearchUrl,
-  getExerciseMovementGroup,
-  getValidVideoUrl,
-  getYouTubeEmbedUrl,
-} from "../utils/exerciseMedia";
+import { getExerciseMovementGroup } from "../utils/exerciseMedia";
+
+function getUploadedDemoVideoUrl(exercise) {
+  const value = exercise?.videoUrl || exercise?.demoVideoUrl || exercise?.video_url;
+  if (typeof value !== "string" || !value.trim()) return null;
+
+  try {
+    const apiUrl = new URL(import.meta.env.VITE_API_URL || "http://localhost:8080/api", window.location.origin);
+    const videoUrl = new URL(value.trim(), apiUrl);
+    if (
+      videoUrl.origin !== apiUrl.origin ||
+      !/^\/media\/exercise-demos\/[^/]+\.(mp4|mov|webm)$/i.test(videoUrl.pathname)
+    ) {
+      return null;
+    }
+    return videoUrl.href;
+  } catch {
+    return null;
+  }
+}
 
 // Default detailed guide data matching Figma mockup 100%
 const EXERCISE_CATALOG = {
@@ -437,16 +451,12 @@ export default function ExerciseDetailPage() {
   const anatomyImageUrl = uploadedAnatomyImageUrl && failedAnatomyImageUrl !== uploadedAnatomyImageUrl
     ? uploadedAnatomyImageUrl
     : getAnatomyImage(displayedMuscleGroups);
-  const demoVideoUrl = getValidVideoUrl(exercise);
-  const demoYouTubeEmbedUrl = getYouTubeEmbedUrl(demoVideoUrl);
-  const demoSearchUrl = getExerciseDemoSearchUrl(exercise.name || exercise.title);
+  const demoVideoUrl = getUploadedDemoVideoUrl(exercise);
   const isCustomExercise =
     exercise.isSystem === false ||
     String(exercise.isSystem).toLowerCase() === "false" ||
     exercise.authorId != null;
-  const hasUploadedDemoVideo = Boolean(
-    exercise.videoUrl || exercise.demoVideoUrl || exercise.video_url,
-  );
+  const hasUploadedDemoVideo = Boolean(demoVideoUrl);
 
   // Video player state
   const [videoDuration, setVideoDuration] = useState(null);
@@ -735,16 +745,7 @@ export default function ExerciseDetailPage() {
                 background: "radial-gradient(circle at center, #1e1548 0%, #0d0924 70%, #080518 100%)",
               }}
             >
-              {demoYouTubeEmbedUrl ? (
-                <iframe
-                  src={demoYouTubeEmbedUrl}
-                  title={`${exercise.name} demo video`}
-                  className="absolute inset-0 h-full w-full border-0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  allowFullScreen
-                />
-              ) : demoVideoUrl ? (
+              {demoVideoUrl ? (
                 <video
                   ref={videoRef}
                   src={demoVideoUrl}
@@ -762,16 +763,8 @@ export default function ExerciseDetailPage() {
               ) : (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 p-6 text-center">
                   <p className="text-sm font-semibold text-slate-200">
-                    Demo video is unavailable. Try searching YouTube for this exercise.
+                    Demo video is not available yet. The Content Manager must upload a video file.
                   </p>
-                  <a
-                    href={demoSearchUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-xl border border-[#8068c4] bg-[#2b1d5e] px-4 py-2 text-xs font-semibold text-violet-100 transition hover:bg-[#392676]"
-                  >
-                    Search YouTube for this exercise
-                  </a>
                 </div>
               )}
               {/* Overlay decor pattern */}
@@ -781,7 +774,7 @@ export default function ExerciseDetailPage() {
               <div className="w-full h-8 z-10" />
 
               {/* Nút Play tròn to chính giữa: h-16 w-16 bg-[#643bf6] */}
-              {demoVideoUrl && !demoYouTubeEmbedUrl && (
+              {demoVideoUrl && (
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                 <button
                   type="button"
@@ -806,7 +799,7 @@ export default function ExerciseDetailPage() {
               )}
 
               {/* Thanh điều khiển video ở đáy: Các nút trong suốt không viền */}
-              {demoVideoUrl && !demoYouTubeEmbedUrl && (
+              {demoVideoUrl && (
               <div className="w-full px-4 py-2.5 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex items-center gap-3 z-10">
                 {/* Nút Play/Pause nhỏ */}
                 <button

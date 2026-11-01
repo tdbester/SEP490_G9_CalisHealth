@@ -1,6 +1,8 @@
 package com.calishealth.service;
 
 import com.calishealth.dtos.CreatePersonalExerciseRequestDTO;
+import com.calishealth.dtos.ContentTextCheckRequestDTO;
+import com.calishealth.dtos.ContentTextCheckResponseDTO;
 import com.calishealth.dtos.PageResponseDTO;
 import com.calishealth.dtos.PersonalExerciseResponseDTO;
 import com.calishealth.dtos.SubmissionCountsDTO;
@@ -36,6 +38,12 @@ public class PersonalExerciseService {
     private final UserRepository users;
     private final ContentModerationService moderation;
     private final ExerciseVideoStorageService videoStorage;
+
+    @Transactional(readOnly = true)
+    public ContentTextCheckResponseDTO checkText(ContentTextCheckRequestDTO request) {
+        return new ContentTextCheckResponseDTO(moderation.findFlaggedWords(
+                request.title(), request.description(), request.guideSteps(), request.targetMuscle()));
+    }
 
     public PersonalExerciseResponseDTO createPersonalExercise(
             String memberEmail,

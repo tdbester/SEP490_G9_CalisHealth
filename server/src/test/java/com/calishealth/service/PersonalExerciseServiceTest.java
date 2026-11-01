@@ -1,9 +1,12 @@
 package com.calishealth.service;
 
 import com.calishealth.dtos.CreatePersonalExerciseRequestDTO;
+import com.calishealth.dtos.ContentTextCheckRequestDTO;
 import com.calishealth.models.Exercise;
+import com.calishealth.models.ProfanityWord;
 import com.calishealth.models.User;
 import com.calishealth.repository.ExerciseRepository;
+import com.calishealth.repository.ProfanityWordRepository;
 import com.calishealth.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,16 +32,20 @@ class PersonalExerciseServiceTest {
 
     private ExerciseRepository exercises;
     private UserRepository users;
+    private ProfanityWordRepository profanityWords;
     private PersonalExerciseService service;
 
     @BeforeEach
     void setUp() {
         exercises = mock(ExerciseRepository.class);
         users = mock(UserRepository.class);
+        profanityWords = mock(ProfanityWordRepository.class);
+        when(profanityWords.findByActiveTrueOrderByIdAsc()).thenReturn(blockedWords());
         ExerciseVideoStorageService videoStorage = new ExerciseVideoStorageService(
                 temporaryDirectory.resolve("videos").toString(),
                 temporaryDirectory.resolve("anatomy").toString());
-        service = new PersonalExerciseService(exercises, users, new ContentModerationService(), videoStorage);
+        service = new PersonalExerciseService(
+                exercises, users, new ContentModerationService(profanityWords), videoStorage);
         User member = new User();
         member.setId(7L);
         member.setEmail("member@example.com");
@@ -84,7 +91,7 @@ class PersonalExerciseServiceTest {
 
     @Test
     void screensGuideInstructionsAndTargetMuscleText() {
-        ContentModerationService moderation = new ContentModerationService();
+        ContentModerationService moderation = new ContentModerationService(profanityWords);
 
         assertThat(moderation.checkText("Squat", "Controlled movement", List.of("Move slowly"), "Legs"))
                 .isNull();
@@ -102,6 +109,45 @@ class PersonalExerciseServiceTest {
                 .contains("Exercise content contains inappropriate language");
         assertThat(moderation.checkText("Squat", "Controlled movement", List.of("Move slowly"), "fuck"))
                 .contains("Exercise content contains inappropriate language");
+    }
+
+    @Test
+    void reportsEveryUniqueMatchedWordFromDatabaseDictionary() {
+        ContentModerationService moderation = new ContentModerationService(profanityWords);
+
+        assertThat(moderation.findFlaggedWords(
+                "Assisted squat",
+                "This is shit, and ASS.",
+                List.of("No bad content", "That is a bitch move"),
+                "Legs"))
+                .containsExactly("ass", "shit", "bitch");
+    }
+
+    @Test
+    void textCheckResponseReturnsAllFlaggedWords() {
+        var result = service.checkText(new ContentTextCheckRequestDTO(
+                "Shit exercise",
+                "This is ass",
+                List.of("Bitch"),
+                "Legs"));
+
+        assertThat(result.passed()).isFalse();
+        assertThat(result.flaggedWords()).containsExactly("ass", "shit", "bitch");
+    }
+
+    private List<ProfanityWord> blockedWords() {
+        return List.of("ass", "arse", "fuck", "shit", "bitch", "asshole", "bastard",
+                        "motherfucker", "stupid", "địt", "đụ", "đéo", "lồn", "cặc", "đĩ",
+                        "đồ chó", "đồ khốn", "giết người", "giết chết", "đâm chết",
+                        "bắn chết", "tự sát", "kill yourself", "kill him", "kill her",
+                        "murder", "rape", "stab someone")
+                .stream()
+                .map(word -> {
+                    ProfanityWord profanityWord = new ProfanityWord();
+                    profanityWord.setWord(word);
+                    return profanityWord;
+                })
+                .toList();
     }
 
     @Test

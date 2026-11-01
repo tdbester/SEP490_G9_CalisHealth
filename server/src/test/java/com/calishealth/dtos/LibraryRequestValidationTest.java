@@ -47,6 +47,8 @@ class LibraryRequestValidationTest {
         CreateUpdateWorkoutRequestDTO request = new CreateUpdateWorkoutRequestDTO(
                 "  ",
                 "n".repeat(201),
+                null,
+                null,
                 false,
                 List.of(new WorkoutItemDTO(1L, 0, 101, 0, null, "REPS", 181))
         );
@@ -67,6 +69,8 @@ class LibraryRequestValidationTest {
         CreateUpdateWorkoutRequestDTO request = new CreateUpdateWorkoutRequestDTO(
                 "Workout",
                 null,
+                null,
+                null,
                 false,
                 List.of()
         );
@@ -81,11 +85,45 @@ class LibraryRequestValidationTest {
         CreateUpdateWorkoutRequestDTO request = new CreateUpdateWorkoutRequestDTO(
                 "Workout",
                 null,
+                null,
+                null,
                 false,
                 List.of(new WorkoutItemDTO(1L, 0, 3, 10, null, "REPS", 180))
         );
 
         assertTrue(validator.validate(request).stream()
                 .noneMatch(violation -> violation.getPropertyPath().toString().equals("items[0].restSeconds")));
+    }
+
+    @Test
+    void rejectsUnsupportedWorkoutLevel() {
+        CreateUpdateWorkoutRequestDTO request = new CreateUpdateWorkoutRequestDTO(
+                "Workout",
+                null,
+                "EXPERT",
+                null,
+                false,
+                List.of(new WorkoutItemDTO(1L, 0, 3, 10, null, "REPS", 60))
+        );
+
+        assertTrue(validator.validate(request).stream()
+                .anyMatch(violation -> violation.getPropertyPath().toString().equals("level")
+                        && violation.getMessage().equals("Please select a valid workout level")));
+    }
+
+    @Test
+    void rejectsUnsupportedWorkoutType() {
+        CreateUpdateWorkoutRequestDTO request = new CreateUpdateWorkoutRequestDTO(
+                "Workout",
+                null,
+                null,
+                "CUSTOM",
+                false,
+                List.of(new WorkoutItemDTO(1L, 0, 3, 10, null, "REPS", 60))
+        );
+
+        assertTrue(validator.validate(request).stream()
+                .anyMatch(violation -> violation.getPropertyPath().toString().equals("type")
+                        && violation.getMessage().equals("Please select a valid workout type")));
     }
 }

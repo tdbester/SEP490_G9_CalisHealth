@@ -7,7 +7,6 @@ import {
   validatePersonalExercise,
   validateVideoFile,
 } from './libraryFormValidation';
-import { LIBRARY_TEXT_WARNING, scanLibraryText } from './libraryTextModeration';
 import {
   getPersonalExercise,
   resubmitPersonalExercise,
@@ -298,12 +297,6 @@ export default function UpdatePersonalExercisePage() {
       focusFirstInvalidField(validationErrors);
       return;
     }
-    if (scanLibraryText([title, description, ...guide, ...targetMuscles])) {
-      setErrorMessage(LIBRARY_TEXT_WARNING);
-      toast.error(LIBRARY_TEXT_WARNING, { style: { fontFamily: "Arial, sans-serif" } });
-      return;
-    }
-
     submissionLock.current = true;
     setSaving(true);
     setErrorMessage('');

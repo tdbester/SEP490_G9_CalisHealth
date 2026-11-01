@@ -20,7 +20,7 @@ public interface WorkoutRepository extends JpaRepository<WorkoutEntry, Long>, Jp
 
     @Query("""
             SELECT COUNT(w) FROM WorkoutEntry w
-            WHERE w.isSystem = false AND w.authorId = :authorId AND UPPER(w.type) = 'CUSTOM'
+            WHERE w.isSystem = false AND w.authorId = :authorId
             """)
     long countCustomWorkoutsByAuthorId(@Param("authorId") Long authorId);
     boolean existsByLevelIgnoreCase(String level);

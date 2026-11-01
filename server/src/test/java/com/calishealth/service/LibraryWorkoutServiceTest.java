@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -60,6 +61,8 @@ class LibraryWorkoutServiceTest {
         CreateUpdateWorkoutRequestDTO request = new CreateUpdateWorkoutRequestDTO(
                 "Test workout",
                 "Details",
+                null,
+                "SKILL",
                 false,
                 List.of(
                         new WorkoutItemDTO(10L, 0, 100, 101, null, "REPS", 120),
@@ -77,6 +80,7 @@ class LibraryWorkoutServiceTest {
         assertEquals(102, saved.getTotalSets());
         assertEquals(825, saved.getEstimatedDuration());
         assertEquals("ADVANCED", saved.getLevel());
+        assertEquals("SKILL", saved.getType());
         assertEquals(member, saved.getCreatedBy());
         assertEquals(member.getId(), saved.getAuthorId());
     }
@@ -101,15 +105,20 @@ class LibraryWorkoutServiceTest {
         var response = service.createWorkout(member.getEmail(), new CreateUpdateWorkoutRequestDTO(
                 "Repeated exercise workout",
                 null,
+                "ADVANCED",
+                "NONE",
                 false,
                 List.of(
                         new WorkoutItemDTO(10L, 0, 3, 10, null, "REPS", 30),
                         new WorkoutItemDTO(10L, 1, 2, 8, null, "REPS", 30))));
 
         assertEquals(5, response.totalSets());
+        assertEquals("ADVANCED", response.level());
         ArgumentCaptor<WorkoutEntry> workoutCaptor = ArgumentCaptor.forClass(WorkoutEntry.class);
         verify(workouts, times(2)).saveAndFlush(workoutCaptor.capture());
         assertEquals(2, workoutCaptor.getValue().getExercises().size());
+        assertEquals("ADVANCED", workoutCaptor.getValue().getLevel());
+        assertNull(workoutCaptor.getValue().getType());
         assertEquals(10L, workoutCaptor.getValue().getExercises().get(0).getId());
         assertEquals(10L, workoutCaptor.getValue().getExercises().get(1).getId());
     }

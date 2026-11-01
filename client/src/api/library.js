@@ -61,6 +61,11 @@ export const createPersonalExercise = async (data, videoFile, anatomyImageFile) 
   return response.data;
 };
 
+export const checkPersonalExerciseText = async (data) => {
+  const response = await api.post("/v1/library/personal-exercises/text-check", data);
+  return response.data;
+};
+
 export const getPersonalExercises = async (params = {}) => {
   const response = await api.get("/v1/library/personal-exercises", { params });
   return response.data;

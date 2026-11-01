@@ -94,6 +94,8 @@ export default function CreatePersonalWorkoutPage() {
   const [exercisePage, setExercisePage] = useState(1);
   const [workoutName, setWorkoutName] = useState("");
   const [note, setNote]               = useState("");
+  const [workoutLevel, setWorkoutLevel] = useState("BEGINNER");
+  const [workoutType, setWorkoutType] = useState("NONE");
   const [search, setSearch]           = useState("");
   const [levelFilter, setLevelFilter] = useState("All levels");
   const [selected, setSelected]       = useState([]);
@@ -107,15 +109,18 @@ export default function CreatePersonalWorkoutPage() {
     getAvailableWorkoutExercises()
       .then((items) => {
         if (active) {
-          setAvailableExercises(items.map((exercise) => ({
-            id: exercise.id,
-            title: exercise.title,
-            level: String(exercise.level).toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase()),
-            muscles: exercise.targetMuscle,
-            defaultSets: exercise.defaultSets,
-            defaultReps: exercise.defaultReps,
-            defaultDuration: exercise.defaultDuration,
-          })));
+          setAvailableExercises(items.map((exercise) => {
+            const level = String(exercise.level ?? "").trim();
+            return {
+              id: exercise.id,
+              title: exercise.title,
+              level: level ? level.toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase()) : "Intermediate",
+              muscles: exercise.targetMuscle,
+              defaultSets: exercise.defaultSets,
+              defaultReps: exercise.defaultReps,
+              defaultDuration: exercise.defaultDuration,
+            };
+          }));
         }
       })
       .catch((error) => {
@@ -257,6 +262,8 @@ export default function CreatePersonalWorkoutPage() {
       await createMyWorkout({
         title: name,
         description: note.trim(),
+        level: workoutLevel,
+        type: workoutType,
         isSharedWithCommunity: false,
         items: selected.map((exercise, orderIndex) => ({
           exerciseId: Number(exercise.id),
@@ -332,6 +339,34 @@ export default function CreatePersonalWorkoutPage() {
             className="w-full resize-none rounded-xl border border-[#231b46] bg-[#0c0820] px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:border-[#7c3aed] focus:outline-none transition-colors"
           />
           {showFieldError("description") && descriptionError && <p className="text-rose-400 text-[11px] mt-1">{descriptionError}</p>}
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="workout-level" className="mb-1.5 block text-xs text-slate-400">Level</label>
+            <select
+              id="workout-level"
+              value={workoutLevel}
+              onChange={(event) => setWorkoutLevel(event.target.value)}
+              className="w-full cursor-pointer rounded-xl border border-[#231b46] bg-[#0c0820] px-4 py-2.5 text-xs text-white focus:border-[#7c3aed] focus:outline-none transition-colors"
+            >
+              <option value="BEGINNER">Beginner</option>
+              <option value="INTERMEDIATE">Intermediate</option>
+              <option value="ADVANCED">Advanced</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="workout-type" className="mb-1.5 block text-xs text-slate-400">Type</label>
+            <select
+              id="workout-type"
+              value={workoutType}
+              onChange={(event) => setWorkoutType(event.target.value)}
+              className="w-full cursor-pointer rounded-xl border border-[#231b46] bg-[#0c0820] px-4 py-2.5 text-xs text-white focus:border-[#7c3aed] focus:outline-none transition-colors"
+            >
+              <option value="HEALTH">Health</option>
+              <option value="SKILL">Skill</option>
+              <option value="NONE">None</option>
+            </select>
+          </div>
         </div>
       </div>
       {errorMessage && (
@@ -504,26 +539,24 @@ export default function CreatePersonalWorkoutPage() {
                     <XIcon />
                   </button>
                 </div>
-                <div className={`grid gap-2.5 ${ex.countBy === "Duration" ? "grid-cols-2" : "grid-cols-3"}`}>
+                <div className="grid grid-cols-3 gap-2.5">
                   <div className="col-span-full">
                     <label className="block text-[10px] text-slate-400 mb-1">Count by</label>
                     <p className="rounded-lg border border-[#231b46] bg-[#080518] p-2 text-center text-xs text-white">
                       {ex.countBy === "Duration" ? `Duration (${ex.reps} seconds)` : "Sets & Reps"}
                     </p>
                   </div>
+                  <div>
+                    <label className="block text-[10px] text-slate-400 mb-1">Sets</label>
+                    <input id={`workout-sets-${idx}`} type="number" value={ex.sets} readOnly
+                      className="w-full cursor-not-allowed rounded-lg border border-[#231b46] bg-[#080518] p-2 text-center text-xs text-slate-300 focus:outline-none" />
+                  </div>
                   {ex.countBy === "Reps" ? (
-                    <>
-                      <div>
-                        <label className="block text-[10px] text-slate-400 mb-1">Sets</label>
-                        <input id={`workout-sets-${idx}`} type="number" value={ex.sets} readOnly
-                          className="w-full cursor-not-allowed rounded-lg border border-[#231b46] bg-[#080518] p-2 text-center text-xs text-slate-300 focus:outline-none" />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] text-slate-400 mb-1">Reps</label>
-                        <input id={`workout-reps-${idx}`} type="number" value={ex.reps} readOnly
-                          className="w-full cursor-not-allowed rounded-lg border border-[#231b46] bg-[#080518] p-2 text-center text-xs text-slate-300 focus:outline-none" />
-                      </div>
-                    </>
+                    <div>
+                      <label className="block text-[10px] text-slate-400 mb-1">Reps</label>
+                      <input id={`workout-reps-${idx}`} type="number" value={ex.reps} readOnly
+                        className="w-full cursor-not-allowed rounded-lg border border-[#231b46] bg-[#080518] p-2 text-center text-xs text-slate-300 focus:outline-none" />
+                    </div>
                   ) : (
                     <div>
                       <label className="block text-[10px] text-slate-400 mb-1">Duration (seconds)</label>

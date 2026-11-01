@@ -28,11 +28,23 @@ import {
   ExerciseFields,
   validateExerciseUpload,
 } from "./ExerciseFormPage";
-import {
-  getExerciseDemoSearchUrl,
-  getValidVideoUrl,
-  getYouTubeEmbedUrl,
-} from "../utils/exerciseMedia";
+
+function getUploadedDemoVideoUrl(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const apiUrl = new URL(import.meta.env.VITE_API_URL || "http://localhost:8080/api", window.location.origin);
+    const videoUrl = new URL(value.trim(), apiUrl.origin);
+    if (
+      videoUrl.origin !== apiUrl.origin ||
+      !/^\/media\/exercise-demos\/[^/]+\.(mp4|mov|webm)$/i.test(videoUrl.pathname)
+    ) {
+      return null;
+    }
+    return videoUrl.href;
+  } catch {
+    return null;
+  }
+}
 
 const rise = keyframes`
   from { opacity: 0; transform: translateY(8px); }
@@ -186,9 +198,9 @@ function SystemExerciseDetailContent() {
   const [saveError, setSaveError] = useState("");
   const [videoError, setVideoError] = useState(null);
   const [imageError, setImageError] = useState(null);
-  const demoVideoUrl = entry ? getValidVideoUrl(entry) : null;
-  const demoYouTubeEmbedUrl = getYouTubeEmbedUrl(demoVideoUrl);
-  const demoSearchUrl = getExerciseDemoSearchUrl(entry?.name || "");
+  const demoVideoUrl = entry
+    ? getUploadedDemoVideoUrl(entry.videoUrl || entry.demoVideoUrl || entry.video_url)
+    : null;
 
   useEffect(() => {
     if (!entry) return;
@@ -426,24 +438,7 @@ function SystemExerciseDetailContent() {
           <Typography variant="subtitle2" fontWeight={700} sx={{ color: "#fff" }}>
             Demo video
           </Typography>
-          {demoYouTubeEmbedUrl ? (
-            <Box
-              component="iframe"
-              src={demoYouTubeEmbedUrl}
-              title={`${entry.name} demo video`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-              sx={{
-                mt: 1.5,
-                width: "100%",
-                aspectRatio: "16 / 9",
-                border: 0,
-                borderRadius: 2,
-                bgcolor: "#000",
-                display: "block",
-              }}
-            />
-          ) : demoVideoUrl ? (
+          {demoVideoUrl ? (
             <Box
               component="video"
               src={mediaUrl(demoVideoUrl)}
@@ -461,18 +456,8 @@ function SystemExerciseDetailContent() {
           ) : (
             <Stack spacing={1} alignItems="flex-start" sx={{ mt: 1 }}>
               <Typography variant="body2" color="text.secondary">
-                Demo video is not available yet.
+                No uploaded demo video. Upload a video file using Edit exercise.
               </Typography>
-              <Button
-                component="a"
-                href={demoSearchUrl}
-                target="_blank"
-                rel="noreferrer"
-                size="small"
-                variant="outlined"
-              >
-                Search YouTube for this exercise
-              </Button>
             </Stack>
           )}
 

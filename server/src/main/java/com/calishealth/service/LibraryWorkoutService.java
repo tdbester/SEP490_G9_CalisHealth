@@ -139,15 +139,14 @@ public class LibraryWorkoutService {
                 .substring(0, 12).toUpperCase(Locale.ROOT));
         workout.setName(request.title().trim());
         workout.setDescription(request.description() == null ? null : request.description().trim());
-        workout.setType("CUSTOM");
+        workout.setType(resolveWorkoutType(request.type()));
         workout.setSystem(false);
         workout.setCreatedBy(member);
         workout.setAuthorId(member.getId());
-        workout.setLevel("BEGINNER");
         workout.setSharedWithCommunity(Boolean.TRUE.equals(request.isSharedWithCommunity()));
         workout.setStatus("ACCEPTED");
         workouts.saveAndFlush(workout);
-        populateWorkout(workout, request.items(), selectedExercises);
+        populateWorkout(workout, request.items(), selectedExercises, request.level());
         return toDetail(workouts.saveAndFlush(workout));
     }
 
@@ -164,8 +163,11 @@ public class LibraryWorkoutService {
                 member.getId(), request.items().stream().map(WorkoutItemDTO::exerciseId).toList());
         workout.setName(request.title().trim());
         workout.setDescription(request.description() == null ? null : request.description().trim());
+        if (request.type() != null) {
+            workout.setType(resolveWorkoutType(request.type()));
+        }
         workout.setSharedWithCommunity(Boolean.TRUE.equals(request.isSharedWithCommunity()));
-        populateWorkout(workout, request.items(), selectedExercises);
+        populateWorkout(workout, request.items(), selectedExercises, request.level());
         WorkoutEntry saved = workouts.saveAndFlush(workout);
         return toDetail(saved);
     }
@@ -222,7 +224,8 @@ public class LibraryWorkoutService {
     private void populateWorkout(
             WorkoutEntry workout,
             List<WorkoutItemDTO> items,
-            Map<Long, Exercise> exercisesById
+            Map<Long, Exercise> exercisesById,
+            String requestedLevel
     ) {
         List<WorkoutItemDTO> ordered = items.stream()
                 .sorted(Comparator.comparingInt(WorkoutItemDTO::orderIndex))
@@ -252,11 +255,13 @@ public class LibraryWorkoutService {
         workout.setTotalSets(totalSets);
         long estimatedMinutes = (long) Math.ceil(totalSeconds / 60.0);
         workout.setEstimatedDuration((int) Math.min(Integer.MAX_VALUE, estimatedMinutes));
-        workout.setLevel(switch (maximumLevel) {
-            case 3 -> "ADVANCED";
-            case 2 -> "INTERMEDIATE";
-            default -> "BEGINNER";
-        });
+        workout.setLevel(requestedLevel == null || requestedLevel.isBlank()
+                ? switch (maximumLevel) {
+                    case 3 -> "ADVANCED";
+                    case 2 -> "INTERMEDIATE";
+                    default -> "BEGINNER";
+                }
+                : requestedLevel.trim().toUpperCase(Locale.ROOT));
 
         for (int index = 0; index < ordered.size(); index++) {
             WorkoutItemDTO item = ordered.get(index);
@@ -408,5 +413,14 @@ public class LibraryWorkoutService {
             case "ADVANCED" -> 3;
             default -> 0;
         };
+    }
+
+    private String resolveWorkoutType(String type) {
+        if (type == null || type.isBlank()) {
+            return "CUSTOM";
+        }
+        return "NONE".equalsIgnoreCase(type.trim())
+                ? null
+                : type.trim().toUpperCase(Locale.ROOT);
     }
 }
