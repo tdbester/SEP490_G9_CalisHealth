@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLevelNames } from "../useLevelNames";
-import { Link as RouterLink, useParams } from "react-router-dom";
+import { Link as RouterLink, useLocation, useParams } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -22,7 +22,6 @@ import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import TimerRoundedIcon from "@mui/icons-material/TimerRounded";
 import LayersRoundedIcon from "@mui/icons-material/LayersRounded";
 import { contentManagerApi } from "../api/contentManager";
 import { useApiMutation, useApiQuery } from "../hooks";
@@ -32,7 +31,12 @@ import {
   DarkPill,
 } from "../components/ContentShared";
 import { CM } from "../theme-content";
-import { WorkoutFields } from "./ExerciseFormPage";
+import {
+  WorkoutFields,
+  defaultWorkoutItem,
+  toWorkoutItemRequests,
+  workoutItemErrors,
+} from "./ExerciseFormPage";
 
 const rise = keyframes`
   from { opacity: 0; transform: translateY(8px); }
@@ -80,6 +84,9 @@ function Detail({ label, value, full, icon: Icon }) {
 
 export default function WorkoutDetailPage() {
   const { code = "" } = useParams();
+  const location = useLocation();
+  const returnTo = location.state?.returnTo || CONTENT_PATHS.workouts;
+  const returnLabel = location.state?.returnLabel || "Back to list";
   const { levels: levelNames } = useLevelNames();
   const { data: workout, isLoading, error, refetch } = useApiQuery(
     () => contentManagerApi.workout(code),
@@ -108,7 +115,7 @@ export default function WorkoutDetailPage() {
 
   const crumb = [
     { label: "Content manager", to: CONTENT_PATHS.dashboard },
-    { label: "Exercise & Workout Management", to: CONTENT_PATHS.exercises },
+    { label: "Exercise & Workout", to: CONTENT_PATHS.exercises },
     { label: "Workout details" },
   ];
 
@@ -140,11 +147,11 @@ export default function WorkoutDetailPage() {
         </Alert>
         <Button
           component={RouterLink}
-          to={CONTENT_PATHS.workouts}
+          to={returnTo}
           sx={{ mt: 2 }}
           startIcon={<ArrowBackRoundedIcon />}
         >
-          Back to workout list
+          {returnLabel}
         </Button>
       </Box>
     );
@@ -165,10 +172,20 @@ export default function WorkoutDetailPage() {
     setForm({
       name: workout.name || "",
       description: workout.description || "",
-      restSeconds: workout.restSeconds ?? 60,
-      type: "WORKOUT",
+      type: ["HEALTH", "SKILL", "FLEX"].includes(workout.type) ? workout.type : "FLEX",
       level: workout.level || "",
-      exerciseCodes: exercises.map((exercise) => exercise.code),
+      items: exercises.map((exercise) => ({
+        ...defaultWorkoutItem(exercise),
+        // Giữ cấu hình đã lưu; bài chưa có cấu hình thì dùng mặc định ở trên.
+        ...(exercise.countBy
+          ? {
+              sets: exercise.sets ?? 3,
+              reps: exercise.reps ?? 10,
+              durationSeconds: exercise.durationSeconds ?? 30,
+              restSeconds: exercise.restSeconds ?? 60,
+            }
+          : {}),
+      })),
       planItems: [],
     });
     setHasSubmitted(false);
@@ -184,16 +201,18 @@ export default function WorkoutDetailPage() {
   const submitEdit = () => {
     setHasSubmitted(true);
     if (!form?.name.trim() || form.name.length > 60 || !form.description.trim()
-      || form.description.length > 300 || !Number.isInteger(form.restSeconds)
-      || form.restSeconds < 0 || form.restSeconds > 3600
+      || form.description.length > 300
+      || !["HEALTH", "SKILL", "FLEX"].includes(form.type)
       || !levelNames.includes(form.level)
-      || form.exerciseCodes.length === 0) return;
+      || form.items.length === 0
+      || form.items.some((item) => Object.keys(workoutItemErrors(item)).length > 0)) return;
     saveMutation.mutate({
       name: form.name.trim(),
       description: form.description.trim(),
-      restSeconds: form.restSeconds,
+      type: form.type,
       level: form.level,
-      exerciseCodes: form.exerciseCodes,
+      exerciseCodes: form.items.map((item) => item.exerciseCode),
+      items: toWorkoutItemRequests(form.items),
     });
   };
 
@@ -212,11 +231,11 @@ export default function WorkoutDetailPage() {
             )}
             <Button
               component={RouterLink}
-              to={CONTENT_PATHS.workouts}
+              to={returnTo}
               variant="outlined"
               startIcon={<ArrowBackRoundedIcon />}
             >
-              Back to list
+              {returnLabel}
             </Button>
           </Stack>
         }
@@ -244,7 +263,19 @@ export default function WorkoutDetailPage() {
                 onSelectedDayChange={() => {}}
               />
               {saveMutation.error && <Alert severity="error">{saveMutation.error.message}</Alert>}
-              <Stack direction="row" spacing={1} justifyContent="flex-end">
+              <Divider sx={{ mt: 1, borderColor: CM.border }} />
+              <Stack
+                direction="row"
+                spacing={1.5}
+                justifyContent="flex-end"
+                sx={{
+                  position: "sticky",
+                  bottom: 0,
+                  py: 1.5,
+                  bgcolor: "background.default",
+                  zIndex: 5,
+                }}
+              >
                 <Button startIcon={<CloseRoundedIcon />} onClick={cancelEditing} disabled={saveMutation.isPending}>
                   Cancel
                 </Button>
@@ -405,9 +436,15 @@ export default function WorkoutDetailPage() {
                           {exercise.muscleGroup || "—"}
                         </Typography>
                         <Typography variant="caption" display="block" sx={{ mt: 0.5, color: CM.textMuted }}>
-                          {String(exercise.category || "").toUpperCase() === "HOLD"
-                            ? `${exercise.defaultSets ?? "Not set"} sets · ${exercise.duration == null ? "Not set" : `${exercise.duration} sec`}`
-                            : `${exercise.defaultSets ?? "Not set"} sets · ${exercise.defaultReps ?? "Not set"} reps`}
+                          {exercise.countBy
+                            ? `${exercise.sets} sets · ${
+                                exercise.countBy === "DURATION"
+                                  ? `${exercise.durationSeconds} sec`
+                                  : `${exercise.reps} reps`
+                              } · rest ${exercise.restSeconds} sec`
+                            : String(exercise.category || "").toUpperCase() === "HOLD"
+                              ? `${exercise.defaultSets ?? "Not set"} sets · ${exercise.duration == null ? "Not set" : `${exercise.duration} sec`}`
+                              : `${exercise.defaultSets ?? "Not set"} sets · ${exercise.defaultReps ?? "Not set"} reps`}
                         </Typography>
                       </Box>
                     </Stack>
@@ -417,7 +454,7 @@ export default function WorkoutDetailPage() {
               <Divider sx={{ my: 2.5 }} />
               <Grid container spacing={1.5}>
                 <Detail icon={LayersRoundedIcon} label="Level" value={workout.level} />
-                <Detail icon={TimerRoundedIcon} label="Rest" value={`${workout.restSeconds ?? 60} seconds`} />
+                <Detail icon={FitnessCenterRoundedIcon} label="Type" value={workout.type} />
               </Grid>
             </>
           )}

@@ -54,7 +54,7 @@ const enter = (delay = 0) => ({
 
 const BREADCRUMB = [
   { label: "Content manager", to: CONTENT_PATHS.dashboard },
-  { label: "Exercise & Workout Management", to: CONTENT_PATHS.exercises },
+  { label: "Exercise & Workout", to: CONTENT_PATHS.exercises },
   { label: "Exercise list" },
 ];
 
@@ -177,7 +177,7 @@ export default function ExerciseListPage() {
     <Box sx={{ maxWidth: 1280, mx: "auto", px: { xs: 2, sm: 3 }, py: { xs: 2.5, sm: 3 } }}>
       <ContentPageHeader
         breadcrumb={BREADCRUMB}
-        title="Exercise & workout management"
+        title="Exercise & workout"
         description="Manage system exercises and skills, and moderate exercises submitted by users."
         action={
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>

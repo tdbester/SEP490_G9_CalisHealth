@@ -20,6 +20,7 @@ import {
 } from "@mui/material";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
+import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import NotificationsNoneRoundedIcon from "@mui/icons-material/NotificationsNoneRounded";
 import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
 import EventAvailableRoundedIcon from "@mui/icons-material/EventAvailableRounded";
@@ -40,6 +41,7 @@ import {
 export const ADMIN_PATHS = {
   dashboard: "/admin/dashboard",
   users: "/admin/users",
+  surveys: "/admin/surveys",
   notifications: "/admin/notifications",
   storage: "/admin/storage",
   maintenance: "/admin/maintenance",
@@ -49,6 +51,7 @@ export const ADMIN_PATHS = {
 export const ADMIN_LINKS = [
   { to: ADMIN_PATHS.dashboard, label: "Dashboard", icon: DashboardRoundedIcon },
   { to: ADMIN_PATHS.users, label: "Users", icon: PeopleAltRoundedIcon },
+  { to: ADMIN_PATHS.surveys, label: "Survey Management", icon: MenuBookRoundedIcon },
   { to: ADMIN_PATHS.notifications, label: "Notifications", icon: NotificationsNoneRoundedIcon },
   { to: ADMIN_PATHS.storage, label: "Media storage & infrastructure", icon: StorageRoundedIcon },
   { to: ADMIN_PATHS.maintenance, label: "Create maintenance schedule", icon: EventAvailableRoundedIcon },

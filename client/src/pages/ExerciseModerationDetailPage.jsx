@@ -88,7 +88,7 @@ export default function ExerciseModerationDetailPage() {
   const busy = approve.isPending || reject.isPending;
   const breadcrumb = [
     { label: "Content manager", to: CONTENT_PATHS.dashboard },
-    { label: "Exercise & Workout Management", to: CONTENT_PATHS.exercises },
+    { label: "Exercise & Workout", to: CONTENT_PATHS.exercises },
     { label: isHistoryView ? "Approval history" : "Pending moderation", to: isHistoryView ? CONTENT_PATHS.exerciseApprovalHistory : CONTENT_PATHS.pendingExerciseModeration },
     { label: "Exercise details" },
   ];

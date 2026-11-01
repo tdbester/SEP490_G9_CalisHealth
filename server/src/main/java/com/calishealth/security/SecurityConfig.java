@@ -47,6 +47,8 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/media/exercise-demos/**").permitAll()
                         .requestMatchers("/media/exercise-anatomy/**").permitAll()
+                        // Survey Management now belongs to the Admin area (must stay before /api/content/**).
+                        .requestMatchers("/api/content/surveys/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/content/**").hasRole("CONTENT_MANAGER")
                         .requestMatchers("/api/content/**").hasRole("CONTENT_MANAGER")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

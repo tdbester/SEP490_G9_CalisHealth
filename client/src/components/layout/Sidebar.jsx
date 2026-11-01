@@ -49,7 +49,7 @@ const NAV_ITEMS = [
 // Figma content_manager_dashboard: Dashboard, Survey, Library (Progression rules / Level criteria chưa có màn)
 const CONTENT_MANAGER_NAV = [
   { label: "Dashboard", path: "/dashboard", icon: DashboardIcon },
-  { label: "Survey", path: "/content/surveys", icon: SurveyIcon },
+  { label: "Daily Training Plans", path: "/content/daily-training-plans", icon: SurveyIcon },
   { label: "Library", path: "/library", icon: LibraryIcon },
 ];
 

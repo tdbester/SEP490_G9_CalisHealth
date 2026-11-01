@@ -397,10 +397,8 @@ public class ExerciseService {
                 .distinct()
                 .reduce((first, second) -> first + " · " + second)
                 .orElse(null);
-        if (joined != null) {
-            return joined;
-        }
-        return exercise.getCategory();
+        // Không có dữ liệu muscle thì để trống, không lấy category thay thế.
+        return joined;
     }
 
     private ExerciseResponse toResponse(Exercise exercise) {

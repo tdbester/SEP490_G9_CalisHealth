@@ -180,7 +180,7 @@ export default function PendingModerationPage() {
       <ContentPageHeader
         breadcrumb={[
           { label: "Content manager", to: CONTENT_PATHS.dashboard },
-          { label: "Exercise & workout management", to: CONTENT_PATHS.exercises },
+          { label: "Exercise & workout", to: CONTENT_PATHS.exercises },
           { label: "Pending moderation" },
         ]}
         title="Pending exercise moderation"
