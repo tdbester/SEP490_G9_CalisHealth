@@ -155,7 +155,8 @@ public class DailyPlanTemplateService {
             WorkoutEntry workout = workouts.findByCode(request.workoutCode().trim())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
                             "The workout for Day " + request.dayNumber() + " no longer exists"));
-            if (!"WORKOUT".equals(workout.getType()) || !"SYSTEM".equalsIgnoreCase(workout.getSource())) {
+            // Workout types are HEALTH / SKILL / FLEX / WORKOUT; only weekly plans and non-system workouts are rejected.
+            if ("DAILY_TRAINING_PLAN".equals(workout.getType()) || !"SYSTEM".equalsIgnoreCase(workout.getSource())) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only system workouts can be scheduled");
             }
             if (!level.equalsIgnoreCase(workout.getLevel())) {
