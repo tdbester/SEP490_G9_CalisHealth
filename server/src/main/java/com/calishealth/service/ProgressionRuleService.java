@@ -6,6 +6,9 @@ import com.calishealth.dtos.ProgressionRuleDtos.RuleDetail;
 import com.calishealth.dtos.ProgressionRuleDtos.RuleEvaluation;
 import com.calishealth.dtos.ProgressionRuleDtos.RuleList;
 import com.calishealth.dtos.ProgressionRuleDtos.RuleSummary;
+import com.calishealth.dtos.ProgressionRuleDtos.RuleTree;
+import com.calishealth.dtos.ProgressionRuleDtos.TreeEdge;
+import com.calishealth.dtos.ProgressionRuleDtos.TreeNode;
 import com.calishealth.dtos.ProgressionRuleDtos.SaveRuleRequest;
 import com.calishealth.dtos.ProgressionRuleDtos.SetResultInput;
 import com.calishealth.dtos.ProgressionRuleDtos.SubmitExerciseResultRequest;
@@ -39,7 +42,9 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -81,6 +86,33 @@ public class ProgressionRuleService {
                 .toList();
         return new RuleList(all.stream().map(ProgressionRuleService::summary).toList(),
                 active, all.size() - active, available);
+    }
+
+    /** Đồ thị cho màn Exercise Tree: mọi rule là một cạnh, chỉ các bài có trong rule mới thành node. */
+    @Transactional(readOnly = true)
+    public RuleTree tree() {
+        List<ProgressionRule> all = rules.findAll().stream()
+                .sorted(Comparator.comparing(ProgressionRule::getId))
+                .toList();
+        Map<Long, Exercise> used = new LinkedHashMap<>();
+        for (ProgressionRule rule : all) {
+            used.putIfAbsent(rule.getPrerequisiteExercise().getId(), rule.getPrerequisiteExercise());
+            used.putIfAbsent(rule.getExercise().getId(), rule.getExercise());
+        }
+        List<TreeNode> nodes = used.values().stream()
+                .map(exercise -> new TreeNode(exercise.getCode(), exercise.getName(), exercise.getType(),
+                        measureOf(exercise), exercise.getDifficultyLevel(),
+                        exercise.getMuscleGroups().stream()
+                                .map(link -> link.getMuscleGroup().getName())
+                                .sorted(String.CASE_INSENSITIVE_ORDER)
+                                .toList()))
+                .toList();
+        List<TreeEdge> edges = all.stream()
+                .map(rule -> new TreeEdge(rule.getId(), rule.getStatus(), rule.getMeasureType(), rule.getRequiredSets(),
+                        rule.getRequiredReps(), rule.getRequiredSeconds(), rule.getMinAccuracy(),
+                        rule.getPrerequisiteExercise().getCode(), rule.getExercise().getCode()))
+                .toList();
+        return new RuleTree(nodes, edges);
     }
 
     @Transactional(readOnly = true)
@@ -342,7 +374,7 @@ public class ProgressionRuleService {
     }
 
     private static String normalizeStatus(String status) {
-        if (status == null || status.isBlank()) return STATUS_ACTIVE;
+        if (status == null || status.isBlank()) throw bad("Status is required and must be ACTIVE or INACTIVE");
         String value = status.trim().toUpperCase();
         if (!STATUS_ACTIVE.equals(value) && !STATUS_INACTIVE.equals(value)) throw bad("Status must be ACTIVE or INACTIVE");
         return value;

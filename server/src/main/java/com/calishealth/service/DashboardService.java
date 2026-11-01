@@ -84,21 +84,23 @@ public class DashboardService {
     }
 
     private ObjectNode community() {
+        // Community = user-created content only (source CUSTOM); SYSTEM library items are excluded.
         Long workouts = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM workout_entries WHERE active = TRUE AND created_by IS NOT NULL",
+                "SELECT COUNT(*) FROM workout_entries WHERE active = TRUE AND UPPER(source) = 'CUSTOM'",
                 Long.class
         );
+        // Athletes = distinct creators who contributed CUSTOM exercises or workouts (at least one active item).
         Long athletes = jdbcTemplate.queryForObject(
-                "SELECT COUNT(DISTINCT created_by) FROM workout_entries WHERE active = TRUE AND created_by IS NOT NULL",
+                """
+                SELECT COUNT(DISTINCT u.id)
+                FROM users u
+                WHERE EXISTS (SELECT 1 FROM exercises e WHERE e.created_by = u.id AND e.active = TRUE AND UPPER(e.source) = 'CUSTOM')
+                   OR EXISTS (SELECT 1 FROM workout_entries w WHERE w.created_by = u.id AND w.active = TRUE AND UPPER(w.source) = 'CUSTOM')
+                """,
                 Long.class
         );
         Long exercises = jdbcTemplate.queryForObject(
-                """
-                SELECT COUNT(DISTINCT we.exercise_id)
-                FROM workout_exercises we
-                JOIN workout_entries w ON w.id = we.workout_id
-                WHERE w.active = TRUE AND w.created_by IS NOT NULL
-                """,
+                "SELECT COUNT(*) FROM exercises WHERE active = TRUE AND UPPER(source) = 'CUSTOM'",
                 Long.class
         );
         return jsonMapper.createObjectNode()

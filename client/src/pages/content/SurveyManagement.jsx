@@ -136,7 +136,7 @@ export default function SurveyManagement() {
   return (
     <div className="survey-mgmt">
       <header className="sm-header">
-        <p className="sm-breadcrumb">Content manager / Survey</p>
+        <p className="sm-breadcrumb">Admin / Survey</p>
         <h1 className="sm-title">Survey management</h1>
         <p className="sm-subtitle">Manage the survey steps and questions members answer when they sign up.</p>
       </header>

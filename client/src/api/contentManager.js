@@ -97,6 +97,9 @@ export const contentManagerApi = {
   progressionRules: () =>
     contentApi.get("/content/progression-rules").then((r) => r.data).catch((error) => { throw requestError(error); }),
 
+  progressionTree: () =>
+    contentApi.get("/content/progression-rules/tree").then((r) => r.data).catch((error) => { throw requestError(error); }),
+
   progressionRule: (id) =>
     contentApi.get(`/content/progression-rules/${encodeURIComponent(id)}`).then((r) => r.data).catch((error) => { throw requestError(error); }),
 
@@ -212,6 +215,39 @@ export const contentManagerApi = {
     contentApi
       .put(`/content/workouts/${encodeURIComponent(code)}`, data)
       .then((r) => r.data)
+      .catch((error) => { throw requestError(error); }),
+
+  cloneWorkout: (code, data) =>
+    contentApi.post(`/content/workouts/${encodeURIComponent(code)}/clone`, data)
+      .then((r) => r.data).catch((error) => { throw requestError(error); }),
+
+  quickUpdateWorkout: (code, data) =>
+    contentApi.patch(`/content/workouts/${encodeURIComponent(code)}/quick-update`, data)
+      .then((r) => r.data).catch((error) => { throw requestError(error); }),
+
+  /** Daily Training Plan Templates: existing workouts scheduled on training days. */
+  dailyPlanTemplates: () =>
+    contentApi.get("/content/daily-plan-templates").then((r) => r.data)
+      .catch((error) => { throw requestError(error); }),
+
+  dailyPlanTemplate: (code) =>
+    contentApi.get(`/content/daily-plan-templates/${encodeURIComponent(code)}`).then((r) => r.data)
+      .catch((error) => { throw requestError(error); }),
+
+  createDailyPlanTemplate: (data) =>
+    contentApi.post("/content/daily-plan-templates", data)
+      .then((r) => r.data).catch((error) => { throw requestError(error); }),
+
+  updateDailyPlanTemplate: (code, data) =>
+    contentApi.put(`/content/daily-plan-templates/${encodeURIComponent(code)}`, data)
+      .then((r) => r.data).catch((error) => { throw requestError(error); }),
+
+  updateDailyPlanTemplateStatus: (code, active) =>
+    contentApi.patch(`/content/daily-plan-templates/${encodeURIComponent(code)}/status`, { active })
+      .then((r) => r.data).catch((error) => { throw requestError(error); }),
+
+  deleteDailyPlanTemplate: (code) =>
+    contentApi.delete(`/content/daily-plan-templates/${encodeURIComponent(code)}`)
       .catch((error) => { throw requestError(error); }),
 };
 
