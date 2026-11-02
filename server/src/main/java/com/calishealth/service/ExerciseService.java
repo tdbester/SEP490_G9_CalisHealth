@@ -3,21 +3,29 @@ package com.calishealth.service;
 import com.calishealth.dtos.ExerciseDtos.CreateExerciseRequest;
 import com.calishealth.dtos.ExerciseDtos.ExerciseResponse;
 import com.calishealth.dtos.ExerciseDtos.ExerciseModerationHistoryResponse;
+import com.calishealth.dtos.ExerciseFilterRequestDTO;
+import com.calishealth.dtos.ExerciseItemResponseDTO;
+import com.calishealth.dtos.PageResponseDTO;
+import com.calishealth.dtos.SystemExerciseDetailResponseDTO;
 import com.calishealth.models.Exercise;
 import com.calishealth.models.ExerciseMuscleGroup;
 import com.calishealth.models.ExerciseMuscleGroupId;
+import com.calishealth.models.ExerciseTreeEdge;
 import com.calishealth.models.FitnessLevel;
 import com.calishealth.models.MuscleGroup;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.ExerciseModerationHistoryRepository;
+import com.calishealth.repository.ExerciseTreeEdgeRepository;
 import com.calishealth.repository.MuscleGroupRepository;
 import com.calishealth.repository.UserRepository;
+import com.calishealth.specification.ExerciseSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -27,6 +35,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.UUID;
 
 /**
@@ -52,7 +61,139 @@ public class ExerciseService {
     private final UserRepository users;
     private final JdbcTemplate jdbcTemplate;
     private final ExerciseVideoStorageService videoStorage;
+    private final ExerciseTreeEdgeRepository treeEdges;
     private final FitnessLevelRepository fitnessLevels;
+
+    @Transactional(readOnly = true)
+    public PageResponseDTO<ExerciseItemResponseDTO> getSystemExercises(ExerciseFilterRequestDTO filter) {
+        if (filter == null || filter.getType() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exercise type is required");
+        }
+        Page<Exercise> result = exercises.findAll(
+                ExerciseSpecification.withFilters(filter),
+                PageRequest.of(filter.getPage(), filter.getSize()));
+        List<ExerciseItemResponseDTO> content = result.getContent().stream()
+                .map(exercise -> new ExerciseItemResponseDTO(
+                        exercise.getId(),
+                        exercise.getName(),
+                        ExerciseFilterRequestDTO.ExerciseType.valueOf(exercise.getType().toUpperCase(Locale.ROOT)),
+                        enumValue(ExerciseFilterRequestDTO.ExerciseLevel.class, exercise.getLevel()),
+                        exercise.getMuscleGroup(),
+                        exercise.getDefaultSets(),
+                        exercise.getDefaultReps(),
+                        exercise.getDefaultDuration(),
+                        exercise.getEquipment(),
+                        exercise.getGoal() == null ? null
+                                : ExerciseFilterRequestDTO.ExerciseGoal.valueOf(exercise.getGoal().name()),
+                        exercise.getTargetSkill() == null ? null
+                                : ExerciseFilterRequestDTO.TargetSkill.valueOf(exercise.getTargetSkill().name()),
+                        exercise.getIcon()))
+                .toList();
+        return new PageResponseDTO<>(
+                content,
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages(),
+                result.hasNext(),
+                result.hasPrevious());
+    }
+
+    @Transactional(readOnly = true)
+    public SystemExerciseDetailResponseDTO getSystemExerciseDetail(Long exerciseId) {
+        Exercise exercise = exercises.findByIdAndSystemTrueAndStatus(exerciseId, "ACCEPTED")
+                .filter(Exercise::isActive)
+                .orElseThrow(() -> new com.calishealth.exception.ResourceNotFoundException("System exercise not found"));
+
+        String guide = exercise.getGuideSteps();
+        if (guide == null || guide.isBlank()) {
+            guide = exercise.getGuide();
+        }
+        if (guide == null || guide.isBlank()) {
+            guide = exercise.getExecutionSteps();
+        }
+        List<String> steps = guide == null || guide.isBlank()
+                ? List.of()
+                : guide.lines().map(String::trim).filter(line -> !line.isBlank()).toList();
+        if (steps.size() == 1) {
+            steps = List.of(
+                    "Set up for " + exercise.getName() + " with " + nullToDefault(exercise.getMuscleGroup(), "the target muscles") + " engaged.",
+                    "Brace your core and keep the " + nullToDefault(exercise.getMuscleGroup(), "target muscles")
+                            + " engaged while moving through a controlled range of motion.",
+                    steps.get(0),
+                    "Return to the starting position with control and repeat.");
+        }
+
+        List<ExerciseTreeEdge> connected = exercise.getId() == null
+                ? List.of()
+                : treeEdges.findAllConnectedTo(Set.of(exercise.getId()));
+        List<Long> relatedIds = connected.stream()
+                .flatMap(edge -> java.util.stream.Stream.of(edge.getParentExerciseId(), edge.getChildExerciseId()))
+                .filter(id -> !id.equals(exercise.getId()))
+                .distinct()
+                .toList();
+        var relatedNames = exercises.findAllById(relatedIds).stream()
+                .collect(Collectors.toMap(Exercise::getId, Exercise::getName));
+        List<String> previous = connected.stream()
+                .filter(edge -> exercise.getId().equals(edge.getChildExerciseId()))
+                .map(ExerciseTreeEdge::getParentExerciseId)
+                .map(relatedNames::get)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        List<String> next = connected.stream()
+                .filter(edge -> exercise.getId().equals(edge.getParentExerciseId()))
+                .map(ExerciseTreeEdge::getChildExerciseId)
+                .map(relatedNames::get)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        boolean hasTree = exercise.getExerciseTreeId() != null || !connected.isEmpty();
+
+        return new SystemExerciseDetailResponseDTO(
+                exercise.getId(),
+                exercise.getCode(),
+                exercise.getName(),
+                exercise.getDescription() == null ? exercise.getInstructions() : exercise.getDescription(),
+                exercise.getVideoUrl(),
+                exercise.getAnatomyImageUrl(),
+                steps,
+                exercise.getMuscleGroup(),
+                label(exercise.getLevel()),
+                exercise.getDefaultSets(),
+                exercise.getDefaultReps(),
+                exercise.getDefaultDuration(),
+                exercise.getEquipment(),
+                exercise.getType(),
+                exercise.getGoal() == null ? null : exercise.getGoal().name(),
+                exercise.getTargetSkill() == null ? null : exercise.getTargetSkill().name(),
+                exercise.getExerciseTreeId(),
+                hasTree,
+                exercise.getMovementGroup() == null ? null : exercise.getMovementGroup().name(),
+                previous,
+                next);
+    }
+
+    private static <T extends Enum<T>> T enumValue(Class<T> enumType, String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Enum.valueOf(enumType, value.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
+    private static String label(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String normalized = value.toLowerCase(Locale.ROOT);
+        return Character.toUpperCase(normalized.charAt(0)) + normalized.substring(1);
+    }
+
+    private static String nullToDefault(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
+    }
 
     /** Levels are managed by content (fitness_levels), so any level that exists there is valid. */
     private String resolveLevelName(String level) {
@@ -302,6 +443,10 @@ public class ExerciseService {
         exercise.setModerationStatus(active
                 ? STATUS_ACTIVE
                 : (SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource()) ? STATUS_REJECTED : STATUS_INACTIVE));
+        exercise.setStatus(active
+                ? "ACCEPTED"
+                : (SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource()) ? "REJECTED" : "ACCEPTED"));
+        exercise.setRejectionReason(active ? null : rejectionReason.trim());
         ExerciseResponse response = toResponse(exercises.saveAndFlush(exercise));
         if (SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource())) {
             moderationHistory.insert(exercise.getCode(), exercise.getName(), exercise.getType(),
@@ -375,6 +520,7 @@ public class ExerciseService {
         Map<String, Boolean> activity = levelActivity();
         return exercises.findAll().stream()
                 .filter(exercise -> SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource())
+                        && Exercise.EntryStatus.PENDING.name().equalsIgnoreCase(exercise.getStatus())
                         && !exercise.isActive()
                         && !STATUS_REJECTED.equalsIgnoreCase(exercise.getModerationStatus()))
                 .sorted((first, second) -> second.getUpdatedAt().compareTo(first.getUpdatedAt()))
@@ -412,6 +558,7 @@ public class ExerciseService {
         String source = responseSource(exercise);
         return new ExerciseResponse(
                 exercise.getCode(),
+                exercise.getMovementGroup() == null ? null : exercise.getMovementGroup().name(),
                 exercise.getName(),
                 type,
                 exercise.getInstructions(),

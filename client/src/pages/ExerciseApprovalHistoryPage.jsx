@@ -14,6 +14,7 @@ import { useLevelNames } from "../useLevelNames";
 import { CONTENT_PATHS, ContentPageHeader, DarkPill, formatDateTime, SummaryCard } from "../components/ContentShared";
 import ContentDataCard, { DbSourceNote, EmptyState, HEAD_ROW_SX } from "../components/ContentDataCard";
 import { CM } from "../theme-content";
+import { getLevelBadgeStyle } from "../utils/levelBadge";
 
 const rise = keyframes`
   from { opacity: 0; transform: translateY(8px); }
@@ -146,7 +147,11 @@ export default function ExerciseApprovalHistoryPage() {
                       <TableCell sx={{ textAlign: "left !important", pl: 3, "& > .MuiStack-root": { justifyContent: "flex-start" } }}><Stack direction="row" spacing={1.25} alignItems="center"><Box sx={{ width: 32, height: 32, borderRadius: 1.5, display: "grid", placeItems: "center", flexShrink: 0, bgcolor: "rgba(168,155,208,0.14)", color: CM.textMuted }}><FitnessIconSmall /></Box><Box sx={{ minWidth: 0, textAlign: "left" }}><Typography variant="body2" fontWeight={600} sx={{ color: "#fff" }}>{row.name}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>{row.code}</Typography></Box></Stack></TableCell>
                       <TableCell><Stack direction="row" spacing={1} alignItems="center"><Avatar sx={{ width: 28, height: 28, fontSize: 11, fontWeight: 700, bgcolor: "rgba(65,201,173,0.2)", color: "#8dd8c5" }}>{initials(row.createdByName)}</Avatar><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.createdByName || "Unknown"}</Typography></Stack></TableCell>
                       <TableCell><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.muscleGroup || "—"}</Typography></TableCell>
-                      <TableCell><DarkPill tone={levelTone(row.level)}>{row.level || "—"}</DarkPill></TableCell>
+                      <TableCell>
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${getLevelBadgeStyle(row.level)}`}>
+                          {row.level || "Intermediate"}
+                        </span>
+                      </TableCell>
                       <TableCell><DarkPill tone={row.decision === "APPROVED" ? "success" : "danger"}>{row.decision === "APPROVED" ? "Approved" : "Rejected"}</DarkPill></TableCell>
                       <TableCell sx={{ whiteSpace: "nowrap" }}><Typography variant="caption" sx={{ color: CM.textDim }}>{formatDateTime(row.reviewedAt)}</Typography></TableCell>
                       <TableCell align="center"><Button component={RouterLink} to={historyDetailPath(row)} state={{ historyRow: row }} size="small" variant="outlined" sx={{ py: 0.25, px: 1.25, fontSize: 11.5 }}>View</Button></TableCell>

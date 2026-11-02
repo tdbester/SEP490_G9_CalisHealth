@@ -4,6 +4,8 @@ import com.calishealth.dtos.ExerciseDtos.ExerciseModerationHistoryResponse;
 import com.calishealth.models.Exercise;
 import com.calishealth.repository.ExerciseModerationHistoryRepository;
 import com.calishealth.repository.ExerciseRepository;
+import com.calishealth.repository.ExerciseTreeEdgeRepository;
+import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.MuscleGroupRepository;
 import com.calishealth.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -30,7 +32,8 @@ class ExerciseServiceModerationReasonTest {
     private final ExerciseVideoStorageService videoStorage = mock(ExerciseVideoStorageService.class);
     private final ExerciseService service = new ExerciseService(
             exercises, moderationHistory, muscleGroups, users, jdbcTemplate, videoStorage,
-            mock(com.calishealth.repository.FitnessLevelRepository.class)
+            mock(ExerciseTreeEdgeRepository.class),
+            mock(FitnessLevelRepository.class)
     );
 
     @Test
@@ -49,6 +52,7 @@ class ExerciseServiceModerationReasonTest {
 
         service.updateStatus(exercise.getCode(), false, "  Unsafe execution form  ");
 
+        assertEquals("Unsafe execution form", exercise.getRejectionReason());
         verify(moderationHistory).insert(
                 eq(exercise.getCode()),
                 eq(exercise.getName()),

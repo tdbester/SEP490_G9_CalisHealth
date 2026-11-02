@@ -39,10 +39,12 @@ export const surveyApi = {
 
 /**
  * Member cần làm onboarding khi chưa từng hoàn thành hoặc bỏ qua khảo sát.
+ * Chỉ yêu cầu onboarding nếu có survey ACTIVE và chưa có phiên hoàn tất/bỏ qua.
  * Lỗi (vd survey chưa được seed) -> không chặn member, coi như không cần.
  */
 export async function needsOnboarding() {
   try {
+    await surveyApi.definition();
     const sessions = await surveyApi.sessions();
     return !sessions.some((s) => s.status === "COMPLETED" || s.status === "SKIPPED");
   } catch {

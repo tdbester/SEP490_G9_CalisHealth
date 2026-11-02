@@ -59,6 +59,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     null,
                                     List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
                             ));
+                    logger.info("JWT authenticated request: method={}, path={}, role={}",
+                            req.getMethod(), req.getRequestURI(), user.getRole());
                 }
             } catch (io.jsonwebtoken.ExpiredJwtException exception) {
                 logger.warn("Rejected expired JWT");
@@ -67,6 +69,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             } catch (io.jsonwebtoken.JwtException | IllegalArgumentException exception) {
                 logger.warn("Rejected malformed JWT: {}", exception.getMessage());
             }
+        } else if (header != null) {
+            logger.warn("Rejected Authorization header with unsupported scheme: method={}, path={}",
+                    req.getMethod(), req.getRequestURI());
+        } else if (req.getRequestURI().startsWith("/api/v1/library/personal-exercises/")) {
+            logger.warn("Missing Authorization header: method={}, path={}, contentType={}",
+                    req.getMethod(), req.getRequestURI(), req.getContentType());
         }
         chain.doFilter(req, res);
     }
