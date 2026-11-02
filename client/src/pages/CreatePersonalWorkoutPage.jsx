@@ -317,7 +317,7 @@ export default function CreatePersonalWorkoutPage() {
               setWorkoutName((value) => value.trim());
             }}
             placeholder="Upper body push day"
-            className={`w-full rounded-xl border ${showFieldError("name") && nameError ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#0c0820] px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors`}
+            className={`w-full rounded-xl border ${showFieldError("name") && nameError ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#0c0820] px-4 py-2.5 font-[inherit] text-xs text-white placeholder-slate-500 focus:outline-none transition-colors`}
           />
           {showFieldError("name") && nameError && <p className="text-rose-400 text-[11px] mt-1">{nameError}</p>}
         </div>
@@ -336,7 +336,7 @@ export default function CreatePersonalWorkoutPage() {
               setNote((value) => value.trim());
             }}
             placeholder="Anything you want to remember about this workout"
-            className="w-full resize-none rounded-xl border border-[#231b46] bg-[#0c0820] px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:border-[#7c3aed] focus:outline-none transition-colors"
+            className="w-full resize-none rounded-xl border border-[#231b46] bg-[#0c0820] px-4 py-2.5 font-[inherit] text-xs text-white placeholder-slate-500 focus:border-[#7c3aed] focus:outline-none transition-colors"
           />
           {showFieldError("description") && descriptionError && <p className="text-rose-400 text-[11px] mt-1">{descriptionError}</p>}
         </div>
@@ -398,7 +398,7 @@ export default function CreatePersonalWorkoutPage() {
                   setSearch(e.target.value);
                   setExercisePage(1);
                 }}
-                className="w-full rounded-xl border border-[#231b46] bg-[#0d0922] py-2.5 pl-9 pr-3 text-xs text-slate-300 placeholder-slate-500 focus:border-[#7c3aed] focus:outline-none"
+                className="w-full rounded-xl border border-[#231b46] bg-[#0d0922] py-2.5 pl-9 pr-3 font-[inherit] text-xs text-slate-300 placeholder-slate-500 focus:border-[#7c3aed] focus:outline-none"
               />
             </div>
             <select
