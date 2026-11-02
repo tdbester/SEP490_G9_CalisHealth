@@ -37,7 +37,7 @@ public class SecurityConfig {
                         // lỗi chưa có handler được Spring chuyển sang /error: không mở thì mọi lỗi thành 401 (FE tự logout)
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/auth/change-password", "/api/auth/me").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/dashboard").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/dashboard").permitAll()
                         .requestMatchers(
                             "/api/auth/**",
                             "/swagger-ui.html",

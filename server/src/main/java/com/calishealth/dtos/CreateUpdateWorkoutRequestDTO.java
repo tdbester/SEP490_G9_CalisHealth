@@ -17,7 +17,7 @@ public record CreateUpdateWorkoutRequestDTO(
         String description,
         @Pattern(regexp = "(?i)BEGINNER|INTERMEDIATE|ADVANCED", message = "Please select a valid workout level")
         String level,
-        @Pattern(regexp = "(?i)HEALTH|SKILL|NONE", message = "Please select a valid workout type")
+        @Pattern(regexp = "(?i)HEALTH|SKILL|FLEX", message = "Please select a valid workout type")
         String type,
         Boolean isSharedWithCommunity,
         @NotEmpty(message = "A workout must contain at least one exercise")

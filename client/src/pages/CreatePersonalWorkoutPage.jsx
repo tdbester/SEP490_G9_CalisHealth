@@ -95,7 +95,7 @@ export default function CreatePersonalWorkoutPage() {
   const [workoutName, setWorkoutName] = useState("");
   const [note, setNote]               = useState("");
   const [workoutLevel, setWorkoutLevel] = useState("BEGINNER");
-  const [workoutType, setWorkoutType] = useState("NONE");
+  const [workoutType, setWorkoutType] = useState("FLEX");
   const [search, setSearch]           = useState("");
   const [levelFilter, setLevelFilter] = useState("All levels");
   const [selected, setSelected]       = useState([]);
@@ -364,7 +364,7 @@ export default function CreatePersonalWorkoutPage() {
             >
               <option value="HEALTH">Health</option>
               <option value="SKILL">Skill</option>
-              <option value="NONE">None</option>
+              <option value="FLEX">Flex</option>
             </select>
           </div>
         </div>

@@ -46,7 +46,15 @@ api.interceptors.response.use(
       window.location.href = "/change-password";
     }
     const isLoginRequest = /\/auth\/login(?:\?|$)/i.test(err.config?.url || "");
-    if (err.response?.status === 401 && !isLoginRequest) {
+    const isPublicDashboardRequest = /^\/dashboard(?:\?|$)/i.test(err.config?.url || "");
+    const isCurrentUserRequest = /\/auth\/me(?:\?|$)/i.test(err.config?.url || "");
+    const isHomeAuthCheck = isCurrentUserRequest && window.location.pathname === "/";
+    if (
+      err.response?.status === 401 &&
+      !isLoginRequest &&
+      !isPublicDashboardRequest &&
+      !isHomeAuthCheck
+    ) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       if (window.location.pathname !== "/login") {

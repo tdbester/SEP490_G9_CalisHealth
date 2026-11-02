@@ -96,8 +96,6 @@ export default function Dashboard() {
   const [dashboardError, setDashboardError] = useState(false);
 
   useEffect(() => {
-    if (!localStorage.getItem("token")) return;
-
     api.get("/dashboard")
       .then((response) => setDashboardData(response.data))
       .catch(() => setDashboardError(true));

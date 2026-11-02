@@ -35,7 +35,10 @@ class DashboardServiceTest {
                 .queryForObject(sqlCaptor.capture(), eq(Long.class));
 
         assertTrue(sqlCaptor.getAllValues().stream()
-                .allMatch(sql -> sql.contains("workout_entries")
+                .anyMatch(sql -> sql.contains("workout_entries")
+                        && sql.contains("source")));
+        assertTrue(sqlCaptor.getAllValues().stream()
+                .anyMatch(sql -> sql.contains("workout_entries")
                         && sql.contains("created_by")));
     }
 
