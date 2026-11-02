@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * Màn "Survey management" (Content Manager). /api/content/** đã giới hạn ROLE_CONTENT_MANAGER ở SecurityConfig.
+ * Màn "Survey Management" (Admin). SecurityConfig giới hạn /api/content/surveys/** cho ROLE_ADMIN.
  * version (tùy chọn) chọn survey version; bỏ trống = version ACTIVE, không có thì version DRAFT mới nhất.
  */
 @RestController

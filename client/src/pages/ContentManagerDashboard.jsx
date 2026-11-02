@@ -4,7 +4,7 @@ import { keyframes } from "@mui/material/styles";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
 import GroupRoundedIcon from "@mui/icons-material/GroupRounded";
-import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
+import EventNoteRoundedIcon from "@mui/icons-material/EventNoteRounded";
 import RuleRoundedIcon from "@mui/icons-material/RuleRounded";
 import SelfImprovementRoundedIcon from "@mui/icons-material/SelfImprovementRounded";
 import { CONTENT_PATHS, ContentPageHeader, TONE_STYLES } from "../components/ContentShared";
@@ -183,23 +183,23 @@ export default function ContentManagerDashboard() {
       >
         <Box sx={enter(0)}>
           <ManagementCard
-            title="Survey management"
-            description="Questions and options members answer when they sign up."
-            to={CONTENT_PATHS.surveys}
-            action="Manage surveys"
-            icon={MenuBookRoundedIcon}
-            preview={<PreviewList items={[{ label: "Personal information", detail: "Sign-up" }, { label: "Fitness goals", detail: "Survey" }, { label: "Training experience", detail: "Survey" }]} tone={CARD_TONES[0]} />}
+            title="Exercise & workout"
+            description="Manage exercises and workouts available to members."
+            to={CONTENT_PATHS.exercises}
+            action="Manage exercises"
+            icon={SelfImprovementRoundedIcon}
+            preview={<PreviewList items={[{ label: "Push-up", detail: "Exercise" }, { label: "Pull-up", detail: "Exercise" }, { label: "Upper body A", detail: "Workout" }]} tone={CARD_TONES[0]} />}
             tone={CARD_TONES[0]}
           />
         </Box>
         <Box sx={enter(80)}>
           <ManagementCard
-            title="Exercise & workout management"
-            description="Manage exercises and workouts available to members."
-            to={CONTENT_PATHS.exercises}
-            action="Manage exercises"
-            icon={SelfImprovementRoundedIcon}
-            preview={<PreviewList items={[{ label: "Push-up", detail: "Exercise" }, { label: "Pull-up", detail: "Exercise" }, { label: "Upper body A", detail: "Workout" }]} tone={CARD_TONES[1]} />}
+            title="Daily training plans"
+            description="Schedule existing workouts onto training days by level, month, and days per week."
+            to={CONTENT_PATHS.templates}
+            action="Manage plans"
+            icon={EventNoteRoundedIcon}
+            preview={<PreviewList items={[{ label: "Full Body A", detail: "Day 1" }, { label: "Full Body B", detail: "Day 2" }, { label: "Full Body C", detail: "Day 3" }]} tone={CARD_TONES[1]} />}
             tone={CARD_TONES[1]}
           />
         </Box>

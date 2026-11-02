@@ -51,6 +51,26 @@ public final class ProgressionRuleDtos {
             List<RuleSummary> nextRules
     ) {}
 
+    /** Một bài tập xuất hiện trong ít nhất một rule; là node của Exercise Tree. */
+    public record TreeNode(String code, String name, String type, String category, String difficultyLevel,
+                           List<String> muscleGroups) {}
+
+    /** Một rule dưới dạng cạnh có hướng prerequisite -> exercise (bài được mở khóa). */
+    public record TreeEdge(
+            Long ruleId,
+            String status,
+            String measureType,
+            int requiredSets,
+            Integer requiredReps,
+            Integer requiredSeconds,
+            BigDecimal minAccuracy,
+            String prerequisiteCode,
+            String exerciseCode
+    ) {}
+
+    /** Toàn bộ đồ thị thăng tiến (cả rule ACTIVE và INACTIVE); client tự chia nhóm và xếp bố cục. */
+    public record RuleTree(List<TreeNode> nodes, List<TreeEdge> edges) {}
+
     public record SaveRuleRequest(
             @NotBlank String exerciseCode,
             @NotBlank String prerequisiteCode,
@@ -58,7 +78,7 @@ public final class ProgressionRuleDtos {
             Integer requiredReps,
             Integer requiredSeconds,
             @NotNull @DecimalMin("1") @DecimalMax("100") BigDecimal minAccuracy,
-            String status
+            @NotBlank String status
     ) {}
 
     /** Sửa ngưỡng của rule có sẵn. Cặp bài không đổi được, muốn đổi thì tạo rule mới. */
@@ -67,7 +87,7 @@ public final class ProgressionRuleDtos {
             Integer requiredReps,
             Integer requiredSeconds,
             @NotNull @DecimalMin("1") @DecimalMax("100") BigDecimal minAccuracy,
-            String status
+            @NotBlank String status
     ) {}
 
     /** Kết quả một set do client (MediaPipe) đếm; backend tự tính lại % từ các số này. */

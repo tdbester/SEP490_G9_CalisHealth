@@ -7,6 +7,7 @@ import com.calishealth.exception.ResourceNotFoundException;
 import com.calishealth.models.Exercise;
 import com.calishealth.models.User;
 import com.calishealth.models.WorkoutEntry;
+import com.calishealth.models.WorkoutExerciseItem;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.UserRepository;
 import com.calishealth.repository.WorkoutRepository;
@@ -19,8 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.jdbc.core.JdbcTemplate;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -35,7 +34,6 @@ class LibraryWorkoutServiceTest {
     @Mock private WorkoutRepository workouts;
     @Mock private ExerciseRepository exercises;
     @Mock private UserRepository users;
-    @Mock private JdbcTemplate jdbcTemplate;
     @InjectMocks private LibraryWorkoutService service;
 
     @Test
@@ -55,8 +53,6 @@ class LibraryWorkoutServiceTest {
                 .thenReturn(List.of(beginner, advanced));
         when(workouts.saveAndFlush(any(WorkoutEntry.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
-        when(jdbcTemplate.update(anyString(), any(), any(), any(), any(), any(), any(), any(), anyInt()))
-                .thenReturn(1);
 
         CreateUpdateWorkoutRequestDTO request = new CreateUpdateWorkoutRequestDTO(
                 "Test workout",
@@ -83,6 +79,13 @@ class LibraryWorkoutServiceTest {
         assertEquals("SKILL", saved.getType());
         assertEquals(member, saved.getCreatedBy());
         assertEquals(member.getId(), saved.getAuthorId());
+        assertEquals(2, saved.getExercises().size());
+        assertEquals(100, saved.getExercises().get(0).getSets());
+        assertEquals(101, saved.getExercises().get(0).getReps());
+        assertNull(saved.getExercises().get(0).getDurationSeconds());
+        assertEquals(2, saved.getExercises().get(1).getSets());
+        assertNull(saved.getExercises().get(1).getReps());
+        assertEquals(3601, saved.getExercises().get(1).getDurationSeconds());
     }
 
     @Test
@@ -99,8 +102,6 @@ class LibraryWorkoutServiceTest {
                 .thenReturn(List.of(exercise));
         when(workouts.saveAndFlush(any(WorkoutEntry.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
-        when(jdbcTemplate.update(anyString(), any(), any(), any(), any(), any(), any(), any(), anyInt()))
-                .thenReturn(1);
 
         var response = service.createWorkout(member.getEmail(), new CreateUpdateWorkoutRequestDTO(
                 "Repeated exercise workout",
@@ -119,8 +120,8 @@ class LibraryWorkoutServiceTest {
         assertEquals(2, workoutCaptor.getValue().getExercises().size());
         assertEquals("ADVANCED", workoutCaptor.getValue().getLevel());
         assertNull(workoutCaptor.getValue().getType());
-        assertEquals(10L, workoutCaptor.getValue().getExercises().get(0).getId());
-        assertEquals(10L, workoutCaptor.getValue().getExercises().get(1).getId());
+        assertEquals(10L, workoutCaptor.getValue().getExercises().get(0).getExercise().getId());
+        assertEquals(10L, workoutCaptor.getValue().getExercises().get(1).getExercise().getId());
     }
 
     @Test
@@ -159,7 +160,9 @@ class LibraryWorkoutServiceTest {
         workout.setEstimatedDuration(12);
         Exercise exercise = new Exercise();
         exercise.setMuscleGroup("Chest");
-        workout.setExercises(List.of(exercise));
+        WorkoutExerciseItem item = new WorkoutExerciseItem();
+        item.setExercise(exercise);
+        workout.setExercises(List.of(item));
         when(workouts.findAll(
                 any(org.springframework.data.jpa.domain.Specification.class),
                 any(Pageable.class)))

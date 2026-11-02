@@ -6,6 +6,7 @@ import com.calishealth.exception.RequestValidationException;
 import com.calishealth.models.Exercise;
 import com.calishealth.models.User;
 import com.calishealth.models.WorkoutEntry;
+import com.calishealth.models.WorkoutExerciseItem;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.UserRepository;
 import com.calishealth.repository.WorkoutRepository;
@@ -16,7 +17,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -35,7 +35,6 @@ public class LibraryWorkoutService {
     private final WorkoutRepository workouts;
     private final ExerciseRepository exercises;
     private final UserRepository users;
-    private final JdbcTemplate jdbcTemplate;
 
     @Transactional(readOnly = true)
     public PageResponseDTO<WorkoutListItemDTO> getCommunityWorkouts(String memberEmail, WorkoutFilterRequestDTO filter) {
@@ -230,12 +229,24 @@ public class LibraryWorkoutService {
         List<WorkoutItemDTO> ordered = items.stream()
                 .sorted(Comparator.comparingInt(WorkoutItemDTO::orderIndex))
                 .toList();
-        List<Exercise> selected = ordered.stream()
+        List<Exercise> selectedExercises = ordered.stream()
                 .map(item -> exercisesById.get(item.exerciseId()))
+                .toList();
+        List<WorkoutExerciseItem> selectedItems = ordered.stream()
+                .map(item -> {
+                    WorkoutExerciseItem workoutItem = new WorkoutExerciseItem();
+                    workoutItem.setExercise(exercisesById.get(item.exerciseId()));
+                    workoutItem.setSets(item.sets());
+                    String countBy = normalizedCountBy(item);
+                    workoutItem.setReps("REPS".equals(countBy) ? item.reps() : null);
+                    workoutItem.setDurationSeconds("SECONDS".equals(countBy) ? item.duration() : null);
+                    workoutItem.setRestSeconds(item.restSeconds());
+                    return workoutItem;
+                })
                 .toList();
         workout.getExercises().clear();
         workouts.flush();
-        workout.getExercises().addAll(selected);
+        workout.getExercises().addAll(selectedItems);
         workouts.flush();
 
         int totalSets = ordered.stream().mapToInt(WorkoutItemDTO::sets).sum();
@@ -243,7 +254,7 @@ public class LibraryWorkoutService {
         int maximumLevel = 0;
         for (int index = 0; index < ordered.size(); index++) {
             WorkoutItemDTO item = ordered.get(index);
-            Exercise exercise = selected.get(index);
+            Exercise exercise = selectedExercises.get(index);
             String countBy = normalizedCountBy(item);
             long effortSeconds = "SECONDS".equals(countBy)
                     ? item.duration()
@@ -263,53 +274,29 @@ public class LibraryWorkoutService {
                 }
                 : requestedLevel.trim().toUpperCase(Locale.ROOT));
 
-        for (int index = 0; index < ordered.size(); index++) {
-            WorkoutItemDTO item = ordered.get(index);
-            String countBy = normalizedCountBy(item);
-            int updated = jdbcTemplate.update("""
-                    UPDATE workout_exercises
-                    SET order_index = ?, sets = ?, reps = ?, duration = ?, count_by = ?, rest_seconds = ?
-                    WHERE workout_id = ? AND display_order = ?
-                    """,
-                    index,
-                    item.sets(),
-                    "REPS".equals(countBy) ? item.reps() : null,
-                    "SECONDS".equals(countBy) ? item.duration() : null,
-                    countBy,
-                    item.restSeconds(),
-                    workout.getId(),
-                    index);
-            if (updated == 0 && jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM workout_exercises WHERE workout_id = ? AND display_order = ?",
-                    Integer.class,
-                    workout.getId(),
-                    index) != 1) {
-                throw new IllegalStateException("Could not persist workout exercise configuration");
-            }
-        }
     }
 
     private WorkoutDetailResponseDTO toDetail(WorkoutEntry workout) {
-        List<WorkoutExerciseItemDTO> items = jdbcTemplate.query("""
-                SELECT we.id, we.exercise_id, e.name, e.is_system, e.muscle_group, e.level,
-                       we.order_index, we.sets, we.reps, we.duration, we.count_by, we.rest_seconds
-                FROM workout_exercises we
-                JOIN exercises e ON e.id = we.exercise_id
-                WHERE we.workout_id = ?
-                ORDER BY we.order_index ASC, we.display_order ASC
-                """, (row, rowNum) -> new WorkoutExerciseItemDTO(
-                row.getLong("id"),
-                row.getLong("exercise_id"),
-                row.getString("name"),
-                row.getBoolean("is_system"),
-                row.getString("muscle_group"),
-                row.getString("level"),
-                row.getInt("order_index"),
-                row.getInt("sets"),
-                (Integer) row.getObject("reps"),
-                (Integer) row.getObject("duration"),
-                row.getString("count_by"),
-                row.getInt("rest_seconds")), workout.getId());
+        List<WorkoutExerciseItemDTO> items = java.util.stream.IntStream.range(0, workout.getExercises().size())
+                .mapToObj(index -> {
+                    WorkoutExerciseItem item = workout.getExercises().get(index);
+                    Exercise exercise = item.getExercise();
+                    boolean usesDuration = "HOLD".equalsIgnoreCase(exercise.getCategory());
+                    return new WorkoutExerciseItemDTO(
+                            null,
+                            exercise.getId(),
+                            exercise.getName(),
+                            exercise.isSystem(),
+                            exercise.getMuscleGroup(),
+                            exercise.getLevel(),
+                            index,
+                            item.getSets(),
+                            item.getReps(),
+                            item.getDurationSeconds(),
+                            usesDuration ? "SECONDS" : "REPS",
+                            item.getRestSeconds());
+                })
+                .toList();
         return new WorkoutDetailResponseDTO(
                 workout.getId(),
                 workout.getName(),
@@ -338,7 +325,7 @@ public class LibraryWorkoutService {
                 workout.getTotalSets(),
                 workout.getEstimatedDuration(),
                 workout.getExercises().stream()
-                        .map(Exercise::getMuscleGroup)
+                        .map(item -> item.getExercise().getMuscleGroup())
                         .filter(group -> group != null && !group.isBlank())
                         .distinct()
                         .collect(Collectors.joining(", ")),

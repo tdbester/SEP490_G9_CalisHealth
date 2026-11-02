@@ -55,7 +55,7 @@ const enter = (delay = 0) => ({
 
 const BREADCRUMB = [
   { label: "Content manager", to: CONTENT_PATHS.dashboard },
-  { label: "Exercise & Workout Management", to: CONTENT_PATHS.exercises },
+  { label: "Exercise & Workout", to: CONTENT_PATHS.exercises },
   { label: "Exercise list" },
 ];
 
@@ -125,7 +125,7 @@ export default function ExerciseListPage() {
   const [level, setLevel] = useState("all");
   const { levels: levelNames, levelTone } = useLevelNames();
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const rowsPerPage = 5;
   const [menu, setMenu] = useState({ anchor: null, entry: null });
 
   const statusMutation = useApiMutation(
@@ -185,10 +185,18 @@ export default function ExerciseListPage() {
   const closeMenu = () => setMenu({ anchor: null, entry: null });
 
   return (
-    <Box sx={{ maxWidth: 1280, mx: "auto", px: { xs: 2, sm: 3 }, py: { xs: 2.5, sm: 3 } }}>
+    <Box
+      sx={{
+        maxWidth: 1280,
+        mx: "auto",
+        px: { xs: 2, sm: 3 },
+        py: { xs: 2.5, sm: 3 },
+        "&, & *": { fontFamily: "Arial, sans-serif !important" },
+      }}
+    >
       <ContentPageHeader
         breadcrumb={BREADCRUMB}
-        title="Exercise & workout management"
+        title="Exercise & workout"
         description="Manage system exercises and skills, and moderate exercises submitted by users."
         action={
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
@@ -477,11 +485,7 @@ export default function ExerciseListPage() {
               page={Math.min(page, Math.max(0, Math.ceil(filtered.length / rowsPerPage) - 1))}
               onPageChange={(_, nextPage) => setPage(nextPage)}
               rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={(event) => {
-                setRowsPerPage(parseInt(event.target.value, 10));
-                setPage(0);
-              }}
-              rowsPerPageOptions={[10, 20, 50]}
+              rowsPerPageOptions={[]}
               labelDisplayedRows={({ from, to, count }) => `Showing ${from}-${to} of ${count}`}
             />
           </>

@@ -31,6 +31,10 @@ import WorkoutSystemListPage from "./pages/WorkoutSystemListPage";
 import SystemWorkoutDetailPage from "./pages/SystemWorkoutDetailPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ContentManagerDashboard from "./pages/ContentManagerDashboard";
+import ExerciseTreePage from "./pages/ExerciseTreePage";
+import DailyPlanTemplateListPage from "./pages/DailyPlanTemplateListPage";
+import DailyPlanTemplateBuilderPage from "./pages/DailyPlanTemplateBuilderPage";
+import DailyPlanTemplateDetailPage from "./pages/DailyPlanTemplateDetailPage";
 import ProgressionRulesPage, {
   ProgressionRuleDetailPage,
   ProgressionRuleFormPage,
@@ -112,11 +116,19 @@ export default function App() {
           <Route path="/content" element={<ContentManagerLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<ContentManagerDashboard />} />
-          <Route path="surveys" element={<SurveyManagement />} />
-          {/* URL cũ của màn Survey management */}
-          <Route path="survey" element={<Navigate to="/content/surveys" replace />} />
+          <Route path="daily-training-plans" element={<DailyPlanTemplateListPage />} />
+          <Route path="daily-training-plans/new" element={<DailyPlanTemplateBuilderPage />} />
+          <Route path="daily-training-plans/:code" element={<DailyPlanTemplateDetailPage />} />
+          <Route path="daily-training-plans/:code/edit" element={<DailyPlanTemplateBuilderPage />} />
+          {/* Old Workout Templates URL */}
+          <Route path="workout-templates" element={<Navigate to="/content/daily-training-plans" replace />} />
+          {/* Survey Management moved to the Admin area */}
+          <Route path="surveys" element={<Navigate to="/admin/surveys" replace />} />
+          {/* Legacy Survey Management URLs */}
+          <Route path="survey" element={<Navigate to="/admin/surveys" replace />} />
           <Route path="exercises" element={<ExerciseListPage />} />
           <Route path="progression-rules" element={<ProgressionRulesPage />} />
+          <Route path="progression-rules/tree" element={<ExerciseTreePage />} />
           <Route path="progression-rules/new" element={<ProgressionRuleFormPage />} />
           <Route path="progression-rules/:id/edit" element={<ProgressionRuleFormPage />} />
           <Route path="progression-rules/:id" element={<ProgressionRuleDetailPage />} />
@@ -175,6 +187,7 @@ export default function App() {
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="users/create" element={<AdminCreateStaffPage />} />
           <Route path="users/:id" element={<AdminUserDetailPage />} />
+          <Route path="surveys" element={<SurveyManagement />} />
           <Route path="create" element={<Navigate to="/admin/users/create" replace />} />
           <Route path="notifications" element={<AdminSectionPage title="Notifications" />} />
           <Route path="storage" element={<AdminSectionPage title="Media storage & infrastructure" />} />

@@ -270,7 +270,7 @@ function SystemExerciseDetailContent() {
 
   const crumb = [
     { label: "Content manager", to: CONTENT_PATHS.dashboard },
-    { label: "Exercise & Workout Management", to: CONTENT_PATHS.exercises },
+    { label: "Exercise & Workout", to: CONTENT_PATHS.exercises },
     { label: "Exercise details" },
   ];
 

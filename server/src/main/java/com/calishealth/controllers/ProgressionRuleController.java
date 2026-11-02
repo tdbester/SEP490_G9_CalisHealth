@@ -2,6 +2,7 @@ package com.calishealth.controllers;
 
 import com.calishealth.dtos.ProgressionRuleDtos.RuleDetail;
 import com.calishealth.dtos.ProgressionRuleDtos.RuleList;
+import com.calishealth.dtos.ProgressionRuleDtos.RuleTree;
 import com.calishealth.dtos.ProgressionRuleDtos.SaveRuleRequest;
 import com.calishealth.dtos.ProgressionRuleDtos.UpdateRuleRequest;
 import com.calishealth.service.ProgressionRuleService;
@@ -30,6 +31,11 @@ public class ProgressionRuleController {
     @GetMapping
     public RuleList list() {
         return progressionRules.list();
+    }
+
+    @GetMapping("/tree")
+    public RuleTree tree() {
+        return progressionRules.tree();
     }
 
     @GetMapping("/{id}")

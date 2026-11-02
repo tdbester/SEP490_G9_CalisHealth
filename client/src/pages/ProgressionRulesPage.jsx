@@ -204,7 +204,10 @@ export default function ProgressionRulesPage() {
     <Heading
       title="Progression Rules"
       description="Set what a member must achieve on one exercise to unlock the next one."
-      action={<Button component={RouterLink} to={`${CONTENT_PATHS.progressionRules}/new`} variant="contained" startIcon={<AddRoundedIcon />}>Create progression rule</Button>}
+      action={<Stack direction="row" spacing={1}>
+        <Button component={RouterLink} to={`${CONTENT_PATHS.progressionRules}/tree`} variant="outlined" startIcon={<AccountTreeRoundedIcon />}>Exercise tree</Button>
+        <Button component={RouterLink} to={`${CONTENT_PATHS.progressionRules}/new`} variant="contained" startIcon={<AddRoundedIcon />}>Create progression rule</Button>
+      </Stack>}
     />
     <Box sx={{ mt: 2.5, display: "grid", gap: 1.25, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" } }}>
       <Box sx={enter(0)}><SummaryCard label="Total Rules" count={rules.length} detail="configured rules" /></Box>
@@ -314,17 +317,23 @@ function RuleTable({ title, caption, rules }) {
 /** Screen 2: Progression rule detail. */
 export function ProgressionRuleDetailPage() {
   const { id } = useParams();
+  const location = useLocation();
   const query = useApiQuery(() => contentManagerApi.progressionRule(id), { deps: [id] });
+  // Mở từ Exercise Tree thì Back quay lại đúng chuỗi đang xem.
+  const fromTree = location.state?.from === "tree";
+  const backTo = fromTree
+    ? `${CONTENT_PATHS.progressionRules}/tree${location.state.chain ? `?chain=${encodeURIComponent(location.state.chain)}` : ""}`
+    : CONTENT_PATHS.progressionRules;
   if (query.isLoading) return <Loading />;
   if (query.error || !query.data) {
     return <Box sx={{ p: 3 }}>
       <Heading breadcrumb={LIST_BREADCRUMB} title="Progression rule not found" description={query.error?.message || ""} />
-      <Button component={RouterLink} to={CONTENT_PATHS.progressionRules} variant="outlined" startIcon={<ArrowBackRoundedIcon />} sx={{ mt: 2 }}>Back</Button>
+      <Button component={RouterLink} to={backTo} variant="outlined" startIcon={<ArrowBackRoundedIcon />} sx={{ mt: 2 }}>Back</Button>
     </Box>;
   }
   const { rule, unlockedMembers, sameTargetRules, nextRules } = query.data;
   const actions = <Stack direction="row" spacing={1}>
-    <Button component={RouterLink} to={CONTENT_PATHS.progressionRules} variant="outlined" startIcon={<ArrowBackRoundedIcon />}>Back</Button>
+    <Button component={RouterLink} to={backTo} variant="outlined" startIcon={<ArrowBackRoundedIcon />}>Back</Button>
     <Button component={RouterLink} to={`${CONTENT_PATHS.progressionRules}/${rule.id}/edit`} variant="contained">Update</Button>
   </Stack>;
   return <Box sx={{ maxWidth: 1100, mx: "auto", px: 3, py: 2.5 }}>

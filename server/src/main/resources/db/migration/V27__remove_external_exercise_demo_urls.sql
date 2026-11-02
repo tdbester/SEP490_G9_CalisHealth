@@ -1,4 +1,4 @@
--- Keep the pre-library exercises (EX_<id>) as the canonical rows. V22 seeded
+-- V27: Keep the pre-library exercises (EX_<id>) as the canonical rows. V22 seeded
 -- a second copy of some exercises with EX-### codes, so move their references
 -- and uploaded media to the older rows before removing the copies.
 CREATE TEMPORARY TABLE exercise_id_merge_map (

@@ -181,7 +181,7 @@ export function formatDateTime(value) {
 
 export const CONTENT_PATHS = {
   dashboard: "/content/dashboard",
-  surveys: "/content/surveys",
+  templates: "/content/daily-training-plans",
   exercises: "/content/exercises",
   progressionRules: "/content/progression-rules",
   levelCriteria: "/content/benchmark-criteria",

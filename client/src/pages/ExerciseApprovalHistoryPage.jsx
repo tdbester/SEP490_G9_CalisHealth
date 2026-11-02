@@ -103,7 +103,7 @@ export default function ExerciseApprovalHistoryPage() {
       <ContentPageHeader
         breadcrumb={[
           { label: "Content manager", to: CONTENT_PATHS.dashboard },
-          { label: "Exercise & workout management", to: CONTENT_PATHS.exercises },
+          { label: "Exercise & workout", to: CONTENT_PATHS.exercises },
           { label: "Approval history" },
         ]}
         title="Exercise approval history"

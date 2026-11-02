@@ -73,7 +73,10 @@ public final class ExerciseDtos {
             String description,
             String type,
             String level,
-            int restSeconds,
+            int monthNumber,
+            int daysPerWeek,
+            int daySequence,
+            String templateStatus,
             boolean active,
             LocalDateTime updatedAt,
             String source,
@@ -85,10 +88,35 @@ public final class ExerciseDtos {
     public record CreateWorkoutRequest(
             String name,
             String description,
-            int restSeconds,
+            String type,
             String level,
+            Integer monthNumber,
+            Integer daysPerWeek,
+            Integer daySequence,
+            String templateStatus,
+            /** Cách cũ: chỉ danh sách mã bài, cấu hình lấy theo mặc định của bài. Dùng khi {@code items} rỗng. */
             List<String> exerciseCodes,
-            List<WorkoutPlanItemRequest> planItems
+            List<WorkoutPlanItemRequest> planItems,
+            /** Bài tập kèm cấu hình riêng, theo thứ tự hiển thị. */
+            List<WorkoutExerciseItemRequest> items
+    ) {}
+
+    /** Clone Workout Template: copies every exercise setting into a new DRAFT template for the target month. */
+    public record CloneWorkoutRequest(Integer monthNumber, String name) {}
+
+    /**
+     * Quick Update Sets/Reps: adds the deltas to every exercise of the template (progressive overload).
+     * repsDelta applies to REPS exercises, durationDelta (seconds) to HOLD exercises.
+     */
+    public record QuickUpdateWorkoutRequest(Integer setsDelta, Integer repsDelta, Integer durationDelta) {}
+
+    /** Cách đếm không gửi lên: bài HOLD dùng durationSeconds, các bài còn lại dùng reps. */
+    public record WorkoutExerciseItemRequest(
+            String exerciseCode,
+            Integer sets,
+            Integer reps,
+            Integer durationSeconds,
+            Integer restSeconds
     ) {}
 
     public record WorkoutExerciseResponse(
@@ -99,7 +127,12 @@ public final class ExerciseDtos {
             String category,
             Integer defaultSets,
             Integer defaultReps,
-            Integer duration
+            Integer duration,
+            String countBy,
+            Integer sets,
+            Integer reps,
+            Integer durationSeconds,
+            Integer restSeconds
     ) {}
 
     public record WorkoutPlanItemRequest(

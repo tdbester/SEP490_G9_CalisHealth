@@ -44,9 +44,6 @@ public class WorkoutEntry {
     @Column(nullable = false, length = 20)
     private String source = "SYSTEM";
 
-    @Column(name = "rest_seconds", nullable = false)
-    private int restSeconds = 60;
-
     @Column(nullable = false, length = 30)
     private String level;
 
@@ -65,6 +62,18 @@ public class WorkoutEntry {
     @Column(name = "estimated_duration", nullable = false)
     private Integer estimatedDuration = 0;
 
+    @Column(name = "month_number", nullable = false)
+    private int monthNumber = 1;
+
+    @Column(name = "days_per_week", nullable = false)
+    private int daysPerWeek = 3;
+
+    @Column(name = "day_sequence", nullable = false)
+    private int daySequence = 1;
+
+    @Column(name = "template_status", nullable = false, length = 20)
+    private String templateStatus = "DRAFT";
+
     @Column(nullable = false)
     private boolean active = true;
 
@@ -72,14 +81,11 @@ public class WorkoutEntry {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
-    @ManyToMany
-    @JoinTable(
-            name = "workout_exercises",
-            joinColumns = @JoinColumn(name = "workout_id"),
-            inverseJoinColumns = @JoinColumn(name = "exercise_id")
-    )
+    /** Bài tập theo thứ tự hiển thị, mỗi bài có count by / sets / reps hoặc duration / rest riêng. */
+    @ElementCollection
+    @CollectionTable(name = "workout_exercises", joinColumns = @JoinColumn(name = "workout_id"))
     @OrderColumn(name = "display_order")
-    private List<Exercise> exercises = new ArrayList<>();
+    private List<WorkoutExerciseItem> exercises = new ArrayList<>();
 
     @OneToMany(mappedBy = "workout", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("dayOfWeek ASC, id ASC")

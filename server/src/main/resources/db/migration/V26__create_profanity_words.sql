@@ -1,3 +1,4 @@
+-- V26: Store database-managed profanity words for content moderation.
 CREATE TABLE IF NOT EXISTS profanity_words (
     id         BIGINT NOT NULL AUTO_INCREMENT,
     word       VARCHAR(120) NOT NULL,

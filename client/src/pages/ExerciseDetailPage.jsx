@@ -611,7 +611,10 @@ export default function ExerciseDetailPage() {
   const level = exercise.level || exercise.difficultyLevel || "Intermediate";
 
   return (
-    <div className="exercise-detail-page w-full max-w-6xl mx-auto text-white pb-10">
+    <div
+      className="exercise-detail-page w-full max-w-6xl mx-auto text-white pb-10"
+      style={{ fontFamily: "Arial, sans-serif" }}
+    >
       {/* Explicit style reset to prevent any browser default button styles (buttonface/white box) */}
       <style>{`
         .exercise-detail-page button {

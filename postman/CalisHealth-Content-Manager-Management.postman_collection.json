@@ -182,7 +182,7 @@
         {
           "name": "Get workout detail (set workoutCode)",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/content/workouts/{{workoutCode}}" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Workout detail returns 200', function () { pm.response.to.have.status(200); });", "if (pm.response.code === 200) pm.test('Workout detail has plan and exercise data', function () { const body = pm.response.json(); pm.expect(body.code).to.eql(pm.collectionVariables.get('workoutCode')); pm.expect(body.exercises).to.be.an('array'); pm.expect(body).to.have.property('restSeconds'); });"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Workout detail returns 200', function () { pm.response.to.have.status(200); });", "if (pm.response.code === 200) pm.test('Workout detail has plan and exercise data', function () { const body = pm.response.json(); pm.expect(body.code).to.eql(pm.collectionVariables.get('workoutCode')); pm.expect(body.exercises).to.be.an('array'); pm.expect(body).to.not.have.property('restSeconds'); });"] } }]
         },
         {
           "name": "Unknown workout detail (not found state)",
@@ -196,13 +196,13 @@
       "item": [
         {
           "name": "Create workout using created exercise",
-          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman CM Workout {{$timestamp}}\",\n  \"description\": \"Temporary workout created by the Content Manager collection.\",\n  \"restSeconds\": 60,\n  \"level\": \"Beginner\",\n  \"exerciseCodes\": [\"{{createdExerciseCode}}\"]\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/content/workouts" },
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman CM Workout {{$timestamp}}\",\n  \"description\": \"Temporary workout created by the Content Manager collection.\",\n  \"level\": \"Beginner\",\n  \"exerciseCodes\": [\"{{createdExerciseCode}}\"]\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/content/workouts" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Workout is created', function () { pm.response.to.have.status(201); });", "if (pm.response.code === 201) { const body = pm.response.json(); pm.collectionVariables.set('createdWorkoutCode', body.code); pm.test('Workout has generated code and selected exercise', function () { pm.expect(body.code).to.be.a('string').and.not.empty; pm.expect(body.exercises).to.have.length(1); pm.expect(body.exercises[0].code).to.eql(pm.collectionVariables.get('createdExerciseCode')); }); }"] } }]
         },
         {
           "name": "Update created workout",
-          "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman CM Workout Updated {{$timestamp}}\",\n  \"description\": \"Updated temporary workout.\",\n  \"restSeconds\": 90,\n  \"level\": \"Intermediate\",\n  \"exerciseCodes\": [\"{{createdExerciseCode}}\"]\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/content/workouts/{{createdWorkoutCode}}" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Workout update succeeds', function () { pm.response.to.have.status(200); });", "if (pm.response.code === 200) pm.test('Updated workout values are persisted', function () { const body = pm.response.json(); pm.expect(body.name).to.include('Updated'); pm.expect(body.restSeconds).to.eql(90); pm.expect(body.level).to.eql('Intermediate'); });"] } }]
+          "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman CM Workout Updated {{$timestamp}}\",\n  \"description\": \"Updated temporary workout.\",\n  \"level\": \"Intermediate\",\n  \"exerciseCodes\": [\"{{createdExerciseCode}}\"]\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/content/workouts/{{createdWorkoutCode}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Workout update succeeds', function () { pm.response.to.have.status(200); });", "if (pm.response.code === 200) pm.test('Updated workout values are persisted', function () { const body = pm.response.json(); pm.expect(body.name).to.include('Updated'); pm.expect(body.level).to.eql('Intermediate'); });"] } }]
         },
         {
           "name": "Set created workout inactive",

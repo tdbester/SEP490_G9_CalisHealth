@@ -1,4 +1,4 @@
--- V22: Init Library module schema and seed data for CalisHealth
+-- V25: Init Library module schema and seed data for CalisHealth
 -- Hỗ trợ chức năng Library & Exercise cho Member và Content Manager
 -- Chiến lược cuốn gói: Kế thừa V1 (users, auth_tokens), tạo các bảng phục vụ bài tập, nhóm cơ, video và kế hoạch tập.
 

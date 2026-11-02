@@ -24,7 +24,7 @@ import {
 } from "@mui/material";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
-import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
+import EventNoteRoundedIcon from "@mui/icons-material/EventNoteRounded";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import RuleRoundedIcon from "@mui/icons-material/RuleRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
@@ -41,8 +41,8 @@ export const DRAWER_WIDTH = 248;
 /** Main navigation of the Content Manager area. */
 export const CONTENT_LINKS = [
   { to: CONTENT_PATHS.dashboard, label: "Dashboard", icon: DashboardRoundedIcon },
-  { to: CONTENT_PATHS.surveys, label: "Survey Management", icon: MenuBookRoundedIcon },
   { to: CONTENT_PATHS.exercises, label: "Exercise & Workout", icon: FitnessCenterRoundedIcon },
+  { to: CONTENT_PATHS.templates, label: "Daily Training Plans", icon: EventNoteRoundedIcon },
   { to: CONTENT_PATHS.progressionRules, label: "Progression Rules", icon: TrendingUpRoundedIcon },
   { to: CONTENT_PATHS.levelCriteria, label: "Level Criteria", icon: RuleRoundedIcon },
 ];

@@ -54,9 +54,14 @@ class WorkoutServiceTest {
         var response = service.create(new CreateWorkoutRequest(
                 "Repeated exercises",
                 "Workout description",
-                60,
+                "HEALTH",
                 "Beginner",
+                1,
+                3,
+                1,
+                "PUBLISHED",
                 List.of("PUSH_UP", "PUSH_UP"),
+                null,
                 null
         ), member.getEmail());
 
