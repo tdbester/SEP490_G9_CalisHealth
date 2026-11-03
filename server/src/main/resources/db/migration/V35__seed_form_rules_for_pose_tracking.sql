@@ -1,4 +1,4 @@
--- V32: Form rules cho AI Pose Tracking.
+-- V35: Form rules cho AI Pose Tracking.
 --
 -- Mỗi rule mô tả một khớp cần theo dõi khi member tập:
 --   angle_threshold : góc (độ) coi là đạt khi đứng thẳng / đủ độ mở khớp

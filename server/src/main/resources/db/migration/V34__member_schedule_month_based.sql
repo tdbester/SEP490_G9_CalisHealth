@@ -1,4 +1,4 @@
--- V31: Member workout schedule (lịch tháng).
+-- V34: Member workout schedule (lịch tháng).
 -- Member tự xếp các workout (lấy từ Daily Training Plan Template của Content Manager)
 -- vào từng ngày cụ thể trong tháng — màn "Workout schedule" (Figma 1015:5).
 --
