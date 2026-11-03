@@ -45,6 +45,7 @@ export const ADMIN_PATHS = {
   notifications: "/admin/notifications",
   storage: "/admin/storage",
   maintenance: "/admin/maintenance",
+  profile: "/admin/profile",
 };
 
 /** Main navigation of the Admin area (same sidebar look as the Content Manager). */
@@ -78,9 +79,20 @@ function useAdminGuard() {
       .then(({ data }) => {
         if (cancelled) return;
         setUser(data);
+        let cachedAvatar = null;
+        try {
+          cachedAvatar = JSON.parse(localStorage.getItem("user") || "null")?.avatarUrl || null;
+        } catch {
+          // Ignore malformed cached account data.
+        }
         localStorage.setItem(
           "user",
-          JSON.stringify({ email: data.email, fullName: data.fullName, role: data.role }),
+          JSON.stringify({
+            email: data.email,
+            fullName: data.fullName,
+            role: data.role,
+            avatarUrl: data.avatarUrl || cachedAvatar,
+          }),
         );
         setStatus(data?.role === "ADMIN" ? "allowed" : "forbidden");
       })
@@ -203,7 +215,13 @@ function AdminShell({ user, logout, children }) {
               />
             </IconButton>
           </Tooltip>
-          <AccountMenu user={user} logout={logout} fallbackName="Admin" />
+          <AccountMenu
+            user={user}
+            logout={logout}
+            onProfile={() => navigate(ADMIN_PATHS.profile)}
+            onSettings={() => navigate(ADMIN_PATHS.profile)}
+            fallbackName="Admin"
+          />
           <LogoutButton logout={logout} />
         </Stack>
 

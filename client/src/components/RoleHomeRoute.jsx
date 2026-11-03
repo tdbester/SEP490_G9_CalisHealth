@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { Box, CircularProgress } from "@mui/material";
 import api, { getStoredAuthToken } from "../api/client";
 import AdminLayout from "./layout/AdminLayout";
-import Dashboard from "../pages/Dashboard";
+import MainDashboard from "../pages/MainDashboard";
 
 function clearAuthState() {
   localStorage.removeItem("token");
@@ -47,10 +47,22 @@ export default function RoleHomeRoute() {
           setState({ status: "guest", role: null });
           return;
         }
+        let cachedAvatar = null;
+        try {
+          cachedAvatar = JSON.parse(localStorage.getItem("user") || "null")?.avatarUrl || null;
+        } catch {
+          // Ignore malformed cached account data.
+        }
         localStorage.setItem(
           "user",
-          JSON.stringify({ email: data.email, fullName: data.fullName, role: data.role }),
+          JSON.stringify({
+            email: data.email,
+            fullName: data.fullName,
+            role: data.role,
+            avatarUrl: data.avatarUrl || cachedAvatar,
+          }),
         );
+        window.dispatchEvent(new CustomEvent("profile-updated", { detail: data }));
         setState({ status: "ready", role: data.role });
       })
       .catch(() => {
@@ -84,7 +96,7 @@ export default function RoleHomeRoute() {
 
   return (
     <AdminLayout>
-      <Dashboard />
+      <MainDashboard />
     </AdminLayout>
   );
 }

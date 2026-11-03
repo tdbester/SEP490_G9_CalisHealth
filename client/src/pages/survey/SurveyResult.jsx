@@ -3,21 +3,28 @@ import { useNavigate } from "react-router-dom";
 import { surveyApi, surveyErrorMessage } from "../../api/survey";
 import SurveyProgress from "../../components/survey/SurveyProgress";
 import TrainingPlanPreviewModal from "../../components/survey/TrainingPlanPreviewModal";
-import { ArrowRight, MedalIcon, RefreshIcon, SparkleIcon } from "../../components/survey/SurveyIcons";
+import { ArrowLeft, ArrowRight, MedalIcon, RefreshIcon, SparkleIcon } from "../../components/survey/SurveyIcons";
 import { durationRange } from "../../utils/planCalendar";
 import "./Survey.css";
 
 /** Số đẹp cho kết quả: 35 -> "35", 12.5 -> "12.5". */
 const formatNumber = (value) => (value === null || value === undefined ? "–" : String(Number(value)));
 
+/** "Level test" -> "level-test" (đúng slug dùng trong URL /survey/:stepSlug). */
+const LEVEL_TEST_SLUG = "level-test";
+
 /**
- * Màn "Result and recommended plan": level do backend chấm theo bộ luật trong DB
+ * Màn "Result and recommended plan": level do backend chấm theo bảng Level Criteria
  * (GET /api/survey-sessions/{id}/result) và kế hoạch gợi ý theo level đó.
+ *
+ * Member đến màn này bằng nút "Finish" ở bước Level test, rồi có thể bắt đầu kế hoạch,
+ * xem trước lịch đầy đủ, quay lại level test để sửa, hoặc làm lại toàn bộ khảo sát.
  */
 export default function SurveyResult() {
   const navigate = useNavigate();
   const [state, setState] = useState({ status: "loading" });
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [busy, setBusy] = useState(null); // null | "start" | "back"
 
   const load = useCallback(async () => {
     setState({ status: "loading" });
@@ -32,7 +39,7 @@ export default function SurveyResult() {
         surveyApi.result(completed.sessionId),
         surveyApi.definition(completed.surveyVersion),
       ]);
-      setState({ status: "ready", result, stepCount: definition.steps.length });
+      setState({ status: "ready", result, sessionId: completed.sessionId, stepCount: definition.steps.length });
     } catch (err) {
       setState({ status: "error", message: surveyErrorMessage(err, "We could not load your result.") });
     }
@@ -42,6 +49,38 @@ export default function SurveyResult() {
     document.title = "CalisHealth · Survey – Result";
     load();
   }, [load]);
+
+  /** "Start my training plan": chốt kế hoạch rồi về dashboard để bắt đầu tập. */
+  const handleStartPlan = async () => {
+    if (busy) return;
+    setBusy("start");
+    try {
+      await surveyApi.startPlan(state.sessionId);
+      navigate("/", { replace: true });
+    } catch (err) {
+      setState((prev) => ({
+        ...prev,
+        actionError: surveyErrorMessage(err, "We could not start your training plan. Please try again."),
+      }));
+      setBusy(null);
+    }
+  };
+
+  /** "Back to level test": mở lại phiên để sửa số liệu level test. */
+  const handleBackToLevelTest = async () => {
+    if (busy) return;
+    setBusy("back");
+    try {
+      await surveyApi.reopen(state.sessionId);
+      navigate(`/survey/${LEVEL_TEST_SLUG}`, { replace: true });
+    } catch (err) {
+      setState((prev) => ({
+        ...prev,
+        actionError: surveyErrorMessage(err, "We could not reopen the level test. Please try again."),
+      }));
+      setBusy(null);
+    }
+  };
 
   if (state.status !== "ready") {
     return (
@@ -82,6 +121,12 @@ export default function SurveyResult() {
             A starting point that fits you. Let&apos;s build strength, one session at a time.
           </p>
         </header>
+
+        {state.actionError && (
+          <p className="survey-form-error" role="alert">
+            {state.actionError}
+          </p>
+        )}
 
         {/* ── Level hiện tại ─────────────────────────────────────── */}
         <section className="result-card">
@@ -132,7 +177,7 @@ export default function SurveyResult() {
               <h2 className="result-section-title">Your test results</h2>
               <p className="result-muted">Your starting benchmark</p>
             </div>
-            <div className="result-scores">
+            <div className={`result-scores result-scores--count-${Math.min(assessment.criteria.length, 7)}`}>
               {assessment.criteria.map((item) => (
                 <div key={item.criterionCode} className="result-score">
                   <p className="result-score-label">{item.label}</p>
@@ -141,6 +186,11 @@ export default function SurveyResult() {
                     {item.unit && <span>{item.unit}</span>}
                   </p>
                   {item.bandLabel && <p className="result-score-band">{item.bandLabel}</p>}
+                  {item.score !== null && item.score !== undefined && (
+                    <p className="result-score-points">
+                      {formatNumber(item.score)} {Number(item.score) === 1 ? "point" : "points"}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
@@ -171,6 +221,16 @@ export default function SurveyResult() {
                 <li key={slot.day}>
                   <span>{slot.day}</span>
                   <p>{slot.name}</p>
+                  {slot.exercises?.length > 0 && (
+                    <ul className="result-rhythm-exercises">
+                      {slot.exercises.map((exercise) => (
+                        <li key={`${slot.day}-${exercise.name}`}>
+                          {exercise.name}
+                          {exercise.detail && <em>{exercise.detail}</em>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </li>
               ))}
             </ul>
@@ -180,8 +240,13 @@ export default function SurveyResult() {
 
         {/* ── Hành động ──────────────────────────────────────────── */}
         <div className="result-actions">
-          <button type="button" className="survey-btn survey-btn--primary" onClick={() => navigate("/", { replace: true })}>
-            <span>Start my training plan</span>
+          <button
+            type="button"
+            className="survey-btn survey-btn--primary"
+            onClick={handleStartPlan}
+            disabled={Boolean(busy)}
+          >
+            <span>{busy === "start" ? "Starting…" : "Start my training plan"}</span>
             <ArrowRight />
           </button>
           {plan && assessment.showPlanPreview && (
@@ -190,6 +255,15 @@ export default function SurveyResult() {
               <ArrowRight />
             </button>
           )}
+          <button
+            type="button"
+            className="survey-btn survey-btn--ghost"
+            onClick={handleBackToLevelTest}
+            disabled={Boolean(busy)}
+          >
+            <ArrowLeft />
+            <span>{busy === "back" ? "Opening…" : "Back to level test"}</span>
+          </button>
         </div>
 
         <div className="result-retake">

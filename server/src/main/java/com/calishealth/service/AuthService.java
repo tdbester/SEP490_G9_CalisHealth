@@ -64,6 +64,7 @@ public class AuthService {
         u.setEmail(email);
         u.setFullName(r.fullName().trim());
         u.setPassword(encoder.encode(r.password()));
+        u.setPasswordChangedAt(LocalDateTime.now());
         users.save(u);
 
         AuthToken t = createToken(u, TokenType.VERIFY_EMAIL, 24 * 60);
@@ -144,6 +145,7 @@ public class AuthService {
         }
         u.setPassword(encoder.encode(r.newPassword()));
         u.setMustChangePassword(false);
+        u.setPasswordChangedAt(LocalDateTime.now());
         users.save(u);
         tokens.delete(t);
     }
@@ -160,6 +162,7 @@ public class AuthService {
             throw err(HttpStatus.BAD_REQUEST, "The new password must be different from the default password");
         u.setPassword(encoder.encode(r.newPassword()));
         u.setMustChangePassword(false);
+        u.setPasswordChangedAt(LocalDateTime.now());
         users.save(u);
     }
 
