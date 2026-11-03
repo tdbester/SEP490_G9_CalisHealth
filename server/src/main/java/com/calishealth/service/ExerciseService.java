@@ -8,16 +8,12 @@ import com.calishealth.dtos.ExerciseItemResponseDTO;
 import com.calishealth.dtos.PageResponseDTO;
 import com.calishealth.dtos.SystemExerciseDetailResponseDTO;
 import com.calishealth.models.Exercise;
-import com.calishealth.models.ExerciseMuscleGroup;
-import com.calishealth.models.ExerciseMuscleGroupId;
 import com.calishealth.models.ExerciseTreeEdge;
 import com.calishealth.models.FitnessLevel;
-import com.calishealth.models.MuscleGroup;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.ExerciseModerationHistoryRepository;
 import com.calishealth.repository.ExerciseTreeEdgeRepository;
-import com.calishealth.repository.MuscleGroupRepository;
 import com.calishealth.repository.UserRepository;
 import com.calishealth.specification.ExerciseSpecification;
 import lombok.RequiredArgsConstructor;
@@ -57,12 +53,12 @@ public class ExerciseService {
 
     private final ExerciseRepository exercises;
     private final ExerciseModerationHistoryRepository moderationHistory;
-    private final MuscleGroupRepository muscleGroups;
     private final UserRepository users;
     private final JdbcTemplate jdbcTemplate;
     private final ExerciseVideoStorageService videoStorage;
     private final ExerciseTreeEdgeRepository treeEdges;
     private final FitnessLevelRepository fitnessLevels;
+    private final ExerciseMuscleGroupCatalog muscleGroupCatalog;
 
     @Transactional(readOnly = true)
     public PageResponseDTO<ExerciseItemResponseDTO> getSystemExercises(ExerciseFilterRequestDTO filter) {
@@ -101,7 +97,7 @@ public class ExerciseService {
 
     @Transactional(readOnly = true)
     public SystemExerciseDetailResponseDTO getSystemExerciseDetail(Long exerciseId) {
-        Exercise exercise = exercises.findByIdAndSystemTrueAndStatus(exerciseId, "ACCEPTED")
+        Exercise exercise = exercises.findByIdAndSourceAndStatus(exerciseId, "SYSTEM", "ACCEPTED")
                 .filter(Exercise::isActive)
                 .orElseThrow(() -> new com.calishealth.exception.ResourceNotFoundException("System exercise not found"));
 
@@ -254,6 +250,9 @@ public class ExerciseService {
     }
 
     private void validateExerciseValue(CreateExerciseRequest request) {
+        if (request.guide() == null || request.guide().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Execution steps are required");
+        }
         if (!"REPS".equals(request.category()) && !"HOLD".equals(request.category())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a repetition-count or hold exercise category");
         }
@@ -323,21 +322,7 @@ public class ExerciseService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "The signed-in user no longer exists")));
         Exercise saved = exercises.save(exercise);
 
-        // Phải persist exercise trước: ExerciseMuscleGroup dùng @MapsId nên khoá
-        // chính ghép (exercise_id, muscle_group_id) lấy từ id vừa sinh.
-        for (String muscleName : request.muscleGroup().split("\\s*·\\s*")) {
-            String displayName = muscleName.trim();
-            if (displayName.isEmpty()) {
-                continue;
-            }
-            MuscleGroup muscleGroup = resolveMuscleGroup(displayName);
-            ExerciseMuscleGroup link = new ExerciseMuscleGroup();
-            link.setId(new ExerciseMuscleGroupId());
-            link.setExercise(saved);
-            link.setMuscleGroup(muscleGroup);
-            saved.getMuscleGroups().add(link);
-        }
-
+        muscleGroupCatalog.assign(saved, request.muscleGroup());
         return toResponse(exercises.save(saved));
     }
 
@@ -386,23 +371,7 @@ public class ExerciseService {
         exercise.setExecutionSteps(request.guide());
         if (demoVideoUrl != null) exercise.setVideoUrl(demoVideoUrl);
         if (anatomyImageUrl != null) exercise.setAnatomyImageUrl(anatomyImageUrl);
-        List<String> requestedMuscles = java.util.Arrays.stream(request.muscleGroup().split("\\s*·\\s*"))
-                .map(String::trim)
-                .filter(name -> !name.isEmpty())
-                .distinct()
-                .toList();
-        List<MuscleGroup> resolvedMuscles = requestedMuscles.stream()
-                .map(this::resolveMuscleGroup)
-                .toList();
-        exercise.getMuscleGroups().clear();
-        exercises.saveAndFlush(exercise);
-        for (MuscleGroup muscleGroup : resolvedMuscles) {
-            ExerciseMuscleGroup link = new ExerciseMuscleGroup();
-            link.setId(new ExerciseMuscleGroupId());
-            link.setExercise(exercise);
-            link.setMuscleGroup(muscleGroup);
-            exercise.getMuscleGroups().add(link);
-        }
+        muscleGroupCatalog.assign(exercise, request.muscleGroup());
         Exercise saved = exercises.save(exercise);
         if (demoVideoUrl != null) videoStorage.delete(previousVideoUrl);
         if (anatomyImageUrl != null) videoStorage.deleteAnatomyImage(previousAnatomyImageUrl);
@@ -446,7 +415,6 @@ public class ExerciseService {
         exercise.setStatus(active
                 ? "ACCEPTED"
                 : (SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource()) ? "REJECTED" : "ACCEPTED"));
-        exercise.setRejectionReason(active ? null : rejectionReason.trim());
         ExerciseResponse response = toResponse(exercises.saveAndFlush(exercise));
         if (SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource())) {
             moderationHistory.insert(exercise.getCode(), exercise.getName(), exercise.getType(),
@@ -457,45 +425,6 @@ public class ExerciseService {
                     active ? "APPROVED" : "REJECTED", active ? null : rejectionReason.trim());
         }
         return response;
-    }
-
-    /**
-     * Lấy muscle group theo tên (không phân biệt hoa/thường), tạo mới nếu chưa có.
-     * Flush sau khi save để lần lặp sau trong cùng request luôn thấy row vừa tạo.
-     */
-    private MuscleGroup resolveMuscleGroup(String displayName) {
-        return muscleGroups.findByNameIgnoreCase(displayName)
-                .orElseGet(() -> muscleGroups.saveAndFlush(newMuscleGroup(displayName)));
-    }
-
-    /**
-     * V4 tạo muscle_groups với dashboard_code / icon_key / tone NOT NULL, nhưng
-     * màn hình Content Manager cho phép chọn group mới. Sinh các cột dashboard
-     * từ tên để INSERT không vướng ràng buộc NOT NULL.
-     */
-    private MuscleGroup newMuscleGroup(String displayName) {
-        String dashboardCode = displayName.toUpperCase(Locale.ROOT)
-                .replaceAll("[^A-Z0-9]+", "_")
-                .replaceAll("^_+|_+$", "");
-        if (dashboardCode.isBlank()) {
-            dashboardCode = "GROUP_" + UUID.randomUUID().toString().substring(0, 6).toUpperCase(Locale.ROOT);
-        }
-        MuscleGroup createdGroup = new MuscleGroup();
-        createdGroup.setName(displayName);
-        createdGroup.setDashboardCode(dashboardCode);
-        createdGroup.setIconKey(dashboardCode.toLowerCase(Locale.ROOT));
-        createdGroup.setTone(defaultToneFor(displayName));
-        return createdGroup;
-    }
-
-    private static String defaultToneFor(String displayName) {
-        Set<String> strong = Set.of("CHEST", "BACK", "ARMS", "SHOULDERS", "LEGS", "GLUTES");
-        Set<String> core = Set.of("CORE", "ABS");
-        String key = displayName.toUpperCase(Locale.ROOT);
-        if (core.contains(key)) {
-            return "amber";
-        }
-        return strong.contains(key) ? "violet" : "slate";
     }
 
     /** Mã hiển thị duy nhất, giữ ổn định vì được dùng trên URL của Content Manager. */

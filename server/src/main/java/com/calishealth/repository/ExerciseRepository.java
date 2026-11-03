@@ -15,12 +15,13 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long>, JpaSp
     List<Exercise> findAllByCodeIn(List<String> codes);
     Optional<Exercise> findByNameIgnoreCase(String name);
     boolean existsByNameIgnoreCaseAndSource(String name, String source);
-    Optional<Exercise> findByIdAndSystemTrueAndStatus(Long id, String status);
-    long countByTypeAndSystemTrueAndStatus(String type, String status);
-    long countByAuthor_IdAndSystemFalseAndStatus(Long authorId, String status);
-    Optional<Exercise> findByIdAndAuthor_IdAndSystemFalse(Long id, Long authorId);
-    List<Exercise> findAllByMovementGroupAndSystemTrueAndStatus(
+    Optional<Exercise> findByIdAndSourceAndStatus(Long id, String source, String status);
+    long countByTypeAndSourceAndStatus(String type, String source, String status);
+    long countByCreatedBy_IdAndSourceAndStatus(Long authorId, String source, String status);
+    Optional<Exercise> findByIdAndCreatedBy_IdAndSource(Long id, Long authorId, String source);
+    List<Exercise> findAllByMovementGroupAndSourceAndStatus(
             Exercise.MovementGroup movementGroup,
+            String source,
             String status);
 
     @Query("""
@@ -37,13 +38,13 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long>, JpaSp
 
     @Query("""
             SELECT COUNT(e) FROM Exercise e
-            WHERE e.system = true AND e.status = 'ACCEPTED' AND e.type = :type
+            WHERE e.source = 'SYSTEM' AND e.status = 'ACCEPTED' AND e.type = :type
             """)
     long countAcceptedSystemExercisesByType(String type);
 
     @Query("""
             SELECT COUNT(e) FROM Exercise e
-            WHERE e.author.id = :authorId AND e.system = false
+            WHERE e.createdBy.id = :authorId AND e.source = 'CUSTOM'
               AND e.status = 'ACCEPTED'
             """)
     long countAcceptedMemberExercisesByAuthorId(Long authorId);

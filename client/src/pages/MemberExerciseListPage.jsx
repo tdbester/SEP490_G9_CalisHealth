@@ -77,8 +77,10 @@ const MUSCLE_GROUPS = [
   "Back",
   "Legs",
   "Core",
+  "Arms",
+  "Shoulders",
+  "Glutes",
   "Full body",
-  "Arm/Shoulders",
 ];
 
 const LEVEL_OPTIONS = ["All levels", "Beginner", "Intermediate", "Advanced"];

@@ -7,9 +7,7 @@ import com.calishealth.repository.ExerciseModerationHistoryRepository;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.ExerciseTreeEdgeRepository;
 import com.calishealth.repository.FitnessLevelRepository;
-import com.calishealth.repository.MuscleGroupRepository;
 import com.calishealth.repository.UserRepository;
-import com.calishealth.service.ExerciseVideoStorageService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,12 +29,12 @@ class SystemExerciseDetailTest {
         exerciseService = new ExerciseService(
                 exerciseRepository,
                 mock(ExerciseModerationHistoryRepository.class),
-                mock(MuscleGroupRepository.class),
                 mock(UserRepository.class),
                 mock(JdbcTemplate.class),
                 mock(ExerciseVideoStorageService.class),
                 mock(ExerciseTreeEdgeRepository.class),
-                mock(FitnessLevelRepository.class));
+                mock(FitnessLevelRepository.class),
+                mock(ExerciseMuscleGroupCatalog.class));
     }
 
     @Test
@@ -56,8 +54,8 @@ class SystemExerciseDetailTest {
         exercise.setTargetSkill(Exercise.EntryTargetSkill.HANDSTAND);
         exercise.setMovementGroup(Exercise.MovementGroup.PUSH);
         exercise.setExerciseTreeId(12L);
-        when(exerciseRepository.findByIdAndSystemTrueAndStatus(
-                17L, Exercise.EntryStatus.ACCEPTED.name())).thenReturn(Optional.of(exercise));
+        when(exerciseRepository.findByIdAndSourceAndStatus(
+                17L, "SYSTEM", Exercise.EntryStatus.ACCEPTED.name())).thenReturn(Optional.of(exercise));
 
         SystemExerciseDetailResponseDTO result = exerciseService.getSystemExerciseDetail(17L);
 
@@ -79,8 +77,8 @@ class SystemExerciseDetailTest {
 
     @Test
     void throwsNotFoundWhenNoAcceptedSystemExerciseExists() {
-        when(exerciseRepository.findByIdAndSystemTrueAndStatus(
-                17L, Exercise.EntryStatus.ACCEPTED.name())).thenReturn(Optional.empty());
+        when(exerciseRepository.findByIdAndSourceAndStatus(
+                17L, "SYSTEM", Exercise.EntryStatus.ACCEPTED.name())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> exerciseService.getSystemExerciseDetail(17L))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -94,8 +92,8 @@ class SystemExerciseDetailTest {
         exercise.setName("Plank");
         exercise.setMuscleGroup("Core");
         exercise.setGuide("Keep your forearms grounded and avoid letting your hips sag.");
-        when(exerciseRepository.findByIdAndSystemTrueAndStatus(
-                18L, Exercise.EntryStatus.ACCEPTED.name())).thenReturn(Optional.of(exercise));
+        when(exerciseRepository.findByIdAndSourceAndStatus(
+                18L, "SYSTEM", Exercise.EntryStatus.ACCEPTED.name())).thenReturn(Optional.of(exercise));
 
         var result = exerciseService.getSystemExerciseDetail(18L);
 
@@ -114,8 +112,8 @@ class SystemExerciseDetailTest {
         exercise.setMovementGroup(Exercise.MovementGroup.PUSH);
         exercise.setTreeLevel(1);
         exercise.setExerciseTreeId(118L);
-        when(exerciseRepository.findByIdAndSystemTrueAndStatus(
-                118L, Exercise.EntryStatus.ACCEPTED.name())).thenReturn(Optional.of(exercise));
+        when(exerciseRepository.findByIdAndSourceAndStatus(
+                118L, "SYSTEM", Exercise.EntryStatus.ACCEPTED.name())).thenReturn(Optional.of(exercise));
 
         var result = exerciseService.getSystemExerciseDetail(118L);
 

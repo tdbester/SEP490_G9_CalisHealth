@@ -32,14 +32,15 @@ public class LibraryService {
     private final ExerciseRepository exerciseRepository;
     private final WorkoutRepository workoutRepository;
     private final UserRepository userRepository;
+    private final ExerciseMuscleGroupCatalog muscleGroupCatalog;
 
     // Temporary session cache for member exercises created in memory if DB user record not found
     private final List<ExerciseListItem> customSessionExercises = new ArrayList<>();
 
     @Transactional(readOnly = true)
     public ExerciseCounts getExerciseCounts(String userEmail) {
-        long healthCount = exerciseRepository.countByTypeAndSystemTrueAndStatus("HEALTH", "ACCEPTED");
-        long skillCount = exerciseRepository.countByTypeAndSystemTrueAndStatus("SKILL", "ACCEPTED");
+        long healthCount = exerciseRepository.countByTypeAndSourceAndStatus("HEALTH", "SYSTEM", "ACCEPTED");
+        long skillCount = exerciseRepository.countByTypeAndSourceAndStatus("SKILL", "SYSTEM", "ACCEPTED");
         long memberCount = userEmail == null || userEmail.isBlank()
                 ? 0
                 : userRepository.findByEmail(userEmail)
@@ -83,8 +84,8 @@ public class LibraryService {
         }
 
         return new LibraryOverviewDTO(
-                exerciseRepository.countByTypeAndSystemTrueAndStatus("HEALTH", "ACCEPTED"),
-                exerciseRepository.countByTypeAndSystemTrueAndStatus("SKILL", "ACCEPTED"),
+                exerciseRepository.countByTypeAndSourceAndStatus("HEALTH", "SYSTEM", "ACCEPTED"),
+                exerciseRepository.countByTypeAndSourceAndStatus("SKILL", "SYSTEM", "ACCEPTED"),
                 exerciseRepository.countAcceptedMemberExercisesByAuthorId(member.getId()),
                 workoutRepository.countSystemWorkoutsByType("HEALTH"),
                 workoutRepository.countSystemWorkoutsByType("SKILL"),
@@ -111,7 +112,7 @@ public class LibraryService {
             final String normalizedType = type.trim().toLowerCase(Locale.ROOT);
             if (normalizedType.equals("member")) {
                 allExercises = allExercises.stream()
-                        .filter(e -> "MEMBER".equalsIgnoreCase(e.source()))
+                        .filter(e -> isMemberSource(e.source()))
                         .toList();
             } else if (normalizedType.equals("health")) {
                 allExercises = allExercises.stream()
@@ -130,7 +131,7 @@ public class LibraryService {
             final String normalizedSource = source.trim().toLowerCase(Locale.ROOT);
             if (normalizedSource.equals("member")) {
                 allExercises = allExercises.stream()
-                        .filter(e -> "MEMBER".equalsIgnoreCase(e.source()))
+                        .filter(e -> isMemberSource(e.source()))
                         .toList();
             } else if (normalizedSource.equals("system")) {
                 allExercises = allExercises.stream()
@@ -229,6 +230,7 @@ public class LibraryService {
     public ExerciseListItem createMemberExercise(CreateMemberExerciseRequest req, String userEmail) {
         String name = req.name() != null ? req.name().trim() : "Untitled Custom Exercise";
         String mg = req.muscleGroup() != null && !req.muscleGroup().isBlank() ? req.muscleGroup().trim() : "Full body";
+        muscleGroupCatalog.validate(mg);
         String lvl = req.level() != null && !req.level().isBlank() ? req.level().trim() : "Intermediate";
         String equip = req.equipment() != null && !req.equipment().isBlank() ? req.equipment().trim() : "Bodyweight";
         int sets = req.sets() != null && req.sets() > 0 ? req.sets() : 3;
@@ -255,7 +257,6 @@ public class LibraryService {
                 memberEntry.setStatus("PENDING");
                 memberEntry.setActive(false);
                 memberEntry.setCategory(req.category() != null ? req.category() : "Custom");
-                memberEntry.setMuscleGroup(mg);
                 memberEntry.setLevel(lvl.toUpperCase(Locale.ROOT));
                 memberEntry.setDefaultSets(sets);
                 memberEntry.setDefaultReps(parseRepCount(reps));
@@ -264,6 +265,8 @@ public class LibraryService {
                 memberEntry.setGuide(desc);
                 memberEntry.setSaveCount(0);
                 Exercise saved = exerciseRepository.save(memberEntry);
+                muscleGroupCatalog.assign(saved, mg);
+                saved = exerciseRepository.save(saved);
                 newId = saved.getId();
                 code = saved.getCode();
                 persisted = true;
@@ -370,7 +373,7 @@ public class LibraryService {
 
         String videoUrl = e.getVideoUrl();
 
-        String source = e.getSource() != null ? e.getSource() : "SYSTEM";
+        String source = isMemberSource(e.getSource()) ? "MEMBER" : "SYSTEM";
         String code = "EX-" + e.getId();
 
         return new ExerciseListItem(
@@ -472,7 +475,7 @@ public class LibraryService {
         }
 
         // 5. If no member exercises found yet, provide starter seed member exercises
-        long memberCount = list.stream().filter(e -> "MEMBER".equalsIgnoreCase(e.source())).count();
+        long memberCount = list.stream().filter(e -> isMemberSource(e.source())).count();
         if (memberCount == 0) {
             list.addAll(getSeedMemberExercises());
         }
@@ -495,10 +498,10 @@ public class LibraryService {
             new ExerciseListItem(114L, "EX-014", "Hanging Knee Raise", "HEALTH", "SYSTEM", "Strength", "Core", 3, "12 reps", "Strength", "Pull-up bar", "Intermediate", "Core • 3 sets • 12 reps • Pull-up bar", "Bar-hanging abdominal drill targeting the lower abs and hip flexors.", null),
             new ExerciseListItem(115L, "EX-015", "Hollow Body Hold", "HEALTH", "SYSTEM", "Stability", "Core", 3, "30 sec", "Stability", "Bodyweight", "Intermediate", "Core • 3 sets • 30 sec • Bodyweight", "Gymnastic staple holding posterior pelvic tilt to solidify bodyweight stability.", null),
 
-            // Health - Arm/Shoulders
-            new ExerciseListItem(116L, "EX-016", "Pike Push-up", "HEALTH", "SYSTEM", "Strength", "Arm/Shoulders", 3, "10 reps", "Strength", "Bodyweight", "Intermediate", "Arm/Shoulders • 3 sets • 10 reps • Bodyweight", "Vertical pushing angle transitioning chest drive directly into the anterior deltoids.", null),
-            new ExerciseListItem(117L, "EX-017", "Parallel Bar Dips", "HEALTH", "SYSTEM", "Strength", "Arm/Shoulders", 3, "10 reps", "Strength", "Parallel bars", "Intermediate", "Arm/Shoulders • 3 sets • 10 reps • Parallel bars", "High-load bodyweight dip targeting lateral triceps and lower chest fibers.", null),
-            new ExerciseListItem(118L, "EX-018", "Bench Dips", "HEALTH", "SYSTEM", "Strength", "Arm/Shoulders", 3, "12 reps", "Strength", "Bench", "Beginner", "Arm/Shoulders • 3 sets • 12 reps • Bench", "Accessible tricep flexion drill for building pushing lock-out strength.", null),
+            // Health - Arms and Shoulders
+            new ExerciseListItem(116L, "EX-016", "Pike Push-up", "HEALTH", "SYSTEM", "Strength", "Arms, Shoulders", 3, "10 reps", "Strength", "Bodyweight", "Intermediate", "Arms, Shoulders • 3 sets • 10 reps • Bodyweight", "Vertical pushing angle transitioning chest drive directly into the anterior deltoids.", null),
+            new ExerciseListItem(117L, "EX-017", "Parallel Bar Dips", "HEALTH", "SYSTEM", "Strength", "Arms, Shoulders", 3, "10 reps", "Strength", "Parallel bars", "Intermediate", "Arms, Shoulders • 3 sets • 10 reps • Parallel bars", "High-load bodyweight dip targeting lateral triceps and lower chest fibers.", null),
+            new ExerciseListItem(118L, "EX-018", "Bench Dips", "HEALTH", "SYSTEM", "Strength", "Arms, Shoulders", 3, "12 reps", "Strength", "Bench", "Beginner", "Arms, Shoulders • 3 sets • 12 reps • Bench", "Accessible tricep flexion drill for building pushing lock-out strength.", null),
 
             // Skills (Chuẩn 100% theo Mockup Figma)
             new ExerciseListItem(201L, "SK-001", "Wall handstand hold", "SKILL", "SYSTEM", "Skill", "Shoulders", 4, "30 sec", "Handstand", "Wall / Floor", "Beginner", "Shoulders, core • 4 sets • 30 sec • Handstand", "Balance drill on hands demanding wrist mobility, shoulder flexion, and overhead stability.", null),
@@ -514,8 +517,12 @@ public class LibraryService {
         return List.of(
             new ExerciseListItem(301L, "MEM-001", "Custom Archer Push-up", "HEALTH", "MEMBER", "Strength", "Chest", 3, "10 reps", "Strength", "Bodyweight", "Intermediate", "Chest • 3 sets • 10 reps • Bodyweight", "Member custom progression emphasizing asymmetric horizontal pushing power.", null),
             new ExerciseListItem(302L, "MEM-002", "Doorframe Bodyweight Rows", "HEALTH", "MEMBER", "Strength", "Back", 3, "12 reps", "Strength", "Doorframe", "Beginner", "Back • 3 sets • 12 reps • Doorframe", "Home-calisthenics pulling variation using household doorframe for scapular traction.", null),
-            new ExerciseListItem(303L, "MEM-003", "Chair Elevated Dips", "HEALTH", "MEMBER", "Strength", "Arm/Shoulders", 3, "12 reps", "Strength", "Chair", "Beginner", "Arm/Shoulders • 3 sets • 12 reps • Chair", "Accessible triceps dipping variation using stable living room chairs.", null),
+            new ExerciseListItem(303L, "MEM-003", "Chair Elevated Dips", "HEALTH", "MEMBER", "Strength", "Arms, Shoulders", 3, "12 reps", "Strength", "Chair", "Beginner", "Arms, Shoulders • 3 sets • 12 reps • Chair", "Accessible triceps dipping variation using stable living room chairs.", null),
             new ExerciseListItem(304L, "MEM-004", "Bulgarian Split Squat Variation", "HEALTH", "MEMBER", "Strength", "Legs", 3, "10 reps", "Strength", "Chair / Bench", "Intermediate", "Legs • 3 sets • 10 reps • Chair / Bench", "Single leg rear-foot elevated drill customized for quad hypertrophy.", null)
         );
+    }
+
+    private static boolean isMemberSource(String source) {
+        return "MEMBER".equalsIgnoreCase(source) || "CUSTOM".equalsIgnoreCase(source);
     }
 }

@@ -18,11 +18,11 @@ public final class PersonalExerciseSpecification {
     ) {
         return (root, query, builder) -> {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
-            predicates.add(builder.isFalse(root.get("system")));
-            predicates.add(builder.equal(root.get("author").get("id"), memberId));
+            predicates.add(builder.equal(root.get("source"), "CUSTOM"));
+            predicates.add(builder.equal(root.get("createdBy").get("id"), memberId));
             predicates.add(builder.equal(root.get("status"), status.name()));
             if (level != null) {
-                predicates.add(builder.equal(root.get("level"), level.name()));
+                predicates.add(builder.equal(root.get("difficultyLevel"), level.name()));
             }
             if (search != null && !search.isBlank()) {
                 predicates.add(builder.like(

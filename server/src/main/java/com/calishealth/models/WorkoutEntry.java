@@ -31,16 +31,6 @@ public class WorkoutEntry {
     @Column(length = 40)
     private String type = "WORKOUT";
 
-    @Column(name = "is_system", nullable = false)
-    private boolean isSystem = true;
-
-    @Column(name = "author_id")
-    private Long authorId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "author_id", insertable = false, updatable = false)
-    private User author;
-
     @Column(nullable = false, length = 20)
     private String source = "SYSTEM";
 
@@ -113,5 +103,26 @@ public class WorkoutEntry {
         if (estimatedDuration == null) {
             estimatedDuration = 0;
         }
+        if (source == null || source.isBlank()) {
+            source = "SYSTEM";
+        } else if ("MEMBER".equalsIgnoreCase(source)) {
+            source = "CUSTOM";
+        }
+    }
+
+    public boolean isSystem() {
+        return "SYSTEM".equalsIgnoreCase(source);
+    }
+
+    public void setSystem(boolean system) {
+        source = system ? "SYSTEM" : "CUSTOM";
+    }
+
+    public Long getAuthorId() {
+        return createdBy == null ? null : createdBy.getId();
+    }
+
+    public User getAuthor() {
+        return createdBy;
     }
 }

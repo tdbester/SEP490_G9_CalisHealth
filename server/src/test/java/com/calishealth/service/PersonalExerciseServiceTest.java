@@ -6,6 +6,7 @@ import com.calishealth.models.Exercise;
 import com.calishealth.models.ProfanityWord;
 import com.calishealth.models.User;
 import com.calishealth.repository.ExerciseRepository;
+import com.calishealth.repository.ExerciseModerationHistoryRepository;
 import com.calishealth.repository.ProfanityWordRepository;
 import com.calishealth.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +32,7 @@ class PersonalExerciseServiceTest {
     Path temporaryDirectory;
 
     private ExerciseRepository exercises;
+    private ExerciseModerationHistoryRepository moderationHistory;
     private UserRepository users;
     private ProfanityWordRepository profanityWords;
     private PersonalExerciseService service;
@@ -38,6 +40,7 @@ class PersonalExerciseServiceTest {
     @BeforeEach
     void setUp() {
         exercises = mock(ExerciseRepository.class);
+        moderationHistory = mock(ExerciseModerationHistoryRepository.class);
         users = mock(UserRepository.class);
         profanityWords = mock(ProfanityWordRepository.class);
         when(profanityWords.findByActiveTrueOrderByIdAsc()).thenReturn(blockedWords());
@@ -45,7 +48,12 @@ class PersonalExerciseServiceTest {
                 temporaryDirectory.resolve("videos").toString(),
                 temporaryDirectory.resolve("anatomy").toString());
         service = new PersonalExerciseService(
-                exercises, users, new ContentModerationService(profanityWords), videoStorage);
+                exercises,
+                moderationHistory,
+                users,
+                new ContentModerationService(profanityWords),
+                videoStorage,
+                mock(ExerciseMuscleGroupCatalog.class));
         User member = new User();
         member.setId(7L);
         member.setEmail("member@example.com");
@@ -72,7 +80,7 @@ class PersonalExerciseServiceTest {
         assertThat(response.anatomyImageUrl()).startsWith("/media/exercise-anatomy/");
 
         var captor = org.mockito.ArgumentCaptor.forClass(Exercise.class);
-        verify(exercises).save(captor.capture());
+        verify(exercises, org.mockito.Mockito.times(2)).save(captor.capture());
         Exercise saved = captor.getValue();
         assertThat(saved.isSystem()).isFalse();
         assertThat(saved.getAuthor().getId()).isEqualTo(7L);
@@ -164,9 +172,8 @@ class PersonalExerciseServiceTest {
         rejected.setLevel(Exercise.EntryLevel.BEGINNER);
         rejected.setMuscleGroup("Legs");
         rejected.setStatus(Exercise.EntryStatus.REJECTED);
-        rejected.setRejectionReason("Previous reason");
         rejected.setVideoUrl("/media/exercise-demos/current.mp4");
-        when(exercises.findByIdAndAuthor_IdAndSystemFalse(31L, 7L)).thenReturn(Optional.of(rejected));
+        when(exercises.findByIdAndCreatedBy_IdAndSource(31L, 7L, "CUSTOM")).thenReturn(Optional.of(rejected));
 
         var response = service.resubmitPersonalExercise(
                 "member@example.com",
@@ -209,7 +216,7 @@ class PersonalExerciseServiceTest {
         accepted.setMuscleGroup("Legs");
         accepted.setStatus(Exercise.EntryStatus.ACCEPTED);
         accepted.setVideoUrl("/media/exercise-demos/current.mp4");
-        when(exercises.findByIdAndAuthor_IdAndSystemFalse(31L, 7L)).thenReturn(Optional.of(accepted));
+        when(exercises.findByIdAndCreatedBy_IdAndSource(31L, 7L, "CUSTOM")).thenReturn(Optional.of(accepted));
 
         var response = service.updateAcceptedPersonalExercise(
                 "member@example.com",
@@ -248,7 +255,7 @@ class PersonalExerciseServiceTest {
         rejected.setSystem(false);
         rejected.setType(Exercise.EntryType.HEALTH);
         rejected.setStatus(Exercise.EntryStatus.REJECTED);
-        when(exercises.findByIdAndAuthor_IdAndSystemFalse(31L, 7L)).thenReturn(Optional.of(rejected));
+        when(exercises.findByIdAndCreatedBy_IdAndSource(31L, 7L, "CUSTOM")).thenReturn(Optional.of(rejected));
 
         var response = service.resubmitPersonalExercise(
                 "member@example.com",
@@ -272,6 +279,20 @@ class PersonalExerciseServiceTest {
 
         assertThat(response.status()).isEqualTo("REJECTED");
         assertThat(response.rejectionReason()).contains("Video check");
+        verify(moderationHistory).insert(
+                org.mockito.ArgumentMatchers.eq(rejected.getCode()),
+                org.mockito.ArgumentMatchers.eq(rejected.getName()),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq("REJECTED"),
+                org.mockito.ArgumentMatchers.contains("Video check"));
     }
 
     private CreatePersonalExerciseRequestDTO request(String title) {

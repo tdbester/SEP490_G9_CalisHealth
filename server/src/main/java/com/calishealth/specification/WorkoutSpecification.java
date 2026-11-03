@@ -18,12 +18,12 @@ public final class WorkoutSpecification {
     ) {
         return (root, query, builder) -> {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
-            predicates.add(builder.isFalse(root.get("isSystem")));
+            predicates.add(builder.equal(root.get("source"), "CUSTOM"));
             if (community) {
                 predicates.add(builder.isTrue(root.get("sharedWithCommunity")));
                 predicates.add(builder.equal(root.get("status"), "ACCEPTED"));
             } else {
-                predicates.add(builder.equal(root.get("authorId"), memberId));
+                predicates.add(builder.equal(root.get("createdBy").get("id"), memberId));
             }
 
             if (filter.getLevel() != null && !filter.getLevel().isBlank()
@@ -34,7 +34,7 @@ public final class WorkoutSpecification {
             }
             if (filter.getSearch() != null && !filter.getSearch().isBlank()) {
                 String pattern = "%" + filter.getSearch().trim().toLowerCase(Locale.ROOT) + "%";
-                var author = root.join("author", jakarta.persistence.criteria.JoinType.LEFT);
+                var author = root.join("createdBy", jakarta.persistence.criteria.JoinType.LEFT);
                 predicates.add(builder.or(
                         builder.like(builder.lower(root.get("name")), pattern),
                         builder.like(builder.lower(author.get("fullName")), pattern)));
@@ -58,7 +58,7 @@ public final class WorkoutSpecification {
     ) {
         return (root, query, builder) -> {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
-            predicates.add(builder.isTrue(root.get("isSystem")));
+            predicates.add(builder.equal(root.get("source"), "SYSTEM"));
             predicates.add(builder.isTrue(root.get("active")));
             predicates.add(builder.equal(root.get("status"), "ACCEPTED"));
             predicates.add(builder.equal(builder.upper(root.get("type")), type));

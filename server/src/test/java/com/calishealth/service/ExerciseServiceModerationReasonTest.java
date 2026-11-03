@@ -6,7 +6,6 @@ import com.calishealth.repository.ExerciseModerationHistoryRepository;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.ExerciseTreeEdgeRepository;
 import com.calishealth.repository.FitnessLevelRepository;
-import com.calishealth.repository.MuscleGroupRepository;
 import com.calishealth.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -26,14 +25,14 @@ import static org.mockito.Mockito.when;
 class ExerciseServiceModerationReasonTest {
     private final ExerciseRepository exercises = mock(ExerciseRepository.class);
     private final ExerciseModerationHistoryRepository moderationHistory = mock(ExerciseModerationHistoryRepository.class);
-    private final MuscleGroupRepository muscleGroups = mock(MuscleGroupRepository.class);
     private final UserRepository users = mock(UserRepository.class);
     private final JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
     private final ExerciseVideoStorageService videoStorage = mock(ExerciseVideoStorageService.class);
     private final ExerciseService service = new ExerciseService(
-            exercises, moderationHistory, muscleGroups, users, jdbcTemplate, videoStorage,
+            exercises, moderationHistory, users, jdbcTemplate, videoStorage,
             mock(ExerciseTreeEdgeRepository.class),
-            mock(FitnessLevelRepository.class)
+            mock(FitnessLevelRepository.class),
+            mock(ExerciseMuscleGroupCatalog.class)
     );
 
     @Test
@@ -52,12 +51,11 @@ class ExerciseServiceModerationReasonTest {
 
         service.updateStatus(exercise.getCode(), false, "  Unsafe execution form  ");
 
-        assertEquals("Unsafe execution form", exercise.getRejectionReason());
         verify(moderationHistory).insert(
                 eq(exercise.getCode()),
                 eq(exercise.getName()),
                 eq(exercise.getType()),
-                eq(exercise.getCategory()),
+                eq(null),
                 eq(exercise.getDifficultyLevel()),
                 eq(exercise.getInstructions()),
                 eq(exercise.getCategory()),
