@@ -5,7 +5,10 @@ import com.calishealth.dtos.ExerciseDtos.WorkoutResponse;
 import com.calishealth.service.ExerciseService;
 import com.calishealth.service.WorkoutService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -23,6 +26,15 @@ public class PublicLibraryController {
         return exercises.findAll().stream()
                 .filter(ExerciseResponse::active)
                 .toList();
+    }
+
+    @GetMapping("/exercises/{code}")
+    public ExerciseResponse getExercise(@PathVariable String code) {
+        ExerciseResponse exercise = exercises.findByCode(code);
+        if (!exercise.active()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Exercise or skill not found");
+        }
+        return exercise;
     }
 
     @GetMapping("/workouts")

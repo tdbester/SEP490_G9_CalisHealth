@@ -155,7 +155,7 @@ export default function Dashboard() {
           <button
             type="button"
             className="dash-btn dash-btn-primary"
-            onClick={() => navigate("/tracking")}
+            onClick={() => navigate("/schedule")}
           >
             Start Workout
             <PlayArrowRoundedIcon />

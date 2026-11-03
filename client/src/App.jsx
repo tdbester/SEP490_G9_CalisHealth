@@ -13,6 +13,10 @@ import HealthTracking from "./pages/HealthTracking";
 import WorkoutHistory from "./pages/WorkoutHistory";
 import PerformanceAnalytics from "./pages/PerformanceAnalytics";
 import DayStreak from "./pages/DayStreak";
+import DailyWorkoutPlan from "./pages/DailyWorkoutPlan";
+import MemberSchedulePage from "./pages/MemberSchedulePage";
+import ReviewTrainingPlanPage from "./pages/ReviewTrainingPlanPage";
+import ExerciseDetailPreview from "./pages/ExerciseDetailPreview";
 import ContentManagerDashboard from "./pages/ContentManagerDashboard";
 import ExerciseTreePage from "./pages/ExerciseTreePage";
 import DailyPlanTemplateListPage from "./pages/DailyPlanTemplateListPage";
@@ -135,6 +139,46 @@ export default function App() {
 
         <Route path="/" element={<RoleHomeRoute />} />
         <Route path="/dashboard" element={<Navigate to="/" replace />} />
+        <Route
+          path="/plan"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <DailyWorkoutPlan />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/schedule"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <MemberSchedulePage />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/schedule/review"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <ReviewTrainingPlanPage />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/exercises/:code"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <ExerciseDetailPreview />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/day-streak"
           element={
