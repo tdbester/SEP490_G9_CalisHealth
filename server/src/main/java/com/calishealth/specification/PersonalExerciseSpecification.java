@@ -20,7 +20,13 @@ public final class PersonalExerciseSpecification {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
             predicates.add(builder.equal(root.get("source"), "CUSTOM"));
             predicates.add(builder.equal(root.get("createdBy").get("id"), memberId));
-            predicates.add(builder.equal(root.get("status"), status.name()));
+            if (status == Exercise.EntryStatus.ACCEPTED) {
+                predicates.add(builder.upper(root.get("moderationStatus")).in("ACTIVE", "ACCEPTED"));
+            } else {
+                predicates.add(builder.equal(
+                        builder.upper(root.get("moderationStatus")),
+                        status.name()));
+            }
             if (level != null) {
                 predicates.add(builder.equal(root.get("difficultyLevel"), level.name()));
             }

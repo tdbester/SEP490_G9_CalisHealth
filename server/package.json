@@ -1,0 +1,17 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://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@github.com/tdbester/SEP490_G9_CalisHealth.git"
+  },
+  "private": true,
+  "dependencies": {
+    "vite": "^8.3.5"
+  }
+}

@@ -32,7 +32,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.UUID;
 
 /**
  * Thư viện exercise/skill. Bảng canonical là `exercises` (ERD) — mọi module
@@ -97,7 +96,7 @@ public class ExerciseService {
 
     @Transactional(readOnly = true)
     public SystemExerciseDetailResponseDTO getSystemExerciseDetail(Long exerciseId) {
-        Exercise exercise = exercises.findByIdAndSourceAndStatus(exerciseId, "SYSTEM", "ACCEPTED")
+        Exercise exercise = exercises.findAcceptedByIdAndSource(exerciseId, "SYSTEM")
                 .filter(Exercise::isActive)
                 .orElseThrow(() -> new com.calishealth.exception.ResourceNotFoundException("System exercise not found"));
 
@@ -303,7 +302,7 @@ public class ExerciseService {
         type = requestedType;
 
         Exercise exercise = new Exercise();
-        exercise.setCode(newCode(requestedType));
+        exercise.setCode(temporaryExerciseCode());
         exercise.setName(request.name().trim());
         exercise.setType(type);
         exercise.setCategory(request.category());
@@ -322,6 +321,7 @@ public class ExerciseService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "The signed-in user no longer exists")));
         Exercise saved = exercises.save(exercise);
 
+        saved.setCode(systemExerciseCode(saved.getId()));
         muscleGroupCatalog.assign(saved, request.muscleGroup());
         return toResponse(exercises.save(saved));
     }
@@ -412,9 +412,6 @@ public class ExerciseService {
         exercise.setModerationStatus(active
                 ? STATUS_ACTIVE
                 : (SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource()) ? STATUS_REJECTED : STATUS_INACTIVE));
-        exercise.setStatus(active
-                ? "ACCEPTED"
-                : (SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource()) ? "REJECTED" : "ACCEPTED"));
         ExerciseResponse response = toResponse(exercises.saveAndFlush(exercise));
         if (SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource())) {
             moderationHistory.insert(exercise.getCode(), exercise.getName(), exercise.getType(),
@@ -427,16 +424,12 @@ public class ExerciseService {
         return response;
     }
 
-    /** Mã hiển thị duy nhất, giữ ổn định vì được dùng trên URL của Content Manager. */
-    private String newCode(String type) {
-        String prefix = "SKILL".equals(type) ? "SK" : "HE";
-        for (int attempt = 0; attempt < 5; attempt++) {
-            String candidate = prefix + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
-            if (!exercises.existsByCode(candidate)) {
-                return candidate;
-            }
-        }
-        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not allocate an exercise code");
+    private static String systemExerciseCode(Long id) {
+        return "EX_" + id;
+    }
+
+    private static String temporaryExerciseCode() {
+        return "TMP-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 24);
     }
 
     @Transactional(readOnly = true)

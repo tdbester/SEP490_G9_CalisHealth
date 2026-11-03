@@ -22,10 +22,16 @@ public final class MemberExerciseSpecification {
             if ("MY_SUBMISSIONS".equals(filter.getTab())) {
                 predicates.add(builder.equal(root.get("createdBy").get("id"), memberId));
                 if (filter.getStatus() != null) {
-                    predicates.add(builder.equal(root.get("status"), filter.getStatus().name()));
+                    if (filter.getStatus() == Exercise.EntryStatus.ACCEPTED) {
+                        predicates.add(builder.upper(root.get("moderationStatus")).in("ACTIVE", "ACCEPTED"));
+                    } else {
+                        predicates.add(builder.equal(
+                                builder.upper(root.get("moderationStatus")),
+                                filter.getStatus().name()));
+                    }
                 }
             } else {
-                predicates.add(builder.equal(root.get("status"), "ACCEPTED"));
+                predicates.add(builder.upper(root.get("moderationStatus")).in("ACTIVE", "ACCEPTED"));
                 predicates.add(builder.isTrue(root.get("shareWithCommunity")));
             }
 

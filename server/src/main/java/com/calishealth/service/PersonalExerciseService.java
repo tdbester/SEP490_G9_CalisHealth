@@ -78,7 +78,7 @@ public class PersonalExerciseService {
         try {
             anatomyImageUrl = storeAnatomyImage(anatomyImageFile);
             Exercise exercise = new Exercise();
-            exercise.setCode("PER-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase(Locale.ROOT));
+            exercise.setCode(temporaryExerciseCode());
             exercise.setName(request.title().trim());
             exercise.setDescription(request.description() == null ? "" : request.description().trim());
             exercise.setType(Exercise.EntryType.HEALTH);
@@ -100,6 +100,7 @@ public class PersonalExerciseService {
             exercise.setShareWithCommunity(Boolean.TRUE.equals(request.shareWithCommunity()));
             exercise.setSaveCount(0);
             Exercise saved = exercises.save(exercise);
+            saved.setCode(customExerciseCode(saved.getId()));
             muscleGroupCatalog.assign(saved, request.targetMuscle());
             saved = exercises.save(saved);
             if (!result.isPassed()) {
@@ -151,12 +152,12 @@ public class PersonalExerciseService {
     public SubmissionCountsDTO getSubmissionCounts(String memberEmail) {
         Long memberId = requireMember(memberEmail).getId();
         return new SubmissionCountsDTO(
-                exercises.countByCreatedBy_IdAndSourceAndStatus(
-                        memberId, "CUSTOM", Exercise.EntryStatus.PENDING.name()),
-                exercises.countByCreatedBy_IdAndSourceAndStatus(
-                        memberId, "CUSTOM", Exercise.EntryStatus.REJECTED.name()),
-                exercises.countByCreatedBy_IdAndSourceAndStatus(
-                        memberId, "CUSTOM", Exercise.EntryStatus.ACCEPTED.name()));
+                exercises.countByAuthorAndSourceAndModerationStatuses(
+                        memberId, "CUSTOM", List.of("PENDING")),
+                exercises.countByAuthorAndSourceAndModerationStatuses(
+                        memberId, "CUSTOM", List.of("REJECTED")),
+                exercises.countByAuthorAndSourceAndModerationStatuses(
+                        memberId, "CUSTOM", List.of("ACTIVE", "ACCEPTED")));
     }
 
     @Transactional(readOnly = true)
@@ -374,6 +375,7 @@ public class PersonalExerciseService {
             if (sets == null || reps == null || sets < 1 || sets > 20 || reps < 1 || reps > 1000) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sets and reps must be valid");
             }
+            exercise.setCategory("REPS");
             exercise.setDefaultSets(sets);
             exercise.setDefaultReps(reps);
             exercise.setDefaultDuration(null);
@@ -384,6 +386,7 @@ public class PersonalExerciseService {
         if (duration == null || duration < 1 || duration > 3600) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Duration must be between 1 and 3600 seconds");
         }
+        exercise.setCategory("HOLD");
         exercise.setDefaultSets(1);
         exercise.setDefaultReps(null);
         exercise.setDefaultDuration(duration);
@@ -392,6 +395,14 @@ public class PersonalExerciseService {
     private User requireMember(String email) {
         return users.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated member not found"));
+    }
+
+    private static String customExerciseCode(Long id) {
+        return "CU_" + id;
+    }
+
+    private static String temporaryExerciseCode() {
+        return "TMP-" + UUID.randomUUID().toString().replace("-", "").substring(0, 24);
     }
 
     private void validatePage(int page, int size) {
