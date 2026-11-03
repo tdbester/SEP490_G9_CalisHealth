@@ -1,0 +1,1020 @@
+{
+  "info": {
+    "name": "CalisHealth - Progression Rules",
+    "description": "Postman checks for the Content Manager 'Progression Rules' screens (list, detail, create/edit, row actions) and for the member endpoint that judges a rule from MediaPipe counts. Set cmPassword (a CONTENT_MANAGER account) and memberEmail/memberPassword (an enabled MEMBER with a member profile), then run the whole collection in order with the Runner. Folder 1 reads the live data and picks free exercise pairs, so the rules created here never clash with existing ones or form a loop; folders 2-6 create, edit, evaluate and toggle those rules; folder 7 deletes them. Workout sessions and unlocked skills written for the member by folder 5 are not removed. Run it against a local/dev database, not production.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "cmEmail", "value": "contentmanager@calishealth.com" },
+    { "key": "cmPassword", "value": "", "type": "secret" },
+    { "key": "memberEmail", "value": "dashboard.beginner@calishealth.com" },
+    { "key": "memberPassword", "value": "", "type": "secret" },
+    { "key": "token", "value": "", "type": "secret" },
+    { "key": "memberToken", "value": "", "type": "secret" },
+    { "key": "ruleCountBefore", "value": "" },
+    { "key": "repsPrereqCode", "value": "" },
+    { "key": "repsTargetCode", "value": "" },
+    { "key": "altPrereqCode", "value": "" },
+    { "key": "chainTargetCode", "value": "" },
+    { "key": "holdPrereqCode", "value": "" },
+    { "key": "holdTargetCode", "value": "" },
+    { "key": "altBody", "value": "" },
+    { "key": "chainBody", "value": "" },
+    { "key": "ruleId", "value": "" },
+    { "key": "altRuleId", "value": "" },
+    { "key": "chainRuleId", "value": "" },
+    { "key": "holdRuleId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ]
+  },
+  "item": [
+    {
+      "name": "0. Authentication & access",
+      "item": [
+        {
+          "name": "Login as Content Manager (save JWT)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/auth/login", "auth": { "type": "noauth" }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{cmEmail}}\",\n  \"password\": \"{{cmPassword}}\"\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Login succeeds', function () { pm.response.to.have.status(200); });",
+            "if (pm.response.code === 200) {",
+            "  const b = pm.response.json();",
+            "  pm.test('Account is a Content Manager', function () { pm.expect(b.role).to.eql('CONTENT_MANAGER'); });",
+            "  pm.test('Login returns a token', function () { pm.expect(b.token).to.be.a('string').and.not.empty; });",
+            "  pm.collectionVariables.set('token', b.token);",
+            "}"
+          ] } } ]
+        },
+        {
+          "name": "Login as a member (save JWT for the submit-result tests)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/auth/login", "auth": { "type": "noauth" }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{memberEmail}}\",\n  \"password\": \"{{memberPassword}}\"\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Login succeeds', function () { pm.response.to.have.status(200); });",
+            "if (pm.response.code === 200) {",
+            "  const b = pm.response.json();",
+            "  pm.test('Account is a member', function () { pm.expect(b.role).to.eql('MEMBER'); });",
+            "  pm.collectionVariables.set('memberToken', b.token);",
+            "}"
+          ] } } ]
+        },
+        {
+          "name": "List rules rejects a missing token",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/progression-rules", "auth": { "type": "noauth" } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Unauthenticated request is rejected', function () { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });"
+          ] } } ]
+        },
+        {
+          "name": "List rules rejects a member token",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/progression-rules", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('A member cannot open the Content Manager screen', function () { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });"
+          ] } } ]
+        },
+        {
+          "name": "Create rule rejects a member token",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"X\",\n  \"prerequisiteCode\": \"Y\",\n  \"requiredSets\": 1,\n  \"requiredReps\": 1,\n  \"minAccuracy\": 50\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('A member cannot create rules', function () { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });"
+          ] } } ]
+        },
+        {
+          "name": "Submit result rejects a missing token",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "noauth" }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"X\",\n  \"sets\": [ { \"totalReps\": 5, \"cleanReps\": 5, \"totalSeconds\": 0, \"cleanSeconds\": 0 } ]\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Unauthenticated request is rejected', function () { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });"
+          ] } } ]
+        }
+      ]
+    },
+    {
+      "name": "1. Screen: Progression Rules (list)",
+      "item": [
+        {
+          "name": "Load the list (also picks free exercise pairs for the later tests)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/progression-rules" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+            "if (pm.response.code !== 200) { return; }",
+            "const b = pm.response.json();",
+            "const rules = b.rules, ex = b.availableExercises;",
+            "",
+            "pm.test('Response has rules, counts and availableExercises', function () {",
+            "  pm.expect(b.rules).to.be.an('array');",
+            "  pm.expect(b.availableExercises).to.be.an('array').and.not.empty;",
+            "  pm.expect(b.activeCount).to.be.a('number');",
+            "  pm.expect(b.inactiveCount).to.be.a('number');",
+            "});",
+            "pm.test('activeCount + inactiveCount equals the number of rules', function () {",
+            "  pm.expect(b.activeCount + b.inactiveCount).to.eql(rules.length);",
+            "  pm.expect(rules.filter(function (r) { return r.status === 'ACTIVE'; }).length).to.eql(b.activeCount);",
+            "});",
+            "pm.test('Each row has the columns shown in the table', function () {",
+            "  rules.forEach(function (r) {",
+            "    pm.expect(r.id).to.be.a('number');",
+            "    pm.expect(r.status).to.be.oneOf(['ACTIVE', 'INACTIVE']);",
+            "    pm.expect(r.measureType).to.be.oneOf(['REPS', 'HOLD']);",
+            "    pm.expect(r.requiredSets).to.be.within(1, 20);",
+            "    if (r.measureType === 'HOLD') { pm.expect(r.requiredSeconds).to.be.within(1, 3600); pm.expect(r.requiredReps).to.eql(null); }",
+            "    else { pm.expect(r.requiredReps).to.be.within(1, 500); pm.expect(r.requiredSeconds).to.eql(null); }",
+            "    pm.expect(Number(r.minAccuracy)).to.be.within(1, 100);",
+            "    ['exercise', 'prerequisite'].forEach(function (k) {",
+            "      pm.expect(r[k].code).to.be.a('string').and.not.empty;",
+            "      pm.expect(r[k].name).to.be.a('string').and.not.empty;",
+            "      pm.expect(r[k].type).to.be.oneOf(['HEALTH', 'SKILL']);",
+            "      pm.expect(r[k].category).to.be.oneOf(['REPS', 'HOLD']);",
+            "    });",
+            "    pm.expect(r.exercise.code).to.not.eql(r.prerequisite.code);",
+            "    pm.expect(r.measureType, 'measure type follows the prerequisite').to.eql(r.prerequisite.category);",
+            "  });",
+            "});",
+            "pm.test('Rows are sorted by unlocked exercise, then prerequisite', function () {",
+            "  const keys = rules.map(function (r) { return (r.exercise.name + '\\u0000' + r.prerequisite.name).toLowerCase(); });",
+            "  pm.expect(keys).to.eql(keys.slice().sort());",
+            "});",
+            "pm.test('Every prerequisite/unlock pair appears once', function () {",
+            "  const pairs = rules.map(function (r) { return r.prerequisite.code + '>' + r.exercise.code; });",
+            "  pm.expect(new Set(pairs).size).to.eql(pairs.length);",
+            "});",
+            "pm.test('The rules contain no loop (A -> B -> A)', function () {",
+            "  const adj = {};",
+            "  rules.forEach(function (r) { (adj[r.prerequisite.code] = adj[r.prerequisite.code] || []).push(r.exercise.code); });",
+            "  const color = {}; let loop = false;",
+            "  const dfs = function (u) { color[u] = 1; (adj[u] || []).forEach(function (v) { if (color[v] === 1) loop = true; else if (!color[v]) dfs(v); }); color[u] = 2; };",
+            "  Object.keys(adj).forEach(function (u) { if (!color[u]) dfs(u); });",
+            "  pm.expect(loop).to.eql(false);",
+            "});",
+            "pm.test('Selectable exercises are REPS or HOLD with a code, name and type', function () {",
+            "  ex.forEach(function (e) {",
+            "    pm.expect(e.code).to.be.a('string').and.not.empty;",
+            "    pm.expect(e.name).to.be.a('string').and.not.empty;",
+            "    pm.expect(e.type).to.be.oneOf(['HEALTH', 'SKILL']);",
+            "    pm.expect(e.category).to.be.oneOf(['REPS', 'HOLD']);",
+            "  });",
+            "});",
+            "",
+            "// ---- pick pairs that are safe to create: no duplicate edge and no loop ----",
+            "const edges = rules.map(function (r) { return [r.prerequisite.code, r.exercise.code]; });",
+            "const has = function (p, t) { return edges.some(function (e) { return e[0] === p && e[1] === t; }); };",
+            "const reaches = function (s, g) {",
+            "  const seen = {}, q = [s];",
+            "  while (q.length) {",
+            "    const c = q.shift(); if (seen[c]) continue; seen[c] = true;",
+            "    for (const e of edges) { if (e[0] === c) { if (e[1] === g) return true; q.push(e[1]); } }",
+            "  }",
+            "  return false;",
+            "};",
+            "const pick = function (prereqs, targets) {",
+            "  for (const p of prereqs) for (const t of targets) {",
+            "    if (p.code === t.code || has(p.code, t.code) || reaches(t.code, p.code)) continue;",
+            "    edges.push([p.code, t.code]); return [p, t];",
+            "  }",
+            "  return null;",
+            "};",
+            "const bodyFor = function (p, t) {",
+            "  const o = { exerciseCode: t.code, prerequisiteCode: p.code, requiredSets: 1, minAccuracy: 60, status: 'ACTIVE' };",
+            "  if (p.category === 'HOLD') o.requiredSeconds = 10; else o.requiredReps = 3;",
+            "  return JSON.stringify(o);",
+            "};",
+            "const put = function (k, v) { pm.collectionVariables.set(k, v === undefined || v === null ? '' : String(v)); };",
+            "['repsPrereqCode', 'repsTargetCode', 'altPrereqCode', 'chainTargetCode', 'holdPrereqCode', 'holdTargetCode', 'altBody', 'chainBody', 'ruleId', 'altRuleId', 'chainRuleId', 'holdRuleId'].forEach(function (k) { put(k, ''); });",
+            "put('ruleCountBefore', rules.length);",
+            "",
+            "const reps = ex.filter(function (e) { return e.category === 'REPS'; });",
+            "const holds = ex.filter(function (e) { return e.category === 'HOLD'; });",
+            "const main = pick(reps, ex);",
+            "if (main) {",
+            "  put('repsPrereqCode', main[0].code); put('repsTargetCode', main[1].code);",
+            "  const alt = pick(ex, [main[1]]);",
+            "  if (alt) { put('altPrereqCode', alt[0].code); put('altBody', bodyFor(alt[0], main[1])); }",
+            "  const chain = pick([main[1]], ex);",
+            "  if (chain) { put('chainTargetCode', chain[1].code); put('chainBody', bodyFor(main[1], chain[1])); }",
+            "}",
+            "const hold = pick(holds, ex);",
+            "if (hold) { put('holdPrereqCode', hold[0].code); put('holdTargetCode', hold[1].code); }",
+            "pm.test('A free pair of exercises was found for the REPS rule', function () {",
+            "  pm.expect(pm.collectionVariables.get('repsPrereqCode'), 'no free REPS pair: delete a rule or add exercises').to.not.be.empty;",
+            "});"
+          ] } } ]
+        },
+        {
+          "name": "Search and tabs work on the loaded rows",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/progression-rules" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+            "const b = pm.response.json();",
+            "pm.test('Active and inactive tabs add up to All', function () {",
+            "  const a = b.rules.filter(function (r) { return r.status === 'ACTIVE'; }).length;",
+            "  const i = b.rules.filter(function (r) { return r.status === 'INACTIVE'; }).length;",
+            "  pm.expect(a + i).to.eql(b.rules.length);",
+            "});",
+            "pm.test('Searching by exercise name (case-insensitive) finds the row', function () {",
+            "  if (!b.rules.length) return;",
+            "  const term = b.rules[0].exercise.name.toUpperCase();",
+            "  const found = b.rules.filter(function (r) { return (r.exercise.name + ' ' + r.prerequisite.name).toUpperCase().includes(term); });",
+            "  pm.expect(found.length).to.be.at.least(1);",
+            "});"
+          ] } } ]
+        }
+      ]
+    },
+    {
+      "name": "2. Screen: Create rule (validation first, then valid rules)",
+      "item": [
+        {
+          "name": "Create with a blank unlocked exercise",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"\",\n  \"prerequisiteCode\": \"{{repsPrereqCode}}\",\n  \"requiredSets\": 2,\n  \"requiredReps\": 5,\n  \"minAccuracy\": 70\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Validation names the field', function () { pm.expect(pm.response.json().errors).to.have.property('exerciseCode'); });"
+          ] } } ]
+        },
+        {
+          "name": "Create with a blank prerequisite",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsTargetCode}}\",\n  \"prerequisiteCode\": \"\",\n  \"requiredSets\": 2,\n  \"requiredReps\": 5,\n  \"minAccuracy\": 70\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Validation names the field', function () { pm.expect(pm.response.json().errors).to.have.property('prerequisiteCode'); });"
+          ] } } ]
+        },
+        {
+          "name": "Create with 0 sets",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsTargetCode}}\",\n  \"prerequisiteCode\": \"{{repsPrereqCode}}\",\n  \"requiredSets\": 0,\n  \"requiredReps\": 5,\n  \"minAccuracy\": 70\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Validation names the field', function () { pm.expect(pm.response.json().errors).to.have.property('requiredSets'); });"
+          ] } } ]
+        },
+        {
+          "name": "Create with more than 20 sets",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsTargetCode}}\",\n  \"prerequisiteCode\": \"{{repsPrereqCode}}\",\n  \"requiredSets\": 21,\n  \"requiredReps\": 5,\n  \"minAccuracy\": 70\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('repsPrereqCode')) { pm.test('Skipped: no free exercise pair', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message explains the limit', function () { pm.expect(pm.response.json().message).to.match(/between 1 and 20/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Create without a minimum clean rate",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsTargetCode}}\",\n  \"prerequisiteCode\": \"{{repsPrereqCode}}\",\n  \"requiredSets\": 2,\n  \"requiredReps\": 5\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Validation names the field', function () { pm.expect(pm.response.json().errors).to.have.property('minAccuracy'); });"
+          ] } } ]
+        },
+        {
+          "name": "Create with a clean rate of 0",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsTargetCode}}\",\n  \"prerequisiteCode\": \"{{repsPrereqCode}}\",\n  \"requiredSets\": 2,\n  \"requiredReps\": 5,\n  \"minAccuracy\": 0\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Validation names the field', function () { pm.expect(pm.response.json().errors).to.have.property('minAccuracy'); });"
+          ] } } ]
+        },
+        {
+          "name": "Create with a clean rate above 100",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsTargetCode}}\",\n  \"prerequisiteCode\": \"{{repsPrereqCode}}\",\n  \"requiredSets\": 2,\n  \"requiredReps\": 5,\n  \"minAccuracy\": 101\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Validation names the field', function () { pm.expect(pm.response.json().errors).to.have.property('minAccuracy'); });"
+          ] } } ]
+        },
+        {
+          "name": "Create a REPS rule without reps per set",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsTargetCode}}\",\n  \"prerequisiteCode\": \"{{repsPrereqCode}}\",\n  \"requiredSets\": 2,\n  \"minAccuracy\": 70\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('repsPrereqCode')) { pm.test('Skipped: no free exercise pair', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message explains the limit', function () { pm.expect(pm.response.json().message).to.match(/reps per set must be between 1 and 500/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Create a REPS rule with 501 reps per set",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsTargetCode}}\",\n  \"prerequisiteCode\": \"{{repsPrereqCode}}\",\n  \"requiredSets\": 2,\n  \"requiredReps\": 501,\n  \"minAccuracy\": 70\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('repsPrereqCode')) { pm.test('Skipped: no free exercise pair', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message explains the limit', function () { pm.expect(pm.response.json().message).to.match(/reps per set must be between 1 and 500/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Create with an invalid status",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsTargetCode}}\",\n  \"prerequisiteCode\": \"{{repsPrereqCode}}\",\n  \"requiredSets\": 2,\n  \"requiredReps\": 5,\n  \"minAccuracy\": 70,\n  \"status\": \"PAUSED\"\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('repsPrereqCode')) { pm.test('Skipped: no free exercise pair', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message explains the problem', function () { pm.expect(pm.response.json().message).to.match(/ACTIVE or INACTIVE/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Create where an exercise is its own prerequisite",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsTargetCode}}\",\n  \"prerequisiteCode\": \"{{repsTargetCode}}\",\n  \"requiredSets\": 2,\n  \"requiredReps\": 5,\n  \"minAccuracy\": 70\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('repsPrereqCode')) { pm.test('Skipped: no free exercise pair', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message explains the problem', function () { pm.expect(pm.response.json().message).to.match(/own prerequisite/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Create with an unknown unlocked exercise",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"POSTMAN-NOT-FOUND\",\n  \"prerequisiteCode\": \"{{repsPrereqCode}}\",\n  \"requiredSets\": 2,\n  \"requiredReps\": 5,\n  \"minAccuracy\": 70\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('repsPrereqCode')) { pm.test('Skipped: no free exercise pair', function () {}); return; }",
+            "pm.test('Returns 404', function () { pm.response.to.have.status(404); });",
+            "pm.test('Message explains the problem', function () { pm.expect(pm.response.json().message).to.match(/not found/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Create with an unknown prerequisite",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsTargetCode}}\",\n  \"prerequisiteCode\": \"POSTMAN-NOT-FOUND\",\n  \"requiredSets\": 2,\n  \"requiredReps\": 5,\n  \"minAccuracy\": 70\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('repsPrereqCode')) { pm.test('Skipped: no free exercise pair', function () {}); return; }",
+            "pm.test('Returns 404', function () { pm.response.to.have.status(404); });",
+            "pm.test('Message explains the problem', function () { pm.expect(pm.response.json().message).to.match(/not found/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Create with an empty body",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message is present', function () { pm.expect(pm.response.json().message).to.be.a('string').and.not.empty; });"
+          ] } } ]
+        },
+        {
+          "name": "Create the main REPS rule (prerequisite unlocks the exercise)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsTargetCode}}\",\n  \"prerequisiteCode\": \"{{repsPrereqCode}}\",\n  \"requiredSets\": 2,\n  \"requiredReps\": 5,\n  \"minAccuracy\": 70,\n  \"status\": \"ACTIVE\"\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('repsPrereqCode')) { pm.test('Skipped: no free exercise pair', function () {}); return; }",
+            "pm.test('Returns 201', function () { pm.response.to.have.status(201); });",
+            "const d = pm.response.json(); const r = d.rule;",
+            "pm.test('The new rule is returned with its detail', function () {",
+            "  pm.expect(r.id).to.be.a('number');",
+            "  pm.expect(d.unlockedMembers).to.eql(0);",
+            "  pm.expect(d.sameTargetRules).to.be.an('array');",
+            "  pm.expect(d.nextRules).to.be.an('array');",
+            "});",
+            "pm.test('The rule links the chosen exercises', function () {",
+            "  pm.expect(r.exercise.code).to.eql(pm.collectionVariables.get('repsTargetCode'));",
+            "  pm.expect(r.prerequisite.code).to.eql(pm.collectionVariables.get('repsPrereqCode'));",
+            "});",
+            "pm.test('Thresholds are stored as sent', function () {",
+            "  pm.expect(r.measureType).to.eql('REPS');",
+            "  pm.expect(r.requiredSets).to.eql(2);",
+            "  pm.expect(r.requiredReps).to.eql(5);",
+            "  pm.expect(r.requiredSeconds).to.eql(null);",
+            "  pm.expect(Number(r.minAccuracy)).to.eql(70);",
+            "  pm.expect(r.status).to.eql('ACTIVE');",
+            "});",
+            "pm.test('A rule name is generated', function () { pm.expect(r.ruleName).to.be.a('string').and.not.empty; });",
+            "pm.collectionVariables.set('ruleId', String(r.id));"
+          ] } } ]
+        },
+        {
+          "name": "Create the same pair again",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsTargetCode}}\",\n  \"prerequisiteCode\": \"{{repsPrereqCode}}\",\n  \"requiredSets\": 2,\n  \"requiredReps\": 5,\n  \"minAccuracy\": 70\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 409', function () { pm.response.to.have.status(409); });",
+            "pm.test('Message explains the problem', function () { pm.expect(pm.response.json().message).to.match(/already exists/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Create the reverse pair (direct loop A to B to A)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsPrereqCode}}\",\n  \"prerequisiteCode\": \"{{repsTargetCode}}\",\n  \"requiredSets\": 2,\n  \"requiredReps\": 5,\n  \"minAccuracy\": 70\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message explains the loop', function () { pm.expect(pm.response.json().message).to.match(/loop/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Create a second rule that unlocks the same exercise",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{{altBody}}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('altBody') || !pm.collectionVariables.get('ruleId')) { pm.test('Skipped: no second prerequisite available', function () {}); return; }",
+            "pm.test('Returns 201', function () { pm.response.to.have.status(201); });",
+            "const r = pm.response.json().rule;",
+            "pm.test('Same unlocked exercise, different prerequisite', function () {",
+            "  pm.expect(r.exercise.code).to.eql(pm.collectionVariables.get('repsTargetCode'));",
+            "  pm.expect(r.prerequisite.code).to.eql(pm.collectionVariables.get('altPrereqCode'));",
+            "});",
+            "pm.collectionVariables.set('altRuleId', String(r.id));"
+          ] } } ]
+        },
+        {
+          "name": "Create a rule that continues the chain (unlocked exercise becomes a prerequisite)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{{chainBody}}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('chainBody') || !pm.collectionVariables.get('ruleId')) { pm.test('Skipped: no chain target available', function () {}); return; }",
+            "pm.test('Returns 201', function () { pm.response.to.have.status(201); });",
+            "const r = pm.response.json().rule;",
+            "pm.test('The first rule target is now the prerequisite', function () {",
+            "  pm.expect(r.prerequisite.code).to.eql(pm.collectionVariables.get('repsTargetCode'));",
+            "  pm.expect(r.exercise.code).to.eql(pm.collectionVariables.get('chainTargetCode'));",
+            "});",
+            "pm.collectionVariables.set('chainRuleId', String(r.id));"
+          ] } } ]
+        },
+        {
+          "name": "Create a rule that closes a longer loop (A to B to C, then C to A)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsPrereqCode}}\",\n  \"prerequisiteCode\": \"{{chainTargetCode}}\",\n  \"requiredSets\": 1,\n  \"requiredReps\": 3,\n  \"minAccuracy\": 60\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('chainRuleId')) { pm.test('Skipped: the chained rule was not created', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message explains the loop', function () { pm.expect(pm.response.json().message).to.match(/loop/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Create a HOLD rule without seconds per set",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{holdTargetCode}}\",\n  \"prerequisiteCode\": \"{{holdPrereqCode}}\",\n  \"requiredSets\": 3,\n  \"minAccuracy\": 85\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('holdPrereqCode')) { pm.test('Skipped: no free HOLD pair', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message explains the limit', function () { pm.expect(pm.response.json().message).to.match(/seconds per set must be between 1 and 3600/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Create a HOLD rule with 3601 seconds",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{holdTargetCode}}\",\n  \"prerequisiteCode\": \"{{holdPrereqCode}}\",\n  \"requiredSets\": 3,\n  \"requiredSeconds\": 3601,\n  \"minAccuracy\": 85\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('holdPrereqCode')) { pm.test('Skipped: no free HOLD pair', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message explains the limit', function () { pm.expect(pm.response.json().message).to.match(/seconds per set must be between 1 and 3600/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Create a HOLD rule (seconds per set instead of reps)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/content/progression-rules", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{holdTargetCode}}\",\n  \"prerequisiteCode\": \"{{holdPrereqCode}}\",\n  \"requiredSets\": 3,\n  \"requiredSeconds\": 20,\n  \"minAccuracy\": 85\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('holdPrereqCode')) { pm.test('Skipped: no free HOLD pair', function () {}); return; }",
+            "pm.test('Returns 201', function () { pm.response.to.have.status(201); });",
+            "const r = pm.response.json().rule;",
+            "pm.test('Measure type follows the prerequisite', function () {",
+            "  pm.expect(r.measureType).to.eql('HOLD');",
+            "  pm.expect(r.requiredSeconds).to.eql(20);",
+            "  pm.expect(r.requiredReps).to.eql(null);",
+            "  pm.expect(r.requiredSets).to.eql(3);",
+            "});",
+            "pm.collectionVariables.set('holdRuleId', String(r.id));"
+          ] } } ]
+        }
+      ]
+    },
+    {
+      "name": "3. Screen: Rule detail",
+      "item": [
+        {
+          "name": "Load the detail of the new rule",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/progression-rules/{{ruleId}}" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+            "const d = pm.response.json(); const r = d.rule;",
+            "pm.test('Detail has the rule, member count and related rules', function () {",
+            "  pm.expect(String(r.id)).to.eql(pm.collectionVariables.get('ruleId'));",
+            "  pm.expect(r.exercise.code).to.be.a('string').and.not.empty;",
+            "  pm.expect(r.prerequisite.code).to.be.a('string').and.not.empty;",
+            "  pm.expect(d.unlockedMembers).to.be.a('number').and.at.least(0);",
+            "  pm.expect(d.sameTargetRules).to.be.an('array');",
+            "  pm.expect(d.nextRules).to.be.an('array');",
+            "});",
+            "pm.test('The rule itself is not listed as another way to unlock', function () {",
+            "  d.sameTargetRules.forEach(function (x) { pm.expect(x.id).to.not.eql(r.id); });",
+            "});",
+            "pm.test('Other ways to unlock share the same unlocked exercise', function () {",
+            "  d.sameTargetRules.forEach(function (x) { pm.expect(x.exercise.code).to.eql(r.exercise.code); });",
+            "});",
+            "pm.test('What comes next uses the unlocked exercise as prerequisite', function () {",
+            "  d.nextRules.forEach(function (x) { pm.expect(x.prerequisite.code).to.eql(r.exercise.code); });",
+            "});"
+          ] } } ]
+        },
+        {
+          "name": "Detail lists the second rule as another way to unlock",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/progression-rules/{{ruleId}}" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('altRuleId')) { pm.test('Skipped: no second rule was created', function () {}); return; }",
+            "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+            "pm.test('Other ways to unlock includes the second rule', function () {",
+            "  const ids = pm.response.json().sameTargetRules.map(function (x) { return String(x.id); });",
+            "  pm.expect(ids).to.include(pm.collectionVariables.get('altRuleId'));",
+            "});"
+          ] } } ]
+        },
+        {
+          "name": "Detail lists the chained rule under what comes next",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/progression-rules/{{ruleId}}" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('chainRuleId')) { pm.test('Skipped: no chained rule was created', function () {}); return; }",
+            "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+            "pm.test('What comes next includes the chained rule', function () {",
+            "  const ids = pm.response.json().nextRules.map(function (x) { return String(x.id); });",
+            "  pm.expect(ids).to.include(pm.collectionVariables.get('chainRuleId'));",
+            "});"
+          ] } } ]
+        },
+        {
+          "name": "Detail of an unknown rule",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/progression-rules/999999999" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 404', function () { pm.response.to.have.status(404); });",
+            "pm.test('Message explains the problem', function () { pm.expect(pm.response.json().message).to.match(/not found/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Detail with a non-numeric id",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/progression-rules/abc" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message is present', function () { pm.expect(pm.response.json().message).to.be.a('string').and.not.empty; });"
+          ] } } ]
+        }
+      ]
+    },
+    {
+      "name": "4. Screen: Edit rule",
+      "item": [
+        {
+          "name": "Edit with 0 sets",
+          "request": { "method": "PUT", "url": "{{baseUrl}}/api/content/progression-rules/{{ruleId}}", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"requiredSets\": 0,\n  \"requiredReps\": 6,\n  \"minAccuracy\": 80,\n  \"status\": \"ACTIVE\"\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Validation names the field', function () { pm.expect(pm.response.json().errors).to.have.property('requiredSets'); });"
+          ] } } ]
+        },
+        {
+          "name": "Edit with more than 20 sets",
+          "request": { "method": "PUT", "url": "{{baseUrl}}/api/content/progression-rules/{{ruleId}}", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"requiredSets\": 21,\n  \"requiredReps\": 6,\n  \"minAccuracy\": 80,\n  \"status\": \"ACTIVE\"\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message explains the limit', function () { pm.expect(pm.response.json().message).to.match(/between 1 and 20/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Edit with a clean rate of 0",
+          "request": { "method": "PUT", "url": "{{baseUrl}}/api/content/progression-rules/{{ruleId}}", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"requiredSets\": 2,\n  \"requiredReps\": 6,\n  \"minAccuracy\": 0,\n  \"status\": \"ACTIVE\"\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Validation names the field', function () { pm.expect(pm.response.json().errors).to.have.property('minAccuracy'); });"
+          ] } } ]
+        },
+        {
+          "name": "Edit with a clean rate above 100",
+          "request": { "method": "PUT", "url": "{{baseUrl}}/api/content/progression-rules/{{ruleId}}", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"requiredSets\": 2,\n  \"requiredReps\": 6,\n  \"minAccuracy\": 100.5,\n  \"status\": \"ACTIVE\"\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Validation names the field', function () { pm.expect(pm.response.json().errors).to.have.property('minAccuracy'); });"
+          ] } } ]
+        },
+        {
+          "name": "Edit a REPS rule without reps per set",
+          "request": { "method": "PUT", "url": "{{baseUrl}}/api/content/progression-rules/{{ruleId}}", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"requiredSets\": 2,\n  \"minAccuracy\": 80,\n  \"status\": \"ACTIVE\"\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message explains the limit', function () { pm.expect(pm.response.json().message).to.match(/reps per set must be between 1 and 500/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Edit with an invalid status",
+          "request": { "method": "PUT", "url": "{{baseUrl}}/api/content/progression-rules/{{ruleId}}", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"requiredSets\": 2,\n  \"requiredReps\": 6,\n  \"minAccuracy\": 80,\n  \"status\": \"PAUSED\"\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message explains the problem', function () { pm.expect(pm.response.json().message).to.match(/ACTIVE or INACTIVE/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Edit an unknown rule",
+          "request": { "method": "PUT", "url": "{{baseUrl}}/api/content/progression-rules/999999999", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"requiredSets\": 2,\n  \"requiredReps\": 6,\n  \"minAccuracy\": 80,\n  \"status\": \"ACTIVE\"\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 404', function () { pm.response.to.have.status(404); });",
+            "pm.test('Message explains the problem', function () { pm.expect(pm.response.json().message).to.match(/not found/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Edit the thresholds (2 sets, 6 reps, 80% clean)",
+          "request": { "method": "PUT", "url": "{{baseUrl}}/api/content/progression-rules/{{ruleId}}", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"requiredSets\": 2,\n  \"requiredReps\": 6,\n  \"minAccuracy\": 80,\n  \"status\": \"ACTIVE\"\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+            "const r = pm.response.json().rule;",
+            "pm.test('New thresholds are saved', function () {",
+            "  pm.expect(r.requiredSets).to.eql(2);",
+            "  pm.expect(r.requiredReps).to.eql(6);",
+            "  pm.expect(Number(r.minAccuracy)).to.eql(80);",
+            "  pm.expect(r.status).to.eql('ACTIVE');",
+            "});",
+            "pm.test('The exercise pair cannot be changed', function () {",
+            "  pm.expect(r.exercise.code).to.eql(pm.collectionVariables.get('repsTargetCode'));",
+            "  pm.expect(r.prerequisite.code).to.eql(pm.collectionVariables.get('repsPrereqCode'));",
+            "});"
+          ] } } ]
+        },
+        {
+          "name": "The list shows the edited values",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/progression-rules" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+            "const mine = pm.response.json().rules.find(function (r) { return String(r.id) === pm.collectionVariables.get('ruleId'); });",
+            "pm.test('The row has the edited thresholds', function () {",
+            "  pm.expect(mine).to.be.an('object');",
+            "  pm.expect(mine.requiredReps).to.eql(6);",
+            "  pm.expect(Number(mine.minAccuracy)).to.eql(80);",
+            "});"
+          ] } } ]
+        },
+        {
+          "name": "Edit the HOLD rule (4 sets, 25 seconds, 90% clean)",
+          "request": { "method": "PUT", "url": "{{baseUrl}}/api/content/progression-rules/{{holdRuleId}}", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"requiredSets\": 4,\n  \"requiredSeconds\": 25,\n  \"minAccuracy\": 90,\n  \"status\": \"ACTIVE\"\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('holdRuleId')) { pm.test('Skipped: no HOLD rule was created', function () {}); return; }",
+            "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+            "const r = pm.response.json().rule;",
+            "pm.test('Seconds are saved and reps stay empty', function () {",
+            "  pm.expect(r.requiredSets).to.eql(4);",
+            "  pm.expect(r.requiredSeconds).to.eql(25);",
+            "  pm.expect(r.requiredReps).to.eql(null);",
+            "  pm.expect(Number(r.minAccuracy)).to.eql(90);",
+            "});"
+          ] } } ]
+        }
+      ]
+    },
+    {
+      "name": "5. Member submits results (MediaPipe counts) and the server judges the rule",
+      "item": [
+        {
+          "name": "Submit with a blank exercise code",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"\",\n  \"sets\": [ { \"totalReps\": 5, \"cleanReps\": 5, \"totalSeconds\": 0, \"cleanSeconds\": 0 } ]\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Validation names the field', function () { pm.expect(pm.response.json().errors).to.have.property('exerciseCode'); });"
+          ] } } ]
+        },
+        {
+          "name": "Submit with no sets",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsPrereqCode}}\",\n  \"sets\": []\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Validation names the field', function () { pm.expect(pm.response.json().errors).to.have.property('sets'); });"
+          ] } } ]
+        },
+        {
+          "name": "Submit with negative reps",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsPrereqCode}}\",\n  \"sets\": [ { \"totalReps\": -1, \"cleanReps\": 0, \"totalSeconds\": 0, \"cleanSeconds\": 0 } ]\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message is present', function () { pm.expect(pm.response.json().message).to.be.a('string').and.not.empty; });"
+          ] } } ]
+        },
+        {
+          "name": "Submit with an unknown exercise",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"POSTMAN-NOT-FOUND\",\n  \"sets\": [ { \"totalReps\": 5, \"cleanReps\": 5, \"totalSeconds\": 0, \"cleanSeconds\": 0 } ]\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 404', function () { pm.response.to.have.status(404); });",
+            "pm.test('Message explains the problem', function () { pm.expect(pm.response.json().message).to.match(/not found/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Submit where clean reps exceed total reps",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsPrereqCode}}\",\n  \"sets\": [ { \"totalReps\": 5, \"cleanReps\": 6, \"totalSeconds\": 0, \"cleanSeconds\": 0 } ]\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('repsPrereqCode')) { pm.test('Skipped: no free exercise pair', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message explains the problem', function () { pm.expect(pm.response.json().message).to.match(/clean reps cannot exceed/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Submit where clean seconds exceed total seconds",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsPrereqCode}}\",\n  \"sets\": [ { \"totalReps\": 5, \"cleanReps\": 5, \"totalSeconds\": 10, \"cleanSeconds\": 11 } ]\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('repsPrereqCode')) { pm.test('Skipped: no free exercise pair', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message explains the problem', function () { pm.expect(pm.response.json().message).to.match(/clean seconds cannot exceed/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Submit a REPS exercise with no reps counted",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsPrereqCode}}\",\n  \"sets\": [ { \"totalReps\": 0, \"cleanReps\": 0, \"totalSeconds\": 30, \"cleanSeconds\": 30 } ]\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('repsPrereqCode')) { pm.test('Skipped: no free exercise pair', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message explains the problem', function () { pm.expect(pm.response.json().message).to.match(/no reps were recorded/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Submit a HOLD exercise with no hold time",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{holdPrereqCode}}\",\n  \"sets\": [ { \"totalReps\": 8, \"cleanReps\": 8, \"totalSeconds\": 0, \"cleanSeconds\": 0 } ]\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('holdPrereqCode')) { pm.test('Skipped: no free HOLD pair', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message explains the problem', function () { pm.expect(pm.response.json().message).to.match(/no hold time/i); });"
+          ] } } ]
+        },
+        {
+          "name": "One set only: not enough sets (rule needs 2 sets of 6 clean reps)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsPrereqCode}}\",\n  \"sets\": [ { \"totalReps\": 10, \"cleanReps\": 10, \"totalSeconds\": 0, \"cleanSeconds\": 0 } ]\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 201', function () { pm.response.to.have.status(201); });",
+            "const d = pm.response.json();",
+            "const ev = d.evaluations.find(function (e) { return String(e.ruleId) === pm.collectionVariables.get('ruleId'); });",
+            "pm.test('The server returns a session id and the clean rate it calculated', function () {",
+            "  pm.expect(d.sessionId).to.be.a('number');",
+            "  pm.expect(Number(d.cleanRate)).to.eql(100);",
+            "});",
+            "pm.test('The rule is evaluated and not passed', function () {",
+            "  pm.expect(ev, 'evaluation for the new rule').to.be.an('object');",
+            "  pm.expect(ev.passed).to.eql(false);",
+            "  pm.expect(ev.qualifyingSets).to.eql(1);",
+            "  pm.expect(ev.requiredSets).to.eql(2);",
+            "  pm.expect(ev.message).to.match(/only 1 of 2 sets/i);",
+            "});",
+            "pm.test('Nothing is unlocked by this rule', function () {",
+            "  pm.expect(d.newlyUnlocked.map(function (x) { return x.code; })).to.not.include(pm.collectionVariables.get('repsTargetCode'));",
+            "});"
+          ] } } ]
+        },
+        {
+          "name": "Enough sets but only 70% clean (rule needs 80%)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsPrereqCode}}\",\n  \"sets\": [\n    { \"totalReps\": 10, \"cleanReps\": 7, \"totalSeconds\": 0, \"cleanSeconds\": 0 },\n    { \"totalReps\": 10, \"cleanReps\": 7, \"totalSeconds\": 0, \"cleanSeconds\": 0 }\n  ]\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 201', function () { pm.response.to.have.status(201); });",
+            "const d = pm.response.json();",
+            "const ev = d.evaluations.find(function (e) { return String(e.ruleId) === pm.collectionVariables.get('ruleId'); });",
+            "pm.test('Clean rate is computed from the counts', function () {",
+            "  pm.expect(Number(d.cleanRate)).to.eql(70);",
+            "  pm.expect(Number(ev.cleanRate)).to.eql(70);",
+            "});",
+            "pm.test('Both sets reach 6 clean reps but the rule fails on form quality', function () {",
+            "  pm.expect(ev.qualifyingSets).to.eql(2);",
+            "  pm.expect(ev.passed).to.eql(false);",
+            "  pm.expect(ev.message).to.match(/below the required/i);",
+            "});"
+          ] } } ]
+        },
+        {
+          "name": "Client-sent accuracy is ignored (extra field in the body)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsPrereqCode}}\",\n  \"accuracy\": 100,\n  \"sets\": [\n    { \"totalReps\": 10, \"cleanReps\": 5, \"totalSeconds\": 0, \"cleanSeconds\": 0 },\n    { \"totalReps\": 10, \"cleanReps\": 5, \"totalSeconds\": 0, \"cleanSeconds\": 0 }\n  ]\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 201', function () { pm.response.to.have.status(201); });",
+            "const d = pm.response.json();",
+            "const ev = d.evaluations.find(function (e) { return String(e.ruleId) === pm.collectionVariables.get('ruleId'); });",
+            "pm.test('The server still reports 50% and the rule fails', function () {",
+            "  pm.expect(Number(d.cleanRate)).to.eql(50);",
+            "  pm.expect(ev.passed).to.eql(false);",
+            "  pm.expect(ev.qualifyingSets).to.eql(0);",
+            "});"
+          ] } } ]
+        },
+        {
+          "name": "Two sets of 10 clean reps: the rule passes and unlocks the exercise",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsPrereqCode}}\",\n  \"sets\": [\n    { \"totalReps\": 10, \"cleanReps\": 10, \"totalSeconds\": 0, \"cleanSeconds\": 0 },\n    { \"totalReps\": 10, \"cleanReps\": 10, \"totalSeconds\": 0, \"cleanSeconds\": 0 }\n  ]\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 201', function () { pm.response.to.have.status(201); });",
+            "const d = pm.response.json();",
+            "const ev = d.evaluations.find(function (e) { return String(e.ruleId) === pm.collectionVariables.get('ruleId'); });",
+            "pm.test('Rule passes with 2 of 2 sets and 100% clean', function () {",
+            "  pm.expect(ev.passed).to.eql(true);",
+            "  pm.expect(ev.qualifyingSets).to.eql(2);",
+            "  pm.expect(Number(ev.cleanRate)).to.eql(100);",
+            "  pm.expect(ev.unlocks.code).to.eql(pm.collectionVariables.get('repsTargetCode'));",
+            "  pm.expect(ev.message).to.match(/passed/i);",
+            "});",
+            "pm.test('newlyUnlocked lists the target (only the first time this member passes)', function () {",
+            "  const codes = d.newlyUnlocked.map(function (x) { return x.code; });",
+            "  if (codes.length) pm.expect(codes).to.include(pm.collectionVariables.get('repsTargetCode'));",
+            "});"
+          ] } } ]
+        },
+        {
+          "name": "Pass again: the target is not reported as newly unlocked twice",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsPrereqCode}}\",\n  \"sets\": [\n    { \"totalReps\": 10, \"cleanReps\": 10, \"totalSeconds\": 0, \"cleanSeconds\": 0 },\n    { \"totalReps\": 10, \"cleanReps\": 10, \"totalSeconds\": 0, \"cleanSeconds\": 0 }\n  ]\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 201', function () { pm.response.to.have.status(201); });",
+            "const d = pm.response.json();",
+            "const ev = d.evaluations.find(function (e) { return String(e.ruleId) === pm.collectionVariables.get('ruleId'); });",
+            "pm.test('The rule still passes but nothing new unlocks', function () {",
+            "  pm.expect(ev.passed).to.eql(true);",
+            "  pm.expect(d.newlyUnlocked.map(function (x) { return x.code; })).to.not.include(pm.collectionVariables.get('repsTargetCode'));",
+            "});"
+          ] } } ]
+        },
+        {
+          "name": "Rule detail now counts the member as unlocked",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/progression-rules/{{ruleId}}" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+            "pm.test('At least one member unlocked the exercise', function () { pm.expect(pm.response.json().unlockedMembers).to.be.at.least(1); });"
+          ] } } ]
+        },
+        {
+          "name": "HOLD: 4 sets of 30 seconds, all clean: the rule passes",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{holdPrereqCode}}\",\n  \"sets\": [\n    { \"totalReps\": 0, \"cleanReps\": 0, \"totalSeconds\": 30, \"cleanSeconds\": 30 },\n    { \"totalReps\": 0, \"cleanReps\": 0, \"totalSeconds\": 30, \"cleanSeconds\": 30 },\n    { \"totalReps\": 0, \"cleanReps\": 0, \"totalSeconds\": 30, \"cleanSeconds\": 30 },\n    { \"totalReps\": 0, \"cleanReps\": 0, \"totalSeconds\": 30, \"cleanSeconds\": 30 }\n  ]\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('holdRuleId')) { pm.test('Skipped: no HOLD rule was created', function () {}); return; }",
+            "pm.test('Returns 201', function () { pm.response.to.have.status(201); });",
+            "const d = pm.response.json();",
+            "const ev = d.evaluations.find(function (e) { return String(e.ruleId) === pm.collectionVariables.get('holdRuleId'); });",
+            "pm.test('Hold rule passes using seconds', function () {",
+            "  pm.expect(ev.passed).to.eql(true);",
+            "  pm.expect(ev.qualifyingSets).to.eql(4);",
+            "  pm.expect(Number(ev.cleanRate)).to.eql(100);",
+            "});"
+          ] } } ]
+        },
+        {
+          "name": "HOLD: only 66.7% of the time held with clean form (rule needs 90%)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{holdPrereqCode}}\",\n  \"sets\": [\n    { \"totalReps\": 0, \"cleanReps\": 0, \"totalSeconds\": 30, \"cleanSeconds\": 20 },\n    { \"totalReps\": 0, \"cleanReps\": 0, \"totalSeconds\": 30, \"cleanSeconds\": 20 },\n    { \"totalReps\": 0, \"cleanReps\": 0, \"totalSeconds\": 30, \"cleanSeconds\": 20 },\n    { \"totalReps\": 0, \"cleanReps\": 0, \"totalSeconds\": 30, \"cleanSeconds\": 20 }\n  ]\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('holdRuleId')) { pm.test('Skipped: no HOLD rule was created', function () {}); return; }",
+            "pm.test('Returns 201', function () { pm.response.to.have.status(201); });",
+            "const d = pm.response.json();",
+            "const ev = d.evaluations.find(function (e) { return String(e.ruleId) === pm.collectionVariables.get('holdRuleId'); });",
+            "pm.test('Hold rule fails on form quality', function () {",
+            "  pm.expect(Number(d.cleanRate)).to.be.within(66.6, 66.7);",
+            "  pm.expect(ev.qualifyingSets).to.eql(4);",
+            "  pm.expect(ev.passed).to.eql(false);",
+            "  pm.expect(ev.message).to.match(/below the required/i);",
+            "});"
+          ] } } ]
+        },
+        {
+          "name": "HOLD: sets shorter than 25 seconds do not count",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{holdPrereqCode}}\",\n  \"sets\": [\n    { \"totalReps\": 0, \"cleanReps\": 0, \"totalSeconds\": 20, \"cleanSeconds\": 20 },\n    { \"totalReps\": 0, \"cleanReps\": 0, \"totalSeconds\": 20, \"cleanSeconds\": 20 },\n    { \"totalReps\": 0, \"cleanReps\": 0, \"totalSeconds\": 20, \"cleanSeconds\": 20 },\n    { \"totalReps\": 0, \"cleanReps\": 0, \"totalSeconds\": 20, \"cleanSeconds\": 20 }\n  ]\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('holdRuleId')) { pm.test('Skipped: no HOLD rule was created', function () {}); return; }",
+            "pm.test('Returns 201', function () { pm.response.to.have.status(201); });",
+            "const d = pm.response.json();",
+            "const ev = d.evaluations.find(function (e) { return String(e.ruleId) === pm.collectionVariables.get('holdRuleId'); });",
+            "pm.test('No set reaches 25 seconds', function () {",
+            "  pm.expect(ev.qualifyingSets).to.eql(0);",
+            "  pm.expect(ev.passed).to.eql(false);",
+            "  pm.expect(ev.message).to.match(/only 0 of 4 sets/i);",
+            "});"
+          ] } } ]
+        }
+      ]
+    },
+    {
+      "name": "6. Screen: list row actions (status)",
+      "item": [
+        {
+          "name": "Deactivate the rule",
+          "request": { "method": "PATCH", "url": "{{baseUrl}}/api/content/progression-rules/{{ruleId}}/status?status=INACTIVE" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+            "pm.test('Rule is INACTIVE', function () { pm.expect(pm.response.json().rule.status).to.eql('INACTIVE'); });"
+          ] } } ]
+        },
+        {
+          "name": "The list counts the rule as inactive",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/progression-rules" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+            "const b = pm.response.json();",
+            "const mine = b.rules.find(function (r) { return String(r.id) === pm.collectionVariables.get('ruleId'); });",
+            "pm.test('Row is INACTIVE and the Inactive tab count includes it', function () {",
+            "  pm.expect(mine.status).to.eql('INACTIVE');",
+            "  pm.expect(b.inactiveCount).to.be.at.least(1);",
+            "  pm.expect(b.activeCount + b.inactiveCount).to.eql(b.rules.length);",
+            "});"
+          ] } } ]
+        },
+        {
+          "name": "An inactive rule is not evaluated when the member submits",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/member/progression/results", "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{memberToken}}", "type": "string" } ] }, "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"exerciseCode\": \"{{repsPrereqCode}}\",\n  \"sets\": [\n    { \"totalReps\": 10, \"cleanReps\": 10, \"totalSeconds\": 0, \"cleanSeconds\": 0 },\n    { \"totalReps\": 10, \"cleanReps\": 10, \"totalSeconds\": 0, \"cleanSeconds\": 0 }\n  ]\n}", "options": { "raw": { "language": "json" } } } },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 201', function () { pm.response.to.have.status(201); });",
+            "pm.test('No evaluation is returned for the inactive rule', function () {",
+            "  const ids = pm.response.json().evaluations.map(function (e) { return String(e.ruleId); });",
+            "  pm.expect(ids).to.not.include(pm.collectionVariables.get('ruleId'));",
+            "});"
+          ] } } ]
+        },
+        {
+          "name": "Activate the rule (lower-case status is accepted)",
+          "request": { "method": "PATCH", "url": "{{baseUrl}}/api/content/progression-rules/{{ruleId}}/status?status=active" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+            "pm.test('Rule is ACTIVE again', function () { pm.expect(pm.response.json().rule.status).to.eql('ACTIVE'); });"
+          ] } } ]
+        },
+        {
+          "name": "Change status with an invalid value",
+          "request": { "method": "PATCH", "url": "{{baseUrl}}/api/content/progression-rules/{{ruleId}}/status?status=PAUSED" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message explains the problem', function () { pm.expect(pm.response.json().message).to.match(/ACTIVE or INACTIVE/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Change status without the status parameter",
+          "request": { "method": "PATCH", "url": "{{baseUrl}}/api/content/progression-rules/{{ruleId}}/status" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('Message names the missing parameter', function () { pm.expect(pm.response.json().message).to.match(/status.*required/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Change status of an unknown rule",
+          "request": { "method": "PATCH", "url": "{{baseUrl}}/api/content/progression-rules/999999999/status?status=ACTIVE" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 404', function () { pm.response.to.have.status(404); });",
+            "pm.test('Message explains the problem', function () { pm.expect(pm.response.json().message).to.match(/not found/i); });"
+          ] } } ]
+        },
+        {
+          "name": "Delete an unknown rule",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/content/progression-rules/999999999" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 404', function () { pm.response.to.have.status(404); });",
+            "pm.test('Message explains the problem', function () { pm.expect(pm.response.json().message).to.match(/not found/i); });"
+          ] } } ]
+        }
+      ]
+    },
+    {
+      "name": "7. Cleanup (deletes only the rules created by this run)",
+      "item": [
+        {
+          "name": "Delete the chained rule",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/content/progression-rules/{{chainRuleId}}" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('chainRuleId')) { pm.test('Skipped: no chained rule was created', function () {}); return; }",
+            "pm.test('Returns 204', function () { pm.response.to.have.status(204); });"
+          ] } } ]
+        },
+        {
+          "name": "Delete the second rule",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/content/progression-rules/{{altRuleId}}" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('altRuleId')) { pm.test('Skipped: no second rule was created', function () {}); return; }",
+            "pm.test('Returns 204', function () { pm.response.to.have.status(204); });"
+          ] } } ]
+        },
+        {
+          "name": "Delete the HOLD rule",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/content/progression-rules/{{holdRuleId}}" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('holdRuleId')) { pm.test('Skipped: no HOLD rule was created', function () {}); return; }",
+            "pm.test('Returns 204', function () { pm.response.to.have.status(204); });"
+          ] } } ]
+        },
+        {
+          "name": "Delete the main rule",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/content/progression-rules/{{ruleId}}" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 204', function () { pm.response.to.have.status(204); });"
+          ] } } ]
+        },
+        {
+          "name": "Delete the main rule again",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/content/progression-rules/{{ruleId}}" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (!pm.collectionVariables.get('ruleId')) { pm.test('Skipped: the main rule was not created', function () {}); return; }",
+            "pm.test('Returns 404', function () { pm.response.to.have.status(404); });"
+          ] } } ]
+        },
+        {
+          "name": "The list is back to the original size",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/content/progression-rules" },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+            "const b = pm.response.json();",
+            "pm.test('Rule count equals the count before the run', function () {",
+            "  pm.expect(b.rules.length).to.eql(Number(pm.collectionVariables.get('ruleCountBefore')));",
+            "});",
+            "pm.test('No rule from this run is left', function () {",
+            "  const ids = b.rules.map(function (r) { return String(r.id); });",
+            "  ['ruleId', 'altRuleId', 'chainRuleId', 'holdRuleId'].forEach(function (k) {",
+            "    const id = pm.collectionVariables.get(k);",
+            "    if (id) pm.expect(ids).to.not.include(id);",
+            "  });",
+            "});"
+          ] } } ]
+        }
+      ]
+    }
+  ]
+}

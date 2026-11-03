@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('cau hoi co du thong tin cho pop-up', () => j.questions.forEach(q => pm.expect(q).to.include.keys('required', 'requiredByDefault', 'unit', 'validationRules', 'active')));
+      const active = j.questions.filter(q => q.active);
+      pm.test('co it nhat 2 cau hoi active', () => pm.expect(active.length).to.be.at.least(2));
+      pm.collectionVariables.set('bodyRevision', j.step.revision);
+      pm.collectionVariables.set('bodyOriginal', JSON.stringify({ stepName: j.step.stepName, description: j.step.description, status: j.step.status, questions: active.map(q => ({ questionCode: q.questionCode, required: q.required })) }));
+    language: text/javascript
+order: 1000

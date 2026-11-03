@@ -1,0 +1,29 @@
+$kind: http-request
+name: "Preview check (Continue) - Body information: sai va thieu"
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}/preview/check"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "answers": [
+        { "questionCode": "AGE", "value": 150 },
+        { "questionCode": "HEIGHT", "value": 172.55 },
+        { "questionCode": "SHOE_SIZE", "value": 42 }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200 (check khong phai luu)', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      const codeOf = q => (j.errors.find(e => e.questionCode === q) || {}).code;
+      pm.test('valid = false', () => pm.expect(j.valid).to.eql(false));
+      pm.test('AGE vuot khoang', () => pm.expect(codeOf('AGE')).to.eql('VALUE_OUT_OF_RANGE'));
+      pm.test('HEIGHT qua 1 chu so thap phan', () => pm.expect(codeOf('HEIGHT')).to.eql('TOO_MANY_DECIMALS'));
+      pm.test('SHOE_SIZE khong thuoc buoc', () => pm.expect(codeOf('SHOE_SIZE')).to.eql('QUESTION_NOT_IN_STEP'));
+      pm.test('GENDER, WEIGHT bat buoc ma chua tra loi', () => { pm.expect(codeOf('GENDER')).to.eql('MISSING_REQUIRED_ANSWER'); pm.expect(codeOf('WEIGHT')).to.eql('MISSING_REQUIRED_ANSWER'); });
+    language: text/javascript
+order: 4000

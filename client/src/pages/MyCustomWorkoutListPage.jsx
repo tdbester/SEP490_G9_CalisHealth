@@ -158,14 +158,22 @@ export default function MyCustomWorkoutListPage() {
   const [sort, setSort] = useState("newest");
   const [errorMessage, setErrorMessage] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 3;
+  const pageSize = 5;
 
   useEffect(() => {
     let active = true;
-    getMyWorkouts({ page: 0, size: 100 })
-      .then((response) => {
-        if (active) setWorkouts(response.content);
-      })
+    const loadWorkouts = async () => {
+      const firstPage = await getMyWorkouts({ page: 0, size: 5 });
+      const remainingPages = await Promise.all(
+        Array.from({ length: Math.max(0, firstPage.totalPages - 1) }, (_, index) =>
+          getMyWorkouts({ page: index + 1, size: 5 }),
+        ),
+      );
+      if (active) {
+        setWorkouts([firstPage, ...remainingPages].flatMap((response) => response.content || []));
+      }
+    };
+    loadWorkouts()
       .catch((error) => {
         if (active) setErrorMessage(error.response?.data?.message || "Could not load workouts.");
       });

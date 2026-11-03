@@ -15,6 +15,7 @@ import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import workoutPlanImage from "../image/Daily_Workout_Plan.png";
 import api from "../api/client";
+import OnboardingRedirect from "../components/survey/OnboardingRedirect";
 import "./Dashboard.css";
 
 const MUSCLE_ICONS = {
@@ -138,6 +139,8 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
+      {user?.role === "MEMBER" && <OnboardingRedirect />}
+
       {/* ── Daily Workout Plan ─────────────────────────────────── */}
       <section className="dash-plan">
         <img

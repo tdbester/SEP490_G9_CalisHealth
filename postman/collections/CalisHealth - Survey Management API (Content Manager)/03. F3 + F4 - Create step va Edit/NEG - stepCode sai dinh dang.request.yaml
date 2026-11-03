@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "stepName": "Bad code step",
+      "stepCode": "bad code"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 400', () => pm.response.to.have.status(400));
+      const j = pm.response.json();
+      pm.test('code = INVALID_REQUEST, loi o field stepCode', () => { pm.expect(j.code).to.eql('INVALID_REQUEST'); pm.expect(j.errors).to.have.property('stepCode'); });
+    language: text/javascript
+order: 6000

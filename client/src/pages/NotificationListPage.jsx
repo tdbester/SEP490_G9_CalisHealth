@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
+import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
+import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import api from "../api/client";
+import useUndoDelete from "../hooks/useUndoDelete";
+import "../styles/notification.css";
 
 const FILTERS = [
   { key: "ALL", label: "All", count: "allCount" },
@@ -17,7 +21,57 @@ const TYPE_STYLES = {
   MAINTENANCE: "border-amber-500/30 bg-amber-500/10 text-[#D97706]",
   ANNOUNCEMENT: "border-cyan-500/30 bg-cyan-500/10 text-[#06B6D4]",
   UPDATE: "border-violet-500/30 bg-violet-500/10 text-[#8B5CF6]",
+  SYSTEM: "border-indigo-500/30 bg-indigo-500/10 text-indigo-300",
 };
+const PAGE_SIZE = 5;
+
+function PaginationBar({ currentPage, totalPages, onPageChange }) {
+  const firstPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+  const visiblePages = Array.from(
+    { length: Math.min(5, totalPages) },
+    (_, index) => firstPage + index,
+  );
+
+  if (totalPages <= 1) return null;
+
+  return (
+    <nav className="mt-4 flex items-center justify-center gap-2" aria-label="Notification pages">
+      <button
+        type="button"
+        className="flex h-7 w-7 items-center justify-center rounded-md border border-[#22184c] bg-[#130d2e] text-[#8a82af] transition hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+        disabled={currentPage <= 1}
+        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+        aria-label="Previous page"
+      >
+        <ChevronLeftRoundedIcon sx={{ fontSize: 16 }} />
+      </button>
+      {visiblePages.map((page) => (
+        <button
+          key={page}
+          type="button"
+          aria-current={currentPage === page ? "page" : undefined}
+          className={`h-7 w-7 rounded-md text-xs transition ${
+            currentPage === page
+              ? "bg-[#6340f1] font-bold text-white shadow-sm"
+              : "border border-[#22184c] bg-[#130d2e] text-[#8a82af] hover:border-[#382672] hover:text-white"
+          }`}
+          onClick={() => onPageChange(page)}
+        >
+          {page}
+        </button>
+      ))}
+      <button
+        type="button"
+        className="flex h-7 w-7 items-center justify-center rounded-md border border-[#22184c] bg-[#130d2e] text-[#8a82af] transition hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+        disabled={currentPage >= totalPages}
+        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+        aria-label="Next page"
+      >
+        <ChevronRightRoundedIcon sx={{ fontSize: 16 }} />
+      </button>
+    </nav>
+  );
+}
 
 function formatCreatedAt(value) {
   if (!value) return "—";
@@ -30,6 +84,7 @@ function formatCreatedAt(value) {
 export default function NotificationListPage() {
   const navigate = useNavigate();
   const [activeType, setActiveType] = useState("ALL");
+  const [currentPage, setCurrentPage] = useState(1);
   const [notifications, setNotifications] = useState([]);
   const [counts, setCounts] = useState({
     allCount: 0,
@@ -39,9 +94,8 @@ export default function NotificationListPage() {
   });
   const [selectedIds, setSelectedIds] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const { requestDelete, confirmationModal } = useUndoDelete();
 
   const loadNotifications = useCallback(async () => {
     setLoading(true);
@@ -69,15 +123,28 @@ export default function NotificationListPage() {
 
   useEffect(() => {
     setSelectedIds([]);
+    setCurrentPage(1);
     loadNotifications();
   }, [loadNotifications]);
 
+  const totalPages = Math.max(1, Math.ceil(notifications.length / PAGE_SIZE));
+  const pageToDisplay = Math.min(currentPage, totalPages);
+  const visibleNotifications = notifications.slice(
+    (pageToDisplay - 1) * PAGE_SIZE,
+    pageToDisplay * PAGE_SIZE,
+  );
   const allVisibleSelected =
-    notifications.length > 0 &&
-    notifications.every((notification) => selectedIds.includes(notification.id));
+    visibleNotifications.length > 0 &&
+    visibleNotifications.every((notification) => selectedIds.includes(notification.id));
 
   const toggleAll = () => {
-    setSelectedIds(allVisibleSelected ? [] : notifications.map((notification) => notification.id));
+    const visibleIds = visibleNotifications.map((notification) => notification.id);
+    setSelectedIds((current) => {
+      const allSelected = visibleIds.length > 0 && visibleIds.every((id) => current.includes(id));
+      return allSelected
+        ? current.filter((id) => !visibleIds.includes(id))
+        : [...new Set([...current, ...visibleIds])];
+    });
   };
 
   const toggleOne = (id) => {
@@ -86,28 +153,48 @@ export default function NotificationListPage() {
     );
   };
 
-  const deleteSelected = async () => {
-    setDeleting(true);
-    setError("");
-    try {
-      await api.delete("/admin/notifications/batch", {
-        data: { ids: selectedIds },
-      });
-      setSelectedIds([]);
-      setConfirmDelete(false);
-      await loadNotifications();
-    } catch (requestError) {
-      setError(
-        requestError.response?.data?.message ||
-          "Could not delete the selected notifications. Please try again.",
-      );
-    } finally {
-      setDeleting(false);
-    }
+  const confirmDeleteSelected = () => {
+    const idsToDelete = [...selectedIds];
+    if (idsToDelete.length === 0) return;
+    requestDelete({
+      toastOptions: {
+        className: "notification-toast",
+        style: { fontFamily: "Arial, sans-serif" },
+      },
+      toastMessage: idsToDelete.length === 1
+        ? "Notification deleted."
+        : `${idsToDelete.length} notifications deleted.`,
+      successMessage: idsToDelete.length === 1
+        ? "Notification permanently deleted."
+        : "Notifications permanently deleted.",
+      onOptimisticDelete: () => {
+        const removed = notifications.filter((item) => idsToDelete.includes(item.id));
+        setNotifications((current) => current.filter((item) => !idsToDelete.includes(item.id)));
+        setCounts((current) => {
+          const next = { ...current };
+          for (const item of removed) {
+            next.allCount = Math.max(0, next.allCount - 1);
+            const countKey = `${item.type.toLowerCase()}Count`;
+            if (countKey in next) next[countKey] = Math.max(0, next[countKey] - 1);
+          }
+          return next;
+        });
+        setSelectedIds([]);
+      },
+      onUndo: () => {
+        void loadNotifications();
+      },
+      onDelete: async () => {
+        await api.delete("/admin/notifications/batch", {
+          data: { ids: idsToDelete },
+        });
+        await loadNotifications();
+      },
+    });
   };
 
   return (
-    <section className="mx-auto w-full max-w-[1440px] text-slate-100">
+    <section className="notification-module mx-auto w-full max-w-[1440px] text-slate-100">
       <header className="mb-7">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-[22px] font-bold tracking-tight text-white">Notifications</h1>
@@ -154,7 +241,7 @@ export default function NotificationListPage() {
         <button
           type="button"
           disabled={selectedIds.length === 0 || deleting}
-          onClick={() => setConfirmDelete(true)}
+          onClick={confirmDeleteSelected}
           className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#463b61] bg-[#17112d] px-3 text-xs font-medium text-[#d3cce4] transition hover:border-rose-400/50 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <DeleteOutlineRoundedIcon fontSize="small" />
@@ -179,7 +266,7 @@ export default function NotificationListPage() {
                     aria-label="Select all notifications"
                     checked={allVisibleSelected}
                     onChange={toggleAll}
-                    disabled={loading || notifications.length === 0}
+                    disabled={loading || visibleNotifications.length === 0}
                     className="block h-[18px] w-[18px] shrink-0 cursor-pointer appearance-none rounded-[4px] border-2 border-[#c4b5fd] bg-[#17112d] shadow-[0_0_0_1px_rgba(167,139,250,0.2)] transition checked:border-violet-400 checked:bg-violet-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                   {allVisibleSelected && (
@@ -203,14 +290,14 @@ export default function NotificationListPage() {
                   Loading notifications…
                 </td>
               </tr>
-            ) : notifications.length === 0 ? (
+            ) : visibleNotifications.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-12 text-center text-sm text-[#aaa0c5]">
                   No notifications found.
                 </td>
               </tr>
             ) : (
-              notifications.map((notification) => {
+              visibleNotifications.map((notification) => {
                 const normalizedType = String(notification.type || "").toUpperCase();
                 const isPublished = String(notification.status || "").toUpperCase() === "PUBLISHED";
                 return (
@@ -260,7 +347,9 @@ export default function NotificationListPage() {
                       {formatCreatedAt(notification.createdAt)}
                     </td>
                     <td className="px-3 py-3.5 text-right">
-                      <button
+                      {normalizedType === "SYSTEM" ? (
+                        <span className="text-xs text-[#a89bd0]">Automatic</span>
+                      ) : <button
                         type="button"
                         onClick={() => navigate(`/admin/notifications/${notification.id}`)}
                         aria-label={`Edit ${notification.title}`}
@@ -268,7 +357,7 @@ export default function NotificationListPage() {
                       >
                         <EditOutlinedIcon sx={{ fontSize: 15 }} />
                         Edit
-                      </button>
+                      </button>}
                     </td>
                   </tr>
                 );
@@ -278,9 +367,17 @@ export default function NotificationListPage() {
         </table>
       </div>
 
+      <PaginationBar
+        currentPage={pageToDisplay}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
+
       <footer className="mt-3 flex flex-wrap items-center justify-between gap-3 text-[11px] text-[#aaa0c5]">
         <span>
-          Showing {loading ? "…" : notifications.length} of {counts.allCount} notifications
+          Showing {loading ? "…" : notifications.length === 0
+            ? 0
+            : `${(pageToDisplay - 1) * PAGE_SIZE + 1}–${Math.min(pageToDisplay * PAGE_SIZE, notifications.length)}`} of {counts.allCount} notifications
         </span>
         <span className="inline-flex items-center gap-1.5 text-[#c5b88a]">
           <WarningAmberRoundedIcon sx={{ fontSize: 14 }} />
@@ -288,71 +385,7 @@ export default function NotificationListPage() {
         </span>
       </footer>
 
-      {confirmDelete && (
-        <div
-          className="fixed inset-0 z-[1500] flex items-center justify-center bg-black/70 p-4"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !deleting) setConfirmDelete(false);
-          }}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-notifications-title"
-            className="w-full max-w-md rounded-2xl border border-[#463b61] bg-[#17112d] p-6 shadow-2xl"
-          >
-            <h2 id="delete-notifications-title" className="text-lg font-bold text-white">
-              Delete selected notifications?
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-[#b8afd0]">
-              {selectedIds.length} notification{selectedIds.length === 1 ? "" : "s"} will be removed
-              from every member’s notification bell. This action cannot be undone.
-            </p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                disabled={deleting}
-                onClick={() => setConfirmDelete(false)}
-                className="rounded-lg border border-[#51456f] px-4 py-2 text-sm text-[#d2ccdf] hover:bg-white/5 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={deleting}
-                onClick={deleteSelected}
-                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500 disabled:opacity-50"
-              >
-                {deleting ? "Deleting…" : "Delete"}
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
-    </section>
-  );
-}
-
-export function NotificationEditorPlaceholder() {
-  const navigate = useNavigate();
-  const { notificationId } = useParams();
-
-  return (
-    <section className="mx-auto w-full max-w-3xl rounded-2xl border border-[#382d5c] bg-[#17112d] p-7 text-slate-100">
-      <h1 className="text-xl font-bold text-white">
-        {notificationId ? "Edit notification" : "Create notification"}
-      </h1>
-      <p className="mt-2 text-sm text-[#b8afd0]">
-        Notification editor will be available in the next screen.
-      </p>
-      <button
-        type="button"
-        onClick={() => navigate("/admin/notifications")}
-        className="mt-5 rounded-lg border border-[#51456f] px-4 py-2 text-sm text-[#e1d9f4] hover:bg-white/5"
-      >
-        Back to notifications
-      </button>
+      {confirmationModal}
     </section>
   );
 }

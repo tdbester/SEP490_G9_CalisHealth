@@ -20,8 +20,14 @@ public class BenchmarkCriterion {
     @Column(name = "min_value", nullable = false, precision = 10, scale = 2)
     private BigDecimal minValue;
 
+    @Column(name = "max_value", precision = 10, scale = 2)
+    private BigDecimal maxValue;
+
     @Column(name = "criterion_weight", nullable = false, precision = 8, scale = 3)
     private BigDecimal criterionWeight;
+
+    @Column(name = "benchmark_slot", nullable = false, length = 32)
+    private String benchmarkSlot;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "exercise_id", nullable = false)

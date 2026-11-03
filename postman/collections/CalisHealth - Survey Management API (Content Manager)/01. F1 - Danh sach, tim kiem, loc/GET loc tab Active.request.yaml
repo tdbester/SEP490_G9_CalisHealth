@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps?status=ACTIVE"
+method: GET
+queryParams:
+  status: ACTIVE
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('chi co buoc ACTIVE', () => j.steps.forEach(s => pm.expect(s.status).to.eql('ACTIVE')));
+      pm.test('so buoc = counts.active; counts.all van la tong', () => { pm.expect(j.steps.length).to.eql(j.counts.active); pm.expect(j.counts.all).to.be.at.least(j.counts.active); });
+    language: text/javascript
+order: 3000

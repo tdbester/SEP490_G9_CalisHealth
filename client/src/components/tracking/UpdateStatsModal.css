@@ -1,0 +1,268 @@
+/* UpdateStatsModal.css — popup "Update your stats" (Body measurements) */
+
+/* ── Header ──────────────────────────────────────────────────── */
+.usm-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.usm-eyebrow {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #C084FC;
+}
+
+.usm-title {
+  margin-top: 4px !important;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* ── Steppers ────────────────────────────────────────────────── */
+.usm-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.usm-stepper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 12px 12px;
+  border-radius: 14px;
+  border: 1px solid #2D2550;
+  background: #120D24;
+}
+
+.usm-stepper-icon {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #3A2A6E;
+  color: #D8B4FE;
+}
+
+.usm-stepper-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.usm-stepper-label {
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: #9A95B8;
+}
+
+.usm-stepper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.usm-step-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  border: 1px solid #3B2A6B;
+  background: #1F1838;
+  color: #C4B5FD;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.usm-step-btn:hover {
+  background: #2A2150;
+  border-color: #5B3CE8;
+  color: #FFFFFF;
+}
+
+.usm-step-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.usm-stepper-value {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  min-width: 0;
+}
+
+.usm-stepper-value input {
+  min-width: 2ch;
+  max-width: 5ch;
+  padding: 0;
+  border: none;
+  border-bottom: 1px dashed transparent;
+  background: transparent;
+  color: #FFFFFF;
+  font-family: inherit;
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.usm-stepper-value input::-webkit-outer-spin-button,
+.usm-stepper-value input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.usm-stepper-value input:focus {
+  border-bottom-color: #8B5CF6;
+}
+
+.usm-stepper-value input[aria-invalid="true"] {
+  color: #FCA5A5;
+}
+
+.usm-stepper-unit {
+  margin-left: 2px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #9A95B8;
+}
+
+.usm-ruler {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 16px;
+  margin-top: 18px;
+}
+
+.usm-tick {
+  width: 1.5px;
+  height: 8px;
+  border-radius: 1px;
+  background: #4C4370;
+}
+
+.usm-tick.major {
+  height: 12px;
+}
+
+.usm-tick.active {
+  width: 2px;
+  height: 16px;
+  background: #A855F7;
+}
+
+.usm-stepper-hint {
+  margin-top: 18px;
+  font-size: 11.5px;
+  color: #6F6A92;
+}
+
+/* ── BMI preview ─────────────────────────────────────────────── */
+.usm-bmi {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid #2D2550;
+  background: #120D24;
+}
+
+.usm-bmi-value {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  padding-right: 14px;
+  border-right: 1px solid #2D2550;
+}
+
+.usm-bmi-label {
+  font-size: 11.5px;
+  color: #9A95B8;
+}
+
+.usm-bmi-value strong {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.usm-bmi-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.usm-bmi-info p {
+  font-size: 12px;
+  color: #9A95B8;
+}
+
+.usm-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid;
+  font-size: 11.5px;
+}
+
+.usm-badge.tone-healthy {
+  color: #8FE0B4;
+  border-color: rgba(143, 224, 180, 0.55);
+  background: rgba(143, 224, 180, 0.1);
+}
+
+.usm-badge.tone-warning {
+  color: #FCD34D;
+  border-color: rgba(252, 211, 77, 0.55);
+  background: rgba(252, 211, 77, 0.1);
+}
+
+.usm-badge.tone-danger {
+  color: #FCA5A5;
+  border-color: rgba(252, 165, 165, 0.55);
+  background: rgba(252, 165, 165, 0.1);
+}
+
+/* ── Save ────────────────────────────────────────────────────── */
+.usm-save {
+  margin-top: 12px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .usm-title {
+    font-size: 24px;
+  }
+
+  .usm-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .usm-bmi {
+    align-items: flex-start;
+  }
+}

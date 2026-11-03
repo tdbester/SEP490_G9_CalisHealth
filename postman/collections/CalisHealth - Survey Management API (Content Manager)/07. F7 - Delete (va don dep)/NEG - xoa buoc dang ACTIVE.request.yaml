@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}"
+method: DELETE
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 409', () => pm.response.to.have.status(409));
+      pm.test('code = STEP_ACTIVE', () => pm.expect(pm.response.json().code).to.eql('STEP_ACTIVE'));
+    language: text/javascript
+order: 2000

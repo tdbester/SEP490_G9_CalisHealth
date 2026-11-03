@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{goalsStepId}}/status"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: "{}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 400', () => pm.response.to.have.status(400));
+      pm.test('loi o field status', () => pm.expect(pm.response.json().errors).to.have.property('status'));
+    language: text/javascript
+order: 8000

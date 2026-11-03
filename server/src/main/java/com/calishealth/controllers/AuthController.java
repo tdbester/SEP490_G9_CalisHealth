@@ -71,6 +71,7 @@ public class AuthController {
     @GetMapping("/me")
     public AuthResponse me(Authentication a) {
         User u = auth.me((String) a.getPrincipal());
-        return new AuthResponse(null, u.getEmail(), u.getFullName(), u.getRole().name());
+        return new AuthResponse(null, u.getEmail(), u.getFullName(), u.getRole().name(),
+                u.isMustChangePassword());
     }
 }

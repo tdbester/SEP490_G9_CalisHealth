@@ -9,6 +9,7 @@ import {
 } from "./libraryFormValidation";
 import { getAvailableWorkoutExercises, getMyWorkout, updateMyWorkout } from "../api/library";
 import useUndoDelete from "../hooks/useUndoDelete";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
 
 const STORAGE_KEY = "my_custom_workouts";
@@ -95,6 +96,7 @@ export default function UpdateMyCustomWorkoutPage() {
   const { id } = useParams();
   const submissionLock = useRef(false);
   const { requestDelete, confirmationModal } = useUndoDelete();
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [workout, setWorkout] = useState(null);
   const [availableExercises, setAvailableExercises] = useState([]);
   const [title, setTitle] = useState("");
@@ -503,7 +505,7 @@ export default function UpdateMyCustomWorkoutPage() {
                           <input
                             type="number"
                             min="10"
-                            max="120"
+                            max="180"
                             step="5"
                             id={`workout-rest-${index}`}
                             aria-label={`${exercise.name} rest seconds`}
@@ -534,6 +536,14 @@ export default function UpdateMyCustomWorkoutPage() {
                     <p className="py-6 text-center text-xs text-slate-400">Add an exercise to this workout.</p>
                   )}
                   {confirmationModal}
+                  <ConfirmDialog
+                    open={confirmCancel}
+                    title="Discard your changes?"
+                    message="Are you sure you want to cancel? Any unsaved workout changes will be lost."
+                    confirmLabel="Discard"
+                    onCancel={() => setConfirmCancel(false)}
+                    onConfirm={() => navigate(-1)}
+                  />
                 </div>
               </section>
             </div>
@@ -570,7 +580,7 @@ export default function UpdateMyCustomWorkoutPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => { toast.info("Action cancelled"); navigate(-1); }}
+                onClick={() => setConfirmCancel(true)}
                 className="rounded-lg border border-[#514778] bg-[#120d29] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#201748]"
               >
                 Cancel

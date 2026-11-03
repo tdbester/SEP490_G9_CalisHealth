@@ -4,7 +4,15 @@ import "react-toastify/dist/ReactToastify.css";
 import AdminLayout from "./components/layout/AdminLayout";
 import RoleHomeRoute from "./components/RoleHomeRoute";
 import ContentManagerLayout from "./components/layout/ContentManagerLayout";
-import Dashboard from "./pages/Dashboard";
+import AdminAreaLayout from "./components/layout/AdminAreaLayout";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminSectionPage from "./pages/AdminSectionPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminCreateStaffPage from "./pages/AdminCreateStaffPage";
+import AdminUserDetailPage from "./pages/AdminUserDetailPage";
+import HealthTracking from "./pages/HealthTracking";
+import WorkoutHistory from "./pages/WorkoutHistory";
+import PerformanceAnalytics from "./pages/PerformanceAnalytics";
 import DayStreak from "./pages/DayStreak";
 import Library from "./pages/Library";
 import LibraryExerciseListPage from "./pages/LibraryExerciseListPage";
@@ -23,7 +31,14 @@ import WorkoutSystemListPage from "./pages/WorkoutSystemListPage";
 import SystemWorkoutDetailPage from "./pages/SystemWorkoutDetailPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ContentManagerDashboard from "./pages/ContentManagerDashboard";
-import ContentManagerSectionPage from "./pages/ContentManagerSectionPage";
+import ExerciseTreePage from "./pages/ExerciseTreePage";
+import DailyPlanTemplateListPage from "./pages/DailyPlanTemplateListPage";
+import DailyPlanTemplateBuilderPage from "./pages/DailyPlanTemplateBuilderPage";
+import DailyPlanTemplateDetailPage from "./pages/DailyPlanTemplateDetailPage";
+import ProgressionRulesPage, {
+  ProgressionRuleDetailPage,
+  ProgressionRuleFormPage,
+} from "./pages/ProgressionRulesPage";
 import ExerciseListPage from "./pages/ExerciseListPage";
 import SystemExerciseDetailPage from "./pages/SystemExerciseDetailPage";
 import ExerciseFormPage from "./pages/ExerciseFormPage";
@@ -32,6 +47,10 @@ import WorkoutDetailPage from "./pages/WorkoutDetailPage";
 import PendingModerationPage from "./pages/PendingModerationPage";
 import ExerciseModerationDetailPage from "./pages/ExerciseModerationDetailPage";
 import ExerciseApprovalHistoryPage from "./pages/ExerciseApprovalHistoryPage";
+import LevelBenchmarkCriteriaPage, {
+  LevelBenchmarkDetailPage,
+  LevelBenchmarkFormPage,
+} from "./pages/LevelBenchmarkCriteriaPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -41,11 +60,11 @@ import ResetPassword from "./pages/ResetPassword";
 import NotificationListPage from "./pages/NotificationListPage";
 import CreateNotificationPage from "./pages/CreateNotificationPage";
 import EditNotificationPage from "./pages/EditNotificationPage";
-
-function RootRoute() {
-  const token = localStorage.getItem("token")?.trim();
-  return <Navigate to={token ? "/dashboard" : "/login"} replace />;
-}
+import ChangePassword from "./pages/ChangePassword";
+import SurveyFlow, { SurveyEntry } from "./pages/survey/SurveyFlow";
+import SurveyStepPage from "./pages/survey/SurveyStepPage";
+import SurveyResult from "./pages/survey/SurveyResult";
+import SurveyManagement from "./pages/content/SurveyManagement";
 
 export default function App() {
   const memberPage = (page) => (
@@ -53,12 +72,6 @@ export default function App() {
       <AdminLayout>{page}</AdminLayout>
     </ProtectedRoute>
   );
-  const adminNotificationPage = (page) => (
-    <ProtectedRoute>
-      <AdminNotificationAccess>{page}</AdminNotificationAccess>
-    </ProtectedRoute>
-  );
-
   return (
     <>
       <ToastContainer
@@ -76,21 +89,55 @@ export default function App() {
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/verify-reset-password" element={<VerifyResetPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/change-password" element={<ChangePassword />} />
 
-          <Route path="/" element={<RootRoute />} />
-          <Route path="/dashboard" element={<ProtectedRoute><RoleHomeRoute /></ProtectedRoute>} />
+          <Route path="/" element={<RoleHomeRoute />} />
+          <Route path="/dashboard" element={<Navigate to="/" replace />} />
           <Route path="/day-streak" element={memberPage(<DayStreak />)} />
-          <Route path="/admin/notifications" element={adminNotificationPage(<NotificationListPage />)} />
-          <Route path="/admin/notifications/new" element={adminNotificationPage(<CreateNotificationPage />)} />
-          <Route path="/admin/notifications/:id" element={adminNotificationPage(<EditNotificationPage />)} />
+          {/* Onboarding survey của member (sau khi đăng nhập); URL theo Figma: /survey/body-information … */}
+          <Route
+            path="/survey"
+            element={
+              <ProtectedRoute>
+                <SurveyFlow />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<SurveyEntry />} />
+            <Route path=":stepSlug" element={<SurveyStepPage />} />
+          </Route>
+          <Route
+            path="/survey/result"
+            element={
+              <ProtectedRoute>
+                <SurveyResult />
+              </ProtectedRoute>
+            }
+          />
 
           <Route path="/content" element={<ContentManagerLayout />}>
-            <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<ContentManagerDashboard />} />
-            <Route path="surveys" element={<ContentManagerSectionPage section="surveys" />} />
-            <Route path="exercises" element={<ExerciseListPage />} />
-          <Route path="progression-rules" element={<ContentManagerSectionPage section="progressionRules" />} />
-          <Route path="level-criteria" element={<ContentManagerSectionPage section="levelCriteria" />} />
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<ContentManagerDashboard />} />
+          <Route path="daily-training-plans" element={<DailyPlanTemplateListPage />} />
+          <Route path="daily-training-plans/new" element={<DailyPlanTemplateBuilderPage />} />
+          <Route path="daily-training-plans/:code" element={<DailyPlanTemplateDetailPage />} />
+          <Route path="daily-training-plans/:code/edit" element={<DailyPlanTemplateBuilderPage />} />
+          {/* Old Workout Templates URL */}
+          <Route path="workout-templates" element={<Navigate to="/content/daily-training-plans" replace />} />
+          {/* Survey Management moved to the Admin area */}
+          <Route path="surveys" element={<Navigate to="/admin/surveys" replace />} />
+          {/* Legacy Survey Management URLs */}
+          <Route path="survey" element={<Navigate to="/admin/surveys" replace />} />
+          <Route path="exercises" element={<ExerciseListPage />} />
+          <Route path="progression-rules" element={<ProgressionRulesPage />} />
+          <Route path="progression-rules/tree" element={<ExerciseTreePage />} />
+          <Route path="progression-rules/new" element={<ProgressionRuleFormPage />} />
+          <Route path="progression-rules/:id/edit" element={<ProgressionRuleFormPage />} />
+          <Route path="progression-rules/:id" element={<ProgressionRuleDetailPage />} />
+          <Route path="benchmark-criteria" element={<LevelBenchmarkCriteriaPage />} />
+          <Route path="benchmark-criteria/edit" element={<LevelBenchmarkFormPage />} />
+          <Route path="benchmark-criteria/:id/edit" element={<LevelBenchmarkFormPage />} />
+          <Route path="benchmark-criteria/:id" element={<LevelBenchmarkDetailPage />} />
           <Route path="exercises/pending-moderation" element={<PendingModerationPage />} />
           <Route path="exercises/approval-history" element={<ExerciseApprovalHistoryPage />} />
           <Route path="exercises/moderation/:code" element={<ExerciseModerationDetailPage />} />
@@ -134,7 +181,36 @@ export default function App() {
         <Route path="/library/custom-workouts/:id" element={memberPage(<CustomWorkoutDetailPage />)} />
         <Route path="/library/skills/tree" element={memberPage(<CalisthenicsExerciseTreePage />)} />
         <Route path="/explore" element={memberPage(<CalisthenicsExerciseTreePage />)} />
-        <Route path="/tracking" element={memberPage(<DayStreak />)} />
+
+        {/* Admin area (role ADMIN) - the guard reads /auth/me, same pattern as /content. */}
+        <Route path="/admin" element={<AdminAreaLayout />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="users/create" element={<AdminCreateStaffPage />} />
+          <Route path="users/:id" element={<AdminUserDetailPage />} />
+          <Route path="surveys" element={<SurveyManagement />} />
+          <Route path="create" element={<Navigate to="/admin/users/create" replace />} />
+          <Route path="notifications" element={<NotificationListPage />} />
+          <Route path="notifications/new" element={<CreateNotificationPage />} />
+          <Route path="notifications/:id" element={<EditNotificationPage />} />
+          <Route path="storage" element={<AdminSectionPage title="Media storage & infrastructure" />} />
+          <Route path="maintenance" element={<AdminSectionPage title="Create maintenance schedule" />} />
+          <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+        </Route>
+
+        <Route
+          path="/tracking"
+          element={memberPage(<HealthTracking />)}
+        />
+        <Route
+          path="/tracking/workout-history"
+          element={memberPage(<WorkoutHistory />)}
+        />
+        <Route
+          path="/tracking/assessment"
+          element={memberPage(<PerformanceAnalytics />)}
+        />
         <Route path="/profile" element={<Navigate to="/" replace />} />
         <Route path="/settings" element={<Navigate to="/" replace />} />
 
@@ -143,17 +219,4 @@ export default function App() {
       </BrowserRouter>
     </>
   );
-}
-
-function AdminNotificationAccess({ children }) {
-  let user = null;
-  try {
-    user = JSON.parse(localStorage.getItem("user") || "null");
-  } catch {
-    user = null;
-  }
-  if (user?.role !== "ADMIN") {
-    return <Navigate to="/dashboard" replace />;
-  }
-  return <AdminLayout>{children}</AdminLayout>;
 }

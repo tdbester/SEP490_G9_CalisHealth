@@ -243,10 +243,18 @@ export default function CustomWorkoutListPage() {
 
   useEffect(() => {
     let active = true;
-    getCommunityWorkouts({ page: 0, size: 100 })
-      .then((response) => {
-        if (active) setWorkouts(response.content);
-      })
+    const loadWorkouts = async () => {
+      const firstPage = await getCommunityWorkouts({ page: 0, size: 5 });
+      const remainingPages = await Promise.all(
+        Array.from({ length: Math.max(0, firstPage.totalPages - 1) }, (_, index) =>
+          getCommunityWorkouts({ page: index + 1, size: 5 }),
+        ),
+      );
+      if (active) {
+        setWorkouts([firstPage, ...remainingPages].flatMap((response) => response.content || []));
+      }
+    };
+    loadWorkouts()
       .catch((error) => {
         if (active) {
           setErrorMessage(error.response?.data?.message || "Could not load community workouts.");

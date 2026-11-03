@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{goalsStepId}}/status"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "status": "INACTIVE"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      pm.test('status = INACTIVE', () => pm.expect(pm.response.json().step.status).to.eql('INACTIVE'));
+    language: text/javascript
+order: 4000

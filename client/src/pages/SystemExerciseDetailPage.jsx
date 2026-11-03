@@ -1,5 +1,5 @@
 import { Link as RouterLink, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Component, useEffect, useState } from "react";
 import {
   Alert,
   Box,
@@ -12,39 +12,68 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { keyframes } from "@mui/material/styles";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import { contentManagerApi, mediaUrl } from "../api/contentManager";
 import { useApiMutation, useApiQuery } from "../hooks";
+import { useLevelNames } from "../useLevelNames";
 import { CONTENT_PATHS, ContentPageHeader } from "../components/ContentShared";
 import { CM } from "../theme-content";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 import {
   ExerciseFields,
   validateExerciseUpload,
 } from "./ExerciseFormPage";
-import {
-  getExerciseDemoSearchUrl,
-  getValidVideoUrl,
-  getYouTubeEmbedUrl,
-} from "../utils/exerciseMedia";
+
+function getUploadedDemoVideoUrl(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const apiUrl = new URL(import.meta.env.VITE_API_URL || "http://localhost:8080/api", window.location.origin);
+    const videoUrl = new URL(value.trim(), apiUrl.origin);
+    if (
+      videoUrl.origin !== apiUrl.origin ||
+      !/^\/media\/exercise-demos\/[^/]+\.(mp4|mov|webm)$/i.test(videoUrl.pathname)
+    ) {
+      return null;
+    }
+    return videoUrl.href;
+  } catch {
+    return null;
+  }
+}
+
+const rise = keyframes`
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+const enter = (delay = 0) => ({
+  animation: `${rise} .45s ease-out ${delay}ms both`,
+  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+});
 
 function DetailField({ label, value, full, sx }) {
   return (
     <Grid item xs={12} sm={full ? 12 : 4} sx={sx}>
       <Box
         sx={{
+          position: "relative",
+          overflow: "hidden",
           border: `1px solid ${CM.border}`,
-          bgcolor: "rgba(19,10,39,0.6)",
-          borderRadius: 1.5,
-          p: { xs: 1.5, sm: 1.25 },
+          bgcolor: CM.surfaceSoft,
+          borderRadius: "14px",
+          p: { xs: 1.5, sm: 1.5 },
           height: "100%",
+          transition: "all .2s ease",
+          "&:hover": { borderColor: CM.borderStrong },
         }}
       >
         <Typography
           variant="caption"
-          sx={{ color: CM.textDim, textTransform: "uppercase", letterSpacing: "0.07em", fontSize: 10, fontWeight: 700 }}
+          sx={{ color: CM.textDim, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 10, fontWeight: 700 }}
         >
           {label}
         </Typography>
@@ -103,24 +132,75 @@ export function GuideSteps({ guide }) {
 }
 
 const MUSCLE_OPTIONS = ["Chest", "Back", "Shoulders", "Arms", "Core", "Legs", "Glutes"];
-const LEVEL_OPTIONS = ["Beginner", "Intermediate", "Advanced"];
 
-export default function SystemExerciseDetailPage() {
+class ExerciseDetailErrorBoundary extends Component {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, info) {
+    console.error("Exercise detail page failed to render", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Box sx={{ maxWidth: 960, mx: "auto", px: { xs: 2, sm: 3 }, py: 4 }}>
+          <ContentPageHeader
+            breadcrumb={[
+              { label: "Content manager", to: CONTENT_PATHS.dashboard },
+              { label: "Exercise & Workout Management", to: CONTENT_PATHS.exercises },
+              { label: "Exercise details" },
+            ]}
+            title="Exercise details unavailable"
+          />
+          <Alert
+            severity="error"
+            sx={{ mt: 2 }}
+            action={
+              <Button color="inherit" size="small" onClick={() => this.setState({ hasError: false })}>
+                Try again
+              </Button>
+            }
+          >
+            An unexpected error prevented this exercise from being displayed.
+          </Alert>
+          <Button
+            component={RouterLink}
+            to={CONTENT_PATHS.exercises}
+            sx={{ mt: 2 }}
+            startIcon={<ArrowBackRoundedIcon />}
+          >
+            Back to exercise list
+          </Button>
+        </Box>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+function SystemExerciseDetailContent() {
   const { code = "" } = useParams();
+  const { levels: LEVEL_OPTIONS } = useLevelNames();
   const { data: entry, isLoading, error, refetch } = useApiQuery(
     () => contentManagerApi.exercise(code),
     { enabled: Boolean(code), deps: [code] },
   );
   const [editing, setEditing] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [form, setForm] = useState(null);
   const [video, setVideo] = useState(null);
   const [image, setImage] = useState(null);
   const [saveError, setSaveError] = useState("");
   const [videoError, setVideoError] = useState(null);
   const [imageError, setImageError] = useState(null);
-  const demoVideoUrl = entry ? getValidVideoUrl(entry) : null;
-  const demoYouTubeEmbedUrl = getYouTubeEmbedUrl(demoVideoUrl);
-  const demoSearchUrl = getExerciseDemoSearchUrl(entry?.name || "");
+  const demoVideoUrl = entry
+    ? getUploadedDemoVideoUrl(entry.videoUrl || entry.demoVideoUrl || entry.video_url)
+    : null;
 
   useEffect(() => {
     if (!entry) return;
@@ -131,8 +211,10 @@ export default function SystemExerciseDetailPage() {
       category: entry.category || "REPS",
       value: entry.category === "HOLD" ? (entry.duration ?? "") : (entry.defaultReps ?? ""),
       defaultSets: entry.defaultSets ?? 3,
-      level: entry.level || "Beginner",
-      muscleGroup: (entry.muscleGroup || "").split(" · ").filter(Boolean),
+      level: entry.level || "",
+      muscleGroup: typeof entry.muscleGroup === "string"
+        ? entry.muscleGroup.split(" · ").filter(Boolean)
+        : [],
       guide: entry.guide || "",
     });
   }, [entry]);
@@ -177,8 +259,10 @@ export default function SystemExerciseDetailPage() {
         category: entry.category || "REPS",
         value: entry.category === "HOLD" ? (entry.duration ?? "") : (entry.defaultReps ?? ""),
         defaultSets: entry.defaultSets ?? 3,
-        level: entry.level || "Beginner",
-        muscleGroup: (entry.muscleGroup || "").split(" · ").filter(Boolean),
+        level: entry.level || "",
+        muscleGroup: typeof entry.muscleGroup === "string"
+          ? entry.muscleGroup.split(" · ").filter(Boolean)
+          : [],
         guide: entry.guide || "",
       });
     }
@@ -186,7 +270,7 @@ export default function SystemExerciseDetailPage() {
 
   const crumb = [
     { label: "Content manager", to: CONTENT_PATHS.dashboard },
-    { label: "Exercise & Workout Management", to: CONTENT_PATHS.exercises },
+    { label: "Exercise & Workout", to: CONTENT_PATHS.exercises },
     { label: "Exercise details" },
   ];
 
@@ -342,36 +426,19 @@ export default function SystemExerciseDetailPage() {
           {saveError && <Alert severity="error" sx={{ mt: 2 }}>{saveError}</Alert>}
           <Divider sx={{ mt: 3 }} />
           <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ pt: 1.5 }}>
-            <Button startIcon={<CloseRoundedIcon />} onClick={cancelEditing}>Cancel</Button>
+            <Button startIcon={<CloseRoundedIcon />} onClick={() => setConfirmCancel(true)}>Cancel</Button>
             <Button type="submit" form="edit-exercise-form" variant="contained" startIcon={<SaveRoundedIcon />} disabled={saveMutation.isPending}>
               {saveMutation.isPending ? "Saving…" : "Save changes"}
             </Button>
           </Stack>
         </Box>
       ) : (
-      <Card sx={{ mt: 2.5 }}>
-        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+      <Card sx={{ mt: 2.5, overflow: "hidden", ...enter(150) }}>
+        <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
           <Typography variant="subtitle2" fontWeight={700} sx={{ color: "#fff" }}>
             Demo video
           </Typography>
-          {demoYouTubeEmbedUrl ? (
-            <Box
-              component="iframe"
-              src={demoYouTubeEmbedUrl}
-              title={`${entry.name} demo video`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-              sx={{
-                mt: 1.5,
-                width: "100%",
-                aspectRatio: "16 / 9",
-                border: 0,
-                borderRadius: 2,
-                bgcolor: "#000",
-                display: "block",
-              }}
-            />
-          ) : demoVideoUrl ? (
+          {demoVideoUrl ? (
             <Box
               component="video"
               src={mediaUrl(demoVideoUrl)}
@@ -389,18 +456,8 @@ export default function SystemExerciseDetailPage() {
           ) : (
             <Stack spacing={1} alignItems="flex-start" sx={{ mt: 1 }}>
               <Typography variant="body2" color="text.secondary">
-                Demo video is not available yet.
+                No uploaded demo video. Upload a video file using Edit exercise.
               </Typography>
-              <Button
-                component="a"
-                href={demoSearchUrl}
-                target="_blank"
-                rel="noreferrer"
-                size="small"
-                variant="outlined"
-              >
-                Search YouTube for this exercise
-              </Button>
             </Stack>
           )}
 
@@ -508,6 +565,27 @@ export default function SystemExerciseDetailPage() {
         </CardContent>
       </Card>
       )}
+      <ConfirmDialog
+        open={confirmCancel}
+        title="Discard your changes?"
+        message="Are you sure you want to cancel? Any unsaved exercise changes will be lost."
+        confirmLabel="Discard"
+        onCancel={() => setConfirmCancel(false)}
+        onConfirm={() => {
+          setConfirmCancel(false);
+          cancelEditing();
+        }}
+      />
     </Box>
+  );
+}
+
+export default function SystemExerciseDetailPage() {
+  const { code = "" } = useParams();
+
+  return (
+    <ExerciseDetailErrorBoundary key={code}>
+      <SystemExerciseDetailContent />
+    </ExerciseDetailErrorBoundary>
   );
 }

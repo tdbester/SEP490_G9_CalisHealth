@@ -14,6 +14,19 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     List<Notification> findAllByTypeOrderByCreatedAtDesc(String type);
 
+    List<Notification> findAllByStatusOrderByCreatedAtDesc(String status);
+
+    @Query("""
+            select n from Notification n
+            where n.status = :status
+              and (n.userId is null or n.userId = :userId)
+            order by n.createdAt desc
+            """)
+    List<Notification> findVisibleToUserByStatusOrderByCreatedAtDesc(
+            @Param("userId") Long userId,
+            @Param("status") String status
+    );
+
     long countByType(String type);
 
     @Modifying

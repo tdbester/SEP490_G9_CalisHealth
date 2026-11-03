@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('thong tin survey', () => { pm.expect(j.survey.surveyCode).to.eql(pm.environment.get('surveyCode')); pm.expect(j.survey.status).to.eql('ACTIVE'); });
+      pm.test('it nhat 5 buoc, buoc cuoi la RESULT', () => { pm.expect(j.steps.length).to.be.at.least(5); pm.expect(j.steps[j.steps.length - 1].stepType).to.eql('RESULT'); });
+      pm.test('counts.all = so buoc; tong 3 tab = all', () => { pm.expect(j.counts.all).to.eql(j.steps.length); pm.expect(j.counts.active + j.counts.draft + j.counts.inactive).to.eql(j.counts.all); });
+      pm.test('position lien tuc 1..n', () => j.steps.forEach((s, i) => pm.expect(s.position).to.eql(i + 1)));
+      const body = j.steps.find(s => s.stepCode === 'BODY_INFORMATION');
+      const goals = j.steps.find(s => s.stepCode === 'GOALS_AND_MOTIVATION');
+      const result = j.steps[j.steps.length - 1];
+      pm.test('Body information: 4 cau hoi NUMBER + SINGLE_SELECT', () => { pm.expect(body.questionCount).to.eql(4); pm.expect(body.questionTypes).to.have.members(['SINGLE_SELECT', 'NUMBER']); pm.expect(body.updatedAt).to.be.a('string'); });
+      pm.test('buoc RESULT khong co cau hoi', () => pm.expect(result.questionCount).to.eql(0));
+      pm.collectionVariables.set('bodyStepId', body.id);
+      pm.collectionVariables.set('goalsStepId', goals.id);
+      pm.collectionVariables.set('resultStepId', result.id);
+      pm.collectionVariables.set('resultStepCode', result.stepCode);
+    language: text/javascript
+order: 1000

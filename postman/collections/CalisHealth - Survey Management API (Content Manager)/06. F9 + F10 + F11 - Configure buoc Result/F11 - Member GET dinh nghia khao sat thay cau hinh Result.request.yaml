@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/api/surveys/{{surveyCode}}"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      const resultCode = pm.collectionVariables.get('resultStepCode');
+      pm.test('co field result voi config vua luu', () => { pm.expect(j.result.stepCode).to.eql(resultCode); pm.expect(j.result.config.planDurationWeeks).to.eql(6); });
+      pm.test('buoc Result KHONG nam trong steps', () => j.steps.forEach(s => pm.expect(s.stepCode).to.not.eql(resultCode)));
+      pm.test('buoc DRAFT/INACTIVE khong hien voi member', () => j.steps.forEach(s => pm.expect(s.stepCode).to.not.match(/^MOBILITY_CHECK_/)));
+    language: text/javascript
+order: 3000

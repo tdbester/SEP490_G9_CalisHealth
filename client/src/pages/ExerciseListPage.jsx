@@ -22,14 +22,17 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { keyframes } from "@mui/material/styles";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import { contentManagerApi } from "../api/contentManager";
 import { useApiMutation, useApiQuery } from "../hooks";
+import { useLevelNames } from "../useLevelNames";
 import ContentListToolbar from "../components/ContentListToolbar";
 import {
   CONTENT_PATHS,
@@ -41,9 +44,18 @@ import {
 import { CM } from "../theme-content";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
 
+const rise = keyframes`
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+const enter = (delay = 0) => ({
+  animation: `${rise} .45s ease-out ${delay}ms both`,
+  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+});
+
 const BREADCRUMB = [
   { label: "Content manager", to: CONTENT_PATHS.dashboard },
-  { label: "Exercise & Workout Management", to: CONTENT_PATHS.exercises },
+  { label: "Exercise & Workout", to: CONTENT_PATHS.exercises },
   { label: "Exercise list" },
 ];
 
@@ -71,8 +83,13 @@ function SourceChip({ source }) {
   );
 }
 
-function LevelChip({ level }) {
+function LevelChip({ level, toneOf }) {
   const displayLevel = level || "Intermediate";
+  const isStandardLevel = ["BEGINNER", "INTERMEDIATE", "ADVANCED"]
+    .includes(String(displayLevel).trim().toUpperCase());
+  if (!isStandardLevel) {
+    return <DarkPill tone={toneOf(level)}>{level || "—"}</DarkPill>;
+  }
   return (
     <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${getLevelBadgeStyle(displayLevel)}`}>
       {displayLevel}
@@ -89,7 +106,6 @@ function StatusDot({ active }) {
           height: 7,
           borderRadius: "50%",
           bgcolor: active ? CM.green : CM.pink,
-          boxShadow: `0 0 9px ${active ? CM.green : CM.pink}`,
         }}
       />
       <Typography variant="caption" sx={{ color: active ? CM.green : CM.pink, fontWeight: 600 }}>
@@ -106,8 +122,10 @@ export default function ExerciseListPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [type, setType] = useState("all");
+  const [level, setLevel] = useState("all");
+  const { levels: levelNames, levelTone } = useLevelNames();
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const rowsPerPage = 5;
   const [menu, setMenu] = useState({ anchor: null, entry: null });
 
   const statusMutation = useApiMutation(
@@ -151,9 +169,11 @@ export default function ExerciseListPage() {
       const matchesType =
         type === "all" ||
         (type === "custom" ? isCustom : String(entry.type).toLowerCase() === type);
-      return matchesSearch && matchesStatus && matchesType;
+      const matchesLevel =
+        level === "all" || String(entry.level || "").toLowerCase() === level;
+      return matchesSearch && matchesStatus && matchesType && matchesLevel;
     });
-  }, [entries, search, status, type]);
+  }, [entries, search, status, type, level]);
 
   const pageEntries = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
@@ -165,10 +185,18 @@ export default function ExerciseListPage() {
   const closeMenu = () => setMenu({ anchor: null, entry: null });
 
   return (
-    <Box sx={{ maxWidth: 1280, mx: "auto", px: { xs: 2, sm: 3 }, py: { xs: 2.5, sm: 3 } }}>
+    <Box
+      sx={{
+        maxWidth: 1280,
+        mx: "auto",
+        px: { xs: 2, sm: 3 },
+        py: { xs: 2.5, sm: 3 },
+        "&, & *": { fontFamily: "Arial, sans-serif !important" },
+      }}
+    >
       <ContentPageHeader
         breadcrumb={BREADCRUMB}
-        title="Exercise & workout management"
+        title="Exercise & workout"
         description="Manage system exercises and skills, and moderate exercises submitted by users."
         action={
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
@@ -205,22 +233,22 @@ export default function ExerciseListPage() {
           gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" },
         }}
       >
-        <SummaryCard label="All exercises" count={entries.length} detail="exercises" />
-        <SummaryCard
+        <Box sx={enter(0)}><SummaryCard label="All exercises" count={entries.length} detail="exercises" /></Box>
+        <Box sx={enter(80)}><SummaryCard
           label="Active"
           tone="success"
           count={activeCount}
           detail="exercises"
-        />
-        <SummaryCard
+        /></Box>
+        <Box sx={enter(160)}><SummaryCard
           label="Inactive"
           tone="error"
           count={inactiveCount}
           detail="exercises"
-        />
+        /></Box>
       </Box>
 
-      <Card sx={{ mt: 2 }}>
+      <Card sx={{ mt: 2.5, overflow: "hidden", ...enter(220) }}>
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={1.5}
@@ -259,6 +287,19 @@ export default function ExerciseListPage() {
           <TextField
             select
             size="small"
+            value={level}
+            onChange={resetPage(setLevel)}
+            SelectProps={{ SelectDisplayProps: { "aria-label": "Filter by level" } }}
+            sx={{ minWidth: 130 }}
+          >
+            <MenuItem value="all">All levels</MenuItem>
+            {levelNames.map((name) => (
+              <MenuItem key={name} value={name.toLowerCase()}>{name}</MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            size="small"
             value={type}
             onChange={resetPage(setType)}
             SelectProps={{ SelectDisplayProps: { "aria-label": "Filter by type" } }}
@@ -275,7 +316,7 @@ export default function ExerciseListPage() {
                 onClick={() => refetch()}
                 disabled={isFetching}
                 aria-label="Refresh exercise list"
-                sx={{ border: 1, borderColor: "divider", borderRadius: 2 }}
+                sx={{ border: 1, borderColor: "divider", borderRadius: 2, transition: "all .2s ease", "&:hover": { borderColor: CM.violetBright, bgcolor: "rgba(139,92,246,0.1)" } }}
               >
                 {isFetching ? <CircularProgress size={18} /> : <RefreshRoundedIcon fontSize="small" />}
               </IconButton>
@@ -319,7 +360,7 @@ export default function ExerciseListPage() {
               <Table size="small" sx={{ minWidth: 940, "& th, & td": { textAlign: "center" } }}>
                 <TableHead>
                   <TableRow sx={{ "& th": { bgcolor: "rgba(19,10,39,0.85)", color: CM.textMuted, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, whiteSpace: "nowrap" } }}>
-                    <TableCell align="center">Exercise / Skill</TableCell>
+                    <TableCell sx={{ textAlign: "left !important", pl: 3 }}>Exercise / Skill</TableCell>
                     <TableCell>Type</TableCell>
                     <TableCell>Source</TableCell>
                     <TableCell>Muscle group</TableCell>
@@ -330,18 +371,22 @@ export default function ExerciseListPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {pageEntries.map((entry) => {
+                  {pageEntries.map((entry, idx) => {
                     const isUpdating =
                       statusMutation.isPending && menu.entry?.code === entry.code;
                     return (
-                      <TableRow key={entry.code} hover>
-                        <TableCell align="center" sx={{ width: 280 }}>
-                          <Stack direction="row" spacing={1.25} alignItems="center" justifyContent="flex-start" sx={{ width: "100%", textAlign: "left" }}>
+                      <TableRow key={entry.code} hover sx={{
+                        transition: "all .2s ease",
+                        "&:hover": { bgcolor: "rgba(139,92,246,0.06)" },
+                        ...enter(240 + idx * 25),
+                      }}>
+                        <TableCell sx={{ width: 300, textAlign: "left !important", pl: 3, "& > .MuiStack-root": { justifyContent: "flex-start" } }}>
+                          <Stack direction="row" spacing={1.25} alignItems="center" justifyContent="flex-start" sx={{ width: "100%" }}>
                             <Box
                               sx={{
-                                width: 32,
-                                height: 32,
-                                borderRadius: 1.5,
+                                width: 34,
+                                height: 34,
+                                borderRadius: "10px",
                                 display: "grid",
                                 placeItems: "center",
                                 flexShrink: 0,
@@ -351,6 +396,7 @@ export default function ExerciseListPage() {
                                     : "rgba(168,155,208,0.14)",
                                 color:
                                   String(entry.type).toLowerCase() === "skill" ? CM.violetBright : CM.textMuted,
+                                border: `1px solid ${String(entry.type).toLowerCase() === "skill" ? "rgba(167,139,250,0.3)" : CM.border}`,
                               }}
                             >
                               {String(entry.type).toLowerCase() === "skill" ? (
@@ -359,7 +405,7 @@ export default function ExerciseListPage() {
                                 <FitnessIconSmall />
                               )}
                             </Box>
-                            <Box sx={{ minWidth: 0 }}>
+                            <Box sx={{ minWidth: 0, textAlign: "left" }}>
                               <Typography variant="body2" fontWeight={600} noWrap sx={{ color: "#fff" }}>
                                 {entry.name}
                               </Typography>
@@ -381,7 +427,7 @@ export default function ExerciseListPage() {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <LevelChip level={entry.level} />
+                          <LevelChip level={entry.level} toneOf={levelTone} />
                         </TableCell>
                         <TableCell>
                           <StatusDot active={entry.active} />
@@ -418,11 +464,14 @@ export default function ExerciseListPage() {
                   {pageEntries.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={8} sx={{ py: 6, textAlign: "center" }}>
-                        <Typography variant="body2" color="text.secondary">
-                          {entries.length
-                            ? "No exercises match these filters."
-                            : "No exercises or skills yet. Create your first entry to get started."}
-                        </Typography>
+                        <Stack alignItems="center" spacing={1}>
+                          <FitnessCenterRoundedIcon sx={{ fontSize: 44, color: CM.textDim, opacity: 0.4 }} />
+                          <Typography variant="body2" color="text.secondary">
+                            {entries.length
+                              ? "No exercises match these filters."
+                              : "No exercises or skills yet. Create your first entry to get started."}
+                          </Typography>
+                        </Stack>
                       </TableCell>
                     </TableRow>
                   )}
@@ -436,11 +485,7 @@ export default function ExerciseListPage() {
               page={Math.min(page, Math.max(0, Math.ceil(filtered.length / rowsPerPage) - 1))}
               onPageChange={(_, nextPage) => setPage(nextPage)}
               rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={(event) => {
-                setRowsPerPage(parseInt(event.target.value, 10));
-                setPage(0);
-              }}
-              rowsPerPageOptions={[10, 20, 50]}
+              rowsPerPageOptions={[]}
               labelDisplayedRows={({ from, to, count }) => `Showing ${from}-${to} of ${count}`}
             />
           </>

@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "stepName": "Another step {{$timestamp}}",
+      "stepCode": "LEVEL_TEST"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 409', () => pm.response.to.have.status(409));
+      pm.test('code = STEP_CODE_EXISTS', () => pm.expect(pm.response.json().code).to.eql('STEP_CODE_EXISTS'));
+    language: text/javascript
+order: 5000

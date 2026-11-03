@@ -1,0 +1,205 @@
+/* TrainingPlanPreviewModal.css — popup "Preview training plan" (Figma: Survey - Preview training plan) */
+
+.modal-dialog.plan-preview {
+  width: min(980px, 100%);
+  padding: 28px 32px 32px;
+  border-radius: 12px;
+  border-color: #251f3d;
+  background: #0f0c1b;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.plan-preview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.plan-preview-title {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.plan-preview-sub {
+  margin-top: 6px !important;
+  font-size: 15px;
+  color: #7a7399;
+}
+
+.plan-preview-close {
+  flex-shrink: 0;
+  border: 0;
+  background: none;
+  padding: 4px 0;
+  color: #7a7399;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.plan-preview-close:hover {
+  color: #c9c4e8;
+}
+
+.plan-preview-body {
+  display: flex;
+  gap: 32px;
+  padding: 28px 40px;
+  border-radius: 16px;
+  border: 1px solid #251f3d;
+  background: #131023;
+}
+
+.plan-preview-calendar {
+  flex: 1;
+  min-width: 0;
+}
+
+.plan-preview-detail {
+  width: 360px;
+  flex-shrink: 0;
+}
+
+.plan-preview-heading {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.plan-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.plan-preview-weekdays {
+  margin: 20px 0 8px;
+}
+
+.plan-preview-weekdays span {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #7a7399;
+}
+
+.plan-preview-weeks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Figma: ngày nghỉ có viền + số sáng hơn; ngày có buổi tập không viền + số tối; ngày đang chọn nền tím */
+.plan-preview-day {
+  height: 39px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid #2d2650;
+  background: transparent;
+  color: #58507e;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.plan-preview-day.has-session {
+  border-color: transparent;
+  color: #3f3861;
+}
+
+.plan-preview-day.is-active {
+  border-color: #5d4b9b;
+  background: #2d2350;
+  color: #a493e6;
+}
+
+.plan-preview-day--empty {
+  border: 0;
+  cursor: default;
+}
+
+.plan-preview-day:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 2px;
+}
+
+.plan-preview-duration {
+  display: inline-flex;
+  margin-top: 20px !important;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: #201a35;
+  color: #9c96c0;
+  font-size: 14px;
+}
+
+.plan-preview-exercises {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plan-preview-exercises li {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 70px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #292244;
+  background: #181330;
+}
+
+.plan-preview-exercise-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 64px;
+  height: 46px;
+  border-radius: 8px;
+  background: #261f43;
+  color: #9d93cd;
+}
+
+.plan-preview-exercise-name {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.plan-preview-exercise-detail {
+  margin-top: 4px !important;
+  font-size: 14px;
+  color: #7a7399;
+}
+
+.plan-preview-note {
+  margin-top: 24px !important;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #7a7399;
+}
+
+@media (max-width: 860px) {
+  .plan-preview-body {
+    flex-direction: column;
+    padding: 20px 16px;
+  }
+
+  .plan-preview-detail {
+    width: 100%;
+  }
+}

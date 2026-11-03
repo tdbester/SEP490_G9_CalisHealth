@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { createPersonalExercise } from "../api/library";
+import { checkPersonalExerciseText, createPersonalExercise } from "../api/library";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 import {
   getApiErrorMessage,
   validatePersonalExercise,
@@ -11,6 +12,7 @@ import {
 export default function CreatePersonalExercisePage() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const anatomyInputRef = useRef(null);
   const submissionLock = useRef(false);
 
   // Sync document title to match mockup window header: CalisHealth - Library
@@ -28,7 +30,10 @@ export default function CreatePersonalExercisePage() {
   const [sets, setSets] = useState(3);
   const [reps, setReps] = useState(12);
   const [duration, setDuration] = useState(30);
-  const [targetMuscle, setTargetMuscle] = useState("Full Body");
+  const [targetMuscles, setTargetMuscles] = useState(["Full Body"]);
+  const [anatomyImageFile, setAnatomyImageFile] = useState(null);
+  const [anatomyPreview, setAnatomyPreview] = useState("");
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [level, setLevel] = useState("Beginner");
   const [guideSteps, setGuideSteps] = useState([
     "Start in a plank with hands under shoulders",
@@ -36,9 +41,20 @@ export default function CreatePersonalExercisePage() {
   ]);
   const [videoFile, setVideoFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  useEffect(() => {
+    if (!anatomyImageFile) {
+      setAnatomyPreview("");
+      return undefined;
+    }
+    const previewUrl = URL.createObjectURL(anatomyImageFile);
+    setAnatomyPreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [anatomyImageFile]);
 
   // Content Check states (System automated scanning)
   const [textCheckStatus, setTextCheckStatus] = useState("idle"); // 'idle' | 'checking' | 'passed' | 'failed'
+  const [flaggedWords, setFlaggedWords] = useState([]);
+  const [textCheckError, setTextCheckError] = useState("");
   const [videoCheckStatus, setVideoCheckStatus] = useState("idle"); // 'idle' | 'checking' | 'passed' | 'failed'
   const [isCreating, setIsCreating] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -53,26 +69,38 @@ export default function CreatePersonalExercisePage() {
     videoFile,
     requireVideo: true,
   });
-  const isDirty = Boolean(
-    title ||
-      description ||
-      videoFile ||
-      countType !== "reps_sets" ||
-      sets !== 3 ||
-      reps !== 12 ||
-      duration !== 30 ||
-      targetMuscle !== "Full Body" ||
-      level !== "Beginner" ||
-      guideSteps[0] !== "Start in a plank with hands under shoulders" ||
-      guideSteps.length !== 2 ||
-      guideSteps[1] !== ""
-  );
-
   const showFieldError = (field) =>
     Boolean((hasSubmitted || touchedFields[field]) && validationErrors[field]);
   const markFieldTouched = (field) =>
     setTouchedFields((current) => ({ ...current, [field]: true }));
+  const resetTextCheck = () => {
+    setTextCheckStatus("idle");
+    setFlaggedWords([]);
+    setTextCheckError("");
+  };
+  const getTextCheckErrorMessage = (error) => {
+    const status = error?.response?.status;
+    if (!error?.response) {
+      return "Cannot reach the text-check API. Make sure the backend is running, then try again.";
+    }
+    if (status === 404) {
+      return "The text-check API is not available. Restart the backend so it loads the latest endpoint and database migration.";
+    }
+    const responseData = error.response.data;
+    const detail = typeof responseData === "string"
+      ? responseData
+      : responseData?.message;
+    return detail
+      ? `Text check failed (HTTP ${status}): ${detail}`
+      : `Text check failed (HTTP ${status}). Please check the backend and try again.`;
+  };
   const focusFirstInvalidField = (errors) => {
+    if (targetMuscles.length === 0) {
+      const muscleGroupField = document.getElementById("exercise-muscle-groups");
+      muscleGroupField?.scrollIntoView({ behavior: "smooth", block: "center" });
+      muscleGroupField?.focus();
+      return;
+    }
     const firstInvalidId = [
       "exercise-title",
       "exercise-description",
@@ -87,17 +115,20 @@ export default function CreatePersonalExercisePage() {
 
   // Step handlers
   const handleStepChange = (index, value) => {
+    resetTextCheck();
     setGuideSteps((prev) =>
       prev.map((step, idx) => (idx === index ? value : step))
     );
   };
 
   const handleAddStep = () => {
+    resetTextCheck();
     setGuideSteps((prev) => [...prev, ""]);
   };
 
   const handleRemoveStep = (index) => {
     if (guideSteps.length <= 1) return;
+    resetTextCheck();
     setGuideSteps((prev) => prev.filter((_, idx) => idx !== index));
   };
 
@@ -135,6 +166,27 @@ export default function CreatePersonalExercisePage() {
     }
   };
 
+  const handleAnatomyImageSelect = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 10 * 1024 * 1024) {
+      toast.error("Choose a JPG, PNG, or WebP image up to 10 MB.");
+      event.target.value = "";
+      return;
+    }
+    setAnatomyImageFile(file);
+  };
+
+  const toggleMuscleGroup = (muscleGroup) => {
+    resetTextCheck();
+    setTargetMuscles((current) => {
+      const selected = current.includes(muscleGroup)
+        ? current.filter((value) => value !== muscleGroup)
+        : [...current.filter((value) => value !== "Full Body"), muscleGroup];
+      return selected.length > 0 ? selected : [];
+    });
+  };
+
   // Trigger automated scanning and submission
   const handleCreate = async (e) => {
     if (e) {
@@ -143,7 +195,7 @@ export default function CreatePersonalExercisePage() {
     }
     setHasSubmitted(true);
     if (submissionLock.current) return;
-    if (Object.keys(validationErrors).length > 0) {
+    if (Object.keys(validationErrors).length > 0 || targetMuscles.length === 0) {
       setErrorMessage("");
       toast.warning("Please fill in all required fields correctly.");
       focusFirstInvalidField(validationErrors);
@@ -151,17 +203,31 @@ export default function CreatePersonalExercisePage() {
     }
     submissionLock.current = true;
     setErrorMessage("");
+    setTextCheckError("");
     setIsCreating(true);
     setTextCheckStatus("checking");
-    setVideoCheckStatus("checking");
 
+    let textScanComplete = false;
     try {
+      const textCheck = await checkPersonalExerciseText({
+        title,
+        description,
+        guideSteps,
+        targetMuscle: targetMuscles.join(", "),
+      });
+      textScanComplete = true;
+      const matches = Array.isArray(textCheck.flaggedWords) ? textCheck.flaggedWords : [];
+      setFlaggedWords(matches);
+      setTextCheckStatus(matches.length > 0 ? "failed" : "passed");
+      if (matches.length > 0) return;
+
+      setVideoCheckStatus("checking");
       const created = await createPersonalExercise({
         title: title.trim(),
         description: description.trim(),
         level: level.toUpperCase(),
         guideSteps: guideSteps.map((step) => step.trim()).filter(Boolean),
-        targetMuscle,
+        targetMuscle: targetMuscles.join(", "),
         countType,
         sets: countType === "reps_sets" ? sets : 1,
         reps: countType === "reps_sets" ? reps : null,
@@ -170,7 +236,7 @@ export default function CreatePersonalExercisePage() {
         defaultReps: countType === "reps_sets" ? reps : null,
         defaultDuration: countType === "duration" ? duration : null,
         shareWithCommunity: true,
-      }, videoFile);
+      }, videoFile, anatomyImageFile);
       if (created.status === "REJECTED") {
         setTextCheckStatus("failed");
         setVideoCheckStatus("failed");
@@ -181,17 +247,28 @@ export default function CreatePersonalExercisePage() {
       setTextCheckStatus("passed");
       setVideoCheckStatus("passed");
       toast.success("Exercise created successfully!");
-      setSuccessMessage("Automatic checks passed. Your exercise is waiting for review.");
+      setSuccessMessage("Automatic checks passed. Sent to the Content Manager review queue.");
       setTimeout(() => {
         navigate("/library/personal?status=pending");
       }, 1000);
     } catch (err) {
-      setTextCheckStatus("failed");
-      setVideoCheckStatus("failed");
+      if (!textScanComplete) {
+        setTextCheckStatus("failed");
+        setTextCheckError(getTextCheckErrorMessage(err));
+        return;
+      }
       const responseData = err?.response?.data;
       const errorMsg = typeof responseData === "string"
         ? responseData
-        : responseData?.message || getApiErrorMessage(err, "Lưu thất bại");
+        : responseData?.message || getApiErrorMessage(err, "Could not save the exercise.");
+      const flaggedWordsMatch = errorMsg.match(/Flagged words:\s*(.+)$/i);
+      if (flaggedWordsMatch) {
+        setFlaggedWords(flaggedWordsMatch[1].split(",").map((word) => word.trim()).filter(Boolean));
+        setTextCheckStatus("failed");
+        setVideoCheckStatus("idle");
+        return;
+      }
+      setVideoCheckStatus("failed");
       console.error("Create exercise failed:", err?.response || err);
       setErrorMessage(errorMsg);
       toast.error(errorMsg);
@@ -204,11 +281,10 @@ export default function CreatePersonalExercisePage() {
 
   return (
     <div className="create-personal-exercise-page w-full max-w-5xl mx-auto space-y-6 pb-16 text-white">
-      {/* Explicit scoped reset for buttons */}
       <style>{`
-        .create-personal-exercise-page button {
-          border: none;
-          outline: none;
+        .create-personal-exercise-page,
+        .create-personal-exercise-page * {
+          font-family: Arial, sans-serif;
         }
       `}</style>
 
@@ -230,7 +306,8 @@ export default function CreatePersonalExercisePage() {
           <button
             type="button"
             onClick={() => setErrorMessage("")}
-            className="text-rose-300 hover:text-white font-bold ml-2 cursor-pointer"
+            aria-label="Dismiss error message"
+            className="ml-2 inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-rose-200 shadow-none transition-colors hover:bg-rose-900/40 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
           >
             ✕
           </button>
@@ -263,6 +340,7 @@ export default function CreatePersonalExercisePage() {
             maxLength={50}
             value={title}
             onChange={(e) => {
+              resetTextCheck();
               setTitle(e.target.value);
             }}
             onBlur={() => {
@@ -290,6 +368,7 @@ export default function CreatePersonalExercisePage() {
             maxLength={300}
             value={description}
             onChange={(e) => {
+              resetTextCheck();
               setDescription(e.target.value);
             }}
             onBlur={() => {
@@ -303,21 +382,87 @@ export default function CreatePersonalExercisePage() {
         </div>
 
         <div>
-          <label htmlFor="exercise-muscle-group" className="mb-1.5 block text-xs font-semibold text-slate-300">
-            Muscle group
-          </label>
-          <select
-            id="exercise-muscle-group"
-            value={targetMuscle}
-            onChange={(event) => setTargetMuscle(event.target.value)}
-            className="w-full rounded-xl border border-[#231b46] bg-[#0c0820] px-4 py-2.5 text-xs text-white outline-none transition-colors focus:border-[#7c3aed]"
+          <fieldset
+            id="exercise-muscle-groups"
+            tabIndex={-1}
+            aria-invalid={Boolean(hasSubmitted && targetMuscles.length === 0)}
+            className={`m-0 min-w-0 rounded-2xl border-0 bg-[#0c0820]/70 p-4 outline-none transition-colors ${
+              hasSubmitted && targetMuscles.length === 0
+                ? "ring-1 ring-rose-500"
+                : "ring-1 ring-[#2b2257]"
+            }`}
           >
-            {["Chest", "Back", "Shoulders", "Arms", "Core", "Legs", "Full Body"].map((muscleGroup) => (
-              <option key={muscleGroup} value={muscleGroup} className="bg-[#0c0820]">
-                {muscleGroup}
-              </option>
-            ))}
-          </select>
+            <legend className="mb-1 flex w-full flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-200">
+              Primary &amp; secondary muscle groups
+              <span className="rounded-full border border-[#3b2c70] bg-[#17102f] px-2.5 py-1 text-[10px] font-semibold text-violet-200">
+                {targetMuscles.length} selected
+              </span>
+            </legend>
+            <p className="mb-3 text-[11px] leading-relaxed text-slate-500">Choose all muscle groups this exercise targets.</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+              {["Chest", "Back", "Shoulders", "Arms", "Core", "Legs", "Full Body"].map((muscleGroup) => (
+                <label key={muscleGroup} className="group cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={targetMuscles.includes(muscleGroup)}
+                    onChange={() => toggleMuscleGroup(muscleGroup)}
+                    className="peer sr-only"
+                  />
+                  <span
+                    className={`flex min-h-11 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-xs font-medium transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-violet-400 ${
+                      targetMuscles.includes(muscleGroup)
+                        ? "border-violet-500/70 bg-violet-500/15 text-violet-100"
+                        : "border-[#2b2257] bg-[#100b24] text-slate-300 group-hover:border-[#59458f] group-hover:bg-[#17102f]"
+                    }`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-md border text-[10px] leading-none transition-colors ${
+                        targetMuscles.includes(muscleGroup)
+                          ? "border-violet-400 bg-violet-500 text-white"
+                          : "border-slate-600 bg-[#0c0820] text-transparent"
+                      }`}
+                    >
+                      ✓
+                    </span>
+                    {muscleGroup}
+                  </span>
+                </label>
+              ))}
+            </div>
+            {hasSubmitted && targetMuscles.length === 0 && <p className="mt-3 text-[11px] text-rose-400">Choose at least one muscle group.</p>}
+          </fieldset>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold text-slate-300" htmlFor="exercise-anatomy-image">
+            Anatomy image <span className="font-normal text-slate-500">(optional)</span>
+          </label>
+          <input
+            ref={anatomyInputRef}
+            id="exercise-anatomy-image"
+            type="file"
+            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+            onChange={handleAnatomyImageSelect}
+            className="block w-full text-xs text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-[#211844] file:px-3 file:py-2 file:text-xs file:font-semibold file:text-violet-200"
+          />
+          {anatomyImageFile && (
+            <div className="mt-3 flex items-center gap-3">
+              <img src={anatomyPreview} alt="Anatomy preview" className="h-20 w-20 rounded-lg border border-[#44366f] object-cover" />
+              <div className="min-w-0">
+                <p className="truncate text-xs text-slate-200">{anatomyImageFile.name}</p>
+                <button
+                  type="button"
+                  onClick={() => { setAnatomyImageFile(null); if (anatomyInputRef.current) anatomyInputRef.current.value = ""; }}
+                  className="mt-2 inline-flex items-center gap-1 rounded-full border border-rose-500/40 bg-rose-950/60 px-2.5 py-1 text-[11px] font-semibold text-rose-200 transition-colors hover:border-rose-400 hover:bg-rose-900/70 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+                >
+                  <span aria-hidden="true">×</span>
+                  Remove image
+                </button>
+              </div>
+            </div>
+          )}
+          <p className="mt-1 text-[11px] text-slate-500">JPG, PNG, or WebP · up to 10 MB</p>
         </div>
 
         {/* Count type and exercise dosage */}
@@ -659,6 +804,10 @@ export default function CreatePersonalExercisePage() {
                 </div>
               ) : textCheckStatus === "checking" ? (
                 <div className="w-4 h-4 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+              ) : textCheckStatus === "failed" ? (
+                <div className="flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-white">
+                  <span className="text-[10px] font-bold leading-none">!</span>
+                </div>
               ) : (
                 <div className="w-4 h-4 rounded-full border-2 border-[#9d7aff] bg-[#1b1438] shadow-[0_0_0_3px_rgba(100,59,246,0.14)]" />
               )}
@@ -677,11 +826,36 @@ export default function CreatePersonalExercisePage() {
                     Passed
                   </span>
                 )}
+                {textCheckStatus === "failed" && (
+                  <span className="text-[10px] text-rose-300 font-semibold">
+                    {textCheckError ? "Check unavailable" : "Needs revision"}
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5">
                 Title, description and guide are scanned for inappropriate
                 words.
               </p>
+              {flaggedWords.length > 0 && (
+                <div role="alert" className="mt-2 rounded-lg border border-rose-800/70 bg-rose-950/40 p-2.5 text-[11px] text-rose-200">
+                  <p className="font-semibold">Banned words found — remove or replace these words:</p>
+                  <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                    {flaggedWords.map((word) => (
+                      <li
+                        key={word}
+                        className="rounded-md border border-rose-700/70 bg-rose-900/50 px-2 py-1 font-bold text-rose-100"
+                      >
+                        {word}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {textCheckError && (
+                <p role="alert" className="mt-1.5 text-[11px] text-rose-300">
+                  {textCheckError}
+                </p>
+              )}
             </div>
           </div>
 
@@ -733,10 +907,9 @@ export default function CreatePersonalExercisePage() {
           </div>
         </div>
 
-        {/* Ghi chú */}
         <p className="text-[11px] text-slate-500">
-          Both checks run when you press Create. Passing submissions are sent
-          to the review queue.
+          Text and video checks run when you press Create. Passing submissions
+          are sent to the review queue.
         </p>
       </section>
 
@@ -745,7 +918,7 @@ export default function CreatePersonalExercisePage() {
         {/* Nút Cancel */}
         <button
           type="button"
-          onClick={() => { toast.info("Action cancelled"); navigate(-1); }}
+          onClick={() => setConfirmCancel(true)}
           className="rounded-xl border border-[#2b2257] bg-[#141030] hover:bg-[#1f1847] text-slate-300 hover:text-white text-xs font-semibold px-6 py-2.5 transition-colors cursor-pointer"
         >
           Cancel
@@ -754,9 +927,9 @@ export default function CreatePersonalExercisePage() {
         {/* Nút Create */}
         <button
           type="button"
-          disabled={isCreating || !isDirty || Object.keys(validationErrors).length > 0}
+          disabled={isCreating}
           onClick={handleCreate}
-          className="rounded-xl bg-[#643bf6] hover:bg-[#522cd9] text-white text-xs font-semibold px-7 py-2.5 shadow-md active:scale-95 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-60"
+          className="rounded-xl bg-[#643bf6] hover:bg-[#522cd9] text-white text-xs font-semibold px-7 py-2.5 shadow-md active:scale-95 transition-all cursor-pointer flex items-center gap-2 disabled:cursor-wait disabled:opacity-100"
         >
           {isCreating && (
             <div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
@@ -764,6 +937,14 @@ export default function CreatePersonalExercisePage() {
           <span>{isCreating ? "Scanning & Creating..." : "Create"}</span>
         </button>
       </div>
+      <ConfirmDialog
+        open={confirmCancel}
+        title="Discard this exercise?"
+        message="Are you sure you want to cancel? Your unsaved exercise details will be lost."
+        confirmLabel="Discard"
+        onCancel={() => setConfirmCancel(false)}
+        onConfirm={() => navigate(-1)}
+      />
     </div>
   );
 }

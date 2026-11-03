@@ -8,14 +8,12 @@ import com.calishealth.dtos.ExerciseItemResponseDTO;
 import com.calishealth.dtos.PageResponseDTO;
 import com.calishealth.dtos.SystemExerciseDetailResponseDTO;
 import com.calishealth.models.Exercise;
-import com.calishealth.models.ExerciseMuscleGroup;
-import com.calishealth.models.ExerciseMuscleGroupId;
 import com.calishealth.models.ExerciseTreeEdge;
-import com.calishealth.models.MuscleGroup;
+import com.calishealth.models.FitnessLevel;
 import com.calishealth.repository.ExerciseRepository;
+import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.ExerciseModerationHistoryRepository;
 import com.calishealth.repository.ExerciseTreeEdgeRepository;
-import com.calishealth.repository.MuscleGroupRepository;
 import com.calishealth.repository.UserRepository;
 import com.calishealth.specification.ExerciseSpecification;
 import lombok.RequiredArgsConstructor;
@@ -24,18 +22,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.ArrayList;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.Set;
-import java.util.UUID;
 
 /**
  * Thư viện exercise/skill. Bảng canonical là `exercises` (ERD) — mọi module
@@ -56,11 +52,13 @@ public class ExerciseService {
 
     private final ExerciseRepository exercises;
     private final ExerciseModerationHistoryRepository moderationHistory;
-    private final MuscleGroupRepository muscleGroups;
     private final UserRepository users;
     private final JdbcTemplate jdbcTemplate;
     private final ExerciseVideoStorageService videoStorage;
     private final ExerciseTreeEdgeRepository treeEdges;
+    private final FitnessLevelRepository fitnessLevels;
+    private final ExerciseMuscleGroupCatalog muscleGroupCatalog;
+    private final SystemNotificationService systemNotifications;
 
     @Transactional(readOnly = true)
     public PageResponseDTO<ExerciseItemResponseDTO> getSystemExercises(ExerciseFilterRequestDTO filter) {
@@ -99,7 +97,7 @@ public class ExerciseService {
 
     @Transactional(readOnly = true)
     public SystemExerciseDetailResponseDTO getSystemExerciseDetail(Long exerciseId) {
-        Exercise exercise = exercises.findByIdAndSystemTrueAndStatus(exerciseId, "ACCEPTED")
+        Exercise exercise = exercises.findAcceptedByIdAndSource(exerciseId, "SYSTEM")
                 .filter(Exercise::isActive)
                 .orElseThrow(() -> new com.calishealth.exception.ResourceNotFoundException("System exercise not found"));
 
@@ -116,7 +114,8 @@ public class ExerciseService {
         if (steps.size() == 1) {
             steps = List.of(
                     "Set up for " + exercise.getName() + " with " + nullToDefault(exercise.getMuscleGroup(), "the target muscles") + " engaged.",
-                    "Brace your core and move through a controlled range of motion.",
+                    "Brace your core and keep the " + nullToDefault(exercise.getMuscleGroup(), "target muscles")
+                            + " engaged while moving through a controlled range of motion.",
                     steps.get(0),
                     "Return to the starting position with control and repeat.");
         }
@@ -192,12 +191,47 @@ public class ExerciseService {
         return value == null || value.isBlank() ? fallback : value;
     }
 
+    /** Levels are managed by content (fitness_levels), so any level that exists there is valid. */
+    private String resolveLevelName(String level) {
+        if (level == null || level.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a valid exercise level");
+        }
+        return fitnessLevels.findByNameIgnoreCase(level.trim())
+                .map(FitnessLevel::getName)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a valid exercise level"));
+    }
+
+    /** Resolves the level and refuses it when it is inactive (exercises cannot be created at an inactive level). */
+    private String resolveActiveLevelName(String level) {
+        String name = resolveLevelName(level);
+        if (!isLevelActive(name, levelActivity())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Level " + name + " is inactive. Choose an active level or activate it in Level & Benchmark Criteria");
+        }
+        return name;
+    }
+
+    /** Lower-cased level name -> is the level active. */
+    private Map<String, Boolean> levelActivity() {
+        Map<String, Boolean> activity = new HashMap<>();
+        for (FitnessLevel level : fitnessLevels.findAll()) {
+            activity.put(level.getName().toLowerCase(Locale.ROOT), "ACTIVE".equalsIgnoreCase(level.getStatus()));
+        }
+        return activity;
+    }
+
+    /** A level that is not configured at all is not treated as inactive. */
+    private static boolean isLevelActive(String levelName, Map<String, Boolean> activity) {
+        return levelName == null || activity.getOrDefault(levelName.trim().toLowerCase(Locale.ROOT), true);
+    }
+
     @Transactional(readOnly = true)
     public List<ExerciseResponse> findAll() {
+        Map<String, Boolean> activity = levelActivity();
         return exercises.findAll().stream()
                 .filter(exercise -> !STATUS_DELETED.equalsIgnoreCase(exercise.getModerationStatus()))
                 .sorted((first, second) -> second.getUpdatedAt().compareTo(first.getUpdatedAt()))
-                .map(this::toResponse)
+                .map(exercise -> toResponse(exercise, activity))
                 .toList();
     }
 
@@ -216,6 +250,9 @@ public class ExerciseService {
     }
 
     private void validateExerciseValue(CreateExerciseRequest request) {
+        if (request.guide() == null || request.guide().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Execution steps are required");
+        }
         if (!"REPS".equals(request.category()) && !"HOLD".equals(request.category())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a repetition-count or hold exercise category");
         }
@@ -249,9 +286,7 @@ public class ExerciseService {
         if (request.muscleGroup() == null || request.muscleGroup().isBlank() || request.muscleGroup().length() > 120) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select one or more muscle groups");
         }
-        if (request.level() == null || !List.of("Beginner", "Intermediate", "Advanced").contains(request.level())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a valid exercise level");
-        }
+        resolveActiveLevelName(request.level());
         if (!Set.of("REPS", "HOLD").contains(request.category())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a repetition-count or hold exercise category");
         }
@@ -268,14 +303,14 @@ public class ExerciseService {
         type = requestedType;
 
         Exercise exercise = new Exercise();
-        exercise.setCode(newCode(requestedType));
+        exercise.setCode(temporaryExerciseCode());
         exercise.setName(request.name().trim());
         exercise.setType(type);
         exercise.setCategory(request.category());
         exercise.setDefaultSets(request.defaultSets());
         exercise.setDefaultReps(request.defaultReps());
         exercise.setDuration(request.duration());
-        exercise.setDifficultyLevel(request.level().trim());
+        exercise.setDifficultyLevel(resolveActiveLevelName(request.level()));
         exercise.setInstructions(request.description());
         exercise.setExecutionSteps(request.guide());
         exercise.setVideoUrl(demoVideoUrl);
@@ -287,21 +322,8 @@ public class ExerciseService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "The signed-in user no longer exists")));
         Exercise saved = exercises.save(exercise);
 
-        // Phải persist exercise trước: ExerciseMuscleGroup dùng @MapsId nên khoá
-        // chính ghép (exercise_id, muscle_group_id) lấy từ id vừa sinh.
-        for (String muscleName : request.muscleGroup().split("\\s*·\\s*")) {
-            String displayName = muscleName.trim();
-            if (displayName.isEmpty()) {
-                continue;
-            }
-            MuscleGroup muscleGroup = resolveMuscleGroup(displayName);
-            ExerciseMuscleGroup link = new ExerciseMuscleGroup();
-            link.setId(new ExerciseMuscleGroupId());
-            link.setExercise(saved);
-            link.setMuscleGroup(muscleGroup);
-            saved.getMuscleGroups().add(link);
-        }
-
+        saved.setCode(systemExerciseCode(saved.getId()));
+        muscleGroupCatalog.assign(saved, request.muscleGroup());
         return toResponse(exercises.save(saved));
     }
 
@@ -323,8 +345,10 @@ public class ExerciseService {
         if (request.muscleGroup() == null || request.muscleGroup().isBlank() || request.muscleGroup().length() > 120) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select one or more muscle groups");
         }
-        if (request.level() == null || !List.of("Beginner", "Intermediate", "Advanced").contains(request.level())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a valid exercise level");
+        // Keeping the current level is always allowed; moving an exercise to an inactive level is not.
+        String requestedLevel = resolveLevelName(request.level());
+        if (!requestedLevel.equalsIgnoreCase(exercise.getDifficultyLevel())) {
+            resolveActiveLevelName(requestedLevel);
         }
         String type = request.type() == null ? "" : request.type().trim().toUpperCase(Locale.ROOT);
         if (!Set.of("HEALTH", "SKILL").contains(type)) {
@@ -343,28 +367,12 @@ public class ExerciseService {
         exercise.setDefaultSets(request.defaultSets());
         exercise.setDefaultReps(request.defaultReps());
         exercise.setDuration(request.duration());
-        exercise.setDifficultyLevel(request.level().trim());
+        exercise.setDifficultyLevel(requestedLevel);
         exercise.setInstructions(request.description());
         exercise.setExecutionSteps(request.guide());
         if (demoVideoUrl != null) exercise.setVideoUrl(demoVideoUrl);
         if (anatomyImageUrl != null) exercise.setAnatomyImageUrl(anatomyImageUrl);
-        List<String> requestedMuscles = java.util.Arrays.stream(request.muscleGroup().split("\\s*·\\s*"))
-                .map(String::trim)
-                .filter(name -> !name.isEmpty())
-                .distinct()
-                .toList();
-        List<MuscleGroup> resolvedMuscles = requestedMuscles.stream()
-                .map(this::resolveMuscleGroup)
-                .toList();
-        exercise.getMuscleGroups().clear();
-        exercises.saveAndFlush(exercise);
-        for (MuscleGroup muscleGroup : resolvedMuscles) {
-            ExerciseMuscleGroup link = new ExerciseMuscleGroup();
-            link.setId(new ExerciseMuscleGroupId());
-            link.setExercise(exercise);
-            link.setMuscleGroup(muscleGroup);
-            exercise.getMuscleGroups().add(link);
-        }
+        muscleGroupCatalog.assign(exercise, request.muscleGroup());
         Exercise saved = exercises.save(exercise);
         if (demoVideoUrl != null) videoStorage.delete(previousVideoUrl);
         if (anatomyImageUrl != null) videoStorage.deleteAnatomyImage(previousAnatomyImageUrl);
@@ -397,13 +405,15 @@ public class ExerciseService {
         }
         Exercise exercise = exercises.findByCode(code)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Exercise or skill not found"));
+        String previousStatus = exercise.getStatus();
+        if (active && !isLevelActive(exercise.getDifficultyLevel(), levelActivity())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Level " + exercise.getDifficultyLevel() + " is inactive, so its exercises stay inactive. Activate the level first");
+        }
         exercise.setActive(active);
         exercise.setModerationStatus(active
                 ? STATUS_ACTIVE
                 : (SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource()) ? STATUS_REJECTED : STATUS_INACTIVE));
-        exercise.setStatus(active
-                ? "ACCEPTED"
-                : (SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource()) ? "REJECTED" : "ACCEPTED"));
         ExerciseResponse response = toResponse(exercises.saveAndFlush(exercise));
         if (SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource())) {
             moderationHistory.insert(exercise.getCode(), exercise.getName(), exercise.getType(),
@@ -412,59 +422,24 @@ public class ExerciseService {
                     exercise.getAnatomyImageUrl(),
                     exercise.getCreatedBy() == null ? null : exercise.getCreatedBy().getFullName(),
                     active ? "APPROVED" : "REJECTED", active ? null : rejectionReason.trim());
+            if ("PENDING".equalsIgnoreCase(previousStatus)) {
+                systemNotifications.notifyExerciseModeration(
+                        exercise.getAuthorId(),
+                        exercise.getName(),
+                        active,
+                        active ? null : rejectionReason.trim()
+                );
+            }
         }
         return response;
     }
 
-    /**
-     * Lấy muscle group theo tên (không phân biệt hoa/thường), tạo mới nếu chưa có.
-     * Flush sau khi save để lần lặp sau trong cùng request luôn thấy row vừa tạo.
-     */
-    private MuscleGroup resolveMuscleGroup(String displayName) {
-        return muscleGroups.findByNameIgnoreCase(displayName)
-                .orElseGet(() -> muscleGroups.saveAndFlush(newMuscleGroup(displayName)));
+    private static String systemExerciseCode(Long id) {
+        return "EX_" + id;
     }
 
-    /**
-     * V4 tạo muscle_groups với dashboard_code / icon_key / tone NOT NULL, nhưng
-     * màn hình Content Manager cho phép chọn group mới. Sinh các cột dashboard
-     * từ tên để INSERT không vướng ràng buộc NOT NULL.
-     */
-    private MuscleGroup newMuscleGroup(String displayName) {
-        String dashboardCode = displayName.toUpperCase(Locale.ROOT)
-                .replaceAll("[^A-Z0-9]+", "_")
-                .replaceAll("^_+|_+$", "");
-        if (dashboardCode.isBlank()) {
-            dashboardCode = "GROUP_" + UUID.randomUUID().toString().substring(0, 6).toUpperCase(Locale.ROOT);
-        }
-        MuscleGroup createdGroup = new MuscleGroup();
-        createdGroup.setName(displayName);
-        createdGroup.setDashboardCode(dashboardCode);
-        createdGroup.setIconKey(dashboardCode.toLowerCase(Locale.ROOT));
-        createdGroup.setTone(defaultToneFor(displayName));
-        return createdGroup;
-    }
-
-    private static String defaultToneFor(String displayName) {
-        Set<String> strong = Set.of("CHEST", "BACK", "ARMS", "SHOULDERS", "LEGS", "GLUTES");
-        Set<String> core = Set.of("CORE", "ABS");
-        String key = displayName.toUpperCase(Locale.ROOT);
-        if (core.contains(key)) {
-            return "amber";
-        }
-        return strong.contains(key) ? "violet" : "slate";
-    }
-
-    /** Mã hiển thị duy nhất, giữ ổn định vì được dùng trên URL của Content Manager. */
-    private String newCode(String type) {
-        String prefix = "SKILL".equals(type) ? "SK" : "HE";
-        for (int attempt = 0; attempt < 5; attempt++) {
-            String candidate = prefix + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
-            if (!exercises.existsByCode(candidate)) {
-                return candidate;
-            }
-        }
-        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not allocate an exercise code");
+    private static String temporaryExerciseCode() {
+        return "TMP-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 24);
     }
 
     @Transactional(readOnly = true)
@@ -474,12 +449,14 @@ public class ExerciseService {
 
     @Transactional(readOnly = true)
     public List<ExerciseResponse> findPendingModeration() {
+        Map<String, Boolean> activity = levelActivity();
         return exercises.findAll().stream()
                 .filter(exercise -> SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource())
+                        && Exercise.EntryStatus.PENDING.name().equalsIgnoreCase(exercise.getStatus())
                         && !exercise.isActive()
                         && !STATUS_REJECTED.equalsIgnoreCase(exercise.getModerationStatus()))
                 .sorted((first, second) -> second.getUpdatedAt().compareTo(first.getUpdatedAt()))
-                .map(exercise -> toResponse(exercise))
+                .map(exercise -> toResponse(exercise, activity))
                 .toList();
     }
 
@@ -498,13 +475,17 @@ public class ExerciseService {
                 .distinct()
                 .reduce((first, second) -> first + " · " + second)
                 .orElse(null);
-        if (joined != null) {
-            return joined;
-        }
-        return exercise.getCategory();
+        // Không có dữ liệu muscle thì để trống, không lấy category thay thế.
+        return joined;
     }
 
     private ExerciseResponse toResponse(Exercise exercise) {
+        return toResponse(exercise, levelActivity());
+    }
+
+    /** {@code active} is the effective status: the exercise is active AND its level is active. */
+    private ExerciseResponse toResponse(Exercise exercise, Map<String, Boolean> activity) {
+        boolean levelActive = isLevelActive(exercise.getDifficultyLevel(), activity);
         String type = "SKILL".equalsIgnoreCase(exercise.getType()) ? "Skill" : "Health";
         String source = responseSource(exercise);
         return new ExerciseResponse(
@@ -523,11 +504,13 @@ public class ExerciseService {
                 exercise.getCreatedBy() == null ? null : exercise.getCreatedBy().getFullName(),
                 exercise.getDefaultReps(),
                 exercise.getDuration(),
-                exercise.isActive(),
+                exercise.isActive() && levelActive,
                 exercise.getUpdatedAt(),
                 exercise.getUpdatedAt(),
                 autoCheckStatus(exercise),
-                exercise.getDefaultSets()
+                exercise.getDefaultSets(),
+                exercise.isActive(),
+                levelActive
         );
     }
 }

@@ -31,11 +31,14 @@ class DashboardServiceTest {
         new DashboardService(jdbcTemplate).getDashboard(null);
 
         ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
-        verify(jdbcTemplate, org.mockito.Mockito.times(2))
+        verify(jdbcTemplate, org.mockito.Mockito.times(3))
                 .queryForObject(sqlCaptor.capture(), eq(Long.class));
 
         assertTrue(sqlCaptor.getAllValues().stream()
-                .allMatch(sql -> sql.contains("workout_entries")
+                .anyMatch(sql -> sql.contains("workout_entries")
+                        && sql.contains("source")));
+        assertTrue(sqlCaptor.getAllValues().stream()
+                .anyMatch(sql -> sql.contains("workout_entries")
                         && sql.contains("created_by")));
     }
 
@@ -51,6 +54,6 @@ class DashboardServiceTest {
                 .query(sqlCaptor.capture(), any(RowMapper.class));
 
         assertTrue(sqlCaptor.getAllValues().stream()
-                .allMatch(sql -> sql.contains("e.status IN ('ACTIVE', 'ACCEPTED')")));
+                .allMatch(sql -> sql.contains("e.moderation_status = 'ACTIVE'")));
     }
 }

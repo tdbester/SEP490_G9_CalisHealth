@@ -247,7 +247,6 @@
 .streak-cell-day.is-streak {
   background: linear-gradient(135deg, #8B5CF6 0%, #F472B6 100%);
   border-color: transparent;
-  box-shadow: 0 4px 14px rgba(244, 114, 182, 0.28);
 }
 
 .streak-cell-day.is-streak .streak-cell-number {
@@ -260,7 +259,7 @@
 
 /* current active day — flame icon + outline ring */
 .streak-cell-day.is-today {
-  box-shadow: 0 0 0 2px #F472B6, 0 4px 14px rgba(244, 114, 182, 0.32);
+  box-shadow: 0 0 0 2px #F472B6;
 }
 
 .streak-cell-flame {
@@ -448,7 +447,6 @@
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 6px 18px rgba(139, 92, 246, 0.35);
   transition: filter 0.15s ease;
   width: 100%;
 }

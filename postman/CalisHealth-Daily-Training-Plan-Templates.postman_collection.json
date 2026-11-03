@@ -1,0 +1,318 @@
+{
+  "info": {
+    "name": "CalisHealth - Daily Training Plan Templates",
+    "description": "End-to-end Postman flow for the Daily Training Plan Templates screen. Configure cmEmail and cmPassword in the CalisHealth - Local environment, then run the requests in order. The collection chooses an active system workout automatically, creates an inactive template, updates it, activates it, verifies it, and deletes only the template it created.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "cmEmail", "value": "" },
+    { "key": "cmPassword", "value": "", "type": "secret" },
+    { "key": "token", "value": "", "type": "secret" },
+    { "key": "templateCode", "value": "" },
+    { "key": "workoutCode", "value": "" },
+    { "key": "planLevel", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "0. Authentication & access",
+      "item": [
+        {
+          "name": "Login as Content Manager",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{cmEmail}}\",\n  \"password\": \"{{cmPassword}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login succeeds', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Account is a Content Manager', function () { pm.expect(body.role).to.eql('CONTENT_MANAGER'); });",
+                  "  pm.test('Login returns a JWT', function () { pm.expect(body.token).to.be.a('string').and.not.empty; });",
+                  "  pm.collectionVariables.set('token', body.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify current account",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Current account is returned', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) pm.test('Role is Content Manager', function () { pm.expect(pm.response.json().role).to.eql('CONTENT_MANAGER'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unauthenticated access is rejected",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/api/content/daily-plan-templates"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Missing token is rejected', function () { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Prepare valid workout",
+      "item": [
+        {
+          "name": "Find an active system workout",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/content/workouts"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Workout list returns 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  const workouts = pm.response.json();",
+                  "  const workout = workouts.find(item => item.type === 'WORKOUT' && String(item.source).toUpperCase() === 'SYSTEM' && item.active === true);",
+                  "  pm.test('At least one active system workout exists', function () { pm.expect(workout).to.be.ok; });",
+                  "  if (workout) {",
+                  "    pm.collectionVariables.set('workoutCode', workout.code);",
+                  "    pm.collectionVariables.set('planLevel', workout.level);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify selected workout",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/content/workouts/{{workoutCode}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Selected workout detail returns 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Workout is valid for a template', function () { pm.expect(body.type).to.eql('WORKOUT'); pm.expect(String(body.source).toUpperCase()).to.eql('SYSTEM'); pm.expect(body.active).to.eql(true); });",
+                  "  pm.collectionVariables.set('planLevel', body.level);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Daily Training Plan Template CRUD",
+      "item": [
+        {
+          "name": "List templates",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/content/daily-plan-templates"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Template list returns 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) pm.test('Template list is an array', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create inactive template",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Daily Plan {{$timestamp}}\",\n  \"description\": \"Created by the Daily Training Plan Templates Postman collection.\",\n  \"level\": \"{{planLevel}}\",\n  \"monthNumber\": 1,\n  \"daysPerWeek\": 1,\n  \"active\": false,\n  \"days\": [\n    {\n      \"dayNumber\": 1,\n      \"workoutCode\": \"{{workoutCode}}\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/content/daily-plan-templates"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Template is created', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('templateCode', body.code);",
+                  "  pm.test('Created template has one scheduled day and is inactive', function () { pm.expect(body.code).to.be.a('string').and.not.empty; pm.expect(body.active).to.eql(false); pm.expect(body.days).to.have.length(1); pm.expect(body.days[0].workoutCode).to.eql(pm.collectionVariables.get('workoutCode')); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get created template detail",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/content/daily-plan-templates/{{templateCode}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Template detail returns 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) pm.test('Detail matches created template', function () { const body = pm.response.json(); pm.expect(body.code).to.eql(pm.collectionVariables.get('templateCode')); pm.expect(body.level).to.eql(pm.collectionVariables.get('planLevel')); pm.expect(body.daysPerWeek).to.eql(1); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update created template",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Daily Plan Updated {{$timestamp}}\",\n  \"description\": \"Updated by the Daily Training Plan Templates Postman collection.\",\n  \"level\": \"{{planLevel}}\",\n  \"monthNumber\": 2,\n  \"daysPerWeek\": 1,\n  \"active\": false,\n  \"days\": [\n    {\n      \"dayNumber\": 1,\n      \"workoutCode\": \"{{workoutCode}}\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/content/daily-plan-templates/{{templateCode}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Template update succeeds', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) pm.test('Updated values are persisted', function () { const body = pm.response.json(); pm.expect(body.monthNumber).to.eql(2); pm.expect(body.active).to.eql(false); pm.expect(body.name).to.include('Updated'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Activate created template",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"active\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/content/daily-plan-templates/{{templateCode}}/status"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Template activation succeeds', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) pm.test('Template is active', function () { pm.expect(pm.response.json().active).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete created template (cleanup)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/content/daily-plan-templates/{{templateCode}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Template is deleted', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deleted template is no longer found",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/content/daily-plan-templates/{{templateCode}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Deleted template returns 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      const steps = pm.response.json().steps;
+      const newId = Number(pm.collectionVariables.get('newStepId'));
+      pm.test('buoc da bien mat', () => pm.expect(steps.map(s => s.id)).to.not.include(newId));
+      pm.test('thu tu lien tuc, Result van o cuoi', () => { steps.forEach((s, i) => pm.expect(s.position).to.eql(i + 1)); pm.expect(steps[steps.length - 1].stepType).to.eql('RESULT'); });
+    language: text/javascript
+order: 5000

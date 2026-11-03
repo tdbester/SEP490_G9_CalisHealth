@@ -1,6 +1,8 @@
 package com.calishealth.controllers;
 
 import com.calishealth.dtos.CreatePersonalExerciseRequestDTO;
+import com.calishealth.dtos.ContentTextCheckRequestDTO;
+import com.calishealth.dtos.ContentTextCheckResponseDTO;
 import com.calishealth.dtos.PageResponseDTO;
 import com.calishealth.dtos.PersonalExerciseResponseDTO;
 import com.calishealth.dtos.SubmissionCountsDTO;
@@ -23,14 +25,23 @@ import org.springframework.web.multipart.MultipartFile;
 public class PersonalExerciseController {
     private final PersonalExerciseService personalExercises;
 
+    @PostMapping("/text-check")
+    public ResponseEntity<ContentTextCheckResponseDTO> checkText(
+            @Valid @RequestBody ContentTextCheckRequestDTO request
+    ) {
+        return ResponseEntity.ok(personalExercises.checkText(request));
+    }
+
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PersonalExerciseResponseDTO> create(
             @Valid @RequestPart("data") CreatePersonalExerciseRequestDTO request,
             @RequestPart("videoFile") MultipartFile videoFile,
+            @RequestPart(value = "anatomyImageFile", required = false) MultipartFile anatomyImageFile,
             Authentication authentication
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(personalExercises.createPersonalExercise(authentication.getName(), request, videoFile));
+                .body(personalExercises.createPersonalExercise(
+                        authentication.getName(), request, videoFile, anatomyImageFile));
     }
 
     @GetMapping
@@ -64,10 +75,11 @@ public class PersonalExerciseController {
             @PathVariable Long id,
             @Valid @RequestPart("data") CreatePersonalExerciseRequestDTO request,
             @RequestPart(value = "videoFile", required = false) MultipartFile videoFile,
+            @RequestPart(value = "anatomyImageFile", required = false) MultipartFile anatomyImageFile,
             Authentication authentication
     ) {
         return ResponseEntity.ok(personalExercises.resubmitPersonalExercise(
-                authentication.getName(), id, request, videoFile));
+                authentication.getName(), id, request, videoFile, anatomyImageFile));
     }
 
     @PutMapping(path = "/{id}/edit", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -75,10 +87,11 @@ public class PersonalExerciseController {
             @PathVariable Long id,
             @Valid @RequestPart("data") CreatePersonalExerciseRequestDTO request,
             @RequestPart(value = "videoFile", required = false) MultipartFile videoFile,
+            @RequestPart(value = "anatomyImageFile", required = false) MultipartFile anatomyImageFile,
             Authentication authentication
     ) {
         return ResponseEntity.ok(personalExercises.updateAcceptedPersonalExercise(
-                authentication.getName(), id, request, videoFile));
+                authentication.getName(), id, request, videoFile, anatomyImageFile));
     }
 
     @DeleteMapping("/{id}")

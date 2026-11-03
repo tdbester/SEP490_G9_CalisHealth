@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import api from "../api/client";
+import { markOnboardingPrompted, needsOnboarding } from "../api/survey";
 import "./Login.css";
 import AuthLogo from "../components/AuthLogo";
 import ImeNotice from "../components/ImeNotice";
@@ -54,6 +55,10 @@ export default function Login() {
     let cancelled = false;
     api.get("/auth/me").then(({ data }) => {
       if (cancelled) return;
+      if (data.mustChangePassword) {
+        navigate("/change-password", { replace: true });
+        return;
+      }
       setExistingRole(data.role);
       localStorage.setItem(
         "user",
@@ -84,7 +89,7 @@ export default function Login() {
   };
 
   if (existingRole === "ADMIN") {
-    return <Navigate to="/admin/notifications" replace />;
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   if (existingRole === "CONTENT_MANAGER") {
@@ -121,17 +126,28 @@ export default function Login() {
           role: res.data.role,
         }),
       );
+      if (res.data.mustChangePassword) {
+        navigate("/change-password", { replace: true });
+        return;
+      }
+      // Member chưa hoàn thành / chưa bỏ qua khảo sát onboarding -> vào survey trước,
+      // kể cả khi có returnTo (vd vào "/" lúc chưa đăng nhập bị chuyển sang /login?returnTo=/)
+      if (res.data.role === "MEMBER" && (await needsOnboarding())) {
+        markOnboardingPrompted();
+        navigate("/survey", { replace: true });
+        return;
+      }
       const returnTo = new URLSearchParams(location.search).get("returnTo");
       const isSafeReturnTo =
         returnTo?.startsWith("/") && !returnTo.startsWith("//") && returnTo !== "/login";
-      const destination =
-        res.data.role === "ADMIN"
-          ? "/admin/notifications"
-          : res.data.role === "CONTENT_MANAGER"
-          ? "/content/dashboard"
-          : isSafeReturnTo
-            ? returnTo
-            : "/dashboard";
+      let destination = isSafeReturnTo ? returnTo : "/";
+      if (res.data.role === "CONTENT_MANAGER") {
+        destination = "/content/dashboard";
+      } else if (res.data.role === "ADMIN") {
+        destination = isSafeReturnTo && returnTo.startsWith("/admin")
+          ? returnTo
+          : "/admin/dashboard";
+      }
       navigate(destination, { replace: true });
     } catch (err) {
       const msg =

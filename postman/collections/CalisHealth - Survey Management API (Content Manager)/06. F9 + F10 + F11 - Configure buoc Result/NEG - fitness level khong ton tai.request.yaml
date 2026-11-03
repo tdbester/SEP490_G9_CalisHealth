@@ -1,0 +1,26 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{resultStepId}}/result-config"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "stepName": "Result and recommended plan",
+      "config": {
+        "showLevelBreakdown": true,
+        "showPlanPreview": true,
+        "planDurationWeeks": 4,
+        "sessionsPerWeek": 3,
+        "minutesPerSession": 30,
+        "fallbackFitnessLevelId": 999999999
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 400', () => pm.response.to.have.status(400));
+      pm.test('code = FITNESS_LEVEL_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('FITNESS_LEVEL_NOT_FOUND'));
+    language: text/javascript
+order: 7000

@@ -85,8 +85,8 @@ export function validateWorkoutExercises(exercises) {
     if (!isValidInteger(exercise.reps, 1, 2147483647)) {
       errors[`reps-${index}`] = "Value must be an integer greater than 0";
     }
-    if (!isValidInteger(exercise.restSec, 10, 120)) {
-      errors[`rest-${index}`] = "Rest must be an integer from 10 to 120 seconds";
+    if (!isValidInteger(exercise.restSec, 10, 180)) {
+      errors[`rest-${index}`] = "Rest must be an integer from 10 to 180 seconds";
     }
   });
 

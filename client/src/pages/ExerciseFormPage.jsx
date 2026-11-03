@@ -9,8 +9,10 @@ import {
   Chip,
   Divider,
   FormHelperText,
+  IconButton,
   InputAdornment,
   MenuItem,
+  Pagination,
   Skeleton,
   Stack,
   TextField,
@@ -18,18 +20,40 @@ import {
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
+import { keyframes } from "@mui/material/styles";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
+import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
+import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
+import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
+import KeyboardArrowLeftRoundedIcon from "@mui/icons-material/KeyboardArrowLeftRounded";
+import KeyboardArrowRightRoundedIcon from "@mui/icons-material/KeyboardArrowRightRounded";
+import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import VideoLibraryRoundedIcon from "@mui/icons-material/VideoLibraryRounded";
+import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
 import { contentManagerApi } from "../api/contentManager";
+import { useLevelNames } from "../useLevelNames";
 import { useApiMutation, useApiQuery } from "../hooks";
-import { CONTENT_PATHS, ContentPageHeader } from "../components/ContentShared";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { CONTENT_PATHS, ContentPageHeader, DarkPill, TONE_STYLES } from "../components/ContentShared";
+import { CM } from "../theme-content";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 
+const rise = keyframes`
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+const enter = (delay = 0) => ({
+  animation: `${rise} .45s ease-out ${delay}ms both`,
+  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+});
+
+const SYSTEM_PAGE_SIZE = 6;
+const ITEM_PAGE_SIZE = 2;
 const MUSCLE_OPTIONS = ["Chest", "Back", "Shoulders", "Arms", "Core", "Legs", "Glutes"];
 const CATEGORY_OPTIONS = ["REPS", "HOLD"];
-const LEVELS = ["Beginner", "Intermediate", "Advanced"];
 const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
@@ -41,7 +65,7 @@ const ALLOWED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 
 const BREADCRUMB = [
   { label: "Content manager", to: CONTENT_PATHS.dashboard },
-  { label: "Exercise & Workout Management", to: CONTENT_PATHS.exercises },
+  { label: "Exercise & Workout", to: CONTENT_PATHS.exercises },
   { label: "Create content" },
 ];
 
@@ -52,19 +76,77 @@ const EMPTY_EXERCISE = {
   category: "REPS",
   value: 10,
   defaultSets: 3,
-  level: "Beginner",
+  // Filled with the first configured level once levels load (see ExerciseFormPage).
+  level: "",
   guide: "",
 };
 
 const EMPTY_WORKOUT = {
   name: "",
   description: "",
-  restSeconds: 60,
-  type: "WORKOUT",
-  level: "Beginner",
-  exerciseCodes: [],
+  type: "FLEX",
+  level: "",
+  // Mỗi bài trong workout: { exerciseCode, countBy: "REPS" | "DURATION", sets, reps, durationSeconds, restSeconds }
+  items: [],
   planItems: [],
 };
+
+/**
+ * Cấu hình ban đầu của một bài khi thêm vào workout. countBy cố định theo exercises.category
+ * (HOLD = Duration, REPS = Sets & Reps), người dùng không đổi được.
+ */
+export function defaultWorkoutItem(exercise) {
+  const byDuration = String(exercise.category || "").toUpperCase() === "HOLD";
+  return {
+    exerciseCode: exercise.code,
+    countBy: byDuration ? "DURATION" : "REPS",
+    sets: exercise.defaultSets ?? 3,
+    reps: exercise.defaultReps ?? 10,
+    durationSeconds: exercise.duration ?? 30,
+    restSeconds: 60,
+  };
+}
+
+/** Lỗi của một dòng bài tập; trả về object rỗng nếu hợp lệ. */
+export function workoutItemErrors(item) {
+  const errors = {};
+  if (!Number.isInteger(item.sets) || item.sets < 1 || item.sets > 20) errors.sets = "1–20";
+  if (item.countBy === "DURATION") {
+    if (!Number.isInteger(item.durationSeconds) || item.durationSeconds < 1 || item.durationSeconds > 3600) {
+      errors.durationSeconds = "1–3600";
+    }
+  } else if (!Number.isInteger(item.reps) || item.reps < 1 || item.reps > 100) {
+    errors.reps = "1–100";
+  }
+  if (!Number.isInteger(item.restSeconds) || item.restSeconds < 0 || item.restSeconds > 3600) {
+    errors.restSeconds = "0–3600";
+  }
+  return errors;
+}
+
+/** Body gửi lên API: chỉ gửi trường phù hợp với cách đếm. */
+export function toWorkoutItemRequests(items) {
+  return items.map((item) => ({
+    exerciseCode: item.exerciseCode,
+    sets: item.sets,
+    reps: item.countBy === "DURATION" ? null : item.reps,
+    durationSeconds: item.countBy === "DURATION" ? item.durationSeconds : null,
+    restSeconds: item.restSeconds,
+  }));
+}
+
+/** Tổng kết ước tính: "3 exercises · 9 sets · About 11 min". */
+export function summarizeWorkoutItems(items) {
+  const totalSets = items.reduce((sum, item) => sum + (Number(item.sets) || 0), 0);
+  const seconds = items.reduce((sum, item) => {
+    const sets = Number(item.sets) || 0;
+    const work = item.countBy === "DURATION" ? Number(item.durationSeconds) || 0 : (Number(item.reps) || 0) * 3;
+    // Nghỉ sau mỗi hiệp, trừ hiệp cuối của bài.
+    return sum + sets * work + Math.max(sets - 1, 0) * (Number(item.restSeconds) || 0);
+  }, 0);
+  const minutes = Math.max(Math.round(seconds / 60), items.length ? 1 : 0);
+  return `${items.length} exercise${items.length === 1 ? "" : "s"} · ${totalSets} sets · About ${minutes} min`;
+}
 
 function extensionOf(file) {
   return file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
@@ -154,17 +236,19 @@ function FileDropField({ label, hint, accept, file, error, onChange, preview }) 
   return (
     <Box
       sx={{
-        border: 1,
-        borderStyle: "dashed",
-        borderColor: error ? "error.main" : "divider",
-        borderRadius: 2,
-        p: 2,
+        border: "1px dashed",
+        borderColor: error ? "error.main" : CM.borderStrong,
+        borderRadius: "14px",
+        p: 2.25,
+        bgcolor: "rgba(139,92,246,0.03)",
+        transition: "all .2s ease",
+        "&:hover": { borderColor: CM.violetBright, bgcolor: "rgba(139,92,246,0.06)" },
       }}
     >
-      <Typography variant="body2" fontWeight={600}>
+      <Typography variant="body2" fontWeight={700} sx={{ color: "#fff" }}>
         {label}
       </Typography>
-      <Typography variant="caption" color="text.secondary" display="block">
+      <Typography variant="caption" sx={{ color: CM.textMuted }} display="block">
         {hint}
       </Typography>
       <Button
@@ -172,7 +256,7 @@ function FileDropField({ label, hint, accept, file, error, onChange, preview }) 
         variant="outlined"
         size="small"
         startIcon={<CloudUploadRoundedIcon />}
-        sx={{ mt: 1.5 }}
+        sx={{ mt: 1.5, borderColor: CM.borderStrong, bgcolor: "rgba(139,92,246,0.1)", transition: "all .2s ease", "&:hover": { borderColor: CM.violetBright, bgcolor: "rgba(139,92,246,0.2)" } }}
       >
         Choose file
         <input
@@ -185,7 +269,7 @@ function FileDropField({ label, hint, accept, file, error, onChange, preview }) 
         />
       </Button>
       {file && (
-        <Typography variant="caption" color="success.dark" display="block" sx={{ mt: 1 }}>
+        <Typography variant="caption" sx={{ color: CM.green, fontWeight: 600, mt: 1, display: "block" }}>
           Selected: {file.name} ({fileSizeMb(file)} MB)
         </Typography>
       )}
@@ -253,13 +337,19 @@ export function ExerciseFields({
   onAnatomyImageChange,
   anatomyImagePreview,
 }) {
+  const { levels: LEVELS, activeLevels } = useLevelNames();
   return (
-    <Stack spacing={2}>
-      <Card variant="outlined">
-        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
-          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
-            Exercise details
-          </Typography>
+    <Stack spacing={2.5}>
+      <Card sx={{ overflow: "hidden", position: "relative" }}>
+        <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
+          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 2 }}>
+            <Box sx={{ width: 34, height: 34, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}` }}>
+              <FitnessCenterRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
+            </Box>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
+              Exercise details
+            </Typography>
+          </Stack>
           <Stack spacing={2}>
             <TextField
               label="Title"
@@ -366,11 +456,15 @@ export function ExerciseFields({
                   "& .MuiToggleButton-root": invalid.level ? { borderColor: "error.main" } : undefined,
                 }}
               >
-                {LEVELS.map((level) => (
-                  <ToggleButton key={level} value={level} sx={{ fontSize: 12.5 }}>
-                    {level}
-                  </ToggleButton>
-                ))}
+                {LEVELS.map((level) => {
+                  // An inactive level cannot receive exercises; an exercise already at one keeps showing it.
+                  const unavailable = !activeLevels.includes(level) && value.level !== level;
+                  return (
+                    <ToggleButton key={level} value={level} disabled={unavailable} sx={{ fontSize: 12.5 }}>
+                      {unavailable ? `${level} (inactive)` : level}
+                    </ToggleButton>
+                  );
+                })}
               </ToggleButtonGroup>
             </Box>
 
@@ -409,22 +503,37 @@ export function ExerciseFields({
         </CardContent>
       </Card>
 
-      <Card variant="outlined">
-        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
-          <Typography variant="subtitle2" fontWeight={700}>
-            Guide
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Add one action step at a time, in order.
-          </Typography>
+      <Card sx={{ overflow: "hidden" }}>
+        <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
+          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1 }}>
+            <Box sx={{ width: 34, height: 34, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}` }}>
+              <MenuBookRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
+            </Box>
+            <Box>
+              <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
+                Guide
+              </Typography>
+              <Typography variant="caption" sx={{ color: CM.textMuted }}>
+                Add one action step at a time, in order.
+              </Typography>
+            </Box>
+          </Stack>
           <GuideEditor value={value.guide} onChange={(guide) => onChange({ ...value, guide })} />
         </CardContent>
       </Card>
 
-      <Card variant="outlined">
-        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+      <Card sx={{ overflow: "hidden" }}>
+        <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
+          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.5 }}>
+            <Box sx={{ width: 34, height: 34, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}` }}>
+              <VideoLibraryRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
+            </Box>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
+              Demo video
+            </Typography>
+          </Stack>
           <FileDropField
-            label="Demo video"
+            label="Upload video file"
             hint="MP4, MOV or WebM · up to 50 MB"
             accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
             file={demoVideo}
@@ -434,10 +543,18 @@ export function ExerciseFields({
         </CardContent>
       </Card>
 
-      <Card variant="outlined">
-        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+      <Card sx={{ overflow: "hidden" }}>
+        <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
+          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.5 }}>
+            <Box sx={{ width: 34, height: 34, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}` }}>
+              <ImageRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
+            </Box>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
+              Muscle anatomy image
+            </Typography>
+          </Stack>
           <FileDropField
-            label="Muscle anatomy image"
+            label="Upload anatomy image"
             hint="JPG, PNG or WebP · up to 10 MB"
             accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
             file={anatomyImage}
@@ -485,25 +602,257 @@ function PlanLevelInputs({ label, sets, reps, onSetsChange, onRepsChange }) {
   );
 }
 
-function ExercisePickerRow({ entry, onAdd }) {
+function ItemNumberField({ label, value, onChange, min, max, error, unit }) {
+  return (
+    <TextField
+      label={label}
+      type="number"
+      size="small"
+      fullWidth
+      value={Number.isFinite(value) ? value : ""}
+      onChange={(event) => onChange(event.target.value === "" ? NaN : Number(event.target.value))}
+      error={Boolean(error)}
+      helperText={error || " "}
+      inputProps={{ min, max, style: { textAlign: "center" } }}
+      InputProps={unit ? { endAdornment: <InputAdornment position="end">{unit}</InputAdornment> } : undefined}
+      InputLabelProps={{ shrink: true }}
+      FormHelperTextProps={{ sx: { mx: 0, minHeight: 16, fontSize: 10.5 } }}
+    />
+  );
+}
+
+/**
+ * Chân phân trang: "Showing 1–6 of 63 exercises" bên trái, Previous · số trang · Next bên phải.
+ * Nút chuyển trang ẩn khi chỉ có một trang.
+ */
+function ListPager({ page, count, total, pageSize, noun, onChange, label }) {
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+  return (
+    <Stack
+      direction="row"
+      justifyContent="space-between"
+      alignItems="center"
+      flexWrap="wrap"
+      sx={{ mt: 2, pt: 1.5, borderTop: 1, borderColor: "divider", columnGap: 1.5, rowGap: 1 }}
+    >
+      <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+        Showing {from}–{to} of {total} {noun}
+      </Typography>
+      {count > 1 && (
+        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ flexShrink: 0, flexWrap: "nowrap", ml: "auto" }}>
+          <Button
+            type="button"
+            size="small"
+            variant="outlined"
+            disabled={page <= 1}
+            onClick={() => onChange(page - 1)}
+            startIcon={<KeyboardArrowLeftRoundedIcon fontSize="small" />}
+            sx={{ fontSize: 11, minWidth: 0 }}
+            aria-label={`${label} previous page`}
+          >
+            Previous
+          </Button>
+          <Pagination
+            size="small"
+            shape="rounded"
+            color="primary"
+            page={page}
+            count={count}
+            siblingCount={0}
+            boundaryCount={1}
+            hidePrevButton
+            hideNextButton
+            sx={{ "& .MuiPagination-ul": { flexWrap: "nowrap" }, "& .MuiPaginationItem-root": { whiteSpace: "nowrap", flexShrink: 0 } }}
+            onChange={(_, next) => onChange(next)}
+            getItemAriaLabel={(type, itemPage) => `${label} page ${itemPage}`}
+          />
+          <Button
+            type="button"
+            size="small"
+            variant="outlined"
+            disabled={page >= count}
+            onClick={() => onChange(page + 1)}
+            endIcon={<KeyboardArrowRightRoundedIcon fontSize="small" />}
+            sx={{ fontSize: 11, minWidth: 0 }}
+            aria-label={`${label} next page`}
+          >
+            Next
+          </Button>
+        </Stack>
+      )}
+    </Stack>
+  );
+}
+
+/** Thẻ một bài trong workout: count by, sets, reps / duration, rest, đổi thứ tự và xoá. */
+function WorkoutItemCard({ item, index, total, entry, showErrors, onChange, onMove, onRemove }) {
+  const errors = showErrors ? workoutItemErrors(item) : {};
+  const byDuration = item.countBy === "DURATION";
+  const name = entry?.name || item.exerciseCode;
+
+  return (
+    <Box component="li" sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, p: 1.5 }}>
+      <Stack direction="row" spacing={1.25} alignItems="center">
+        <Box
+          sx={{
+            width: 24,
+            height: 24,
+            borderRadius: "7px",
+            bgcolor: "rgba(139,92,246,0.18)",
+            color: CM.violetBright,
+            fontSize: 11,
+            fontWeight: 700,
+            display: "grid",
+            placeItems: "center",
+            flexShrink: 0,
+          }}
+        >
+          {index + 1}
+        </Box>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography variant="body2" fontWeight={600} noWrap>
+            {name}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" noWrap display="block">
+            {entry?.muscleGroup || " "}
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
+          <IconButton size="small" aria-label={`Move ${name} up`} disabled={index === 0} onClick={() => onMove(-1)}>
+            <KeyboardArrowUpRoundedIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            aria-label={`Move ${name} down`}
+            disabled={index === total - 1}
+            onClick={() => onMove(1)}
+          >
+            <KeyboardArrowDownRoundedIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small" color="error" aria-label={`Remove ${name}`} onClick={onRemove}>
+            <CloseRoundedIcon fontSize="small" />
+          </IconButton>
+        </Stack>
+      </Stack>
+
+      {/* Count by cố định theo category của bài tập, chỉ hiển thị. */}
+      <Box sx={{ mt: 1.5 }}>
+        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+          Count by
+        </Typography>
+        <Box
+          sx={{
+            border: 1,
+            borderColor: "divider",
+            borderRadius: 1,
+            py: 0.75,
+            textAlign: "center",
+            fontSize: 13,
+            fontWeight: 600,
+            bgcolor: "rgba(255,255,255,0.03)",
+          }}
+        >
+          {byDuration ? "Duration" : "Sets & Reps"}
+        </Box>
+      </Box>
+
+      <Box sx={{ mt: 1.5, display: "grid", gap: 1, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+        <ItemNumberField
+          label="Sets"
+          value={item.sets}
+          min={1}
+          max={20}
+          error={errors.sets}
+          onChange={(sets) => onChange({ sets })}
+        />
+        {byDuration ? (
+          <ItemNumberField
+            label="Duration"
+            unit="sec"
+            value={item.durationSeconds}
+            min={1}
+            max={3600}
+            error={errors.durationSeconds}
+            onChange={(durationSeconds) => onChange({ durationSeconds })}
+          />
+        ) : (
+          <ItemNumberField
+            label="Reps"
+            value={item.reps}
+            min={1}
+            max={100}
+            error={errors.reps}
+            onChange={(reps) => onChange({ reps })}
+          />
+        )}
+        <ItemNumberField
+          label="Rest"
+          unit="sec"
+          value={item.restSeconds}
+          min={0}
+          max={3600}
+          error={errors.restSeconds}
+          onChange={(restSeconds) => onChange({ restSeconds })}
+        />
+      </Box>
+    </Box>
+  );
+}
+
+/** Small dot in the level's own colour, shown next to level names in menus. */
+function LevelDot({ tone }) {
+  const color = (TONE_STYLES[tone] ?? TONE_STYLES.neutral).color;
+  return <Box component="span" aria-hidden="true" sx={{ display: "inline-block", width: 8, height: 8, mr: 1, borderRadius: "50%", bgcolor: color, flexShrink: 0 }} />;
+}
+
+function ExercisePickerRow({ entry, onAdd, toneOf }) {
+  const level = entry.level || entry.difficultyLevel || "Intermediate";
+  const isStandardLevel = ["BEGINNER", "INTERMEDIATE", "ADVANCED"]
+    .includes(String(level).trim().toUpperCase());
+
   return (
     <Stack
       direction="row"
       spacing={1.25}
       alignItems="center"
-      sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, p: 1 }}
+      sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, px: 1.25, py: 1, minHeight: 58 }}
     >
+      <Box
+        aria-hidden="true"
+        sx={{
+          width: 32,
+          height: 32,
+          borderRadius: "9px",
+          bgcolor: "rgba(139,92,246,0.15)",
+          display: "grid",
+          placeItems: "center",
+          flexShrink: 0,
+        }}
+      >
+        <FitnessCenterRoundedIcon sx={{ fontSize: 16, color: CM.violetBright }} />
+      </Box>
       <Box sx={{ minWidth: 0, flex: 1 }}>
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
           <Typography variant="body2" fontWeight={600} noWrap>
             {entry.name}
           </Typography>
-          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${getLevelBadgeStyle(entry.level || entry.difficultyLevel)}`}>
-            {entry.level || entry.difficultyLevel || "Intermediate"}
-          </span>
+          <Chip
+            size="small"
+            label={String(entry.type).toUpperCase() === "SKILL" ? "Skill" : "Health"}
+            color={String(entry.type).toUpperCase() === "SKILL" ? "secondary" : "info"}
+            sx={{ height: 18, fontSize: 10, fontWeight: 700 }}
+          />
+          {isStandardLevel ? (
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${getLevelBadgeStyle(level)}`}>
+              {level}
+            </span>
+          ) : (
+            <DarkPill tone={toneOf(level)} sx={{ height: 18, fontSize: 10 }}>{level}</DarkPill>
+          )}
         </Stack>
-        <Typography variant="caption" color="text.secondary" noWrap display="block">
-          {entry.muscleGroup}
+        <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ minHeight: 18 }}>
+          {entry.muscleGroup || " "}
         </Typography>
       </Box>
       <Button
@@ -535,6 +884,7 @@ export function WorkoutFields({
   selectedDay,
   onSelectedDayChange,
 }) {
+  const { levels: LEVELS, activeLevels, levelTone } = useLevelNames();
   const isDailyPlan = value.type === "DAILY_TRAINING_PLAN";
   const dayItems = value.planItems.filter((item) => item.dayOfWeek === selectedDay);
   const entryByCode = useMemo(() => {
@@ -542,6 +892,21 @@ export function WorkoutFields({
     allEntries.forEach((entry) => map.set(entry.code, entry));
     return map;
   }, [allEntries]);
+
+  // Phân trang thay cho thanh trượt: "System exercises" và "Workout exercises" mỗi trang một số mục.
+  const [systemPage, setSystemPage] = useState(1);
+  const [itemPage, setItemPage] = useState(1);
+  const systemPageCount = Math.max(1, Math.ceil(entries.length / SYSTEM_PAGE_SIZE));
+  const itemPageCount = Math.max(1, Math.ceil(value.items.length / ITEM_PAGE_SIZE));
+  const currentSystemPage = Math.min(systemPage, systemPageCount);
+  const currentItemPage = Math.min(itemPage, itemPageCount);
+  const pagedEntries = entries.slice((currentSystemPage - 1) * SYSTEM_PAGE_SIZE, currentSystemPage * SYSTEM_PAGE_SIZE);
+  const itemOffset = (currentItemPage - 1) * ITEM_PAGE_SIZE;
+  const pagedItems = value.items.slice(itemOffset, itemOffset + ITEM_PAGE_SIZE);
+  // Đổi từ khoá hoặc level thì quay về trang đầu.
+  useEffect(() => {
+    setSystemPage(1);
+  }, [search, level]);
 
   const addExercise = (exercise) => {
     if (isDailyPlan) {
@@ -564,7 +929,25 @@ export function WorkoutFields({
       });
       return;
     }
-    onChange({ ...value, exerciseCodes: [...value.exerciseCodes, exercise.code] });
+    // Rest của bài mới mặc định là 60 giây, sửa được riêng từng bài.
+    onChange({ ...value, items: [...value.items, defaultWorkoutItem(exercise)] });
+    // Chuyển tới trang chứa bài vừa thêm.
+    setItemPage(Math.floor(value.items.length / ITEM_PAGE_SIZE) + 1);
+  };
+
+  const updateItem = (index, patch) => {
+    onChange({
+      ...value,
+      items: value.items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)),
+    });
+  };
+
+  const moveItem = (index, direction) => {
+    const target = index + direction;
+    if (target < 0 || target >= value.items.length) return;
+    const next = [...value.items];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange({ ...value, items: next });
   };
 
   const updatePlanItem = (code, field, nextValue) => {
@@ -590,23 +973,27 @@ export function WorkoutFields({
     }
     onChange({
       ...value,
-      exerciseCodes: value.exerciseCodes.filter((_, index) => index !== code),
+      items: value.items.filter((_, index) => index !== code),
     });
   };
 
-  const selectedCodes = isDailyPlan ? dayItems.map((item) => item.exerciseCode) : value.exerciseCodes;
   const missingExercises =
     hasSubmitted &&
     ((isDailyPlan && value.planItems.length === 0) ||
-      (!isDailyPlan && value.exerciseCodes.length === 0));
+      (!isDailyPlan && value.items.length === 0));
 
   return (
-    <Stack spacing={2}>
-      <Card variant="outlined">
-        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
-          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
-            Workout details
-          </Typography>
+    <Stack spacing={2.5}>
+      <Card sx={{ overflow: "hidden", position: "relative" }}>
+        <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
+          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 2 }}>
+            <Box sx={{ width: 34, height: 34, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}` }}>
+              <FitnessCenterRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
+            </Box>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
+              Workout details
+            </Typography>
+          </Stack>
           <Stack spacing={2}>
             <TextField
               label="Title"
@@ -635,28 +1022,35 @@ export function WorkoutFields({
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
               <TextField
                 select
+                label="Type"
+                size="small"
+                fullWidth
+                value={value.type}
+                onChange={(event) => onChange({ ...value, type: event.target.value })}
+              >
+                <MenuItem value="HEALTH">Health</MenuItem>
+                <MenuItem value="SKILL">Skill</MenuItem>
+                <MenuItem value="FLEX">Flex</MenuItem>
+              </TextField>
+              <TextField
+                select
                 label="Level"
                 size="small"
                 fullWidth
                 value={value.level}
                 onChange={(event) => onChange({ ...value, level: event.target.value })}
               >
-                {LEVELS.map((item) => (
-                  <MenuItem key={item} value={item}>
-                    {item}
-                  </MenuItem>
-                ))}
+                {LEVELS.map((item) => {
+                  // An inactive level cannot receive workouts; a workout already at one keeps showing it.
+                  const unavailable = !activeLevels.includes(item) && value.level !== item;
+                  return (
+                    <MenuItem key={item} value={item} disabled={unavailable}>
+                      <LevelDot tone={levelTone(item)} />
+                      {unavailable ? `${item} (inactive)` : item}
+                    </MenuItem>
+                  );
+                })}
               </TextField>
-              <TextField
-                label="Rest between sets"
-                type="number"
-                size="small"
-                fullWidth
-                value={value.restSeconds}
-                onChange={(event) => onChange({ ...value, restSeconds: Number(event.target.value) })}
-                inputProps={{ min: 0, max: 3600, step: 5 }}
-                InputProps={{ endAdornment: <InputAdornment position="end">sec</InputAdornment> }}
-              />
             </Stack>
           </Stack>
         </CardContent>
@@ -806,15 +1200,15 @@ export function WorkoutFields({
         </Card>
       )}
 
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: isDailyPlan ? "1fr" : "minmax(0, 1fr) minmax(0, 1fr)" }, gap: 2, alignItems: "start" }}>
-      <Card variant="outlined">
-        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: isDailyPlan ? "1fr" : "minmax(0, 1fr) minmax(0, 1fr)" }, gap: 2, alignItems: "stretch" }}>
+      <Card variant="outlined" sx={{ display: "flex", flexDirection: "column" }}>
+        <CardContent sx={{ p: { xs: 2, sm: 2.5 }, flex: 1, display: "flex", flexDirection: "column", "&:last-child": { pb: { xs: 2, sm: 2.5 } } }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
             <Typography variant="subtitle2" fontWeight={700}>
               {isDailyPlan ? `Add exercises to ${WEEK_DAYS[selectedDay - 1]}` : "System exercises"}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {totalExerciseCount} in system
+              {totalExerciseCount} available
             </Typography>
           </Stack>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 1.5 }}>
@@ -843,13 +1237,14 @@ export function WorkoutFields({
               <MenuItem value="all">All levels</MenuItem>
               {LEVELS.map((item) => (
                 <MenuItem key={item} value={item.toLowerCase()}>
+                  <LevelDot tone={levelTone(item)} />
                   {item}
                 </MenuItem>
               ))}
             </TextField>
           </Stack>
 
-          <Stack spacing={1} sx={{ mt: 1.5, maxHeight: 420, overflowY: "auto", pr: 0.5 }}>
+          <Stack spacing={1} sx={{ mt: 1.5 }}>
             {isLoadingExercises ? (
               [0, 1, 2, 3].map((row) => <Skeleton key={row} variant="rounded" height={48} />)
             ) : exerciseLoadError ? (
@@ -859,63 +1254,94 @@ export function WorkoutFields({
                 No active exercises match this search.
               </Typography>
             ) : (
-              entries.map((entry) => (
+              pagedEntries.map((entry) => (
                 <ExercisePickerRow
                   key={entry.code}
                   entry={entry}
+                  toneOf={levelTone}
                   onAdd={() => addExercise(entry)}
                 />
               ))
             )}
           </Stack>
+          {!isLoadingExercises && !exerciseLoadError && (
+            <Box sx={{ mt: "auto" }}>
+              <ListPager
+                page={currentSystemPage}
+                count={systemPageCount}
+                total={entries.length}
+                pageSize={SYSTEM_PAGE_SIZE}
+                noun="exercises"
+                onChange={setSystemPage}
+                label="System exercises"
+              />
+            </Box>
+          )}
         </CardContent>
       </Card>
 
       {!isDailyPlan && (
-        <Card variant="outlined" sx={{ borderColor: missingExercises ? "error.main" : "divider" }}>
-          <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
-            <Typography variant="subtitle2" fontWeight={700}>
-              Workout exercises
-            </Typography>
-            {value.exerciseCodes.length === 0 ? (
+        <Card variant="outlined" sx={{ display: "flex", flexDirection: "column", borderColor: missingExercises ? "error.main" : "divider" }}>
+          <CardContent sx={{ p: { xs: 2, sm: 2.5 }, flex: 1, display: "flex", flexDirection: "column", "&:last-child": { pb: { xs: 2, sm: 2.5 } } }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
+              <Typography variant="subtitle2" fontWeight={700}>
+                Workout exercises
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {value.items.length} added
+              </Typography>
+            </Stack>
+            {value.items.length === 0 ? (
               <Typography variant="caption" color="text.secondary" display="block" sx={{ py: 6, textAlign: "center" }}>
                 No exercises yet. Add some from the list.
               </Typography>
             ) : (
-              <Stack component="ol" spacing={1} sx={{ mt: 1.5, m: 0, p: 0, listStyle: "none" }}>
-                {value.exerciseCodes.map((code, index) => (
-                  <Stack
-                    component="li"
-                    key={`${code}-${index}`}
-                    direction="row"
-                    spacing={1.25}
-                    alignItems="center"
-                    sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, px: 1.25, py: 1 }}
-                  >
-                    <Typography variant="caption" fontWeight={700} color="primary.main">
-                      {index + 1}
-                    </Typography>
-                    <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography variant="body2" fontWeight={600} noWrap>
-                        {entryByCode.get(code)?.name || code}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" noWrap display="block">
-                        {entryByCode.get(code)?.muscleGroup || "Selected system exercise"}
-                      </Typography>
-                    </Box>
-                    <Button
-                      type="button"
-                      color="error"
-                      size="small"
-                      aria-label={`Remove ${entryByCode.get(code)?.name || code}`}
-                      onClick={() => removeExercise(index)}
-                      sx={{ minWidth: 0, px: 0.75 }}
-                    >
-                      <CloseRoundedIcon fontSize="small" />
-                    </Button>
-                  </Stack>
-                ))}
-              </Stack>
+              <>
+                <Stack
+                  component="ol"
+                  spacing={1.25}
+                  sx={{ mt: 1.5, p: 0, listStyle: "none" }}
+                >
+                  {pagedItems.map((item, pageIndex) => {
+                    // Chỉ số thật trong workout để đánh số, đổi thứ tự và xoá đúng bài.
+                    const index = itemOffset + pageIndex;
+                    return (
+                      <WorkoutItemCard
+                        key={`${item.exerciseCode}-${index}`}
+                        item={item}
+                        index={index}
+                        total={value.items.length}
+                        entry={entryByCode.get(item.exerciseCode)}
+                        showErrors={hasSubmitted}
+                        onChange={(patch) => updateItem(index, patch)}
+                        onMove={(direction) => {
+                          moveItem(index, direction);
+                          // Bài chuyển sang trang khác thì đi theo nó.
+                          const target = index + direction;
+                          if (target >= 0 && target < value.items.length) {
+                            setItemPage(Math.floor(target / ITEM_PAGE_SIZE) + 1);
+                          }
+                        }}
+                        onRemove={() => removeExercise(index)}
+                      />
+                    );
+                  })}
+                </Stack>
+                <Box sx={{ mt: "auto" }}>
+                  <ListPager
+                    page={currentItemPage}
+                    count={itemPageCount}
+                    total={value.items.length}
+                    pageSize={ITEM_PAGE_SIZE}
+                    noun="exercises"
+                    onChange={setItemPage}
+                    label="Workout exercises"
+                  />
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                    {summarizeWorkoutItems(value.items)}
+                  </Typography>
+                </Box>
+              </>
             )}
           </CardContent>
         </Card>
@@ -948,6 +1374,7 @@ export default function ExerciseFormPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const kind = searchParams.get("type") === "workout" ? "workout" : "exercise";
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   const [exercise, setExercise] = useState(EMPTY_EXERCISE);
   const [selectedMuscles, setSelectedMuscles] = useState([]);
@@ -962,6 +1389,17 @@ export default function ExerciseFormPage() {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [error, setError] = useState(null);
   const [invalidFields, setInvalidFields] = useState([]);
+  const { levels: LEVELS, activeLevels } = useLevelNames();
+
+  // Default to the first configured level (lowest score range) until the user picks one. New exercises
+  // can only use active levels.
+  useEffect(() => {
+    if (LEVELS.length === 0) return;
+    if (activeLevels.length > 0) {
+      setExercise((current) => (activeLevels.includes(current.level) ? current : { ...current, level: activeLevels[0] }));
+    }
+    setWorkout((current) => (LEVELS.includes(current.level) ? current : { ...current, level: LEVELS[0] }));
+  }, [LEVELS, activeLevels]);
 
   const {
     data: systemExercises,
@@ -969,8 +1407,9 @@ export default function ExerciseFormPage() {
     error: exerciseLoadError,
   } = useApiQuery(() => contentManagerApi.exercises(), { enabled: kind === "workout" });
 
+  // Workouts are built from the system library only; user-submitted (CUSTOM) exercises are excluded.
   const allExercises = useMemo(
-    () => (Array.isArray(systemExercises) ? systemExercises : []),
+    () => (Array.isArray(systemExercises) ? systemExercises : []).filter((entry) => entry.source === "SYSTEM"),
     [systemExercises],
   );
 
@@ -1026,7 +1465,7 @@ export default function ExerciseFormPage() {
       const invalid = [];
       if (!exercise.name.trim() || exercise.name.length > 120) invalid.push("title");
       if (!["HEALTH", "SKILL"].includes(exercise.type)) invalid.push("type");
-      if (!LEVELS.includes(exercise.level)) invalid.push("level");
+      if (!activeLevels.includes(exercise.level)) invalid.push("level");
       if (selectedMuscles.length === 0) invalid.push("muscles");
       const exerciseValue = exercise.value === "" ? NaN : Number(exercise.value);
       if (!Number.isInteger(exerciseValue) || exerciseValue < 1 || exerciseValue > 3600) invalid.push("value");
@@ -1071,20 +1510,29 @@ export default function ExerciseFormPage() {
       setError("Enter a workout title and description.");
       return;
     }
-    if (!Number.isInteger(workout.restSeconds) || workout.restSeconds < 0 || workout.restSeconds > 3600) {
-      setError("Rest between sets must be a whole number from 0 to 3600 seconds.");
+    if (!["HEALTH", "SKILL", "FLEX"].includes(workout.type)) {
+      setError("Choose a workout type.");
       return;
     }
-    if (workout.exerciseCodes.length === 0) {
+    if (!activeLevels.includes(workout.level)) {
+      setError("Choose an active workout level.");
+      return;
+    }
+    if (workout.items.length === 0) {
       setError("Add at least one system exercise to this workout.");
+      return;
+    }
+    if (workout.items.some((item) => Object.keys(workoutItemErrors(item)).length > 0)) {
+      setError("Check the sets, reps, duration and rest of the highlighted exercises.");
       return;
     }
     workoutMutation.mutate({
       name: workout.name,
       description: workout.description,
-      restSeconds: workout.restSeconds,
+      type: workout.type,
       level: workout.level,
-      exerciseCodes: workout.exerciseCodes,
+      exerciseCodes: workout.items.map((item) => item.exerciseCode),
+      items: toWorkoutItemRequests(workout.items),
     });
   };
 
@@ -1117,17 +1565,36 @@ export default function ExerciseFormPage() {
         value={kind}
         onChange={(_, next) => next && changeKind(next)}
         aria-label="Content type"
-        sx={{ mt: 2 }}
+        sx={{
+          mt: 2.5,
+          p: 0.5,
+          bgcolor: CM.surfaceSoft,
+          borderRadius: "12px",
+          border: `1px solid ${CM.border}`,
+          "& .MuiToggleButton-root": {
+            borderRadius: "8px !important",
+            border: "none !important",
+            px: 3,
+            py: 0.75,
+            fontSize: 13,
+            fontWeight: 600,
+            color: CM.textMuted,
+            "&.Mui-selected": {
+              background: CM.buttonGradient,
+              color: "#fff",
+            },
+          },
+        }}
       >
-        <ToggleButton value="exercise" sx={{ px: 3, fontSize: 13 }}>
+        <ToggleButton value="exercise">
           Exercise
         </ToggleButton>
-        <ToggleButton value="workout" sx={{ px: 3, fontSize: 13 }}>
+        <ToggleButton value="workout">
           Workout
         </ToggleButton>
       </ToggleButtonGroup>
 
-      <Box component="form" id="create-content-form" onSubmit={submit} sx={{ mt: 2 }}>
+      <Box component="form" id="create-content-form" onSubmit={submit} sx={{ mt: 2.5, ...enter(100) }}>
         {kind === "exercise" ? (
           <ExerciseFields
             value={exercise}
@@ -1229,6 +1696,10 @@ export default function ExerciseFormPage() {
           component={RouterLink}
           to={kind === "exercise" ? CONTENT_PATHS.exercises : CONTENT_PATHS.workouts}
           variant="outlined"
+          onClick={(event) => {
+            event.preventDefault();
+            setConfirmCancel(true);
+          }}
         >
           Cancel
         </Button>
@@ -1237,10 +1708,19 @@ export default function ExerciseFormPage() {
           form="create-content-form"
           variant="contained"
           disabled={isSaving}
+          sx={{ minWidth: 140 }}
         >
           {isSaving ? "Creating…" : `Create ${kind}`}
         </Button>
       </Stack>
+      <ConfirmDialog
+        open={confirmCancel}
+        title={`Discard this ${kind}?`}
+        message={`Are you sure you want to cancel? Your unsaved ${kind} details will be lost.`}
+        confirmLabel="Discard"
+        onCancel={() => setConfirmCancel(false)}
+        onConfirm={() => navigate(kind === "exercise" ? CONTENT_PATHS.exercises : CONTENT_PATHS.workouts)}
+      />
     </Box>
   );
 }

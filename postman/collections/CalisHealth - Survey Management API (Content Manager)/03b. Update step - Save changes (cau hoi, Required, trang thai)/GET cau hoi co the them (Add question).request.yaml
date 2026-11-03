@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}/available-questions"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      const codes = j.map(q => q.questionCode);
+      pm.test('cau cua chinh buoc nay co inCurrentStep = true', () => pm.expect(j.find(q => q.questionCode === 'AGE').inCurrentStep).to.eql(true));
+      pm.test('khong co cau dang dung o buoc khac (GOAL_TYPE)', () => pm.expect(codes).to.not.include('GOAL_TYPE'));
+    language: text/javascript
+order: 2000

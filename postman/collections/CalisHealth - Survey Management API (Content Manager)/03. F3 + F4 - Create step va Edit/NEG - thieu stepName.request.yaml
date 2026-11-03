@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "stepName": "   "
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 400', () => pm.response.to.have.status(400));
+      pm.test('loi o field stepName', () => pm.expect(pm.response.json().errors).to.have.property('stepName'));
+    language: text/javascript
+order: 7000

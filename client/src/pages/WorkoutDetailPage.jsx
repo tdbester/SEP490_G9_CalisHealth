@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link as RouterLink, useParams } from "react-router-dom";
+import { useLevelNames } from "../useLevelNames";
+import { Link as RouterLink, useLocation, useParams } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -15,41 +16,66 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { keyframes } from "@mui/material/styles";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import LayersRoundedIcon from "@mui/icons-material/LayersRounded";
 import { contentManagerApi } from "../api/contentManager";
 import { useApiMutation, useApiQuery } from "../hooks";
 import {
   CONTENT_PATHS,
   ContentPageHeader,
+  DarkPill,
 } from "../components/ContentShared";
 import { CM } from "../theme-content";
-import { WorkoutFields } from "./ExerciseFormPage";
-import { getLevelBadgeStyle } from "../utils/levelBadge";
+import ConfirmDialog from "../components/common/ConfirmDialog";
+import {
+  WorkoutFields,
+  defaultWorkoutItem,
+  toWorkoutItemRequests,
+  workoutItemErrors,
+} from "./ExerciseFormPage";
+
+const rise = keyframes`
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+const enter = (delay = 0) => ({
+  animation: `${rise} .45s ease-out ${delay}ms both`,
+  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+});
 
 const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-function Detail({ label, value, full }) {
+function Detail({ label, value, full, icon: Icon }) {
   return (
     <Grid item xs={12} sm={full ? 12 : 6}>
       <Box
         sx={{
+          position: "relative",
+          overflow: "hidden",
           border: `1px solid ${CM.border}`,
-          bgcolor: "rgba(19,10,39,0.6)",
-          borderRadius: 1.5,
-          p: 1.75,
+          bgcolor: CM.surfaceSoft,
+          borderRadius: "14px",
+          p: 2,
           height: "100%",
+          transition: "all .2s ease",
+          "&:hover": { borderColor: CM.borderStrong },
         }}
       >
-        <Typography
-          variant="caption"
-          sx={{ color: CM.textDim, textTransform: "uppercase", letterSpacing: "0.07em", fontSize: 10, fontWeight: 700 }}
-        >
-          {label}
-        </Typography>
-        <Typography variant="body2" fontWeight={600} sx={{ mt: 0.5, whiteSpace: "pre-line", color: "#fff" }}>
+        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 0.5 }}>
+          {Icon && <Icon sx={{ fontSize: 14, color: CM.violetBright }} />}
+          <Typography
+            variant="caption"
+            sx={{ color: CM.textDim, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 10, fontWeight: 700 }}
+          >
+            {label}
+          </Typography>
+        </Stack>
+        <Typography variant="body1" fontWeight={600} sx={{ whiteSpace: "pre-line", color: "#fff" }}>
           {value || "—"}
         </Typography>
       </Box>
@@ -59,11 +85,16 @@ function Detail({ label, value, full }) {
 
 export default function WorkoutDetailPage() {
   const { code = "" } = useParams();
+  const location = useLocation();
+  const returnTo = location.state?.returnTo || CONTENT_PATHS.workouts;
+  const returnLabel = location.state?.returnLabel || "Back to list";
+  const { levels: levelNames } = useLevelNames();
   const { data: workout, isLoading, error, refetch } = useApiQuery(
     () => contentManagerApi.workout(code),
     { enabled: Boolean(code), deps: [code] },
   );
   const [editing, setEditing] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [form, setForm] = useState(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [exerciseSearch, setExerciseSearch] = useState("");
@@ -86,7 +117,7 @@ export default function WorkoutDetailPage() {
 
   const crumb = [
     { label: "Content manager", to: CONTENT_PATHS.dashboard },
-    { label: "Exercise & Workout Management", to: CONTENT_PATHS.exercises },
+    { label: "Exercise & Workout", to: CONTENT_PATHS.exercises },
     { label: "Workout details" },
   ];
 
@@ -118,11 +149,11 @@ export default function WorkoutDetailPage() {
         </Alert>
         <Button
           component={RouterLink}
-          to={CONTENT_PATHS.workouts}
+          to={returnTo}
           sx={{ mt: 2 }}
           startIcon={<ArrowBackRoundedIcon />}
         >
-          Back to workout list
+          {returnLabel}
         </Button>
       </Box>
     );
@@ -143,10 +174,20 @@ export default function WorkoutDetailPage() {
     setForm({
       name: workout.name || "",
       description: workout.description || "",
-      restSeconds: workout.restSeconds ?? 60,
-      type: "WORKOUT",
-      level: workout.level || "Beginner",
-      exerciseCodes: exercises.map((exercise) => exercise.code),
+      type: ["HEALTH", "SKILL", "FLEX"].includes(workout.type) ? workout.type : "FLEX",
+      level: workout.level || "",
+      items: exercises.map((exercise) => ({
+        ...defaultWorkoutItem(exercise),
+        // Giữ cấu hình đã lưu; bài chưa có cấu hình thì dùng mặc định ở trên.
+        ...(exercise.countBy
+          ? {
+              sets: exercise.sets ?? 3,
+              reps: exercise.reps ?? 10,
+              durationSeconds: exercise.durationSeconds ?? 30,
+              restSeconds: exercise.restSeconds ?? 60,
+            }
+          : {}),
+      })),
       planItems: [],
     });
     setHasSubmitted(false);
@@ -162,16 +203,18 @@ export default function WorkoutDetailPage() {
   const submitEdit = () => {
     setHasSubmitted(true);
     if (!form?.name.trim() || form.name.length > 60 || !form.description.trim()
-      || form.description.length > 300 || !Number.isInteger(form.restSeconds)
-      || form.restSeconds < 0 || form.restSeconds > 3600
-      || !["Beginner", "Intermediate", "Advanced"].includes(form.level)
-      || form.exerciseCodes.length === 0) return;
+      || form.description.length > 300
+      || !["HEALTH", "SKILL", "FLEX"].includes(form.type)
+      || !levelNames.includes(form.level)
+      || form.items.length === 0
+      || form.items.some((item) => Object.keys(workoutItemErrors(item)).length > 0)) return;
     saveMutation.mutate({
       name: form.name.trim(),
       description: form.description.trim(),
-      restSeconds: form.restSeconds,
+      type: form.type,
       level: form.level,
-      exerciseCodes: form.exerciseCodes,
+      exerciseCodes: form.items.map((item) => item.exerciseCode),
+      items: toWorkoutItemRequests(form.items),
     });
   };
 
@@ -190,18 +233,18 @@ export default function WorkoutDetailPage() {
             )}
             <Button
               component={RouterLink}
-              to={CONTENT_PATHS.workouts}
+              to={returnTo}
               variant="outlined"
               startIcon={<ArrowBackRoundedIcon />}
             >
-              Back to list
+              {returnLabel}
             </Button>
           </Stack>
         }
       />
 
-      <Card sx={{ mt: 2.5 }}>
-        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+      <Card sx={{ mt: 2.5, overflow: "hidden", ...enter(150) }}>
+        <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
           {editing && form ? (
             <Stack spacing={2}>
               {exerciseLoadError && <Alert severity="error">Could not load exercises: {exerciseLoadError.message}</Alert>}
@@ -222,8 +265,20 @@ export default function WorkoutDetailPage() {
                 onSelectedDayChange={() => {}}
               />
               {saveMutation.error && <Alert severity="error">{saveMutation.error.message}</Alert>}
-              <Stack direction="row" spacing={1} justifyContent="flex-end">
-                <Button startIcon={<CloseRoundedIcon />} onClick={cancelEditing} disabled={saveMutation.isPending}>
+              <Divider sx={{ mt: 1, borderColor: CM.border }} />
+              <Stack
+                direction="row"
+                spacing={1.5}
+                justifyContent="flex-end"
+                sx={{
+                  position: "sticky",
+                  bottom: 0,
+                  py: 1.5,
+                  bgcolor: "background.default",
+                  zIndex: 5,
+                }}
+              >
+                <Button startIcon={<CloseRoundedIcon />} onClick={() => setConfirmCancel(true)} disabled={saveMutation.isPending}>
                   Cancel
                 </Button>
                 <Button
@@ -337,10 +392,12 @@ export default function WorkoutDetailPage() {
                       alignItems="center"
                       sx={{
                         border: `1px solid ${CM.border}`,
-                        bgcolor: "rgba(19,10,39,0.6)",
-                        borderRadius: 1.5,
-                        px: 1.5,
-                        py: 1,
+                        bgcolor: CM.surfaceSoft,
+                        borderRadius: "14px",
+                        px: 2,
+                        py: 1.25,
+                        transition: "all .2s ease",
+                        "&:hover": { borderColor: CM.borderStrong, bgcolor: "rgba(139,92,246,0.06)", transform: "translateX(3px)" },
                       }}
                     >
                       <Box
@@ -381,9 +438,15 @@ export default function WorkoutDetailPage() {
                           {exercise.muscleGroup || "—"}
                         </Typography>
                         <Typography variant="caption" display="block" sx={{ mt: 0.5, color: CM.textMuted }}>
-                          {String(exercise.category || "").toUpperCase() === "HOLD"
-                            ? `${exercise.defaultSets ?? "Not set"} sets · ${exercise.duration == null ? "Not set" : `${exercise.duration} sec`}`
-                            : `${exercise.defaultSets ?? "Not set"} sets · ${exercise.defaultReps ?? "Not set"} reps`}
+                          {exercise.countBy
+                            ? `${exercise.sets} sets · ${
+                                exercise.countBy === "DURATION"
+                                  ? `${exercise.durationSeconds} sec`
+                                  : `${exercise.reps} reps`
+                              } · rest ${exercise.restSeconds} sec`
+                            : String(exercise.category || "").toUpperCase() === "HOLD"
+                              ? `${exercise.defaultSets ?? "Not set"} sets · ${exercise.duration == null ? "Not set" : `${exercise.duration} sec`}`
+                              : `${exercise.defaultSets ?? "Not set"} sets · ${exercise.defaultReps ?? "Not set"} reps`}
                         </Typography>
                       </Box>
                     </Stack>
@@ -392,15 +455,8 @@ export default function WorkoutDetailPage() {
               )}
               <Divider sx={{ my: 2.5 }} />
               <Grid container spacing={1.5}>
-                <Detail
-                  label="Level"
-                  value={
-                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${getLevelBadgeStyle(workout.level)}`}>
-                      {workout.level || "Intermediate"}
-                    </span>
-                  }
-                />
-                <Detail label="Rest" value={`${workout.restSeconds ?? 60} seconds`} />
+                <Detail icon={LayersRoundedIcon} label="Level" value={workout.level} />
+                <Detail icon={FitnessCenterRoundedIcon} label="Type" value={workout.type} />
               </Grid>
             </>
           )}
@@ -408,6 +464,17 @@ export default function WorkoutDetailPage() {
           )}
         </CardContent>
       </Card>
+      <ConfirmDialog
+        open={confirmCancel}
+        title="Discard your changes?"
+        message="Are you sure you want to cancel? Any unsaved workout changes will be lost."
+        confirmLabel="Discard"
+        onCancel={() => setConfirmCancel(false)}
+        onConfirm={() => {
+          setConfirmCancel(false);
+          cancelEditing();
+        }}
+      />
     </Box>
   );
 }

@@ -10,6 +10,7 @@ public record PersonalExerciseResponseDTO(
         String level,
         List<String> guideSteps,
         String videoUrl,
+        String anatomyImageUrl,
         String status,
         String rejectionReason,
         String targetMuscle,

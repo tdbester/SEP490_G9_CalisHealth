@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import api from "../api/client";
+import UnsavedNotificationModal from "../components/notifications/UnsavedNotificationModal";
+import notificationToast from "../utils/notificationToast";
+import useUnsavedNotificationNavigation from "../hooks/useUnsavedNotificationNavigation";
+import "../styles/notification.css";
 
 const TYPE_OPTIONS = [
   {
@@ -18,36 +21,56 @@ const TYPE_OPTIONS = [
   },
 ];
 
-const STATUS_OPTIONS = [
-  {
-    value: "PUBLISHED",
-    label: "Publish now",
-    description: "Members see it in the notification bell right away.",
-  },
-  {
-    value: "DRAFT",
-    label: "Save as draft",
-    description: "Only admins see it. You can publish it later from Notifications.",
-  },
-];
-
 const inputClass =
   "mt-2 w-full rounded-xl border border-[#51456f] bg-[#17112d] px-3.5 py-3 text-sm text-white outline-none transition placeholder:text-[#81769d] focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20";
 const sectionClass = "rounded-2xl border border-[#35275e] bg-[#21183c] p-5 sm:p-6";
 
 export default function CreateNotificationPage() {
-  const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [type, setType] = useState("ANNOUNCEMENT");
-  const [status, setStatus] = useState("PUBLISHED");
   const [fieldErrors, setFieldErrors] = useState({});
   const [requestError, setRequestError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const isDirty = Boolean(title || message) || type !== "ANNOUNCEMENT";
+  const {
+    isLeaveConfirmationOpen,
+    requestLeave,
+    cancelLeave,
+    discardChanges,
+    completeSave,
+  } = useUnsavedNotificationNavigation(isDirty);
+
+  const saveDraftAndLeave = async () => {
+    const errors = {};
+    if (!title.trim()) errors.title = "Title is required.";
+    if (!message.trim()) errors.message = "Message is required.";
+    if (title.trim().length > 255) errors.title = "Title must not exceed 255 characters.";
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
+    setSubmitting(true);
+    try {
+      await api.post("/admin/notifications", {
+        title: title.trim(),
+        message: message.trim(),
+        type,
+        status: "DRAFT",
+      });
+      notificationToast.success("Draft saved successfully!");
+      completeSave();
+    } catch (error) {
+      const message = error.response?.data?.message || "Could not save the draft. Please try again.";
+      setRequestError(message);
+      notificationToast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const submitStatus = event.nativeEvent.submitter?.value || status;
+    const submitStatus = event.nativeEvent.submitter?.value || "PUBLISHED";
     const errors = {};
     if (!title.trim()) errors.title = "Title is required.";
     if (!message.trim()) errors.message = "Message is required.";
@@ -64,7 +87,15 @@ export default function CreateNotificationPage() {
         type,
         status: submitStatus,
       });
-      navigate("/admin/notifications", { replace: true });
+      notificationToast.success(
+        submitStatus === "PUBLISHED"
+          ? "Notification published successfully!"
+          : "Draft saved successfully!",
+      );
+      if (submitStatus === "PUBLISHED") {
+        window.dispatchEvent(new Event("member-notifications-updated"));
+      }
+      completeSave();
     } catch (error) {
       const validationErrors = error.response?.data?.errors;
       if (validationErrors && typeof validationErrors === "object") {
@@ -74,9 +105,9 @@ export default function CreateNotificationPage() {
           message: validationErrors.message || current.message,
         }));
       }
-      setRequestError(
-        error.response?.data?.message || "Could not create the notification. Please try again.",
-      );
+      const message = error.response?.data?.message || "Could not create the notification. Please try again.";
+      setRequestError(message);
+      notificationToast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -86,7 +117,7 @@ export default function CreateNotificationPage() {
   const previewMessage = message.trim() || "Your message will appear here.";
 
   return (
-    <section className="mx-auto w-full max-w-[1080px] text-slate-100">
+    <section className="notification-module mx-auto w-full max-w-[1080px] text-slate-100">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-5">
         <div>
           <h1 className="text-[22px] font-bold tracking-tight text-white">Create notification</h1>
@@ -97,7 +128,7 @@ export default function CreateNotificationPage() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => navigate("/admin/notifications")}
+            onClick={() => requestLeave()}
             disabled={submitting}
             className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#51456f] bg-[#17112d] px-3.5 text-sm font-medium text-white transition hover:bg-[#2b2049] disabled:opacity-50"
           >
@@ -221,36 +252,6 @@ export default function CreateNotificationPage() {
             </p>
           </section>
 
-          <section className={sectionClass}>
-            <h2 className="text-sm font-semibold text-white">Publishing</h2>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              {STATUS_OPTIONS.map((option) => (
-                <label
-                  key={option.value}
-                  className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition ${
-                    status === option.value
-                      ? "border-violet-500 bg-[#30215f]/60"
-                      : "border-[#51456f] bg-[#17112d] hover:border-violet-400/60"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="notification-status"
-                    value={option.value}
-                    checked={status === option.value}
-                    onChange={() => setStatus(option.value)}
-                    className="mt-0.5 h-4 w-4 accent-[#7c5dfa]"
-                  />
-                  <span>
-                    <span className="flex items-center gap-2 text-sm font-semibold text-white">
-                      {option.label}
-                    </span>
-                    <span className="mt-1 block text-xs leading-5 text-[#a89bd0]">{option.description}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </section>
         </div>
 
         <section className={sectionClass}>
@@ -269,6 +270,14 @@ export default function CreateNotificationPage() {
           </div>
         </section>
       </form>
+      {isLeaveConfirmationOpen && (
+        <UnsavedNotificationModal
+          saving={submitting}
+          onCancel={cancelLeave}
+          onDiscard={discardChanges}
+          onSaveDraft={saveDraftAndLeave}
+        />
+      )}
     </section>
   );
 }

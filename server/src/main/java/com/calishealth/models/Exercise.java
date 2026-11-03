@@ -21,7 +21,6 @@ public class Exercise {
     public enum EntryGoal { LOSE_WEIGHT, BUILD_MUSCLE, STAY_FIT }
     public enum EntryTargetSkill { HANDSTAND, MUSCLE_UP, FRONT_LEVER, PLANCHE }
     public enum MovementGroup { PUSH, PULL, LEGS, CORE }
-    public enum TreeDifficulty { BEGINNER, INTERMEDIATE, ADVANCED, EXPERT }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,14 +33,11 @@ public class Exercise {
     @Column(nullable = false, length = 150)
     private String name;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
-
     @Column(nullable = false, length = 40)
     private String type;
 
-    @Column(length = 80)
-    private String category;
+    @Column(nullable = false, length = 80)
+    private String category = "REPS";
 
     @Column(name = "difficulty_level", length = 40)
     private String difficultyLevel;
@@ -68,14 +64,11 @@ public class Exercise {
     @Column(name = "duration")
     private Integer duration;
 
-    @Column(length = 60)
-    private String source;
+    @Column(nullable = false, length = 60)
+    private String source = "SYSTEM";
 
     @Column(name = "moderation_status", length = 40)
     private String moderationStatus;
-
-    @Column(name = "status", length = 20)
-    private String status;
 
     /** Content Manager publish flag: false = đang chờ duyệt / đã ẩn khỏi thư viện. */
     @Column(nullable = false)
@@ -88,30 +81,14 @@ public class Exercise {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
-    @Column(name = "is_system", nullable = false)
-    private boolean system = true;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "author_id")
-    private User author;
-
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @Column(name = "save_count")
     private Integer saveCount = 0;
 
-    @Column(name = "rejection_reason", columnDefinition = "TEXT")
-    private String rejectionReason;
-
-    @Column(name = "guide_steps", columnDefinition = "TEXT")
-    private String guideSteps;
-
     @Column(name = "share_with_community", nullable = false)
     private boolean shareWithCommunity;
-
-    @Column(name = "default_duration")
-    private Integer defaultDuration;
 
     @Column(length = 60)
     private String equipment;
@@ -134,24 +111,14 @@ public class Exercise {
     @Column(name = "tree_level")
     private Integer treeLevel;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "difficulty", length = 20)
-    private TreeDifficulty difficulty;
-
     @Column(length = 255)
     private String icon;
 
-    @Column(name = "muscle_group", length = 120)
-    private String muscleGroup;
-
-    @Column(name = "level", length = 30)
-    private String level;
-
-    @Column(columnDefinition = "TEXT")
-    private String guide;
-
     @OneToMany(mappedBy = "exercise", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ExerciseMuscleGroup> muscleGroups = new ArrayList<>();
+
+    @Transient
+    private String muscleGroupInput;
 
     @PrePersist
     @PreUpdate
@@ -160,44 +127,96 @@ public class Exercise {
         if (createdAt == null) {
             createdAt = updatedAt;
         }
-        if (status == null) {
-            status = "ACCEPTED";
-        }
         if (moderationStatus == null) {
-            moderationStatus = toModerationStatus(status);
+            moderationStatus = "ACTIVE";
         }
-        if (source == null) {
-            source = system ? "SYSTEM" : "CUSTOM";
-        } else if ("MEMBER".equalsIgnoreCase(source)) {
-            source = "CUSTOM";
-        }
-        if (level == null) {
-            level = difficultyLevel;
-        }
-        if (guide == null) {
-            guide = executionSteps;
-        }
-        if (guideSteps == null) {
-            guideSteps = executionSteps;
-        }
+        source = normalizeSource(source);
         if (saveCount == null) {
             saveCount = 0;
         }
     }
 
     public boolean isSystem() {
-        return system;
+        return source == null || "SYSTEM".equalsIgnoreCase(source);
     }
 
     public void setSystem(boolean system) {
-        this.system = system;
-        if (source == null || "SYSTEM".equalsIgnoreCase(source) || "CUSTOM".equalsIgnoreCase(source)) {
-            source = system ? "SYSTEM" : "CUSTOM";
-        }
+        source = system ? "SYSTEM" : "CUSTOM";
     }
 
     public Long getAuthorId() {
-        return author != null ? author.getId() : null;
+        return createdBy != null ? createdBy.getId() : null;
+    }
+
+    public User getAuthor() {
+        return createdBy;
+    }
+
+    public void setAuthor(User author) {
+        this.createdBy = author;
+    }
+
+    public void setSource(String source) {
+        this.source = normalizeSource(source);
+    }
+
+    public String getDescription() {
+        return instructions;
+    }
+
+    public void setDescription(String description) {
+        this.instructions = description;
+    }
+
+    public String getMuscleGroup() {
+        List<String> names = muscleGroups.stream()
+                .map(ExerciseMuscleGroup::getMuscleGroup)
+                .filter(java.util.Objects::nonNull)
+                .map(MuscleGroup::getName)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        return names.isEmpty() ? muscleGroupInput : String.join(", ", names);
+    }
+
+    public void setMuscleGroup(String muscleGroup) {
+        this.muscleGroupInput = muscleGroup;
+    }
+
+    public String getLevel() {
+        return difficultyLevel;
+    }
+
+    public void setLevel(EntryLevel level) {
+        this.difficultyLevel = level == null ? null : level.name();
+    }
+
+    public void setLevel(String level) {
+        this.difficultyLevel = level;
+    }
+
+    public String getGuide() {
+        return executionSteps;
+    }
+
+    public void setGuide(String guide) {
+        this.executionSteps = guide;
+    }
+
+    public String getGuideSteps() {
+        return executionSteps;
+    }
+
+    public void setGuideSteps(String guideSteps) {
+        this.executionSteps = guideSteps;
+    }
+
+    public Integer getDefaultDuration() {
+        return duration;
+    }
+
+    public void setDefaultDuration(Integer defaultDuration) {
+        this.duration = defaultDuration;
     }
 
     public void setDemoVideoUrl(String demoVideoUrl) {
@@ -216,31 +235,39 @@ public class Exercise {
         this.type = type;
     }
 
+    @Transient
+    public String getStatus() {
+        return switch (moderationStatus == null ? "" : moderationStatus.toUpperCase(java.util.Locale.ROOT)) {
+            case "PENDING" -> EntryStatus.PENDING.name();
+            case "REJECTED" -> EntryStatus.REJECTED.name();
+            default -> EntryStatus.ACCEPTED.name();
+        };
+    }
+
+    @Transient
     public void setStatus(EntryStatus status) {
         setStatus(status == null ? null : status.name());
     }
 
+    @Transient
     public void setStatus(String status) {
-        this.status = status;
-        if (status != null) {
-            this.moderationStatus = toModerationStatus(status);
+        if (status == null) {
+            this.moderationStatus = null;
+            return;
         }
-    }
-
-    public void setLevel(EntryLevel level) {
-        this.level = level == null ? null : level.name();
-    }
-
-    public void setLevel(String level) {
-        this.level = level;
-    }
-
-    private String toModerationStatus(String status) {
-        return switch (status) {
-            case "ACCEPTED" -> "ACTIVE";
+        this.moderationStatus = switch (status.toUpperCase(java.util.Locale.ROOT)) {
+            case "ACCEPTED", "ACTIVE" -> "ACTIVE";
             case "PENDING" -> "PENDING";
             case "REJECTED" -> "REJECTED";
             default -> status;
         };
+    }
+
+    private static String normalizeSource(String source) {
+        if (source == null || source.isBlank()) {
+            return "SYSTEM";
+        }
+        String normalized = source.trim().toUpperCase(java.util.Locale.ROOT);
+        return "MEMBER".equals(normalized) ? "CUSTOM" : normalized;
     }
 }

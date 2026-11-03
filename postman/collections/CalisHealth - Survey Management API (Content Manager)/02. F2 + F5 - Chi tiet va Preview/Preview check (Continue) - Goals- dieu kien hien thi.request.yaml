@@ -1,0 +1,26 @@
+$kind: http-request
+name: "Preview check (Continue) - Goals: dieu kien hien thi"
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{goalsStepId}}/preview/check"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "answers": [
+        { "questionCode": "GOAL_TYPE", "value": "HEALTH" },
+        { "questionCode": "TRAINING_SKILLS", "value": ["HANDSTAND"] },
+        { "questionCode": "MOTIVATIONS", "value": ["ENERGY"] }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      const codeOf = q => (j.errors.find(e => e.questionCode === q) || {}).code;
+      pm.test('TRAINING_SKILLS bi an khi GOAL_TYPE = HEALTH', () => pm.expect(codeOf('TRAINING_SKILLS')).to.eql('QUESTION_NOT_APPLICABLE'));
+      pm.test('HEALTH_GOAL hien ra va bat buoc', () => pm.expect(codeOf('HEALTH_GOAL')).to.eql('MISSING_REQUIRED_ANSWER'));
+    language: text/javascript
+order: 6000

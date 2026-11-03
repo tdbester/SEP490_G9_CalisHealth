@@ -15,11 +15,12 @@ import java.util.Set;
  */
 @Component
 public class NumberQuestionType extends AbstractQuestionTypeHandler {
+    public static final String TYPE = "NUMBER";
     private static final Set<String> RULES = Set.of("min", "max", "integerOnly", "maxDecimals");
 
     @Override
     public String type() {
-        return "NUMBER";
+        return TYPE;
     }
 
     @Override

@@ -1,0 +1,29 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "stepName": "{{newStepName}}",
+      "description": "Check joint mobility before training."
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      // ten duy nhat moi lan chay de collection chay lai duoc
+      pm.collectionVariables.set('newStepName', 'Mobility check ' + Date.now());
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 201', () => pm.response.to.have.status(201));
+      const j = pm.response.json();
+      pm.test('stepCode sinh tu ten', () => pm.expect(j.step.stepCode).to.match(/^MOBILITY_CHECK_\d+$/));
+      pm.test('buoc moi o DRAFT, loai QUESTIONS, chua co cau hoi', () => { pm.expect(j.step.status).to.eql('DRAFT'); pm.expect(j.step.stepType).to.eql('QUESTIONS'); pm.expect(j.questions).to.be.empty; });
+      pm.test('co revision (gui lai khi Save changes)', () => pm.expect(j.step.revision).to.be.a('number'));
+      pm.collectionVariables.set('newStepId', j.step.id);
+      pm.collectionVariables.set('newStepRevision', j.step.revision);
+    language: text/javascript
+order: 1000

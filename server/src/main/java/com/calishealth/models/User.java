@@ -26,5 +26,14 @@ public class User {
 
     private boolean enabled = false; // true sau khi xác thực email
 
+    private boolean blocked = false; // true khi admin vô hiệu hóa tài khoản
+
+    private boolean mustChangePassword = false; // true khi admin cấp mật khẩu tạm; xóa sau khi user đổi mật khẩu
+
+    /** Có thể đăng nhập: đã xác thực email và không bị admin khóa. */
+    public boolean isActive() {
+        return enabled && !blocked;
+    }
+
     private LocalDateTime createdAt = LocalDateTime.now();
 }

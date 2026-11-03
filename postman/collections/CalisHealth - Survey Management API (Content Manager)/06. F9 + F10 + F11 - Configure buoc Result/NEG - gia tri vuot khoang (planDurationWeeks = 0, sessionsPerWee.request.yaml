@@ -1,0 +1,28 @@
+$kind: http-request
+name: NEG - gia tri vuot khoang (planDurationWeeks = 0, sessionsPerWeek = 8)
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{resultStepId}}/result-config"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "stepName": "Result and recommended plan",
+      "config": {
+        "showLevelBreakdown": true,
+        "showPlanPreview": true,
+        "planDurationWeeks": 0,
+        "sessionsPerWeek": 8,
+        "minutesPerSession": 30,
+        "fallbackFitnessLevelId": null
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 400', () => pm.response.to.have.status(400));
+      const j = pm.response.json();
+      pm.test('loi o 2 field', () => { pm.expect(j.code).to.eql('INVALID_REQUEST'); pm.expect(j.errors).to.have.property('config.planDurationWeeks'); pm.expect(j.errors).to.have.property('config.sessionsPerWeek'); });
+    language: text/javascript
+order: 5000

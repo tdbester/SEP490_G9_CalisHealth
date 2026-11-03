@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps/{{bodyStepId}}"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('dung buoc', () => pm.expect(j.step.stepCode).to.eql('BODY_INFORMATION'));
+      pm.test('co danh sach cau hoi', () => { pm.expect(j.questions.map(q => q.questionCode)).to.include.members(['GENDER', 'AGE', 'HEIGHT', 'WEIGHT']); j.questions.forEach(q => pm.expect(q).to.have.keys('questionCode', 'questionText', 'questionType', 'required', 'sortOrder', 'active', 'conditionalRules')); });
+      pm.test('buoc QUESTIONS khong co resultConfig', () => pm.expect(j.resultConfig).to.be.null);
+    language: text/javascript
+order: 1000

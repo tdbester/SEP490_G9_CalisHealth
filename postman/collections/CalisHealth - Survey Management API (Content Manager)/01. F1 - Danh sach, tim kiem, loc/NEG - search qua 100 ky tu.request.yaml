@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/api/content/surveys/{{surveyCode}}/steps?search={{longSearch}}"
+method: GET
+queryParams:
+  search: "{{longSearch}}"
+scripts:
+  - type: beforeRequest
+    code: pm.collectionVariables.set('longSearch', 'a'.repeat(101));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('HTTP 400', () => pm.response.to.have.status(400));
+      pm.test('code = INVALID_REQUEST', () => pm.expect(pm.response.json().code).to.eql('INVALID_REQUEST'));
+    language: text/javascript
+order: 6000

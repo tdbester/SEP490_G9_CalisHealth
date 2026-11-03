@@ -12,15 +12,15 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record CreatePersonalExerciseRequestDTO(
-        @NotBlank(message = "Tên bài tập không được để trống")
-        @Size(max = 50, message = "Tên bài tập không quá 50 ký tự")
+        @NotBlank(message = "Exercise title is required")
+        @Size(max = 50, message = "Exercise title must not exceed 50 characters")
         String title,
-        @Size(max = 300, message = "Mô tả không quá 300 ký tự")
+        @Size(max = 300, message = "Description must not exceed 300 characters")
         String description,
-        @NotNull(message = "Vui lòng chọn cấp độ bài tập")
+        @NotNull(message = "Please select an exercise level")
         Exercise.EntryLevel level,
-        @NotEmpty(message = "Phải có ít nhất 1 bước hướng dẫn")
-        List<@NotBlank(message = "Bước hướng dẫn không được để trống") @Size(max = 250) String> guideSteps,
+        @NotEmpty(message = "Add at least one instruction step")
+        List<@NotBlank(message = "Instruction steps cannot be blank") @Size(max = 250) String> guideSteps,
         @NotBlank @Size(max = 120) String targetMuscle,
         @Min(1) @Max(20) Integer defaultSets,
         @Min(1) @Max(1000)
@@ -29,7 +29,7 @@ public record CreatePersonalExerciseRequestDTO(
         Integer defaultDuration,
         Boolean shareWithCommunity,
         Boolean keepCurrentVideo,
-        @Pattern(regexp = "reps_sets|duration", message = "Hình thức tính lượt không hợp lệ")
+        @Pattern(regexp = "reps_sets|duration", message = "Count type is invalid")
         String countType,
         @Min(1) @Max(20) Integer sets,
         @Min(1) @Max(1000) Integer reps,

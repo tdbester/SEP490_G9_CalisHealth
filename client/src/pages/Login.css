@@ -275,6 +275,27 @@
   display: block;
 }
 
+/* Inline error under one field (e.g. password format) */
+.login-field-error {
+  margin-top: -2px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #FCA5A5;
+}
+
+.login-input-wrap--error,
+.login-input-wrap--error:focus-within {
+  border-color: rgba(239, 68, 68, 0.7);
+}
+
+/* "Redirecting to the login page in N seconds" */
+.login-redirect {
+  color: #FFFFFF;
+  font-size: 14px;
+  text-align: center;
+  line-height: 1.5;
+}
+
 .login-success {
   background: rgba(34, 197, 94, 0.15);
   border: 1px solid rgba(34, 197, 94, 0.4);

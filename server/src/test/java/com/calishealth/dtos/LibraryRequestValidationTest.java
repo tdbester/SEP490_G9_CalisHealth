@@ -36,10 +36,10 @@ class LibraryRequestValidationTest {
                 .map(violation -> violation.getPropertyPath() + ":" + violation.getMessage())
                 .collect(Collectors.toSet());
 
-        assertTrue(violations.contains("title:Tên bài tập không được để trống"));
-        assertTrue(violations.contains("description:Mô tả không quá 300 ký tự"));
-        assertTrue(violations.contains("level:Vui lòng chọn cấp độ bài tập"));
-        assertTrue(violations.contains("guideSteps[0].<list element>:Bước hướng dẫn không được để trống"));
+        assertTrue(violations.contains("title:Exercise title is required"));
+        assertTrue(violations.contains("description:Description must not exceed 300 characters"));
+        assertTrue(violations.contains("level:Please select an exercise level"));
+        assertTrue(violations.contains("guideSteps[0].<list element>:Instruction steps cannot be blank"));
     }
 
     @Test
@@ -47,19 +47,21 @@ class LibraryRequestValidationTest {
         CreateUpdateWorkoutRequestDTO request = new CreateUpdateWorkoutRequestDTO(
                 "  ",
                 "n".repeat(201),
+                null,
+                null,
                 false,
-                List.of(new WorkoutItemDTO(1L, 0, 101, 0, null, "REPS", 121))
+                List.of(new WorkoutItemDTO(1L, 0, 101, 0, null, "REPS", 181))
         );
 
         Set<String> violations = validator.validate(request).stream()
                 .map(violation -> violation.getPropertyPath() + ":" + violation.getMessage())
                 .collect(Collectors.toSet());
 
-        assertTrue(violations.contains("title:Tên giáo trình không được để trống"));
-        assertTrue(violations.contains("description:Ghi chú không quá 200 ký tự"));
-        assertTrue(violations.contains("items[0].sets:Số hiệp tối đa là 100"));
-        assertTrue(violations.contains("items[0].reps:Số lần lặp tối thiểu là 1"));
-        assertTrue(violations.contains("items[0].restSeconds:Thời gian nghỉ tối đa là 120 giây"));
+        assertTrue(violations.contains("title:Workout title is required"));
+        assertTrue(violations.contains("description:Description must not exceed 200 characters"));
+        assertTrue(violations.contains("items[0].sets:Sets must not exceed 100"));
+        assertTrue(violations.contains("items[0].reps:Reps must be at least 1"));
+        assertTrue(violations.contains("items[0].restSeconds:Rest time must not exceed 180 seconds"));
     }
 
     @Test
@@ -67,12 +69,61 @@ class LibraryRequestValidationTest {
         CreateUpdateWorkoutRequestDTO request = new CreateUpdateWorkoutRequestDTO(
                 "Workout",
                 null,
+                null,
+                null,
                 false,
                 List.of()
         );
 
         assertTrue(validator.validate(request).stream()
                 .anyMatch(violation -> violation.getPropertyPath().toString().equals("items")
-                        && violation.getMessage().equals("Giáo trình phải chứa ít nhất 1 bài tập")));
+                        && violation.getMessage().equals("A workout must contain at least one exercise")));
+    }
+
+    @Test
+    void acceptsWorkoutRestTimeUpTo180Seconds() {
+        CreateUpdateWorkoutRequestDTO request = new CreateUpdateWorkoutRequestDTO(
+                "Workout",
+                null,
+                null,
+                null,
+                false,
+                List.of(new WorkoutItemDTO(1L, 0, 3, 10, null, "REPS", 180))
+        );
+
+        assertTrue(validator.validate(request).stream()
+                .noneMatch(violation -> violation.getPropertyPath().toString().equals("items[0].restSeconds")));
+    }
+
+    @Test
+    void rejectsUnsupportedWorkoutLevel() {
+        CreateUpdateWorkoutRequestDTO request = new CreateUpdateWorkoutRequestDTO(
+                "Workout",
+                null,
+                "EXPERT",
+                null,
+                false,
+                List.of(new WorkoutItemDTO(1L, 0, 3, 10, null, "REPS", 60))
+        );
+
+        assertTrue(validator.validate(request).stream()
+                .anyMatch(violation -> violation.getPropertyPath().toString().equals("level")
+                        && violation.getMessage().equals("Please select a valid workout level")));
+    }
+
+    @Test
+    void rejectsUnsupportedWorkoutType() {
+        CreateUpdateWorkoutRequestDTO request = new CreateUpdateWorkoutRequestDTO(
+                "Workout",
+                null,
+                null,
+                "CUSTOM",
+                false,
+                List.of(new WorkoutItemDTO(1L, 0, 3, 10, null, "REPS", 60))
+        );
+
+        assertTrue(validator.validate(request).stream()
+                .anyMatch(violation -> violation.getPropertyPath().toString().equals("type")
+                        && violation.getMessage().equals("Please select a valid workout type")));
     }
 }

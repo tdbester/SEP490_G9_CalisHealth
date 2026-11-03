@@ -1,22 +1,40 @@
 package com.calishealth.service;
 
+import com.calishealth.models.ProfanityWord;
+import com.calishealth.repository.ProfanityWordRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 @Service
+@RequiredArgsConstructor
 public class ContentModerationService {
     private static final long MAX_VIDEO_SIZE = 50L * 1024 * 1024;
     private static final String VIDEO_REJECTION =
             "Video check: we could not detect a full body in most frames. Re-record in better light with your whole body in frame.";
-    private static final List<String> BLOCKED_TERMS = List.of("stupid", "badword");
+    private static final String INAPPROPRIATE_TEXT_MESSAGE =
+            "Exercise content contains inappropriate language. Please revise it!";
     private static final List<String> ALLOWED_EXTENSIONS = List.of("mp4", "mov", "webm");
+
+    private final ProfanityWordRepository profanityWords;
+
+    private static Pattern wordPattern(String term) {
+        String expression = term.chars().allMatch(character -> character < 128)
+                ? "\\b" + Pattern.quote(term) + "\\b"
+                : "(?<![\\p{L}\\p{N}])" + Pattern.quote(term) + "(?![\\p{L}\\p{N}])";
+        return Pattern.compile(expression, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
+                | Pattern.UNICODE_CHARACTER_CLASS);
+    }
 
     public ModerationResult moderate(String title, String description, List<String> guideSteps, MultipartFile video) {
         String textReason = checkText(title, description, guideSteps);
@@ -33,22 +51,51 @@ public class ContentModerationService {
     }
 
     public String checkText(String title, String description, List<String> guideSteps) {
+        return checkText(title, description, guideSteps, null);
+    }
+
+    public String checkText(String title, String description, List<String> guideSteps, String targetMuscle) {
+        List<String> flaggedWords = findFlaggedWords(title, description, guideSteps, targetMuscle);
+        if (flaggedWords.isEmpty()) {
+            return null;
+        }
+        return INAPPROPRIATE_TEXT_MESSAGE + " Flagged words: " + String.join(", ", flaggedWords);
+    }
+
+    public List<String> findFlaggedWords(
+            String title,
+            String description,
+            List<String> guideSteps,
+            String targetMuscle
+    ) {
         List<String> text = new ArrayList<>();
         text.add(title);
         text.add(description);
+        text.add(targetMuscle);
         if (guideSteps != null) {
             text.addAll(guideSteps);
         }
-        for (String value : text) {
-            if (value == null) continue;
-            String normalized = value.toLowerCase(Locale.ROOT);
-            for (String blockedTerm : BLOCKED_TERMS) {
-                if (normalized.matches("(?s).*\\b" + Pattern.quote(blockedTerm) + "\\b.*")) {
-                    return "Text check: content contains inappropriate wording ('" + blockedTerm + "').";
-                }
+        String normalizedText = text.stream()
+                .filter(value -> value != null && !value.isBlank())
+                .map(value -> Normalizer.normalize(value, Normalizer.Form.NFC))
+                .reduce((left, right) -> left + " " + right)
+                .orElse("")
+                .toLowerCase(Locale.ROOT);
+        if (normalizedText.isBlank()) {
+            return List.of();
+        }
+
+        Map<String, String> matches = new LinkedHashMap<>();
+        for (ProfanityWord word : profanityWords.findByActiveTrueOrderByIdAsc()) {
+            String term = Normalizer.normalize(word.getWord(), Normalizer.Form.NFC).trim();
+            if (term.isEmpty()) {
+                continue;
+            }
+            if (wordPattern(term).matcher(normalizedText).find()) {
+                matches.putIfAbsent(term.toLowerCase(Locale.ROOT), term);
             }
         }
-        return null;
+        return List.copyOf(matches.values());
     }
 
     public String checkVideo(MultipartFile video) {

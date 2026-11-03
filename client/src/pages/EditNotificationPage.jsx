@@ -4,6 +4,10 @@ import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import api from "../api/client";
+import UnsavedNotificationModal from "../components/notifications/UnsavedNotificationModal";
+import notificationToast from "../utils/notificationToast";
+import useUnsavedNotificationNavigation from "../hooks/useUnsavedNotificationNavigation";
+import "../styles/notification.css";
 
 const TYPE_OPTIONS = [
   {
@@ -15,19 +19,6 @@ const TYPE_OPTIONS = [
     value: "UPDATE",
     label: "Update",
     description: "New content or features, such as a new skill roadmap.",
-  },
-];
-
-const STATUS_OPTIONS = [
-  {
-    value: "PUBLISHED",
-    label: "Publish now",
-    description: "Members see it in the notification bell right away.",
-  },
-  {
-    value: "DRAFT",
-    label: "Save as draft",
-    description: "Only admins see it. You can publish it later from Notifications.",
   },
 ];
 
@@ -60,6 +51,48 @@ export default function EditNotificationPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const isDirty = Boolean(notification) && (
+    title !== notification.title ||
+    message !== notification.message ||
+    type !== notification.type ||
+    status !== notification.status
+  );
+
+  const {
+    isLeaveConfirmationOpen,
+    requestLeave,
+    cancelLeave,
+    discardChanges,
+    completeSave,
+  } = useUnsavedNotificationNavigation(isDirty);
+
+  const saveDraftAndLeave = async () => {
+    const validationErrors = {};
+    if (!title.trim()) validationErrors.title = "Title is required.";
+    if (!message.trim()) validationErrors.message = "Message is required.";
+    if (title.trim().length > 255) validationErrors.title = "Title must not exceed 255 characters.";
+    setFieldErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+
+    setSubmitting(true);
+    try {
+      await api.put(`/admin/notifications/${id}`, {
+        title: title.trim(),
+        message: message.trim(),
+        type,
+        status: "DRAFT",
+      });
+      notificationToast.success("Draft saved successfully!");
+      window.dispatchEvent(new Event("member-notifications-updated"));
+      completeSave();
+    } catch (requestError) {
+      const message = requestError.response?.data?.message || "Could not save the draft. Please try again.";
+      setError(message);
+      notificationToast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -110,7 +143,13 @@ export default function EditNotificationPage() {
         type,
         status: submitStatus,
       });
-      navigate("/admin/notifications", { replace: true });
+      notificationToast.success(
+        submitStatus === "PUBLISHED"
+          ? "Notification published successfully!"
+          : "Draft saved successfully!",
+      );
+      window.dispatchEvent(new Event("member-notifications-updated"));
+      completeSave();
     } catch (requestError) {
       const responseErrors = requestError.response?.data?.errors;
       if (responseErrors && typeof responseErrors === "object") {
@@ -120,10 +159,10 @@ export default function EditNotificationPage() {
           message: responseErrors.message || current.message,
         }));
       }
-      setError(
-        requestError.response?.data?.message ||
-          "Could not update the notification. Please try again.",
-      );
+      const message = requestError.response?.data?.message ||
+        "Could not update the notification. Please try again.";
+      setError(message);
+      notificationToast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -136,7 +175,7 @@ export default function EditNotificationPage() {
 
   if (loading) {
     return (
-      <section className="mx-auto w-full max-w-[1080px] text-sm text-[#a89bd0]" role="status">
+      <section className="notification-module mx-auto w-full max-w-[1080px] text-sm text-[#a89bd0]" role="status">
         Loading notification…
       </section>
     );
@@ -144,7 +183,7 @@ export default function EditNotificationPage() {
 
   if (!notification) {
     return (
-      <section className="mx-auto w-full max-w-[1080px] text-slate-100">
+      <section className="notification-module mx-auto w-full max-w-[1080px] text-slate-100">
         <p role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
           {error}
         </p>
@@ -160,7 +199,7 @@ export default function EditNotificationPage() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-[1080px] text-slate-100">
+    <section className="notification-module mx-auto w-full max-w-[1080px] text-slate-100">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-5">
         <div>
           <h1 className="text-[22px] font-bold tracking-tight text-white">Edit notification</h1>
@@ -184,7 +223,7 @@ export default function EditNotificationPage() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => navigate("/admin/notifications")}
+            onClick={() => requestLeave()}
             disabled={submitting}
             className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#51456f] bg-[#17112d] px-3.5 text-sm font-medium text-white transition hover:bg-[#2b2049] disabled:opacity-50"
           >
@@ -305,35 +344,6 @@ export default function EditNotificationPage() {
         </section>
 
         <section className={sectionClass}>
-          <h2 className="text-sm font-semibold text-white">Publishing</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {STATUS_OPTIONS.map((option) => (
-              <label
-                key={option.value}
-                className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition ${
-                  status === option.value
-                    ? "border-violet-500 bg-[#30215f]/60"
-                    : "border-[#51456f] bg-[#17112d] hover:border-violet-400/60"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="notification-status"
-                  value={option.value}
-                  checked={status === option.value}
-                  onChange={() => setStatus(option.value)}
-                  className="mt-0.5 h-4 w-4 accent-[#7c5dfa]"
-                />
-                <span>
-                  <span className="text-sm font-semibold text-white">{option.label}</span>
-                  <span className="mt-1 block text-xs leading-5 text-[#a89bd0]">{option.description}</span>
-                </span>
-              </label>
-            ))}
-          </div>
-        </section>
-
-        <section className={sectionClass}>
           <h2 className="text-sm font-semibold text-white">Notification preview</h2>
           <div className="mt-4 rounded-xl border border-[#51456f] bg-[#17112d] p-4">
             <div className="flex gap-3">
@@ -349,6 +359,14 @@ export default function EditNotificationPage() {
           </div>
         </section>
       </form>
+      {isLeaveConfirmationOpen && (
+        <UnsavedNotificationModal
+          saving={submitting}
+          onCancel={cancelLeave}
+          onDiscard={discardChanges}
+          onSaveDraft={saveDraftAndLeave}
+        />
+      )}
     </section>
   );
 }

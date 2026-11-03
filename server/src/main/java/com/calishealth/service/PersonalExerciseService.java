@@ -1,6 +1,8 @@
 package com.calishealth.service;
 
 import com.calishealth.dtos.CreatePersonalExerciseRequestDTO;
+import com.calishealth.dtos.ContentTextCheckRequestDTO;
+import com.calishealth.dtos.ContentTextCheckResponseDTO;
 import com.calishealth.dtos.PageResponseDTO;
 import com.calishealth.dtos.PersonalExerciseResponseDTO;
 import com.calishealth.dtos.SubmissionCountsDTO;
@@ -8,6 +10,7 @@ import com.calishealth.exception.ResourceNotFoundException;
 import com.calishealth.models.Exercise;
 import com.calishealth.models.User;
 import com.calishealth.repository.ExerciseRepository;
+import com.calishealth.repository.ExerciseModerationHistoryRepository;
 import com.calishealth.repository.UserRepository;
 import com.calishealth.specification.PersonalExerciseSpecification;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +28,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -33,25 +37,48 @@ import java.util.stream.Stream;
 @Slf4j
 public class PersonalExerciseService {
     private final ExerciseRepository exercises;
+    private final ExerciseModerationHistoryRepository moderationHistory;
     private final UserRepository users;
     private final ContentModerationService moderation;
     private final ExerciseVideoStorageService videoStorage;
+    private final ExerciseMuscleGroupCatalog muscleGroupCatalog;
 
-    @Transactional
+    @Transactional(readOnly = true)
+    public ContentTextCheckResponseDTO checkText(ContentTextCheckRequestDTO request) {
+        return new ContentTextCheckResponseDTO(moderation.findFlaggedWords(
+                request.title(), request.description(), request.guideSteps(), request.targetMuscle()));
+    }
+
     public PersonalExerciseResponseDTO createPersonalExercise(
             String memberEmail,
             CreatePersonalExerciseRequestDTO request,
             MultipartFile videoFile
     ) {
+        return createPersonalExercise(memberEmail, request, videoFile, null);
+    }
+
+    @Transactional
+    public PersonalExerciseResponseDTO createPersonalExercise(
+            String memberEmail,
+            CreatePersonalExerciseRequestDTO request,
+            MultipartFile videoFile,
+            MultipartFile anatomyImageFile
+    ) {
         User member = requireMember(memberEmail);
-            videoStorage.validateVideoFile(videoFile, true);
-            String textReason = moderation.checkText(request.title(), request.description(), request.guideSteps());
-            String videoReason = moderation.checkVideo(videoFile);
-            ContentModerationService.ModerationResult result = moderation.combine(textReason, videoReason);
-            String videoUrl = videoReason == null ? videoStorage.store(videoFile) : null;
+        String textReason = moderation.checkText(
+                request.title(), request.description(), request.guideSteps(), request.targetMuscle());
+        if (textReason != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, textReason);
+        }
+        videoStorage.validateVideoFile(videoFile, true);
+        String videoReason = moderation.checkVideo(videoFile);
+        ContentModerationService.ModerationResult result = moderation.combine(textReason, videoReason);
+        String videoUrl = videoReason == null ? videoStorage.store(videoFile) : null;
+        String anatomyImageUrl = null;
         try {
+            anatomyImageUrl = storeAnatomyImage(anatomyImageFile);
             Exercise exercise = new Exercise();
-            exercise.setCode("PER-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase(Locale.ROOT));
+            exercise.setCode(temporaryExerciseCode());
             exercise.setName(request.title().trim());
             exercise.setDescription(request.description() == null ? "" : request.description().trim());
             exercise.setType(Exercise.EntryType.HEALTH);
@@ -63,19 +90,26 @@ public class PersonalExerciseService {
                     ? Exercise.EntryStatus.PENDING
                     : Exercise.EntryStatus.REJECTED);
             exercise.setActive(false);
-            exercise.setRejectionReason(result.isPassed() ? null : result.rejectionReason());
-            exercise.setMuscleGroup(request.targetMuscle().trim());
             exercise.setLevel(request.level());
             applyCountConfiguration(exercise, request);
             exercise.setGuideSteps(String.join("\n", request.guideSteps()));
             exercise.setGuide(exercise.getGuideSteps());
             exercise.setVideoUrl(videoUrl);
             exercise.setDemoVideoUrl(videoUrl);
+            exercise.setAnatomyImageUrl(anatomyImageUrl);
             exercise.setShareWithCommunity(Boolean.TRUE.equals(request.shareWithCommunity()));
             exercise.setSaveCount(0);
-            return toResponse(exercises.save(exercise));
+            Exercise saved = exercises.save(exercise);
+            saved.setCode(customExerciseCode(saved.getId()));
+            muscleGroupCatalog.assign(saved, request.targetMuscle());
+            saved = exercises.save(saved);
+            if (!result.isPassed()) {
+                recordRejection(saved, result.rejectionReason());
+            }
+            return toResponse(saved, result.isPassed() ? null : result.rejectionReason());
         } catch (RuntimeException exception) {
             videoStorage.delete(videoUrl);
+            videoStorage.deleteAnatomyImage(anatomyImageUrl);
             throw exception;
         }
     }
@@ -97,8 +131,15 @@ public class PersonalExerciseService {
         Page<Exercise> result = exercises.findAll(
                 PersonalExerciseSpecification.withFilters(member.getId(), status, search, level),
                 PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))));
+        List<Exercise> content = result.getContent();
+        Map<String, String> rejectionReasons = moderationHistory.findLatestRejectionReasons(
+                content.stream()
+                        .filter(exercise -> Exercise.EntryStatus.REJECTED.name().equals(exercise.getStatus()))
+                        .map(Exercise::getCode)
+                        .toList());
         return new PageResponseDTO<>(
-                result.getContent().stream().map(this::toResponse).toList(),
+                content.stream().map(exercise -> toResponse(exercise,
+                        rejectionReasons.get(exercise.getCode()))).toList(),
                 result.getNumber(),
                 result.getSize(),
                 result.getTotalElements(),
@@ -111,17 +152,29 @@ public class PersonalExerciseService {
     public SubmissionCountsDTO getSubmissionCounts(String memberEmail) {
         Long memberId = requireMember(memberEmail).getId();
         return new SubmissionCountsDTO(
-                exercises.countByAuthor_IdAndSystemFalseAndStatus(memberId, Exercise.EntryStatus.PENDING.name()),
-                exercises.countByAuthor_IdAndSystemFalseAndStatus(memberId, Exercise.EntryStatus.REJECTED.name()),
-                exercises.countByAuthor_IdAndSystemFalseAndStatus(memberId, Exercise.EntryStatus.ACCEPTED.name()));
+                exercises.countByAuthorAndSourceAndModerationStatuses(
+                        memberId, "CUSTOM", List.of("PENDING")),
+                exercises.countByAuthorAndSourceAndModerationStatuses(
+                        memberId, "CUSTOM", List.of("REJECTED")),
+                exercises.countByAuthorAndSourceAndModerationStatuses(
+                        memberId, "CUSTOM", List.of("ACTIVE", "ACCEPTED")));
     }
 
     @Transactional(readOnly = true)
     public PersonalExerciseResponseDTO getPersonalExercise(String memberEmail, Long exerciseId) {
         User member = requireMember(memberEmail);
-        Exercise exercise = exercises.findByIdAndAuthor_IdAndSystemFalse(exerciseId, member.getId())
+        Exercise exercise = exercises.findByIdAndCreatedBy_IdAndSource(exerciseId, member.getId(), "CUSTOM")
                 .orElseThrow(() -> new ResourceNotFoundException("Personal exercise not found"));
-        return toResponse(exercise);
+        return toResponse(exercise, latestRejectionReason(exercise));
+    }
+
+    public PersonalExerciseResponseDTO resubmitPersonalExercise(
+            String memberEmail,
+            Long exerciseId,
+            CreatePersonalExerciseRequestDTO request,
+            MultipartFile videoFile
+    ) {
+        return resubmitPersonalExercise(memberEmail, exerciseId, request, videoFile, null);
     }
 
     @Transactional
@@ -129,16 +182,21 @@ public class PersonalExerciseService {
             String memberEmail,
             Long exerciseId,
             CreatePersonalExerciseRequestDTO request,
-            MultipartFile videoFile
+            MultipartFile videoFile,
+            MultipartFile anatomyImageFile
     ) {
         User member = requireMember(memberEmail);
-        Exercise exercise = exercises.findByIdAndAuthor_IdAndSystemFalse(exerciseId, member.getId())
+        Exercise exercise = exercises.findByIdAndCreatedBy_IdAndSource(exerciseId, member.getId(), "CUSTOM")
                 .orElseThrow(() -> new ResourceNotFoundException("Personal exercise not found"));
         if (!"REJECTED".equals(exercise.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Only rejected exercises can be resubmitted");
         }
 
-        String textReason = moderation.checkText(request.title(), request.description(), request.guideSteps());
+        String textReason = moderation.checkText(
+                request.title(), request.description(), request.guideSteps(), request.targetMuscle());
+        if (textReason != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, textReason);
+        }
         boolean hasNewVideo = videoFile != null && !videoFile.isEmpty();
         if (hasNewVideo) {
             videoStorage.validateVideoFile(videoFile, true);
@@ -159,17 +217,22 @@ public class PersonalExerciseService {
         }
 
         String previousVideoUrl = exercise.getVideoUrl();
+        String replacementAnatomyUrl = storeAnatomyImage(anatomyImageFile);
+        String previousAnatomyUrl = exercise.getAnatomyImageUrl();
         try {
             exercise.setName(request.title().trim());
             exercise.setDescription(request.description() == null ? "" : request.description().trim());
             exercise.setLevel(request.level());
-            exercise.setMuscleGroup(request.targetMuscle().trim());
+            muscleGroupCatalog.assign(exercise, request.targetMuscle());
             applyCountConfiguration(exercise, request);
             exercise.setGuideSteps(String.join("\n", request.guideSteps()));
             exercise.setGuide(exercise.getGuideSteps());
             if (replacementVideoUrl != null) {
                 exercise.setVideoUrl(replacementVideoUrl);
                 exercise.setDemoVideoUrl(replacementVideoUrl);
+            }
+            if (replacementAnatomyUrl != null) {
+                exercise.setAnatomyImageUrl(replacementAnatomyUrl);
             }
             if (request.shareWithCommunity() != null) {
                 exercise.setShareWithCommunity(request.shareWithCommunity());
@@ -178,16 +241,31 @@ public class PersonalExerciseService {
                     ? Exercise.EntryStatus.PENDING
                     : Exercise.EntryStatus.REJECTED);
             exercise.setActive(false);
-            exercise.setRejectionReason(rejectionReason);
             Exercise saved = exercises.save(exercise);
+            if (rejectionReason != null) {
+                recordRejection(saved, rejectionReason);
+            }
             if (replacementVideoUrl != null && previousVideoUrl != null) {
                 deleteVideoAfterCommit(previousVideoUrl);
             }
-            return toResponse(saved);
+            if (replacementAnatomyUrl != null && previousAnatomyUrl != null) {
+                deleteAnatomyImageAfterCommit(previousAnatomyUrl);
+            }
+            return toResponse(saved, rejectionReason);
         } catch (RuntimeException exception) {
             videoStorage.delete(replacementVideoUrl);
+            videoStorage.deleteAnatomyImage(replacementAnatomyUrl);
             throw exception;
         }
+    }
+
+    public PersonalExerciseResponseDTO updateAcceptedPersonalExercise(
+            String memberEmail,
+            Long exerciseId,
+            CreatePersonalExerciseRequestDTO request,
+            MultipartFile videoFile
+    ) {
+        return updateAcceptedPersonalExercise(memberEmail, exerciseId, request, videoFile, null);
     }
 
     @Transactional
@@ -195,16 +273,21 @@ public class PersonalExerciseService {
             String memberEmail,
             Long exerciseId,
             CreatePersonalExerciseRequestDTO request,
-            MultipartFile videoFile
+            MultipartFile videoFile,
+            MultipartFile anatomyImageFile
     ) {
         User member = requireMember(memberEmail);
-        Exercise exercise = exercises.findByIdAndAuthor_IdAndSystemFalse(exerciseId, member.getId())
+        Exercise exercise = exercises.findByIdAndCreatedBy_IdAndSource(exerciseId, member.getId(), "CUSTOM")
                 .orElseThrow(() -> new ResourceNotFoundException("Personal exercise not found"));
         if (!"ACCEPTED".equals(exercise.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Only accepted exercises can be edited here");
         }
 
-        String textReason = moderation.checkText(request.title(), request.description(), request.guideSteps());
+        String textReason = moderation.checkText(
+                request.title(), request.description(), request.guideSteps(), request.targetMuscle());
+        if (textReason != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, textReason);
+        }
         boolean hasNewVideo = videoFile != null && !videoFile.isEmpty();
         if (hasNewVideo) {
             videoStorage.validateVideoFile(videoFile, true);
@@ -220,11 +303,13 @@ public class PersonalExerciseService {
         }
 
         String previousVideoUrl = exercise.getVideoUrl();
+        String replacementAnatomyUrl = storeAnatomyImage(anatomyImageFile);
+        String previousAnatomyUrl = exercise.getAnatomyImageUrl();
         try {
             exercise.setName(request.title().trim());
             exercise.setDescription(request.description() == null ? "" : request.description().trim());
             exercise.setLevel(request.level());
-            exercise.setMuscleGroup(request.targetMuscle().trim());
+            muscleGroupCatalog.assign(exercise, request.targetMuscle());
             applyCountConfiguration(exercise, request);
             exercise.setGuideSteps(String.join("\n", request.guideSteps()));
             exercise.setGuide(exercise.getGuideSteps());
@@ -232,21 +317,30 @@ public class PersonalExerciseService {
                 exercise.setVideoUrl(replacementVideoUrl);
                 exercise.setDemoVideoUrl(replacementVideoUrl);
             }
+            if (replacementAnatomyUrl != null) {
+                exercise.setAnatomyImageUrl(replacementAnatomyUrl);
+            }
             if (request.shareWithCommunity() != null) {
                 exercise.setShareWithCommunity(request.shareWithCommunity());
             }
             exercise.setStatus(rejectionReason == null
-                    ? Exercise.EntryStatus.PENDING
+                    ? Exercise.EntryStatus.ACCEPTED
                     : Exercise.EntryStatus.REJECTED);
-            exercise.setActive(false);
-            exercise.setRejectionReason(rejectionReason);
+            exercise.setActive(rejectionReason == null);
             Exercise saved = exercises.save(exercise);
+            if (rejectionReason != null) {
+                recordRejection(saved, rejectionReason);
+            }
             if (replacementVideoUrl != null && previousVideoUrl != null) {
                 deleteVideoAfterCommit(previousVideoUrl);
             }
-            return toResponse(saved);
+            if (replacementAnatomyUrl != null && previousAnatomyUrl != null) {
+                deleteAnatomyImageAfterCommit(previousAnatomyUrl);
+            }
+            return toResponse(saved, rejectionReason);
         } catch (RuntimeException exception) {
             videoStorage.delete(replacementVideoUrl);
+            videoStorage.deleteAnatomyImage(replacementAnatomyUrl);
             throw exception;
         }
     }
@@ -254,11 +348,14 @@ public class PersonalExerciseService {
     @Transactional
     public void deletePersonalExercise(String memberEmail, Long exerciseId) {
         User member = requireMember(memberEmail);
-        Exercise exercise = exercises.findByIdAndAuthor_IdAndSystemFalse(exerciseId, member.getId())
+        Exercise exercise = exercises.findByIdAndCreatedBy_IdAndSource(exerciseId, member.getId(), "CUSTOM")
                 .orElseThrow(() -> new ResourceNotFoundException("Personal exercise not found"));
         exercises.delete(exercise);
         if (exercise.getVideoUrl() != null) {
             deleteVideoAfterCommit(exercise.getVideoUrl());
+        }
+        if (exercise.getAnatomyImageUrl() != null) {
+            deleteAnatomyImageAfterCommit(exercise.getAnatomyImageUrl());
         }
     }
 
@@ -278,6 +375,7 @@ public class PersonalExerciseService {
             if (sets == null || reps == null || sets < 1 || sets > 20 || reps < 1 || reps > 1000) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sets and reps must be valid");
             }
+            exercise.setCategory("REPS");
             exercise.setDefaultSets(sets);
             exercise.setDefaultReps(reps);
             exercise.setDefaultDuration(null);
@@ -288,6 +386,7 @@ public class PersonalExerciseService {
         if (duration == null || duration < 1 || duration > 3600) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Duration must be between 1 and 3600 seconds");
         }
+        exercise.setCategory("HOLD");
         exercise.setDefaultSets(1);
         exercise.setDefaultReps(null);
         exercise.setDefaultDuration(duration);
@@ -298,6 +397,14 @@ public class PersonalExerciseService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated member not found"));
     }
 
+    private static String customExerciseCode(Long id) {
+        return "CU_" + id;
+    }
+
+    private static String temporaryExerciseCode() {
+        return "TMP-" + UUID.randomUUID().toString().replace("-", "").substring(0, 24);
+    }
+
     private void validatePage(int page, int size) {
         if (page < 0 || size < 1 || size > 100) {
             throw new ResponseStatusException(
@@ -305,7 +412,7 @@ public class PersonalExerciseService {
         }
     }
 
-    private PersonalExerciseResponseDTO toResponse(Exercise exercise) {
+    private PersonalExerciseResponseDTO toResponse(Exercise exercise, String rejectionReason) {
         List<String> steps = exercise.getGuideSteps() == null || exercise.getGuideSteps().isBlank()
                 ? List.of()
                 : exercise.getGuideSteps().lines().map(String::trim).filter(step -> !step.isBlank()).toList();
@@ -316,14 +423,40 @@ public class PersonalExerciseService {
                 exercise.getLevel() == null ? null : levelLabel(exercise.getLevel()),
                 steps,
                 exercise.getVideoUrl(),
+                exercise.getAnatomyImageUrl(),
                 exercise.getStatus(),
-                exercise.getRejectionReason(),
+                rejectionReason,
                 exercise.getMuscleGroup(),
                 exercise.getDefaultSets(),
                 exercise.getDefaultReps(),
                 exercise.getDefaultDuration(),
                 exercise.getCreatedAt(),
                 exercise.getUpdatedAt());
+    }
+
+    private String latestRejectionReason(Exercise exercise) {
+        if (!Exercise.EntryStatus.REJECTED.name().equals(exercise.getStatus())) {
+            return null;
+        }
+        return moderationHistory.findLatestRejectionReasons(List.of(exercise.getCode()))
+                .get(exercise.getCode());
+    }
+
+    private void recordRejection(Exercise exercise, String reason) {
+        moderationHistory.insert(
+                exercise.getCode(),
+                exercise.getName(),
+                exercise.getType(),
+                exercise.getMuscleGroup(),
+                exercise.getDifficultyLevel(),
+                exercise.getDescription() == null ? exercise.getInstructions() : exercise.getDescription(),
+                exercise.getCategory(),
+                exercise.getGuideSteps() == null ? exercise.getExecutionSteps() : exercise.getGuideSteps(),
+                exercise.getVideoUrl(),
+                exercise.getAnatomyImageUrl(),
+                exercise.getCreatedBy() == null ? null : exercise.getCreatedBy().getFullName(),
+                "REJECTED",
+                reason);
     }
 
     private String levelLabel(String level) {
@@ -339,6 +472,25 @@ public class PersonalExerciseService {
                     videoStorage.delete(videoUrl);
                 } catch (RuntimeException exception) {
                     log.error("Could not remove unused personal exercise video {}", videoUrl, exception);
+                }
+            }
+        });
+    }
+
+    private String storeAnatomyImage(MultipartFile imageFile) {
+        return imageFile == null || imageFile.isEmpty()
+                ? null
+                : videoStorage.storeAnatomyImage(imageFile);
+    }
+
+    private void deleteAnatomyImageAfterCommit(String imageUrl) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    videoStorage.deleteAnatomyImage(imageUrl);
+                } catch (RuntimeException exception) {
+                    log.error("Could not remove unused personal exercise anatomy image {}", imageUrl, exception);
                 }
             }
         });
