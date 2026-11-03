@@ -4,7 +4,7 @@ import api from "../api/client";
 import "./Login.css";
 import AuthLogo from "../components/AuthLogo";
 import ImeNotice from "../components/ImeNotice";
-import { hasNonAscii } from "../utils/authInput";
+import { PASSWORD_RULE_MESSAGE, hasNonAscii, isStrongPassword } from "../utils/authInput";
 
 /** Shown after an admin created the account with a temporary password. */
 export default function ChangePassword() {
@@ -39,6 +39,10 @@ export default function ChangePassword() {
     e.preventDefault();
     setError("");
     if (Object.values(imeWarn).some(Boolean)) return;
+    if (!isStrongPassword(form.newPassword)) {
+      setError(PASSWORD_RULE_MESSAGE);
+      return;
+    }
     if (form.newPassword !== form.confirmNewPassword) {
       setError("The confirmation password does not match");
       return;
@@ -87,7 +91,7 @@ export default function ChangePassword() {
           </div>
           {error && <div className="login-error">{error}</div>}
           {field("oldPassword", "Current (default) password", "Default password")}
-          {field("newPassword", "New password", "Min 8 chars, upper, lower, digit, special")}
+          {field("newPassword", "New password", PASSWORD_RULE_MESSAGE)}
           {field("confirmNewPassword", "Confirm new password", "Re-enter new password")}
           <button type="submit" className="login-submit" disabled={loading}>
             <span className="login-submit-text">{loading ? "Saving..." : "Change password"}</span>

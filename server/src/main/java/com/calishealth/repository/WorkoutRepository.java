@@ -14,7 +14,8 @@ public interface WorkoutRepository extends JpaRepository<WorkoutEntry, Long>, Jp
 
     @Query("""
             SELECT COUNT(w) FROM WorkoutEntry w
-            WHERE w.source = 'SYSTEM' AND UPPER(w.type) = UPPER(:type)
+            WHERE w.source = 'SYSTEM' AND w.active = true AND w.status = 'ACCEPTED'
+              AND UPPER(w.type) = UPPER(:type)
             """)
     long countSystemWorkoutsByType(@Param("type") String type);
 
@@ -23,5 +24,8 @@ public interface WorkoutRepository extends JpaRepository<WorkoutEntry, Long>, Jp
             WHERE w.source = 'CUSTOM' AND w.createdBy.id = :authorId
             """)
     long countCustomWorkoutsByAuthorId(@Param("authorId") Long authorId);
+
+    /** Community workout count: published, accepted workouts shared by members. */
+    long countBySourceAndActiveTrueAndStatusAndSharedWithCommunityTrue(String source, String status);
     boolean existsByLevelIgnoreCase(String level);
 }

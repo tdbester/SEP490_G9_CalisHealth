@@ -1,4 +1,4 @@
-/* Dashboard.css — Main Dashboard (Member)
+/* MainDashboard.css — Main Dashboard (Member)
    Nền tối #0F0C1B theo mockup, card tối #1A1230, nhấn tím #8B5CF6 */
 
 .dashboard {
@@ -136,7 +136,7 @@
   line-height: 1.45;
 }
 
-.dash-plan > .dash-btn {
+.dash-plan>.dash-btn {
   position: relative;
   z-index: 1;
 }
@@ -378,17 +378,75 @@
 }
 
 /* tone variants */
-.tone-blue .dash-muscle-icon { background: rgba(59, 130, 246, 0.16); color: #60A5FA; }
-.tone-green .dash-muscle-icon { background: rgba(16, 185, 129, 0.16); color: #34D399; }
-.tone-orange .dash-muscle-icon { background: rgba(249, 115, 22, 0.16); color: #FB923C; }
-.tone-pink .dash-muscle-icon { background: rgba(236, 72, 153, 0.16); color: #F472B6; }
-.tone-cyan .dash-muscle-icon { background: rgba(34, 211, 238, 0.16); color: #22D3EE; }
+.tone-blue .dash-muscle-icon {
+  background: rgba(59, 130, 246, 0.16);
+  color: #60A5FA;
+}
 
-.tone-blue .dash-skill-icon { background: rgba(59, 130, 246, 0.16); color: #60A5FA; }
-.tone-green .dash-skill-icon { background: rgba(16, 185, 129, 0.16); color: #34D399; }
-.tone-orange .dash-skill-icon { background: rgba(249, 115, 22, 0.16); color: #FB923C; }
-.tone-pink .dash-skill-icon { background: rgba(236, 72, 153, 0.16); color: #F472B6; }
-.tone-cyan .dash-skill-icon { background: rgba(34, 211, 238, 0.16); color: #22D3EE; }
+.tone-green .dash-muscle-icon {
+  background: rgba(16, 185, 129, 0.16);
+  color: #34D399;
+}
+
+.tone-orange .dash-muscle-icon {
+  background: rgba(249, 115, 22, 0.16);
+  color: #FB923C;
+}
+
+.tone-pink .dash-muscle-icon {
+  background: rgba(236, 72, 153, 0.16);
+  color: #F472B6;
+}
+
+.tone-cyan .dash-muscle-icon {
+  background: rgba(34, 211, 238, 0.16);
+  color: #22D3EE;
+}
+
+.tone-violet .dash-muscle-icon {
+  background: rgba(139, 92, 246, 0.16);
+  color: #A78BFA;
+}
+
+.tone-teal .dash-muscle-icon {
+  background: rgba(20, 184, 166, 0.16);
+  color: #2DD4BF;
+}
+
+.tone-blue .dash-skill-icon {
+  background: rgba(59, 130, 246, 0.16);
+  color: #60A5FA;
+}
+
+.tone-green .dash-skill-icon {
+  background: rgba(16, 185, 129, 0.16);
+  color: #34D399;
+}
+
+.tone-orange .dash-skill-icon {
+  background: rgba(249, 115, 22, 0.16);
+  color: #FB923C;
+}
+
+.tone-pink .dash-skill-icon {
+  background: rgba(236, 72, 153, 0.16);
+  color: #F472B6;
+}
+
+.tone-cyan .dash-skill-icon {
+  background: rgba(34, 211, 238, 0.16);
+  color: #22D3EE;
+}
+
+.tone-violet .dash-skill-icon {
+  background: rgba(139, 92, 246, 0.16);
+  color: #A78BFA;
+}
+
+.tone-teal .dash-skill-icon {
+  background: rgba(20, 184, 166, 0.16);
+  color: #2DD4BF;
+}
 
 /* ── Skill cards ─────────────────────────────────────────────── */
 .dash-skill-card {
@@ -440,8 +498,29 @@
   height: 20px;
 }
 
+.dash-skill-meta {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  min-width: 0;
+}
+
 .dash-skill-level {
-  display: none;
+  min-width: 0;
+  max-width: 100%;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(139, 92, 246, 0.18);
+  color: #C4B5FD;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dash-skill-name {
@@ -586,7 +665,7 @@
   gap: 20px 32px;
 }
 
-.dash-community-stats > div {
+.dash-community-stats>div {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -635,7 +714,7 @@
     font-size: 12px;
   }
 
-  .dash-plan > .dash-btn {
+  .dash-plan>.dash-btn {
     justify-content: center;
   }
 
@@ -711,7 +790,7 @@
     font-size: 11px;
   }
 
-  .dash-plan > .dash-btn {
+  .dash-plan>.dash-btn {
     width: 100%;
   }
 

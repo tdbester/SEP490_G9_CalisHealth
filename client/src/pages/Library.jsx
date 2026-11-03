@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Navigate } from "react-router-dom";
-import { getLibraryOverview, getPersonalExerciseCounts } from "../api/library";
-import { mockSystemWorkouts } from "./WorkoutSystemListPage";
+import { getLibraryOverview } from "../api/library";
 import "./Library.css";
 
 // Icons
@@ -60,51 +59,24 @@ export default function Library() {
   const fetchData = async () => {
     setLoading(true);
     setError(null);
-    const [overviewResult, personalCountsResult] = await Promise.allSettled([
-      getLibraryOverview(),
-      getPersonalExerciseCounts(),
-    ]);
+    const [overviewResult] = await Promise.allSettled([getLibraryOverview()]);
 
     const overview = overviewResult.status === "fulfilled" ? overviewResult.value : null;
-    const personalCounts = personalCountsResult.status === "fulfilled"
-      ? personalCountsResult.value
-      : null;
-    const mockHealthWorkoutsCount = mockSystemWorkouts.filter((workout) => workout.type === "health").length;
-    const mockSkillWorkoutsCount = mockSystemWorkouts.filter((workout) => workout.type === "skills").length;
-    let hasMockPendingExercise = false;
-    try {
-      const mockPendingExercise = sessionStorage.getItem("calishealth.mock-resubmitted-exercise");
-      hasMockPendingExercise = Boolean(mockPendingExercise && JSON.parse(mockPendingExercise));
-    } catch (storageError) {
-      console.warn("Unable to read mock exercise submission:", storageError);
-    }
 
     if (overviewResult.status === "rejected") {
       console.error("Failed to load library summary:", overviewResult.reason);
       setError("Unable to load latest library statistics. Showing cached or default view.");
     }
 
-    if (personalCountsResult.status === "rejected") {
-      console.error("Failed to load personal exercise counts:", personalCountsResult.reason);
-    }
-
-    const pendingCount = Number(personalCounts?.pendingCount || 0) + Number(hasMockPendingExercise);
-    const rejectedCount = Number(personalCounts?.rejectedCount || 0);
-    const acceptedCount = Number(personalCounts?.acceptedCount || 0);
-    const fallbackRejectedMockCount = rejectedCount === 0 && !hasMockPendingExercise ? 1 : 0;
-    const totalPersonalExercises = personalCounts
-      ? pendingCount + rejectedCount + acceptedCount + fallbackRejectedMockCount
-      : Number(overview?.memberExercisesCount || 0) + Number(hasMockPendingExercise) + fallbackRejectedMockCount;
-
     setCounts({
       exercise: {
         healthCount: Number(overview?.healthExercisesCount || 0),
         skillCount: Number(overview?.skillExercisesCount || 0),
-        memberCount: totalPersonalExercises,
+        memberCount: Number(overview?.memberExercisesCount || 0),
       },
       workout: {
-        healthCount: Number(overview?.healthWorkoutsCount || 0) || mockHealthWorkoutsCount,
-        skillCount: Number(overview?.skillWorkoutsCount || 0) || mockSkillWorkoutsCount,
+        healthCount: Number(overview?.healthWorkoutsCount || 0),
+        skillCount: Number(overview?.skillWorkoutsCount || 0),
         customCount: Number(overview?.customWorkoutsCount || 0),
       },
     });

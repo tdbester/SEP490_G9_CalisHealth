@@ -1,5 +1,6 @@
 package com.calishealth.controllers;
 
+import com.calishealth.dtos.SurveyDtos.PlanStartResponse;
 import com.calishealth.dtos.SurveyDtos.SaveAnswersRequest;
 import com.calishealth.dtos.SurveyDtos.SessionResponse;
 import com.calishealth.dtos.SurveyDtos.SessionSummaryResponse;
@@ -59,6 +60,18 @@ public class SurveySessionController {
     @GetMapping("/{sessionId}/result")
     public SurveyResultResponse result(Authentication a, @PathVariable Long sessionId) {
         return sessions.result(a.getName(), sessionId);
+    }
+
+    /** "Start my training plan": chốt kế hoạch gợi ý của phiên đã hoàn thành. */
+    @PostMapping("/{sessionId}/start-plan")
+    public PlanStartResponse startPlan(Authentication a, @PathVariable Long sessionId) {
+        return sessions.startPlan(a.getName(), sessionId);
+    }
+
+    /** "Back to level test": mở lại phiên đã hoàn thành để sửa câu trả lời level test. */
+    @PostMapping("/{sessionId}/reopen")
+    public SessionResponse reopen(Authentication a, @PathVariable Long sessionId) {
+        return sessions.reopen(a.getName(), sessionId);
     }
 
     @PostMapping("/{sessionId}/skip")

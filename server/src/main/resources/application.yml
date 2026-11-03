@@ -40,6 +40,7 @@ app:
   storage:
     exercise-video-dir: ${EXERCISE_VIDEO_DIR:${user.home}/calishealth/uploads/exercise-videos}
     exercise-anatomy-dir: ${EXERCISE_ANATOMY_DIR:${user.home}/calishealth/uploads/exercise-anatomy}
+    profile-avatar-dir: ${PROFILE_AVATAR_DIR:${user.home}/calishealth/uploads/profile-avatars}
   jwt:
     secret: clh-demo-secret-key-please-change-this-32-chars-min
     expiration-ms: 86400000

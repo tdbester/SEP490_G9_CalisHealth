@@ -26,6 +26,7 @@ public final class MemberExerciseSpecification {
                 }
             } else {
                 predicates.add(builder.equal(root.get("status"), "ACCEPTED"));
+                predicates.add(builder.isTrue(root.get("active")));
                 predicates.add(builder.isTrue(root.get("shareWithCommunity")));
             }
 

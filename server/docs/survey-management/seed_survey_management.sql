@@ -188,7 +188,9 @@ INSERT INTO survey_step_questions (step_id, question_id, sort_order) VALUES (@st
 INSERT INTO assessment_questions (question_code, question_text, description, question_type, required, validation_rules, unit, created_at, updated_at)
 VALUES ('TRAINING_DAYS_PER_WEEK', 'How many days per week do you train?', NULL, 'NUMBER', 1,
         '{"integerOnly": true, "min": 0, "max": 7}', 'days', NOW(6) - INTERVAL 30 DAY, NOW(6) - INTERVAL 30 DAY);
-INSERT INTO survey_step_questions (step_id, question_id, sort_order) VALUES (@step_routine, LAST_INSERT_ID(), 2);
+INSERT INTO survey_step_questions (step_id, question_id, sort_order, conditional_rules)
+VALUES (@step_routine, LAST_INSERT_ID(), 2,
+        '{"operator": "NE", "questionCode": "TRAINING_EXPERIENCE", "value": "NONE"}');
 
 INSERT INTO assessment_questions (question_code, question_text, description, question_type, required, validation_rules, unit, created_at, updated_at)
 VALUES ('TRAINING_MINUTES_PER_SESSION', 'How long is each training session?', NULL, 'SINGLE_SELECT', 1, NULL, NULL,

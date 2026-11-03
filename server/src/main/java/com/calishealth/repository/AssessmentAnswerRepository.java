@@ -31,4 +31,17 @@ public interface AssessmentAnswerRepository extends JpaRepository<AssessmentAnsw
     /** Trong các câu hỏi này, câu nào đã có member trả lời ở BẤT KỲ survey nào (câu hỏi dùng chung giữa các version). */
     @Query("select distinct a.question.id from AssessmentAnswer a where a.question.id in :questionIds")
     List<Long> findQuestionIdsWithAnswers(@Param("questionIds") Collection<Long> questionIds);
+
+    /**
+     * Câu trả lời mới nhất (JSON) của member cho 1 mã câu hỏi, mới nhất trước. The Profile screen reads
+     * the AGE answer from here instead of deriving the age from the stored date of birth.
+     */
+    @Query("""
+            select a.answerValue from AssessmentAnswer a
+            where a.session.user.id = :userId
+              and upper(a.question.questionCode) = upper(:questionCode)
+            order by a.id desc
+            """)
+    List<String> findLatestAnswerValues(@Param("userId") Long userId,
+            @Param("questionCode") String questionCode);
 }

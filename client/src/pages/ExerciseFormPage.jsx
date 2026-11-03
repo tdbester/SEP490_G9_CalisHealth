@@ -56,6 +56,23 @@ const MUSCLE_OPTIONS = ["Chest", "Back", "Shoulders", "Arms", "Core", "Legs", "G
 const CATEGORY_OPTIONS = ["REPS", "HOLD"];
 const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
+const CATEGORY_LABELS = {
+  REPS: "Count reps",
+  HOLD: "Hold (plank / timed)",
+};
+
+export function workoutTypeFromExercises(items, exercises) {
+  const typeByCode = new Map(
+    exercises.map((exercise) => [exercise.code, String(exercise.type || "").toUpperCase()]),
+  );
+  const types = new Set(
+    items
+      .map((item) => typeByCode.get(item.exerciseCode))
+      .filter((type) => type === "HEALTH" || type === "SKILL"),
+  );
+  return types.size === 1 ? [...types][0] : "FLEX";
+}
+
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
 const ALLOWED_VIDEO_EXTENSIONS = [".mp4", ".mov", ".webm"];
@@ -398,14 +415,25 @@ export function ExerciseFields({
                 label="Category"
                 size="small"
                 fullWidth
-                value={value.category}
-                onChange={(event) => onChange({ ...value, category: event.target.value })}
+                value={CATEGORY_OPTIONS.includes(value.category) ? value.category : ""}
+                onChange={(event) => onChange({ ...value, category: event.target.value || "REPS" })}
                 helperText=" "
+                SelectProps={{
+                  displayEmpty: true,
+                  renderValue: (selected) => (
+                    <Box
+                      component="span"
+                      sx={{ color: selected ? CM.text : CM.textDim }}
+                    >
+                      {CATEGORY_LABELS[selected] || "Select a category"}
+                    </Box>
+                  ),
+                }}
               >
                 <MenuItem value="">Select a category</MenuItem>
                 {CATEGORY_OPTIONS.map((category) => (
                   <MenuItem key={category} value={category}>
-                    {category === "REPS" ? "Count reps" : "Hold (plank / timed)"}
+                    {CATEGORY_LABELS[category]}
                   </MenuItem>
                 ))}
               </TextField>
@@ -1021,16 +1049,13 @@ export function WorkoutFields({
             />
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
               <TextField
-                select
                 label="Type"
                 size="small"
                 fullWidth
-                value={value.type}
-                onChange={(event) => onChange({ ...value, type: event.target.value })}
+                value={value.type === "HEALTH" ? "Health" : value.type === "SKILL" ? "Skill" : "Flex"}
+                InputProps={{ readOnly: true }}
+                helperText="Automatically based on the selected exercises."
               >
-                <MenuItem value="HEALTH">Health</MenuItem>
-                <MenuItem value="SKILL">Skill</MenuItem>
-                <MenuItem value="FLEX">Flex</MenuItem>
               </TextField>
               <TextField
                 select
@@ -1412,6 +1437,12 @@ export default function ExerciseFormPage() {
     () => (Array.isArray(systemExercises) ? systemExercises : []).filter((entry) => entry.source === "SYSTEM"),
     [systemExercises],
   );
+
+  useEffect(() => {
+    if (kind !== "workout") return;
+    const nextType = workoutTypeFromExercises(workout.items, allExercises);
+    setWorkout((current) => (current.type === nextType ? current : { ...current, type: nextType }));
+  }, [allExercises, kind, workout.items]);
 
   const filteredExercises = useMemo(() => {
     const term = exerciseSearch.trim().toLowerCase();

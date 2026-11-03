@@ -17,6 +17,10 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long>, JpaSp
     boolean existsByNameIgnoreCaseAndSource(String name, String source);
     Optional<Exercise> findByIdAndSourceAndStatus(Long id, String source, String status);
     long countByTypeAndSourceAndStatus(String type, String source, String status);
+    /** Library counts only ever show published (active) rows, so the flag is part of the derived query. */
+    long countByTypeAndSourceAndActiveTrueAndStatus(String type, String source, String status);
+    /** Community exercise count: published, accepted rows shared by members. */
+    long countBySourceAndActiveTrueAndStatusAndShareWithCommunityTrue(String source, String status);
     long countByCreatedBy_IdAndSourceAndStatus(Long authorId, String source, String status);
     Optional<Exercise> findByIdAndCreatedBy_IdAndSource(Long id, Long authorId, String source);
     List<Exercise> findAllByMovementGroupAndSourceAndStatus(

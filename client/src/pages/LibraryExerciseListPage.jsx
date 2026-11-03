@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate, useParams } from "react-router-dom";
-import { getExercises } from "../api/library";
+import { getExercises, getMuscleGroups, getExerciseCounts } from "../api/library";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
 import "./ExerciseListPage.css";
 
@@ -96,9 +96,9 @@ function RadioIcon({ checked }) {
   );
 }
 
-// Danh sách nhóm cơ chuẩn Mockup
-const MUSCLE_GROUPS = [
-  "All",
+// Danh mục nhóm cơ lấy từ catalog `muscle_groups` của Library (getMuscleGroups).
+// Danh sách dưới đây chỉ là fallback khi API chưa trả về để bộ lọc không bị trống.
+const FALLBACK_MUSCLE_GROUPS = [
   "Full body",
   "Chest",
   "Back",
@@ -176,6 +176,7 @@ function ExerciseCard({ item, onClick }) {
 
 // SUB-COMPONENT 2: FilterSidebar (Box bộ lọc bên trái dùng chung)
 function FilterSidebar({
+  muscleGroups,
   selectedMuscles,
   onToggleMuscle,
   isAllActive,
@@ -188,7 +189,7 @@ function FilterSidebar({
       </h2>
 
       <div className="flex flex-col gap-1">
-        {MUSCLE_GROUPS.map((mg) => {
+        {["All", ...muscleGroups].map((mg) => {
           const active = mg === "All" ? isAllActive : !isAllActive && selectedMuscles.includes(mg);
           const count = getMuscleCount(mg);
 
@@ -340,6 +341,32 @@ export default function ExerciseListPage() {
   // Multi-select Muscle Groups
   const [selectedMuscles, setSelectedMuscles] = useState(["All"]);
 
+  // Danh mục MUSCLE GROUP (catalog `muscle_groups`) + số bài thật của từng nhóm.
+  const [muscleGroups, setMuscleGroups] = useState(FALLBACK_MUSCLE_GROUPS);
+  const [muscleCounts, setMuscleCounts] = useState({});
+
+  useEffect(() => {
+    let alive = true;
+    getMuscleGroups()
+      .then((groups) => {
+        if (!alive || !Array.isArray(groups) || groups.length === 0) return;
+        setMuscleGroups(groups.map((group) => group.name).filter(Boolean));
+        setMuscleCounts(
+          groups.reduce((acc, group) => {
+            acc[group.name] = {
+              health: Number(group.healthCount ?? 0),
+              skill: Number(group.skillCount ?? 0),
+            };
+            return acc;
+          }, {}),
+        );
+      })
+      .catch((err) => console.error("Failed to load muscle groups:", err));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
@@ -347,12 +374,36 @@ export default function ExerciseListPage() {
   const [exercises, setExercises] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
+  // Tổng số bài của từng tab (Health / Skills) — dùng cho badge "All" để khi đang
+  // lọc một nhóm cơ, "All" vẫn hiển thị tổng của cả tab chứ không phải số đã lọc.
+  const [tabTotals, setTabTotals] = useState({ health: 0, skill: 0 });
+
+  useEffect(() => {
+    getExerciseCounts()
+      .then((counts) =>
+        setTabTotals({
+          health: Number(counts?.healthCount ?? 0),
+          skill: Number(counts?.skillCount ?? 0),
+        }),
+      )
+      .catch((err) => console.error("Failed to load exercise counts:", err));
+  }, []);
 
   // Đồng bộ activeTab khi route path hoặc query thay đổi
   useEffect(() => {
     const isSkill = isSkillFromParam(tab) || isSkillFromParam(searchParams.get("type"));
     setActiveTab(isSkill ? "skill" : "health");
   }, [tab, searchParams]);
+
+  // `?muscle=Chest` (bấm từ Muscle Focus của Dashboard) chọn sẵn nhóm cơ đó.
+  // Phụ thuộc vào CHUỖI trong URL chứ không phải object searchParams: object này
+  // đổi identity mỗi render, khiến effect chạy lại liên tục và ghi đè lựa chọn
+  // người dùng vừa bấm ở sidebar.
+  const muscleParam = searchParams.get("muscle");
+  useEffect(() => {
+    setSelectedMuscles(muscleParam ? [muscleParam] : ["All"]);
+    setCurrentPage(1);
+  }, [muscleParam]);
 
   // Debounce handler (300ms)
   useEffect(() => {
@@ -473,31 +524,19 @@ export default function ExerciseListPage() {
 
   const isAllActive = selectedMuscles.includes("All") || selectedMuscles.length === 0;
 
-  // Badge count cho từng nhóm cơ khớp 100% Mockup screenshot
+  // Số bài hiển thị cạnh mỗi nhóm cơ: lấy từ catalog `muscle_groups`
+  // (cùng nguồn với Dashboard) nên không còn bảng số cứng lệch với dữ liệu thật.
   const getMuscleBadgeCount = useCallback(
     (mg) => {
-      const healthCounts = {
-        All: 6,
-        "Full body": 2,
-        Chest: 1,
-        Back: 1,
-        Arms: 2,
-        Core: 1,
-        Legs: 1,
-      };
-      const skillCounts = {
-        All: 6,
-        "Full body": 1,
-        Chest: 1,
-        Back: 3,
-        Arms: 2,
-        Core: 2,
-        Legs: 1,
-      };
-      const map = activeTab === "skill" ? skillCounts : healthCounts;
-      return map[mg] ?? 0;
+      if (mg === "All") {
+        const tabTotal = activeTab === "skill" ? tabTotals.skill : tabTotals.health;
+        return tabTotal || totalElements;
+      }
+      const counts = muscleCounts[mg];
+      if (!counts) return 0;
+      return activeTab === "skill" ? counts.skill : counts.health;
     },
-    [activeTab]
+    [muscleCounts, tabTotals, totalElements, activeTab]
   );
 
   const displayedTotalCount = totalElements;
@@ -555,6 +594,7 @@ export default function ExerciseListPage() {
       <div className="flex flex-col md:flex-row items-start gap-4 w-full">
         {/* CỘT TRÁI - KHỐI MUSCLE GROUP */}
         <FilterSidebar
+          muscleGroups={muscleGroups}
           selectedMuscles={selectedMuscles}
           onToggleMuscle={handleMuscleToggle}
           isAllActive={isAllActive}
