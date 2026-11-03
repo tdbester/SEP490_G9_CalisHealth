@@ -38,20 +38,28 @@ class LevelBenchmarkScoringTest {
         assertThat(LevelBenchmarkService.isCriticalFailure(0)).isTrue();
         assertThat(LevelBenchmarkService.isCriticalFailure(-1)).isTrue();
         assertThat(LevelBenchmarkService.isCriticalFailure(1)).isFalse();
-        // It still scores the minimum 1 point; the level drop is applied on top of that.
+        // It still scores the minimum 1 point; a zero anywhere then forces the lowest active level.
         assertThat(LevelBenchmarkService.pointsFor(0, 19, 40)).isEqualTo(1);
     }
 
     @Test
-    void thePenaltiesAddUp() {
-        assertThat(LevelBenchmarkService.levelsToDrop(false, false)).isZero();
-        assertThat(LevelBenchmarkService.levelsToDrop(true, false)).isEqualTo(1);
-        assertThat(LevelBenchmarkService.levelsToDrop(false, true)).isEqualTo(1);
-        assertThat(LevelBenchmarkService.levelsToDrop(true, true)).isEqualTo(2);
+    void aZeroAnywherePutsTheMemberOnTheLowestActiveLevel() {
+        FitnessLevel beginner = level("Beginner", 3, 4);
+        FitnessLevel intermediate = level("Intermediate", 5, 7);
+        FitnessLevel advanced = level("Advanced", 8, 9);
+        List<FitnessLevel> active = List.of(beginner, intermediate, advanced);
+
+        // 3 points on every exercise would reach Advanced, but one exercise at 0 reps sends the member to Beginner.
+        assertThat(LevelBenchmarkService.resolveLevel(active, 9, true, false)).isSameAs(beginner);
+        assertThat(LevelBenchmarkService.resolveLevel(active, 9, true, true)).isSameAs(beginner);
+        // Without a zero the total score decides, and an unbalanced result still costs one level.
+        assertThat(LevelBenchmarkService.resolveLevel(active, 9, false, false)).isSameAs(advanced);
+        assertThat(LevelBenchmarkService.resolveLevel(active, 9, false, true)).isSameAs(intermediate);
+        assertThat(LevelBenchmarkService.resolveLevel(active, 6, false, true)).isSameAs(beginner);
     }
 
     @Test
-    void theLevelDropsByTheNumberOfPenaltiesButNeverBelowTheLowest() {
+    void theLevelDropsByOneLevelButNeverBelowTheLowest() {
         FitnessLevel beginner = level("Beginner");
         FitnessLevel intermediate = level("Intermediate");
         FitnessLevel advanced = level("Advanced");
@@ -69,6 +77,13 @@ class LevelBenchmarkScoringTest {
     private static FitnessLevel level(String name) {
         FitnessLevel level = new FitnessLevel();
         level.setName(name);
+        return level;
+    }
+
+    private static FitnessLevel level(String name, int scoreMin, int scoreMax) {
+        FitnessLevel level = level(name);
+        level.setScoreMin(scoreMin);
+        level.setScoreMax(scoreMax);
         return level;
     }
 

@@ -1,8 +1,11 @@
 package com.calishealth.service;
 
+import com.calishealth.dtos.LevelBenchmarkDtos.BenchmarkAssessment;
 import com.calishealth.dtos.LevelBenchmarkDtos.BenchmarkConfiguration;
 import com.calishealth.dtos.LevelBenchmarkDtos.BenchmarkExercise;
 import com.calishealth.dtos.LevelBenchmarkDtos.BenchmarkExerciseUpdate;
+import com.calishealth.dtos.LevelBenchmarkDtos.BenchmarkLevel;
+import com.calishealth.dtos.LevelBenchmarkDtos.BenchmarkScoreItem;
 import com.calishealth.dtos.LevelBenchmarkDtos.CreateLevelRequest;
 import com.calishealth.dtos.LevelBenchmarkDtos.ExerciseOption;
 import com.calishealth.dtos.LevelBenchmarkDtos.LevelBenchmark;
@@ -349,6 +352,73 @@ public class LevelBenchmarkService {
     }
 
     /**
+     * Chấm điểm level test theo bảng level criteria (Exercise point rules) và trả về chi tiết để màn
+     * "Result and recommended plan" hiển thị: tổng điểm, level, thang level và điểm từng bài.
+     *
+     * <p>Đây là cùng bộ luật với {@link #assignLevelFromOnboarding} (mỗi bài 1/2/3 điểm, cộng lại rồi
+     * tra khoảng điểm của level; 0 rep -&gt; bậc thấp nhất; lệch &gt;= 2 điểm -&gt; mất 1 bậc), chỉ khác là
+     * không ghi gì vào DB mà trả về kết quả đầy đủ.</p>
+     *
+     * @param valuesBySlot mã câu hỏi khảo sát -&gt; số rep / số giây member đạt được
+     * @return Optional rỗng khi chưa cấu hình bài benchmark nào hoặc thiếu câu trả lời của một bài
+     */
+    @Transactional(readOnly = true)
+    public Optional<BenchmarkAssessment> assessFromOnboarding(Map<String, Integer> valuesBySlot) {
+        List<BenchmarkExercise> configured = getConfiguration().exercises();
+        if (configured.isEmpty()) return Optional.empty();
+
+        int totalScore = 0;
+        boolean zeroResult = false;
+        List<Integer> exercisePoints = new ArrayList<>();
+        List<BenchmarkScoreItem> scores = new ArrayList<>();
+        for (BenchmarkExercise exercise : configured) {
+            Integer value = valuesBySlot.get(exercise.slot());
+            if (value == null) {
+                log.warn("Level test not scored: no answer for benchmark question {}", exercise.slot());
+                return Optional.empty();
+            }
+            // 0 reps / seconds vẫn được 1 điểm; luật bên dưới đẩy member xuống bậc thấp nhất.
+            if (isCriticalFailure(value)) zeroResult = true;
+            int points = pointsFor(value, exercise.beginnerMax(), exercise.intermediateMax());
+            exercisePoints.add(points);
+            totalScore += points;
+            scores.add(new BenchmarkScoreItem(
+                    exercise.slot(),
+                    exercise.name(),
+                    exercise.unit(),
+                    value,
+                    points,
+                    bandLabel(exercise, points)));
+        }
+
+        boolean unbalanced = isUnbalanced(exercisePoints);
+        List<FitnessLevel> activeLevels = fitnessLevels.findAll().stream()
+                .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
+                .sorted(Comparator.comparingInt(FitnessLevel::getScoreMin))
+                .toList();
+        if (activeLevels.isEmpty()) return Optional.empty();
+        FitnessLevel level = resolveLevel(activeLevels, totalScore, zeroResult, unbalanced);
+
+        List<BenchmarkLevel> ladder = new ArrayList<>();
+        for (int index = 0; index < activeLevels.size(); index++) {
+            FitnessLevel item = activeLevels.get(index);
+            ladder.add(new BenchmarkLevel(item.getId(), item.getName(), index + 1));
+        }
+        return Optional.of(new BenchmarkAssessment(totalScore, level, ladder, scores, zeroResult, unbalanced));
+    }
+
+    /** Nhãn khoảng điểm của 1 bài, vd "20–40 reps" (bài giữ thời gian thì "45–90 sec"). */
+    private static String bandLabel(BenchmarkExercise exercise, int points) {
+        String unit = exercise.unit() == null ? "" : " " + exercise.unit();
+        int lower = points == 1 ? 0 : exercise.beginnerMax() + 1;
+        int upper = points == 2 ? exercise.intermediateMax() : 0;
+        if (points == 3) {
+            return "More than " + exercise.intermediateMax() + unit;
+        }
+        return upper > 0 ? lower + "–" + upper + unit : "Up to " + exercise.beginnerMax() + unit;
+    }
+
+    /**
      * Scores the onboarding answers against the shared thresholds and stores the matching level on the
      * member profile. {@code valuesBySlot} maps a survey question code to its reps / seconds answer.
      * Returns empty (and changes nothing) when an answer for any benchmark exercise is missing.
@@ -366,45 +436,57 @@ public class LevelBenchmarkService {
                 log.warn("Level not assigned for user {}: no answer for benchmark question {}", userId, exercise.slot());
                 return Optional.empty();
             }
-            // 0 reps / seconds still scores the minimum 1 point; the penalty is applied to the level below.
+            // 0 reps / seconds still scores the minimum 1 point; the rule below then forces the lowest level.
             if (isCriticalFailure(value)) zeroResult = true;
             int points = pointsFor(value, exercise.beginnerMax(), exercise.intermediateMax());
             exercisePoints.add(points);
             totalScore += points;
         }
-        // Two penalties, each worth one level, that add up: any exercise at 0 reps / seconds, and lopsided
-        // results (e.g. 3 points on one exercise but 1 point on another).
+        // Two rules: any exercise at 0 reps / seconds puts the member on the lowest active level, and a
+        // lopsided result (e.g. 3 points on one exercise but 1 point on another) costs one more level.
         boolean unbalanced = isUnbalanced(exercisePoints);
-        int levelsToDrop = levelsToDrop(zeroResult, unbalanced);
-        final int score = totalScore;
         List<FitnessLevel> activeLevels = fitnessLevels.findAll().stream()
                 .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
                 .sorted(Comparator.comparingInt(FitnessLevel::getScoreMin))
                 .toList();
-        // Exact range match first; if the matching level is inactive, fall back to the nearest active level
-        // instead of failing the onboarding.
-        FitnessLevel level = activeLevels.stream()
+        FitnessLevel level = resolveLevel(activeLevels, totalScore, zeroResult, unbalanced);
+        if (zeroResult || unbalanced) {
+            log.info("User {} assignment (score {}, points {}, zero result {}, unbalanced {}): level {}",
+                    userId, totalScore, exercisePoints, zeroResult, unbalanced, level.getName());
+        }
+        MemberProfile profile = memberProfiles.findByUser_Id(userId).orElseGet(() -> {
+            MemberProfile created = new MemberProfile();
+            created.setUser(users.getReferenceById(userId));
+            return created;
+        });
+        profile.setFitnessLevel(level);
+        memberProfiles.save(profile);
+        return Optional.of(level.getName());
+    }
+
+    /**
+     * The active level for a member. A zero on any benchmark exercise (cannot do a single rep / second) always
+     * puts the member on the lowest active level, whatever the total score says. Otherwise the level whose score
+     * range contains {@code score} wins (nearest active level when that range belongs to an inactive level), and
+     * a lopsided result costs one more level.
+     *
+     * @param activeLevels levels with status ACTIVE, sorted by score (lowest first)
+     */
+    static FitnessLevel resolveLevel(List<FitnessLevel> activeLevels, int score, boolean zeroResult, boolean unbalanced) {
+        if (activeLevels.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "No active benchmark level is available for the calculated score " + score);
+        }
+        if (zeroResult) return activeLevels.get(0);
+        FitnessLevel matched = activeLevels.stream()
                 .filter(item -> score >= item.getScoreMin() && score <= item.getScoreMax())
                 .findFirst()
                 .orElseGet(() -> activeLevels.stream()
                         .min(Comparator.comparingInt((FitnessLevel item) ->
                                         score < item.getScoreMin() ? item.getScoreMin() - score : score - item.getScoreMax())
                                 .thenComparing(Comparator.comparingInt(FitnessLevel::getScoreMin).reversed()))
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                                "No active benchmark level is available for the calculated score " + score)));
-        if (levelsToDrop > 0) {
-            FitnessLevel lowered = levelsBelow(activeLevels, level, levelsToDrop);
-            if (lowered != level) {
-                log.info("User {} (zero result: {}, unbalanced: {}, points {}): level lowered from {} to {}",
-                        userId, zeroResult, unbalanced, exercisePoints, level.getName(), lowered.getName());
-            }
-            level = lowered;
-        }
-        MemberProfile profile = memberProfiles.findByUser_Id(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member profile not found"));
-        profile.setFitnessLevel(level);
-        memberProfiles.save(profile);
-        return Optional.of(level.getName());
+                        .orElse(activeLevels.get(activeLevels.size() - 1)));
+        return unbalanced ? levelsBelow(activeLevels, matched, 1) : matched;
     }
 
     /**
@@ -421,11 +503,6 @@ public class LevelBenchmarkService {
     /** A member who cannot do a single rep (or hold for a single second) of a benchmark exercise. */
     static boolean isCriticalFailure(int value) {
         return value <= 0;
-    }
-
-    /** Each penalty costs one level and the two add up, so the drop is 0, 1 or 2 levels. */
-    static int levelsToDrop(boolean zeroResult, boolean unbalanced) {
-        return (zeroResult ? 1 : 0) + (unbalanced ? 1 : 0);
     }
 
     /**

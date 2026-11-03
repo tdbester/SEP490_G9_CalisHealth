@@ -302,6 +302,33 @@ public class MemberTrackingRepository {
         return BigDecimal.ZERO.setScale(1, RoundingMode.HALF_UP);
     }
 
+    /**
+     * True when the latest measurement in {@code member_body_metrics} already carries exactly these
+     * values. The onboarding survey uses it to avoid plotting the same point twice when a member
+     * completes the survey more than once.
+     */
+    public boolean hasMetric(Long profileId, BigDecimal weightKg, BigDecimal heightCm) {
+        if (weightKg == null || heightCm == null) {
+            return false;
+        }
+        Boolean match = jdbcTemplate.query(
+                """
+                SELECT weight_kg, height_cm
+                FROM member_body_metrics
+                WHERE member_profile_id = ?
+                ORDER BY recorded_at DESC
+                LIMIT 1
+                """,
+                rs -> rs.next()
+                        && rs.getBigDecimal("weight_kg") != null
+                        && rs.getBigDecimal("height_cm") != null
+                        && rs.getBigDecimal("weight_kg").compareTo(weightKg) == 0
+                        && rs.getBigDecimal("height_cm").compareTo(heightCm) == 0,
+                profileId
+        );
+        return Boolean.TRUE.equals(match);
+    }
+
     public void saveBodyMetric(Long profileId, BigDecimal weightKg, BigDecimal heightCm, BigDecimal bmi, String note) {
         jdbcTemplate.update(
                 """

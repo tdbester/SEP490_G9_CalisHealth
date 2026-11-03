@@ -49,12 +49,15 @@ public class SecurityConfig {
                         .requestMatchers("/media/exercise-demos/**").permitAll()
                         .requestMatchers("/media/exercise-anatomy/**").permitAll()
                         .requestMatchers("/api/public/library/**").permitAll()
+                        // Profile photos are rendered by <img>, which cannot send the JWT header.
+                        .requestMatchers(HttpMethod.GET, "/media/profile-avatars/**").permitAll()
                         // Survey Management now belongs to the Admin area (must stay before /api/content/**).
                         .requestMatchers("/api/content/surveys/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/content/**").hasRole("CONTENT_MANAGER")
                         .requestMatchers("/api/content/**").hasRole("CONTENT_MANAGER")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/library/exercises/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/muscle-groups").hasRole("MEMBER")
                         .requestMatchers("/api/v1/library/exercise-tree/**").hasAnyRole("MEMBER", "CONTENT_MANAGER")
                         .requestMatchers("/api/v1/library/member-exercises/**").hasRole("MEMBER")
                         .requestMatchers("/api/v1/library/personal-exercises/**").authenticated()

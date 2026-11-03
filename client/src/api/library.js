@@ -20,6 +20,12 @@ export const getExercises = async (params = {}) => {
   return response.data;
 };
 
+/** Danh mục MUSCLE GROUP của Library (bảng `muscle_groups`) kèm số bài thực tế. */
+export const getMuscleGroups = async () => {
+  const response = await api.get("/v1/library/muscle-groups");
+  return response.data;
+};
+
 export const getMemberExercises = async (params = {}) => {
   const response = await api.get("/library/member-exercises", { params });
   return response.data;

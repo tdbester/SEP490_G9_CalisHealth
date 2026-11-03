@@ -42,7 +42,6 @@ import {
   formatDate,
 } from "../components/ContentShared";
 import { CM } from "../theme-content";
-import { getLevelBadgeStyle } from "../utils/levelBadge";
 
 const rise = keyframes`
   from { opacity: 0; transform: translateY(8px); }
@@ -84,17 +83,7 @@ function SourceChip({ source }) {
 }
 
 function LevelChip({ level, toneOf }) {
-  const displayLevel = level || "Intermediate";
-  const isStandardLevel = ["BEGINNER", "INTERMEDIATE", "ADVANCED"]
-    .includes(String(displayLevel).trim().toUpperCase());
-  if (!isStandardLevel) {
-    return <DarkPill tone={toneOf(level)}>{level || "—"}</DarkPill>;
-  }
-  return (
-    <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${getLevelBadgeStyle(displayLevel)}`}>
-      {displayLevel}
-    </span>
-  );
+  return <DarkPill tone={toneOf(level)}>{level || "—"}</DarkPill>;
 }
 
 function StatusDot({ active }) {

@@ -206,9 +206,9 @@ const contentTheme = createTheme({
     MuiAlert: {
       styleOverrides: {
         root: { borderRadius: 12, border: `1px solid ${CM.border}`, fontSize: 13 },
-        standardError: { backgroundColor: "rgba(255,119,153,0.12)", color: "inherit" },
-        standardSuccess: { backgroundColor: "rgba(120,232,136,0.12)", color: "inherit" },
-        standardWarning: { backgroundColor: "rgba(248,200,88,0.12)", color: "inherit" },
+        standardError: { backgroundColor: "rgba(255,119,153,0.12)", color: CM.text },
+        standardSuccess: { backgroundColor: "rgba(120,232,136,0.12)", color: CM.text },
+        standardWarning: { backgroundColor: "rgba(248,200,88,0.12)", color: CM.text },
       },
     },
     MuiTablePagination: {

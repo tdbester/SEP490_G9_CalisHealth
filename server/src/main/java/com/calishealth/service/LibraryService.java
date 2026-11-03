@@ -39,14 +39,10 @@ public class LibraryService {
 
     @Transactional(readOnly = true)
     public ExerciseCounts getExerciseCounts(String userEmail) {
-        long healthCount = exerciseRepository.countByTypeAndSourceAndStatus("HEALTH", "SYSTEM", "ACCEPTED");
-        long skillCount = exerciseRepository.countByTypeAndSourceAndStatus("SKILL", "SYSTEM", "ACCEPTED");
-        long memberCount = userEmail == null || userEmail.isBlank()
-                ? 0
-                : userRepository.findByEmail(userEmail)
-                        .map(User::getId)
-                        .map(exerciseRepository::countAcceptedMemberExercisesByAuthorId)
-                        .orElse(0L);
+        long healthCount = exerciseRepository.countByTypeAndSourceAndActiveTrueAndStatus("HEALTH", "SYSTEM", "ACCEPTED");
+        long skillCount = exerciseRepository.countByTypeAndSourceAndActiveTrueAndStatus("SKILL", "SYSTEM", "ACCEPTED");
+        long memberCount = exerciseRepository
+                .countBySourceAndActiveTrueAndStatusAndShareWithCommunityTrue("CUSTOM", "ACCEPTED");
 
         return new ExerciseCounts(healthCount, skillCount, memberCount);
     }
@@ -62,12 +58,10 @@ public class LibraryService {
     @Transactional(readOnly = true)
     public LibrarySummaryResponse getSummary(String userEmail) {
         ExerciseCounts exerciseCounts = getExerciseCounts(userEmail);
-        Long memberId = userEmail == null || userEmail.isBlank()
-                ? null
-                : userRepository.findByEmail(userEmail).map(User::getId).orElse(null);
         long healthWorkouts = workoutRepository.countSystemWorkoutsByType("HEALTH");
         long skillWorkouts = workoutRepository.countSystemWorkoutsByType("SKILL");
-        long customWorkouts = memberId == null ? 0 : workoutRepository.countCustomWorkoutsByAuthorId(memberId);
+        long customWorkouts = workoutRepository
+                .countBySourceAndActiveTrueAndStatusAndSharedWithCommunityTrue("CUSTOM", "ACCEPTED");
 
         return new LibrarySummaryResponse(
             exerciseCounts,
@@ -84,12 +78,12 @@ public class LibraryService {
         }
 
         return new LibraryOverviewDTO(
-                exerciseRepository.countByTypeAndSourceAndStatus("HEALTH", "SYSTEM", "ACCEPTED"),
-                exerciseRepository.countByTypeAndSourceAndStatus("SKILL", "SYSTEM", "ACCEPTED"),
-                exerciseRepository.countAcceptedMemberExercisesByAuthorId(member.getId()),
+                exerciseRepository.countByTypeAndSourceAndActiveTrueAndStatus("HEALTH", "SYSTEM", "ACCEPTED"),
+                exerciseRepository.countByTypeAndSourceAndActiveTrueAndStatus("SKILL", "SYSTEM", "ACCEPTED"),
+                exerciseRepository.countBySourceAndActiveTrueAndStatusAndShareWithCommunityTrue("CUSTOM", "ACCEPTED"),
                 workoutRepository.countSystemWorkoutsByType("HEALTH"),
                 workoutRepository.countSystemWorkoutsByType("SKILL"),
-                workoutRepository.countCustomWorkoutsByAuthorId(member.getId())
+                workoutRepository.countBySourceAndActiveTrueAndStatusAndSharedWithCommunityTrue("CUSTOM", "ACCEPTED")
         );
     }
 
