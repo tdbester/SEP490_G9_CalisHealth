@@ -202,8 +202,21 @@ export default function ExerciseDetailPreview() {
         <CameraCheckModal
           onClose={closeModal}
           onUpload={() => setActiveModal("upload")}
-          // Live counting screen isn't built yet; return to the plan for now.
-          onReady={() => navigate("/plan")}
+          // Bấm "Ready · Start counting" -> màn đếm reps thời gian thực.
+          onReady={() =>
+            navigate("/session/tracking", {
+              state: {
+                exerciseCode: code,
+                exerciseName: exercise.name,
+                sets,
+                reps,
+                durationSeconds: hold,
+                restSeconds: rest,
+                index: state?.index,
+                total: state?.total,
+              },
+            })
+          }
         />
       )}
       {activeModal === "upload" && (

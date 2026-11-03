@@ -22,7 +22,7 @@ function mondayOf(date) {
 
 export default function ReviewTrainingPlanPage() {
   const navigate = useNavigate();
-  const [schedule, setSchedule] = useState(null);
+  const [weekRule, setWeekRule] = useState(null);
   const [planInfo, setPlanInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,12 +32,13 @@ export default function ReviewTrainingPlanPage() {
 
     async function load() {
       try {
-        const [monthSchedule, plan] = await Promise.all([
-          memberScheduleApi.getCurrentMonthSchedule().catch(() => null),
+        const [rule, plan] = await Promise.all([
+          // week-rule đã gộp lịch của cả hai tháng khi tuần qua ranh giới tháng.
+          memberScheduleApi.getWeekRule().catch(() => null),
           memberScheduleApi.getPlanInfo().catch(() => null),
         ]);
         if (cancelled) return;
-        setSchedule(monthSchedule || null);
+        setWeekRule(rule || null);
         setPlanInfo(plan || null);
       } catch (loadError) {
         if (!cancelled) {
@@ -76,15 +77,16 @@ export default function ReviewTrainingPlanPage() {
     });
   }, []);
 
+  /** Buổi tập của tuần hiện tại (backend đã gộp cả 2 tháng nếu tuần qua ranh giới). */
   const byDate = useMemo(() => {
     const map = {};
-    (schedule?.entries || []).forEach((entry) => {
+    (weekRule?.entries || []).forEach((entry) => {
       const list = map[entry.date] || [];
       list.push(entry);
       map[entry.date] = list;
     });
     return map;
-  }, [schedule]);
+  }, [weekRule]);
 
   const plannedCount = week.reduce((sum, day) => sum + (byDate[day.iso]?.length || 0), 0);
   const plannedDays = week.filter((day) => (byDate[day.iso]?.length || 0) > 0).length;
@@ -98,8 +100,7 @@ export default function ReviewTrainingPlanPage() {
       <header className="review-head">
         <h1 className="review-title">Review workout plan</h1>
         <p className="review-subtitle">
-          {schedule?.month ? formatMonth(schedule.month) : formatMonth(new Date())} · week of{" "}
-          {week[0].dateLabel} – {week[6].dateLabel}
+          {formatMonth(new Date())} · week of {week[0].dateLabel} – {week[6].dateLabel}
         </p>
       </header>
 

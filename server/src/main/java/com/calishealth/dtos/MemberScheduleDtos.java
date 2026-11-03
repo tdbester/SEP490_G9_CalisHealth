@@ -75,6 +75,37 @@ public final class MemberScheduleDtos {
     ) {}
 
     /**
+     * Ràng buộc tuần hiện tại mà màn "Workout schedule" áp dụng:
+     * member chỉ được xếp trong tuần này, tối đa {@code maxDaysPerWeek} ngày
+     * tập, và mỗi workout chỉ được xuất hiện đúng một lần trong tuần.
+     */
+    public record WeekRuleResponse(
+            /** Ngày Thứ 2 của tuần hiện tại. */
+            LocalDate weekStart,
+            /** Ngày Chủ nhật của tuần hiện tại. */
+            LocalDate weekEnd,
+            /** Số ngày tập tối đa trong tuần (theo template đang active). */
+            int maxDaysPerWeek,
+            /** Số ngày đã có workout trong tuần hiện tại. */
+            int usedDays,
+            /** Số workout đã xếp trong tuần hiện tại. */
+            int usedWorkouts,
+            /** true khi tuần này đã đủ số ngày tập cho phép. */
+            boolean daysLimitReached,
+            /**
+             * Các buổi tập đã xếp trong tuần hiện tại. Tuần có thể trải qua hai
+             * tháng nên dữ liệu được gộp từ lịch của cả hai tháng.
+             */
+            List<ScheduleEntryResponse> entries
+    ) {}
+
+    /** Body khi lưu lịch của tuần hiện tại. */
+    public record SaveWeekRequest(
+            String templateCode,
+            List<ScheduleEntryRequest> entries
+    ) {}
+
+    /**
      * Một bài tập nằm trong buổi tập hôm nay (màn "Daily workout plan").
      * Cấu hình lấy từ workout_exercises để màn chi tiết hiển thị đúng số hiệp/số lần.
      */

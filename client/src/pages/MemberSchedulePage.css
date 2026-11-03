@@ -119,6 +119,87 @@
   font-size: 13px;
 }
 
+/* ------------------------------------------------------------- week banner */
+
+.schedule-week-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: linear-gradient(
+    90deg,
+    rgba(108, 47, 214, 0.28) 0%,
+    rgba(21, 15, 51, 0.4) 100%
+  );
+  border: 1px solid rgba(167, 139, 250, 0.4);
+  font-size: 12.5px;
+}
+
+.schedule-week-banner__label {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 10px;
+  color: var(--today-ring);
+}
+
+.schedule-week-banner__range {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.schedule-week-banner__count {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(95, 191, 128, 0.14);
+  border: 1px solid rgba(95, 191, 128, 0.42);
+  color: #86e3a0;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.schedule-week-banner__count.is-full {
+  background: rgba(224, 122, 181, 0.16);
+  border-color: #e07ab5;
+  color: #f6c7e0;
+}
+
+.schedule-week-banner__jump {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #1e1646;
+  border: 1px solid #3a2f70;
+  color: #fff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.schedule-week-banner__jump:hover {
+  background: #271d59;
+}
+
+.schedule-notice {
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: rgba(139, 108, 235, 0.12);
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  color: #c9bff0;
+  font-size: 12.5px;
+}
+
+/* Cảnh báo: lịch vượt hạn mức ngày tập của template. */
+.schedule-notice.is-warning {
+  background: rgba(255, 170, 60, 0.12);
+  border-color: rgba(255, 170, 60, 0.4);
+  color: #ffd08a;
+}
+
 /* --------------------------------------------------------------- layout */
 
 .schedule-body {
@@ -275,6 +356,31 @@
 
 .workout-chipcard.is-dragging {
   opacity: 0.45;
+}
+
+/* Workout đã xếp trong tuần này: làm mờ + khoá kéo (chỉ được đổi ngày). */
+.workout-chipcard.is-used {
+  opacity: 0.42;
+  cursor: not-allowed;
+  filter: grayscale(0.55);
+}
+
+.workout-chipcard.is-used:hover {
+  border-color: #302660;
+  transform: none;
+}
+
+.workout-chipcard__used {
+  margin-left: auto;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(95, 191, 128, 0.16);
+  border: 1px solid rgba(95, 191, 128, 0.45);
+  color: #86e3a0;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .workout-chipcard__grip {
@@ -473,6 +579,29 @@
   opacity: 0.55;
 }
 
+/* Ô ngoài tuần hiện tại: bị khoá, không nhận drop. */
+.calendar-cell.is-locked {
+  opacity: 0.35;
+  filter: grayscale(0.6);
+  cursor: not-allowed;
+}
+
+.calendar-cell.is-locked .event-chip {
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Ô thuộc tuần hiện tại nhưng rơi sang tháng kề (vd tuần 30/11 – 06/12):
+   phải nổi bật như ô trong tháng, không mờ như ô ngoài tháng. */
+.calendar-cell.is-week-cell.is-outside-month {
+  opacity: 1;
+  background: var(--week-bg-outside);
+}
+
+.calendar-cell.is-week-cell.is-outside-month .calendar-cell__date {
+  color: #c9bff0;
+}
+
 /* Tuần đang chứa hôm nay — nền sáng hơn + viền trên/dưới để tách khỏi tuần khác. */
 .calendar-cell.is-current-week {
   background: var(--week-bg);
@@ -586,6 +715,11 @@
 
 .event-chip.is-dragging {
   opacity: 0.4;
+}
+
+/* Chip nằm ở ô ngoài tuần hiện tại — không kéo được. */
+.event-chip.is-locked {
+  cursor: default;
 }
 
 .event-chip--health {

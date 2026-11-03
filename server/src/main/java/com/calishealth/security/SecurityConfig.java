@@ -64,6 +64,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/library/overview").hasRole("MEMBER")
                         .requestMatchers("/api/library/**").permitAll()
                         .requestMatchers("/api/exercises/**").permitAll()
+                        .requestMatchers("/api/member/form-rules/**").hasAnyRole("MEMBER", "CONTENT_MANAGER", "ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

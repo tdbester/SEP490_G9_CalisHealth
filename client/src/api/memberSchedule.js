@@ -52,6 +52,34 @@ export function monthLabel(date) {
 
 export const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+/** Thứ 2 của tuần chứa `date` (0 = Thứ 2 ... 6 = Chủ nhật). */
+export function mondayOf(date = new Date()) {
+  const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const offset = (copy.getDay() + 6) % 7;
+  copy.setDate(copy.getDate() - offset);
+  return copy;
+}
+
+/** Khoảng ngày của tuần hiện tại: { startIso, endIso, dates[] }. */
+export function currentWeekRange(date = new Date()) {
+  return weekRangeFromStart(toIsoDate(mondayOf(date)));
+}
+
+/**
+ * Khoảng ngày của tuần bắt đầu từ `startIso` (ngày Thứ 2).
+ * Dùng `weekStart` từ backend để FE và BE luôn tính cùng một tuần.
+ */
+export function weekRangeFromStart(startIso) {
+  const [year, month, day] = startIso.split("-").map(Number);
+  const monday = new Date(year, month - 1, day);
+  const dates = Array.from({ length: 7 }, (_, index) => {
+    const item = new Date(monday);
+    item.setDate(monday.getDate() + index);
+    return toIsoDate(item);
+  });
+  return { startIso: dates[0], endIso: dates[6], dates };
+}
+
 export const memberScheduleApi = {
   /** Sidebar trái: workout có thể kéo vào lịch. */
   getAvailableWorkouts: () =>
@@ -60,6 +88,26 @@ export const memberScheduleApi = {
   /** Thẻ "Plan info" của màn Review; null khi member chưa có template phù hợp. */
   getPlanInfo: () =>
     api.get("/member/schedule/plan-info").then((res) => res.data),
+
+  /**
+   * Ràng buộc tuần hiện tại: weekStart/weekEnd, số ngày tập tối đa, số ngày
+   * đã dùng và cờ đã chạm giới hạn.
+   */
+  getWeekRule: () =>
+    api.get("/member/schedule/week-rule").then((res) => res.data),
+
+  /** Lưu lịch của tuần hiện tại; các tuần khác trong tháng giữ nguyên. */
+  saveWeek: ({ templateCode = null, entries }) =>
+    api
+      .post("/member/schedule/week", {
+        templateCode,
+        entries: entries.map((entry) => ({
+          date: toIsoDate(entry.date),
+          workoutCode: entry.workoutCode,
+          orderInDay: entry.orderInDay ?? 0,
+        })),
+      })
+      .then((res) => res.data),
 
   /** Upsert lịch của tháng chứa `month`. */
   saveSchedule: ({ month, templateCode = null, entries }) =>

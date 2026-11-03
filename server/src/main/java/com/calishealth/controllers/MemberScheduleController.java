@@ -4,7 +4,9 @@ import com.calishealth.dtos.MemberScheduleDtos.AvailableWorkoutResponse;
 import com.calishealth.dtos.MemberScheduleDtos.MemberScheduleResponse;
 import com.calishealth.dtos.MemberScheduleDtos.PlanInfoResponse;
 import com.calishealth.dtos.MemberScheduleDtos.SaveScheduleRequest;
+import com.calishealth.dtos.MemberScheduleDtos.SaveWeekRequest;
 import com.calishealth.dtos.MemberScheduleDtos.TodayWorkoutResponse;
+import com.calishealth.dtos.MemberScheduleDtos.WeekRuleResponse;
 import com.calishealth.service.MemberScheduleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -42,6 +44,24 @@ public class MemberScheduleController {
     @GetMapping("/plan-info")
     public PlanInfoResponse planInfo(Authentication authentication) {
         return scheduleService.planInfo(authentication.getName()).orElse(null);
+    }
+
+    /**
+     * Ràng buộc tuần hiện tại: chỉ được xếp trong tuần này, tối đa N ngày tập,
+     * mỗi workout một lần. FE dùng để khoá ô và làm mờ workout đã dùng.
+     */
+    @GetMapping("/week-rule")
+    public WeekRuleResponse weekRule(Authentication authentication) {
+        return scheduleService.weekRule(authentication.getName());
+    }
+
+    /** Lưu lịch của tuần hiện tại (các tuần khác giữ nguyên). */
+    @PostMapping("/week")
+    @ResponseStatus(HttpStatus.CREATED)
+    public MemberScheduleResponse saveWeek(
+            @RequestBody SaveWeekRequest request,
+            Authentication authentication) {
+        return scheduleService.saveWeek(authentication.getName(), request);
     }
 
     /** Lưu lịch tháng (upsert theo tháng). */

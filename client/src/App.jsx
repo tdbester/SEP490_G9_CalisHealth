@@ -18,6 +18,7 @@ import DailyWorkoutPlan from "./pages/DailyWorkoutPlan";
 import MemberSchedulePage from "./pages/MemberSchedulePage";
 import ReviewTrainingPlanPage from "./pages/ReviewTrainingPlanPage";
 import ExerciseDetailPreview from "./pages/ExerciseDetailPreview";
+import PoseTrackingPage from "./pages/PoseTrackingPage";
 import Library from "./pages/Library";
 import LibraryExerciseListPage from "./pages/LibraryExerciseListPage";
 import ExerciseDetailPage from "./pages/ExerciseDetailPage";
@@ -204,6 +205,16 @@ export default function App() {
         <Route path="/schedule" element={memberPage(<MemberSchedulePage />)} />
         <Route path="/schedule/review" element={memberPage(<ReviewTrainingPlanPage />)} />
         <Route path="/exercises/:code" element={memberPage(<ExerciseDetailPreview />)} />
+        {/* Real-time AI Pose Tracking — mở sau khi member bấm "Ready · Start counting".
+            Màn này fullscreen nên không dùng layout sidebar của member. */}
+        <Route
+          path="/session/tracking"
+          element={
+            <ProtectedRoute>
+              <PoseTrackingPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/tracking"
           element={memberPage(<HealthTracking />)}
