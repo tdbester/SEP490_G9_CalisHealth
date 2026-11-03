@@ -79,7 +79,6 @@ public class FlywayConfig {
                 .validateOnMigrate(true)
                 .placeholders(Map.of("'$'", "$"))
                 .cleanDisabled(true)
-                .placeholders(Map.of("'$'", "$"))
                 .load();
         log.info("Flyway configured: locations=classpath:db/migration");
         return fw;

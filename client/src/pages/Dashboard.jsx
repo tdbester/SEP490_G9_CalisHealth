@@ -103,7 +103,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token) {
+      setUser(null);
+      setAuthStatus("guest");
+      return;
+    }
 
     const cached = localStorage.getItem("user");
     if (cached) {
@@ -121,6 +125,8 @@ export default function Dashboard() {
       })
       .catch(() => {
         localStorage.removeItem("token");
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("jwt");
         localStorage.removeItem("user");
         setUser(null);
         setAuthStatus("guest");
@@ -239,7 +245,9 @@ export default function Dashboard() {
           {authStatus === "authed" ? (
             <>
               {dashboardData?.healthMetrics &&
-                (dashboardData.healthMetrics.weight != null || dashboardData.healthMetrics.bmi != null) ? (
+              (dashboardData.healthMetrics.weight != null
+                || dashboardData.healthMetrics.bmi != null
+                || dashboardData.healthMetrics.weeklyGoal != null) ? (
                 <>
                   <ul className="dash-metric-list">
                     {dashboardData.healthMetrics.weight != null && (

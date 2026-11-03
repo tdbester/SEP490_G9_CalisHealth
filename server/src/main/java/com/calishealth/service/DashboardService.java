@@ -128,21 +128,19 @@ public class DashboardService {
                 (rs, rowNum) -> new MeasurementRow(rs.getBigDecimal("weight"), rs.getBigDecimal("height")),
                 email
         );
-        if (rows.isEmpty()) {
-            return result;
-        }
-
-        MeasurementRow measurement = rows.get(0);
-        if (measurement.weight() != null) {
-            result.put("weight", measurement.weight());
-        }
-        if (measurement.weight() != null && measurement.height() != null) {
-            BigDecimal heightMeters = measurement.height().compareTo(BigDecimal.valueOf(3)) > 0
-                    ? measurement.height().movePointLeft(2) : measurement.height();
-            if (heightMeters.signum() > 0) {
-                double bmi = measurement.weight().doubleValue() / Math.pow(heightMeters.doubleValue(), 2);
-                result.put("bmi", Math.round(bmi * 10.0) / 10.0);
-                result.put("bmiLabel", bmi < 18.5 ? "Underweight" : bmi < 25 ? "Normal" : bmi < 30 ? "Overweight" : "Obesity");
+        if (!rows.isEmpty()) {
+            MeasurementRow measurement = rows.get(0);
+            if (measurement.weight() != null) {
+                result.put("weight", measurement.weight());
+            }
+            if (measurement.weight() != null && measurement.height() != null) {
+                BigDecimal heightMeters = measurement.height().compareTo(BigDecimal.valueOf(3)) > 0
+                        ? measurement.height().movePointLeft(2) : measurement.height();
+                if (heightMeters.signum() > 0) {
+                    double bmi = measurement.weight().doubleValue() / Math.pow(heightMeters.doubleValue(), 2);
+                    result.put("bmi", Math.round(bmi * 10.0) / 10.0);
+                    result.put("bmiLabel", bmi < 18.5 ? "Underweight" : bmi < 25 ? "Normal" : bmi < 30 ? "Overweight" : "Obesity");
+                }
             }
         }
 

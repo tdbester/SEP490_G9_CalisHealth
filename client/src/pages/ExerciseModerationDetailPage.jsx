@@ -157,7 +157,13 @@ export default function ExerciseModerationDetailPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={reasonOpen} onClose={() => setReasonOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={reasonOpen}
+        onClose={() => setReasonOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { fontFamily: "Arial, sans-serif", "& *": { fontFamily: "Arial, sans-serif" } } }}
+      >
         <DialogTitle sx={{ pb: 1 }}>Rejection details</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2}>
@@ -181,7 +187,13 @@ export default function ExerciseModerationDetailPage() {
         <DialogActions><Button onClick={() => setReasonOpen(false)}>Close</Button></DialogActions>
       </Dialog>
 
-      <Dialog open={Boolean(confirmAction)} onClose={() => setConfirmAction(null)} maxWidth="xs" fullWidth>
+      <Dialog
+        open={Boolean(confirmAction)}
+        onClose={() => setConfirmAction(null)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { fontFamily: "Arial, sans-serif", "& *": { fontFamily: "Arial, sans-serif" } } }}
+      >
         <DialogTitle>{confirmAction === "approve" ? "Approve exercise?" : "Reject exercise?"}</DialogTitle>
         <DialogContent>
           <DialogContentText>{confirmAction === "approve" ? `Approve “${entry.name}” and add it to the active exercise list?` : `Reject “${entry.name}”? You will have 10 seconds to undo before its status is changed to rejected.`}</DialogContentText>

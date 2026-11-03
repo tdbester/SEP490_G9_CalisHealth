@@ -1,4 +1,4 @@
-/* AdminLayout.css — chỉ layout, variables nằm ở Topbar.css */
+/* AdminLayout.css — matching Figma dark theme background */
 
 * {
   box-sizing: border-box;
@@ -6,22 +6,15 @@
 
 .admin-layout {
   min-height: 100vh;
-  background-color: #0F0C1B;
+  background-color: #0c0822;
 }
 
 .admin-content {
   margin-left: var(--sidebar-width);
   padding-top: calc(var(--topbar-height) + 24px);
-  padding-left: 24px;
-  padding-right: 24px;
-  padding-bottom: 32px;
+  padding-left: 32px;
+  padding-right: 32px;
+  padding-bottom: 40px;
   min-height: 100vh;
-  background-color: #0F0C1B;
-}
-
-@media (max-width: 768px) {
-  .admin-content {
-    margin-left: 0;
-    padding: calc(var(--topbar-height) + 16px) 14px 84px;
-  }
+  background-color: #0c0822;
 }

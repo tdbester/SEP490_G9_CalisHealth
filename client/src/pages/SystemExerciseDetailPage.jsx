@@ -1,5 +1,5 @@
 import { Link as RouterLink, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Component, useEffect, useState } from "react";
 import {
   Alert,
   Box,
@@ -23,10 +23,28 @@ import { useApiMutation, useApiQuery } from "../hooks";
 import { useLevelNames } from "../useLevelNames";
 import { CONTENT_PATHS, ContentPageHeader } from "../components/ContentShared";
 import { CM } from "../theme-content";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 import {
   ExerciseFields,
   validateExerciseUpload,
 } from "./ExerciseFormPage";
+
+function getUploadedDemoVideoUrl(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const apiUrl = new URL(import.meta.env.VITE_API_URL || "http://localhost:8080/api", window.location.origin);
+    const videoUrl = new URL(value.trim(), apiUrl.origin);
+    if (
+      videoUrl.origin !== apiUrl.origin ||
+      !/^\/media\/exercise-demos\/[^/]+\.(mp4|mov|webm)$/i.test(videoUrl.pathname)
+    ) {
+      return null;
+    }
+    return videoUrl.href;
+  } catch {
+    return null;
+  }
+}
 
 const rise = keyframes`
   from { opacity: 0; transform: translateY(8px); }
@@ -114,7 +132,58 @@ export function GuideSteps({ guide }) {
 }
 
 const MUSCLE_OPTIONS = ["Chest", "Back", "Shoulders", "Arms", "Core", "Legs", "Glutes"];
-export default function SystemExerciseDetailPage() {
+
+class ExerciseDetailErrorBoundary extends Component {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, info) {
+    console.error("Exercise detail page failed to render", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Box sx={{ maxWidth: 960, mx: "auto", px: { xs: 2, sm: 3 }, py: 4 }}>
+          <ContentPageHeader
+            breadcrumb={[
+              { label: "Content manager", to: CONTENT_PATHS.dashboard },
+              { label: "Exercise & Workout Management", to: CONTENT_PATHS.exercises },
+              { label: "Exercise details" },
+            ]}
+            title="Exercise details unavailable"
+          />
+          <Alert
+            severity="error"
+            sx={{ mt: 2 }}
+            action={
+              <Button color="inherit" size="small" onClick={() => this.setState({ hasError: false })}>
+                Try again
+              </Button>
+            }
+          >
+            An unexpected error prevented this exercise from being displayed.
+          </Alert>
+          <Button
+            component={RouterLink}
+            to={CONTENT_PATHS.exercises}
+            sx={{ mt: 2 }}
+            startIcon={<ArrowBackRoundedIcon />}
+          >
+            Back to exercise list
+          </Button>
+        </Box>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+function SystemExerciseDetailContent() {
   const { code = "" } = useParams();
   const { levels: LEVEL_OPTIONS } = useLevelNames();
   const { data: entry, isLoading, error, refetch } = useApiQuery(
@@ -122,12 +191,16 @@ export default function SystemExerciseDetailPage() {
     { enabled: Boolean(code), deps: [code] },
   );
   const [editing, setEditing] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [form, setForm] = useState(null);
   const [video, setVideo] = useState(null);
   const [image, setImage] = useState(null);
   const [saveError, setSaveError] = useState("");
   const [videoError, setVideoError] = useState(null);
   const [imageError, setImageError] = useState(null);
+  const demoVideoUrl = entry
+    ? getUploadedDemoVideoUrl(entry.videoUrl || entry.demoVideoUrl || entry.video_url)
+    : null;
 
   useEffect(() => {
     if (!entry) return;
@@ -139,7 +212,9 @@ export default function SystemExerciseDetailPage() {
       value: entry.category === "HOLD" ? (entry.duration ?? "") : (entry.defaultReps ?? ""),
       defaultSets: entry.defaultSets ?? 3,
       level: entry.level || "",
-      muscleGroup: (entry.muscleGroup || "").split(" · ").filter(Boolean),
+      muscleGroup: typeof entry.muscleGroup === "string"
+        ? entry.muscleGroup.split(" · ").filter(Boolean)
+        : [],
       guide: entry.guide || "",
     });
   }, [entry]);
@@ -185,7 +260,9 @@ export default function SystemExerciseDetailPage() {
         value: entry.category === "HOLD" ? (entry.duration ?? "") : (entry.defaultReps ?? ""),
         defaultSets: entry.defaultSets ?? 3,
         level: entry.level || "",
-        muscleGroup: (entry.muscleGroup || "").split(" · ").filter(Boolean),
+        muscleGroup: typeof entry.muscleGroup === "string"
+          ? entry.muscleGroup.split(" · ").filter(Boolean)
+          : [],
         guide: entry.guide || "",
       });
     }
@@ -244,9 +321,39 @@ export default function SystemExerciseDetailPage() {
         action={
           <Stack direction="row" spacing={1}>
             {entry.source === "SYSTEM" && !editing && (
-              <Button variant="contained" startIcon={<EditRoundedIcon />} onClick={() => setEditing(true)}>
-                Edit
-              </Button>
+              <>
+                <Button
+                  component={RouterLink}
+                  to={{
+                    pathname: "/library/skills/tree",
+                    search: new URLSearchParams({
+                      ...(entry.movementGroup ? { group: entry.movementGroup } : {}),
+                      highlight: entry.code,
+                      exerciseName: entry.name,
+                    }).toString(),
+                  }}
+                  variant="contained"
+                  sx={{
+                    backgroundColor: "#7c5dfa",
+                    "&:hover": { backgroundColor: "#6c47ff" },
+                    color: "#fff",
+                    minWidth: 180,
+                    height: 42,
+                    borderRadius: "16px",
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                    px: 2.5,
+                    textTransform: "none",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.18)",
+                    transition: "all 150ms ease",
+                  }}
+                >
+                  Exercise tree
+                </Button>
+                <Button variant="contained" startIcon={<EditRoundedIcon />} onClick={() => setEditing(true)}>
+                  Edit
+                </Button>
+              </>
             )}
             <Button component={RouterLink} to={CONTENT_PATHS.exercises} variant="outlined" startIcon={<ArrowBackRoundedIcon />}>
               Back to list
@@ -319,7 +426,7 @@ export default function SystemExerciseDetailPage() {
           {saveError && <Alert severity="error" sx={{ mt: 2 }}>{saveError}</Alert>}
           <Divider sx={{ mt: 3 }} />
           <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ pt: 1.5 }}>
-            <Button startIcon={<CloseRoundedIcon />} onClick={cancelEditing}>Cancel</Button>
+            <Button startIcon={<CloseRoundedIcon />} onClick={() => setConfirmCancel(true)}>Cancel</Button>
             <Button type="submit" form="edit-exercise-form" variant="contained" startIcon={<SaveRoundedIcon />} disabled={saveMutation.isPending}>
               {saveMutation.isPending ? "Saving…" : "Save changes"}
             </Button>
@@ -331,10 +438,10 @@ export default function SystemExerciseDetailPage() {
           <Typography variant="subtitle2" fontWeight={700} sx={{ color: "#fff" }}>
             Demo video
           </Typography>
-          {entry.demoVideoUrl ? (
+          {demoVideoUrl ? (
             <Box
               component="video"
-              src={mediaUrl(entry.demoVideoUrl)}
+              src={mediaUrl(demoVideoUrl)}
               controls
               aria-label={`${entry.name} demo video`}
               sx={{
@@ -347,9 +454,11 @@ export default function SystemExerciseDetailPage() {
               }}
             />
           ) : (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              No demo video uploaded.
-            </Typography>
+            <Stack spacing={1} alignItems="flex-start" sx={{ mt: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                No uploaded demo video. Upload a video file using Edit exercise.
+              </Typography>
+            </Stack>
           )}
 
           <Divider sx={{ my: 2.5 }} />
@@ -456,6 +565,27 @@ export default function SystemExerciseDetailPage() {
         </CardContent>
       </Card>
       )}
+      <ConfirmDialog
+        open={confirmCancel}
+        title="Discard your changes?"
+        message="Are you sure you want to cancel? Any unsaved exercise changes will be lost."
+        confirmLabel="Discard"
+        onCancel={() => setConfirmCancel(false)}
+        onConfirm={() => {
+          setConfirmCancel(false);
+          cancelEditing();
+        }}
+      />
     </Box>
+  );
+}
+
+export default function SystemExerciseDetailPage() {
+  const { code = "" } = useParams();
+
+  return (
+    <ExerciseDetailErrorBoundary key={code}>
+      <SystemExerciseDetailContent />
+    </ExerciseDetailErrorBoundary>
   );
 }

@@ -36,8 +36,10 @@ import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
 import { contentManagerApi } from "../api/contentManager";
 import { useLevelNames } from "../useLevelNames";
 import { useApiMutation, useApiQuery } from "../hooks";
+import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { CONTENT_PATHS, ContentPageHeader, DarkPill, TONE_STYLES } from "../components/ContentShared";
 import { CM } from "../theme-content";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 
 const rise = keyframes`
   from { opacity: 0; transform: translateY(8px); }
@@ -805,6 +807,10 @@ function LevelDot({ tone }) {
 }
 
 function ExercisePickerRow({ entry, onAdd, toneOf }) {
+  const level = entry.level || entry.difficultyLevel || "Intermediate";
+  const isStandardLevel = ["BEGINNER", "INTERMEDIATE", "ADVANCED"]
+    .includes(String(level).trim().toUpperCase());
+
   return (
     <Stack
       direction="row"
@@ -837,7 +843,13 @@ function ExercisePickerRow({ entry, onAdd, toneOf }) {
             color={String(entry.type).toUpperCase() === "SKILL" ? "secondary" : "info"}
             sx={{ height: 18, fontSize: 10, fontWeight: 700 }}
           />
-          <DarkPill tone={toneOf(entry.level)} sx={{ height: 18, fontSize: 10 }}>{entry.level}</DarkPill>
+          {isStandardLevel ? (
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${getLevelBadgeStyle(level)}`}>
+              {level}
+            </span>
+          ) : (
+            <DarkPill tone={toneOf(level)} sx={{ height: 18, fontSize: 10 }}>{level}</DarkPill>
+          )}
         </Stack>
         <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ minHeight: 18 }}>
           {entry.muscleGroup || " "}
@@ -1362,6 +1374,7 @@ export default function ExerciseFormPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const kind = searchParams.get("type") === "workout" ? "workout" : "exercise";
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   const [exercise, setExercise] = useState(EMPTY_EXERCISE);
   const [selectedMuscles, setSelectedMuscles] = useState([]);
@@ -1683,6 +1696,10 @@ export default function ExerciseFormPage() {
           component={RouterLink}
           to={kind === "exercise" ? CONTENT_PATHS.exercises : CONTENT_PATHS.workouts}
           variant="outlined"
+          onClick={(event) => {
+            event.preventDefault();
+            setConfirmCancel(true);
+          }}
         >
           Cancel
         </Button>
@@ -1696,6 +1713,14 @@ export default function ExerciseFormPage() {
           {isSaving ? "Creating…" : `Create ${kind}`}
         </Button>
       </Stack>
+      <ConfirmDialog
+        open={confirmCancel}
+        title={`Discard this ${kind}?`}
+        message={`Are you sure you want to cancel? Your unsaved ${kind} details will be lost.`}
+        confirmLabel="Discard"
+        onCancel={() => setConfirmCancel(false)}
+        onConfirm={() => navigate(kind === "exercise" ? CONTENT_PATHS.exercises : CONTENT_PATHS.workouts)}
+      />
     </Box>
   );
 }

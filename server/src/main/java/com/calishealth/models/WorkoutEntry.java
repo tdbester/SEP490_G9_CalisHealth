@@ -37,6 +37,21 @@ public class WorkoutEntry {
     @Column(nullable = false, length = 30)
     private String level;
 
+    @Column(name = "is_shared_with_community", nullable = false)
+    private boolean sharedWithCommunity;
+
+    @Column(nullable = false, length = 20)
+    private String status = "ACCEPTED";
+
+    @Column(name = "save_count", nullable = false)
+    private Integer saveCount = 0;
+
+    @Column(name = "total_sets", nullable = false)
+    private Integer totalSets = 0;
+
+    @Column(name = "estimated_duration", nullable = false)
+    private Integer estimatedDuration = 0;
+
     @Column(name = "month_number", nullable = false)
     private int monthNumber = 1;
 
@@ -66,6 +81,9 @@ public class WorkoutEntry {
     @OrderBy("dayOfWeek ASC, id ASC")
     private List<WorkoutPlanItem> planItems = new ArrayList<>();
 
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
@@ -73,5 +91,38 @@ public class WorkoutEntry {
     @PreUpdate
     void updateTimestamp() {
         updatedAt = LocalDateTime.now();
+        if (createdAt == null) {
+            createdAt = updatedAt;
+        }
+        if (saveCount == null) {
+            saveCount = 0;
+        }
+        if (totalSets == null) {
+            totalSets = 0;
+        }
+        if (estimatedDuration == null) {
+            estimatedDuration = 0;
+        }
+        if (source == null || source.isBlank()) {
+            source = "SYSTEM";
+        } else if ("MEMBER".equalsIgnoreCase(source)) {
+            source = "CUSTOM";
+        }
+    }
+
+    public boolean isSystem() {
+        return "SYSTEM".equalsIgnoreCase(source);
+    }
+
+    public void setSystem(boolean system) {
+        source = system ? "SYSTEM" : "CUSTOM";
+    }
+
+    public Long getAuthorId() {
+        return createdBy == null ? null : createdBy.getId();
+    }
+
+    public User getAuthor() {
+        return createdBy;
     }
 }
