@@ -141,7 +141,6 @@ public class LibraryWorkoutService {
         workout.setType(resolveWorkoutType(request.type()));
         workout.setSystem(false);
         workout.setCreatedBy(member);
-        workout.setAuthorId(member.getId());
         workout.setSharedWithCommunity(Boolean.TRUE.equals(request.isSharedWithCommunity()));
         workout.setStatus("ACCEPTED");
         workouts.saveAndFlush(workout);
@@ -207,11 +206,11 @@ public class LibraryWorkoutService {
 
     private Specification<Exercise> allowedExerciseSpecification(Long memberId) {
         return (root, query, builder) -> {
-            var system = builder.isTrue(root.get("system"));
+            var system = builder.equal(root.get("source"), "SYSTEM");
             var memberExercise = builder.and(
-                    builder.isFalse(root.get("system")),
+                    builder.equal(root.get("source"), "CUSTOM"),
                     builder.or(
-                            builder.equal(root.get("author").get("id"), memberId),
+                            builder.equal(root.get("createdBy").get("id"), memberId),
                             builder.isTrue(root.get("shareWithCommunity"))));
             return builder.and(
                     builder.isTrue(root.get("active")),

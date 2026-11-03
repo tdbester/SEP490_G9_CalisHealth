@@ -103,6 +103,8 @@ const MUSCLE_GROUPS = [
   "Chest",
   "Back",
   "Arms",
+  "Shoulders",
+  "Glutes",
   "Core",
   "Legs",
 ];
@@ -367,10 +369,7 @@ export default function ExerciseListPage() {
     setLoading(true);
     try {
       const isAll = selectedMuscles.includes("All") || selectedMuscles.length === 0;
-      const mappedMuscles = selectedMuscles.map((m) =>
-        m === "Arms" ? "Arm/Shoulders,Arms,Shoulders" : m
-      );
-      const musclesQuery = isAll ? undefined : mappedMuscles.join(",");
+      const musclesQuery = isAll ? undefined : selectedMuscles.join(",");
 
       const data = await getExercises({
         type: activeTab === "skill" ? "SKILL" : "HEALTH",

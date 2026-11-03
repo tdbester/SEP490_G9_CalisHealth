@@ -48,8 +48,9 @@ public class ExerciseTreeService {
                 .getId();
 
         List<Exercise> groupExercises = new ArrayList<>(
-                exercises.findAllByMovementGroupAndSystemTrueAndStatus(
+                exercises.findAllByMovementGroupAndSourceAndStatus(
                         movementGroup,
+                        "SYSTEM",
                         Exercise.EntryStatus.ACCEPTED.name()));
         Comparator<Exercise> comparator = Comparator
                 .comparing(Exercise::getTreeLevel, Comparator.nullsLast(Integer::compareTo))
@@ -109,7 +110,7 @@ public class ExerciseTreeService {
                         exercise.getCode(),
                         exercise.getName(),
                         exercise.getTreeLevel(),
-                        displayDifficulty(exercise.getDifficulty()),
+                        displayDifficulty(exercise.getDifficultyLevel()),
                         exercise.getMovementGroup().name(),
                         states.get(exercise.getId()),
                         List.copyOf(prerequisites.get(exercise.getId())),
@@ -131,9 +132,9 @@ public class ExerciseTreeService {
         return new ExerciseTreeResponseDTO(movementGroup.name(), order.name(), nodes, legend);
     }
 
-    private String displayDifficulty(Exercise.TreeDifficulty difficulty) {
-        if (difficulty == null) return null;
-        String value = difficulty.name().toLowerCase(java.util.Locale.ROOT);
+    private String displayDifficulty(String difficulty) {
+        if (difficulty == null || difficulty.isBlank()) return null;
+        String value = difficulty.trim().toLowerCase(java.util.Locale.ROOT);
         return Character.toUpperCase(value.charAt(0)) + value.substring(1);
     }
 }

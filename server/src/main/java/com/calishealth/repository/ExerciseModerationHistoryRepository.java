@@ -5,12 +5,33 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
 public class ExerciseModerationHistoryRepository {
     private final JdbcTemplate jdbcTemplate;
+
+    public Map<String, String> findLatestRejectionReasons(Collection<String> exerciseCodes) {
+        if (exerciseCodes.isEmpty()) {
+            return Map.of();
+        }
+        String placeholders = exerciseCodes.stream().map(code -> "?").collect(Collectors.joining(", "));
+        String sql = "SELECT h.exercise_code, h.rejection_reason "
+                + "FROM exercise_moderation_history h "
+                + "WHERE h.decision = 'REJECTED' AND h.rejection_reason IS NOT NULL "
+                + "AND h.exercise_code IN (" + placeholders + ") "
+                + "ORDER BY h.reviewed_at DESC, h.id DESC";
+        Map<String, String> reasons = new LinkedHashMap<>();
+        jdbcTemplate.query(sql, exerciseCodes.toArray(), result -> {
+            reasons.putIfAbsent(result.getString("exercise_code"), result.getString("rejection_reason"));
+        });
+        return reasons;
+    }
 
     public List<ExerciseModerationHistoryResponse> findAll() {
         return jdbcTemplate.query(

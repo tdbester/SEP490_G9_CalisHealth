@@ -45,8 +45,9 @@ class ExerciseTreeServiceTest {
         Exercise levelOne = entry(101L, "Incline push-up", 1);
         Exercise levelTwo = entry(102L, "Push-up", 2);
         Exercise levelThree = entry(103L, "Diamond push-up", 3);
-        when(exercises.findAllByMovementGroupAndSystemTrueAndStatus(
+        when(exercises.findAllByMovementGroupAndSourceAndStatus(
                 Exercise.MovementGroup.PUSH,
+                "SYSTEM",
                 Exercise.EntryStatus.ACCEPTED.name()))
                 .thenReturn(List.of(levelThree, levelOne, levelTwo));
         when(edges.findAllConnectedTo(anyCollection()))
@@ -69,6 +70,9 @@ class ExerciseTreeServiceTest {
                 com.calishealth.dtos.ExerciseTreeNodeDTO::code).containsExactly("EX-103", "EX-102", "EX-101");
         assertThat(result.nodes()).extracting(
                 com.calishealth.dtos.ExerciseTreeNodeDTO::state).containsExactly("LOCKED", "CURRENT", "MASTERED");
+        assertThat(result.nodes()).extracting(
+                com.calishealth.dtos.ExerciseTreeNodeDTO::difficulty)
+                .containsOnly("Beginner");
         assertThat(result.nodes().get(1).prerequisiteIds()).containsExactly(101L);
         assertThat(result.nodes().get(1).nextExerciseIds()).containsExactly(103L);
     }
@@ -80,7 +84,7 @@ class ExerciseTreeServiceTest {
         entry.setName(name);
         entry.setMovementGroup(Exercise.MovementGroup.PUSH);
         entry.setTreeLevel(level);
-        entry.setDifficulty(Exercise.TreeDifficulty.BEGINNER);
+        entry.setDifficultyLevel("BEGINNER");
         entry.setMuscleGroup("Chest");
         return entry;
     }
