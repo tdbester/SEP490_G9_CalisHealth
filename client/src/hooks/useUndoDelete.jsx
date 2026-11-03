@@ -59,7 +59,7 @@ export default function useUndoDelete() {
       scheduledDeletes.current.delete(id);
       toast.dismiss(id);
       scheduled.onUndo();
-      toast.info("Deletion undone.", scheduled.toastOptions);
+      toast.info(scheduled.undoMessage || "Deletion undone.", scheduled.toastOptions);
     };
     id = toast(
       <UndoDeleteToast
@@ -87,7 +87,10 @@ export default function useUndoDelete() {
       } catch (error) {
         scheduled.onUndo();
         console.error("Delete request failed:", error);
-        toast.error(error?.response?.data?.message || "Failed to delete item.", scheduled.toastOptions);
+        toast.error(
+          error?.response?.data?.message || scheduled.failureMessage || "Failed to delete item.",
+          scheduled.toastOptions,
+        );
       }
     }, UNDO_SECONDS * 1000);
 
@@ -96,6 +99,8 @@ export default function useUndoDelete() {
       onDelete: operation.onDelete,
       onUndo: operation.onUndo,
       successMessage: operation.successMessage,
+      undoMessage: operation.undoMessage,
+      failureMessage: operation.failureMessage,
       toastOptions: operation.toastOptions,
     });
   };
@@ -114,10 +119,11 @@ export default function useUndoDelete() {
         className="w-full max-w-md rounded-2xl border border-[#44366f] bg-[#17112f] p-6 shadow-2xl shadow-black/50"
       >
         <h2 id="confirm-delete-title" className="text-lg font-semibold text-white">
-          Confirm Delete
+          {confirmation.confirmationTitle || "Confirm Delete"}
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-slate-300">
-          Are you sure you want to delete this item? You will have 10 seconds to undo this action after confirming.
+          {confirmation.confirmationMessage
+            || "Are you sure you want to delete this item? You will have 10 seconds to undo this action after confirming."}
         </p>
         <div className="mt-6 flex justify-end gap-3">
           <button
@@ -125,14 +131,14 @@ export default function useUndoDelete() {
             onClick={cancelConfirmation}
             className="rounded-xl border border-[#51456f] bg-transparent px-4 py-2 text-sm font-medium text-[#d2ccdf] transition hover:border-[#8068c4] hover:bg-white/5"
           >
-            Cancel
+            {confirmation.cancelLabel || "Cancel"}
           </button>
           <button
             type="button"
             onClick={confirmDelete}
             className="rounded-xl border border-rose-700 bg-rose-700 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-600"
           >
-            Delete
+            {confirmation.confirmLabel || "Delete"}
           </button>
         </div>
       </section>

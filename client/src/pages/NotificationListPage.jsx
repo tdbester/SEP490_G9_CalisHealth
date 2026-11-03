@@ -349,6 +349,16 @@ export default function NotificationListPage() {
                     <td className="px-3 py-3.5 text-right">
                       {normalizedType === "SYSTEM" ? (
                         <span className="text-xs text-[#a89bd0]">Automatic</span>
+                      ) : normalizedType === "MAINTENANCE" ? (
+                        <button
+                          type="button"
+                          onClick={() => navigate("/admin/maintenance")}
+                          aria-label={`Manage schedule for ${notification.title}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-[#1e202e] px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:bg-[#282a3d]"
+                        >
+                          <EditOutlinedIcon sx={{ fontSize: 15 }} />
+                          Schedule
+                        </button>
                       ) : <button
                         type="button"
                         onClick={() => navigate(`/admin/notifications/${notification.id}`)}

@@ -25,7 +25,7 @@ import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import NotificationsNoneRoundedIcon from "@mui/icons-material/NotificationsNoneRounded";
 import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
-import EventAvailableRoundedIcon from "@mui/icons-material/EventAvailableRounded";
+import BuildRoundedIcon from "@mui/icons-material/BuildRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import CalendarTodayRoundedIcon from "@mui/icons-material/CalendarTodayRounded";
@@ -81,7 +81,7 @@ export const ADMIN_LINKS = [
   { to: ADMIN_PATHS.surveys, label: "Survey Management", icon: MenuBookRoundedIcon },
   { to: ADMIN_PATHS.notifications, label: "Notifications", icon: NotificationsNoneRoundedIcon },
   { to: ADMIN_PATHS.storage, label: "Media storage & infrastructure", icon: StorageRoundedIcon },
-  { to: ADMIN_PATHS.maintenance, label: "Create maintenance schedule", icon: EventAvailableRoundedIcon },
+  { to: ADMIN_PATHS.maintenance, label: "Maintenance schedules", icon: BuildRoundedIcon },
 ];
 
 /**

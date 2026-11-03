@@ -60,6 +60,9 @@ import ResetPassword from "./pages/ResetPassword";
 import NotificationListPage from "./pages/NotificationListPage";
 import CreateNotificationPage from "./pages/CreateNotificationPage";
 import EditNotificationPage from "./pages/EditNotificationPage";
+import CreateMaintenanceSchedulePage from "./pages/CreateMaintenanceSchedulePage";
+import MaintenanceScheduleListPage from "./pages/MaintenanceScheduleListPage";
+import MaintenanceScheduleDetailPage from "./pages/MaintenanceScheduleDetailPage";
 import ChangePassword from "./pages/ChangePassword";
 import SurveyFlow, { SurveyEntry } from "./pages/survey/SurveyFlow";
 import SurveyStepPage from "./pages/survey/SurveyStepPage";
@@ -195,7 +198,9 @@ export default function App() {
           <Route path="notifications/new" element={<CreateNotificationPage />} />
           <Route path="notifications/:id" element={<EditNotificationPage />} />
           <Route path="storage" element={<AdminSectionPage title="Media storage & infrastructure" />} />
-          <Route path="maintenance" element={<AdminSectionPage title="Create maintenance schedule" />} />
+          <Route path="maintenance" element={<MaintenanceScheduleListPage />} />
+          <Route path="maintenance/create" element={<CreateMaintenanceSchedulePage />} />
+          <Route path="maintenance/:id" element={<MaintenanceScheduleDetailPage />} />
           <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
