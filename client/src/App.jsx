@@ -8,6 +8,10 @@ import AdminSectionPage from "./pages/AdminSectionPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminCreateStaffPage from "./pages/AdminCreateStaffPage";
 import AdminUserDetailPage from "./pages/AdminUserDetailPage";
+import AdminStoragePage from "./pages/AdminStoragePage";
+import StorageCapacityTab from "./pages/storage/StorageCapacityTab";
+import MediaCleanupTab from "./pages/storage/MediaCleanupTab";
+import UploadLimitsTab from "./pages/storage/UploadLimitsTab";
 import Dashboard from "./pages/Dashboard";
 import HealthTracking from "./pages/HealthTracking";
 import WorkoutHistory from "./pages/WorkoutHistory";
@@ -128,7 +132,12 @@ export default function App() {
           <Route path="surveys" element={<SurveyManagement />} />
           <Route path="create" element={<Navigate to="/admin/users/create" replace />} />
           <Route path="notifications" element={<AdminSectionPage title="Notifications" />} />
-          <Route path="storage" element={<AdminSectionPage title="Media storage & infrastructure" />} />
+          <Route path="storage" element={<AdminStoragePage />}>
+            <Route index element={<StorageCapacityTab />} />
+            <Route path="cleanup" element={<MediaCleanupTab />} />
+            <Route path="settings" element={<UploadLimitsTab />} />
+            <Route path="*" element={<Navigate to="/admin/storage" replace />} />
+          </Route>
           <Route path="maintenance" element={<AdminSectionPage title="Create maintenance schedule" />} />
           <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>

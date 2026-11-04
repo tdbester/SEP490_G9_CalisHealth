@@ -18,4 +18,13 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long> {
     @Query("select count(e) > 0 from Exercise e where lower(e.difficultyLevel) = lower(:level) "
             + "and (e.moderationStatus is null or upper(e.moderationStatus) <> 'DELETED')")
     boolean existsInUseByDifficultyLevel(@Param("level") String level);
+
+    /** Moderation status of every exercise that uses this video or anatomy image. */
+    @Query("select coalesce(e.moderationStatus, 'ACTIVE') from Exercise e where e.videoUrl = :url or e.anatomyImageUrl = :url")
+    List<String> findModerationStatusesUsingMedia(@Param("url") String url);
+
+    /** [videoUrl, anatomyImageUrl, moderationStatus, creator id] of every exercise that has media. */
+    @Query("select e.videoUrl, e.anatomyImageUrl, coalesce(e.moderationStatus, 'ACTIVE'), u.id from Exercise e "
+            + "left join e.createdBy u where e.videoUrl is not null or e.anatomyImageUrl is not null")
+    List<Object[]> findMediaReferences();
 }

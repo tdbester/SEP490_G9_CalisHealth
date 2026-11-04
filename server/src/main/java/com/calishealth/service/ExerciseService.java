@@ -51,7 +51,7 @@ public class ExerciseService {
     private final MuscleGroupRepository muscleGroups;
     private final UserRepository users;
     private final JdbcTemplate jdbcTemplate;
-    private final ExerciseVideoStorageService videoStorage;
+    private final MediaRegistryService mediaRegistry;
     private final FitnessLevelRepository fitnessLevels;
 
     /** Levels are managed by content (fitness_levels), so any level that exists there is valid. */
@@ -263,8 +263,8 @@ public class ExerciseService {
             exercise.getMuscleGroups().add(link);
         }
         Exercise saved = exercises.save(exercise);
-        if (demoVideoUrl != null) videoStorage.delete(previousVideoUrl);
-        if (anatomyImageUrl != null) videoStorage.deleteAnatomyImage(previousAnatomyImageUrl);
+        if (demoVideoUrl != null && !demoVideoUrl.equals(previousVideoUrl)) mediaRegistry.release(previousVideoUrl, "Replaced by a newer video");
+        if (anatomyImageUrl != null && !anatomyImageUrl.equals(previousAnatomyImageUrl)) mediaRegistry.release(previousAnatomyImageUrl, "Replaced by a newer image");
         return toResponse(saved);
     }
 
@@ -283,8 +283,8 @@ public class ExerciseService {
                     "This exercise is still referenced by workout or member history and cannot be permanently deleted."
             );
         }
-        videoStorage.delete(videoUrl);
-        videoStorage.deleteAnatomyImage(anatomyImageUrl);
+        mediaRegistry.release(videoUrl, "Exercise was deleted");
+        mediaRegistry.release(anatomyImageUrl, "Exercise was deleted");
     }
 
     @Transactional
@@ -310,6 +310,13 @@ public class ExerciseService {
                     exercise.getAnatomyImageUrl(),
                     exercise.getCreatedBy() == null ? null : exercise.getCreatedBy().getFullName(),
                     active ? "APPROVED" : "REJECTED", active ? null : rejectionReason.trim());
+            // Rejected media is kept for the retention period so the member can read the reason and resubmit.
+            List<String> mediaUrls = java.util.Arrays.asList(exercise.getVideoUrl(), exercise.getAnatomyImageUrl());
+            if (active) {
+                mediaRegistry.markActive(mediaUrls);
+            } else {
+                mediaRegistry.markRejected(mediaUrls, rejectionReason.trim());
+            }
         }
         return response;
     }

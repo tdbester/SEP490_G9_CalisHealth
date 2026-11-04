@@ -23,6 +23,7 @@ import { useApiMutation, useApiQuery } from "../hooks";
 import { useLevelNames } from "../useLevelNames";
 import { CONTENT_PATHS, ContentPageHeader } from "../components/ContentShared";
 import { CM } from "../theme-content";
+import MediaWithFallback from "../components/common/MediaWithFallback";
 import {
   ExerciseFields,
   validateExerciseUpload,
@@ -332,11 +333,10 @@ export default function SystemExerciseDetailPage() {
             Demo video
           </Typography>
           {entry.demoVideoUrl ? (
-            <Box
-              component="video"
+            <MediaWithFallback
+              kind="video"
               src={mediaUrl(entry.demoVideoUrl)}
-              controls
-              aria-label={`${entry.name} demo video`}
+              alt={`${entry.name} demo video`}
               sx={{
                 mt: 1.5,
                 width: "100%",
@@ -367,8 +367,7 @@ export default function SystemExerciseDetailPage() {
                   Muscle anatomy
                 </Typography>
                 {entry.anatomyImageUrl ? (
-                  <Box
-                    component="img"
+                  <MediaWithFallback
                     src={mediaUrl(entry.anatomyImageUrl)}
                     alt={`${entry.name} muscle anatomy`}
                     sx={{
