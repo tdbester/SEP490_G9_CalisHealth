@@ -2,6 +2,7 @@ package com.calishealth.controllers;
 
 import com.calishealth.dtos.CreateMaintenanceScheduleRequestDto;
 import com.calishealth.dtos.MaintenanceScheduleResponseDto;
+import com.calishealth.models.AffectedArea;
 import com.calishealth.service.MaintenanceScheduleService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -18,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping({"/api/admin/maintenance-schedules", "/api/admin/maintenance"})
 @PreAuthorize("hasRole('ADMIN')")
@@ -33,6 +36,16 @@ public class AdminMaintenanceScheduleController {
             @RequestParam(defaultValue = "0") int page
     ) {
         return ResponseEntity.ok(schedules.getSchedules(page));
+    }
+
+    @GetMapping("/service-status")
+    public ResponseEntity<Map<String, Boolean>> getServiceStatus(
+            @RequestParam AffectedArea serviceKey
+    ) {
+        return ResponseEntity.ok(Map.of(
+                serviceKey.name(),
+                schedules.isServiceUnderMaintenance(serviceKey.name())
+        ));
     }
 
     @GetMapping("/{id}")

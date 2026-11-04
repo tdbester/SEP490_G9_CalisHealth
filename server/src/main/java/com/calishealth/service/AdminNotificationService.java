@@ -4,7 +4,6 @@ import com.calishealth.dtos.NotificationCountsDto;
 import com.calishealth.dtos.CreateNotificationRequestDto;
 import com.calishealth.dtos.NotificationListResponseDto;
 import com.calishealth.dtos.NotificationResponseDto;
-import com.calishealth.dtos.UpdateNotificationRequestDto;
 import com.calishealth.exception.ResourceNotFoundException;
 import com.calishealth.models.Notification;
 import com.calishealth.models.User;
@@ -42,6 +41,7 @@ public class AdminNotificationService {
         notification.setMessage(request.message().trim());
         notification.setType(request.type());
         notification.setStatus(request.status());
+        notification.setTargetAudience(normalizeAudience(request.targetAudience()));
         notification.setCreatedBy(admin.getId());
 
         return toResponse(notifications.save(notification));
@@ -55,13 +55,13 @@ public class AdminNotificationService {
         }
 
         List<Notification> rows = "ALL".equals(type)
-                ? notifications.findAllByOrderByCreatedAtDesc()
-                : notifications.findAllByTypeOrderByCreatedAtDesc(type);
+                ? notifications.findAllByCreatedByIsNotNullOrderByCreatedAtDesc()
+                : notifications.findAllByTypeAndCreatedByIsNotNullOrderByCreatedAtDesc(type);
         NotificationCountsDto counts = new NotificationCountsDto(
-                notifications.count(),
-                notifications.countByType("MAINTENANCE"),
-                notifications.countByType("ANNOUNCEMENT"),
-                notifications.countByType("UPDATE")
+                notifications.countByCreatedByIsNotNull(),
+                notifications.countByTypeAndCreatedByIsNotNull("MAINTENANCE"),
+                notifications.countByTypeAndCreatedByIsNotNull("ANNOUNCEMENT"),
+                notifications.countByTypeAndCreatedByIsNotNull("UPDATE")
         );
         return new NotificationListResponseDto(
                 rows.stream().map(AdminNotificationService::toResponse).toList(),
@@ -71,35 +71,15 @@ public class AdminNotificationService {
 
     @Transactional
     public NotificationResponseDto getNotification(Long id) {
-        Notification notification = notifications.findById(id)
+        Notification notification = notifications.findByIdAndCreatedByIsNotNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found: " + id));
         return toResponse(notification);
     }
 
     @Transactional
-    public NotificationResponseDto updateNotification(Long id, UpdateNotificationRequestDto request) {
-        Notification notification = notifications.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Notification not found: " + id));
-
-        String requestedType = request.type();
-        if ("MAINTENANCE".equals(notification.getType()) != "MAINTENANCE".equals(requestedType)) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Maintenance notifications must remain managed by Maintenance schedules"
-            );
-        }
-
-        notification.setTitle(request.title().trim());
-        notification.setMessage(request.message().trim());
-        notification.setType(requestedType);
-        notification.setStatus(request.status());
-        return toResponse(notifications.save(notification));
-    }
-
-    @Transactional
     public void deleteNotifications(List<Long> ids) {
         Set<Long> uniqueIds = new LinkedHashSet<>(ids);
-        List<Notification> found = notifications.findAllById(uniqueIds);
+        List<Notification> found = notifications.findAllByIdInAndCreatedByIsNotNull(uniqueIds);
         if (found.size() != uniqueIds.size()) {
             throw new ResourceNotFoundException("One or more notifications were not found");
         }
@@ -108,7 +88,7 @@ public class AdminNotificationService {
 
     @Transactional
     public void deleteNotification(Long id) {
-        if (!notifications.existsById(id)) {
+        if (!notifications.existsByIdAndCreatedByIsNotNull(id)) {
             throw new ResourceNotFoundException("Notification not found: " + id);
         }
         notifications.deleteById(id);
@@ -121,7 +101,19 @@ public class AdminNotificationService {
                 notification.getMessage(),
                 notification.getType(),
                 notification.getStatus(),
+                notification.getTargetAudience(),
+                notification.getUserId(),
                 notification.getCreatedAt()
         );
+    }
+
+    private static String normalizeAudience(String audience) {
+        if (audience == null || audience.isBlank()) return "MEMBER";
+        String normalized = audience.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "ALL_MEMBERS" -> "MEMBER";
+            case "ALL_USERS", "GLOBAL", "ALL_ROLES" -> "SYSTEM_WIDE";
+            default -> normalized;
+        };
     }
 }

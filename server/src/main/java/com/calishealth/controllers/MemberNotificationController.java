@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/notifications")
-@PreAuthorize("hasRole('MEMBER')")
+@PreAuthorize("hasAnyRole('MEMBER', 'CONTENT_MANAGER', 'ADMIN')")
 public class MemberNotificationController {
     private final MemberNotificationService notifications;
 

@@ -411,9 +411,11 @@ public class ExerciseService {
                     "Level " + exercise.getDifficultyLevel() + " is inactive, so its exercises stay inactive. Activate the level first");
         }
         exercise.setActive(active);
-        exercise.setModerationStatus(active
-                ? STATUS_ACTIVE
-                : (SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource()) ? STATUS_REJECTED : STATUS_INACTIVE));
+        if (SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource())) {
+            exercise.setStatus(active ? Exercise.EntryStatus.ACCEPTED : Exercise.EntryStatus.REJECTED);
+        } else {
+            exercise.setModerationStatus(active ? STATUS_ACTIVE : STATUS_INACTIVE);
+        }
         ExerciseResponse response = toResponse(exercises.saveAndFlush(exercise));
         if (SOURCE_CUSTOM.equalsIgnoreCase(exercise.getSource())) {
             moderationHistory.insert(exercise.getCode(), exercise.getName(), exercise.getType(),

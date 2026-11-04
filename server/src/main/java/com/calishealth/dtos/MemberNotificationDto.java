@@ -7,6 +7,8 @@ public record MemberNotificationDto(
         String title,
         String message,
         String type,
+        String targetAudience,
+        String status,
         LocalDateTime createdAt,
         boolean read
 ) {}

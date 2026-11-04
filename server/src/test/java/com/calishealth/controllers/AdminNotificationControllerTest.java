@@ -4,7 +4,6 @@ import com.calishealth.dtos.NotificationCountsDto;
 import com.calishealth.dtos.CreateNotificationRequestDto;
 import com.calishealth.dtos.NotificationListResponseDto;
 import com.calishealth.dtos.NotificationResponseDto;
-import com.calishealth.dtos.UpdateNotificationRequestDto;
 import com.calishealth.exception.ResourceNotFoundException;
 import com.calishealth.service.AdminNotificationService;
 import org.junit.jupiter.api.Test;
@@ -14,15 +13,14 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.never;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -67,82 +65,39 @@ class AdminNotificationControllerTest {
     }
 
     @Test
-    void updatesNotification() throws Exception {
-        when(notifications.updateNotification(
-                org.mockito.ArgumentMatchers.eq(12L),
-                org.mockito.ArgumentMatchers.eq(new UpdateNotificationRequestDto(
-                        "Updated title", "Updated message.", "ANNOUNCEMENT", "PUBLISHED"
-                ))
-        )).thenReturn(new NotificationResponseDto(
-                12L, "Updated title", "Updated message.", "ANNOUNCEMENT", "PUBLISHED",
-                LocalDateTime.of(2026, 10, 14, 9, 0)
+    void rejectsNotificationUpdatesAsReadOnly() throws Exception {
+        mockMvc.perform(put("/api/admin/notifications/3")
+                        .with(SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN")))
+                .andExpect(status().isMethodNotAllowed());
+    }
+
+    @Test
+    void includesAudienceInNotificationListResponse() throws Exception {
+        when(notifications.getNotifications("ALL")).thenReturn(new NotificationListResponseDto(
+                List.of(new NotificationResponseDto(
+                        17L,
+                        "CM notice",
+                        "Review the new submission.",
+                        "ANNOUNCEMENT",
+                        "PUBLISHED",
+                        "CONTENT_MANAGER",
+                        null,
+                        LocalDateTime.of(2026, 11, 4, 12, 0)
+                )),
+                new NotificationCountsDto(1, 0, 1, 0)
         ));
 
-        mockMvc.perform(put("/api/admin/notifications/12")
-                        .contentType("application/json")
-                        .content("""
-                                {
-                                  "title": "Updated title",
-                                  "message": "Updated message.",
-                                  "type": "ANNOUNCEMENT",
-                                  "status": "PUBLISHED"
-                                }
-                                """)
+        mockMvc.perform(get("/api/admin/notifications")
                         .with(SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("Updated title"))
-                .andExpect(jsonPath("$.status").value("PUBLISHED"));
-    }
-
-    @Test
-    void rejectsUpdateWithBlankTitleOrMessage() throws Exception {
-        mockMvc.perform(put("/api/admin/notifications/12")
-                        .contentType("application/json")
-                        .content("""
-                                {
-                                  "title": " ",
-                                  "message": "",
-                                  "type": "ANNOUNCEMENT",
-                                  "status": "PUBLISHED"
-                                }
-                                """)
-                        .with(SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN")))
-                .andExpect(status().isBadRequest());
-
-        verify(notifications, never()).updateNotification(
-                org.mockito.ArgumentMatchers.anyLong(),
-                org.mockito.ArgumentMatchers.any(UpdateNotificationRequestDto.class)
-        );
-    }
-
-    @Test
-    void rejectsChangingMaintenanceType() throws Exception {
-        when(notifications.updateNotification(
-                org.mockito.ArgumentMatchers.eq(3L),
-                org.mockito.ArgumentMatchers.any(UpdateNotificationRequestDto.class)
-        )).thenThrow(new ResponseStatusException(
-                org.springframework.http.HttpStatus.BAD_REQUEST,
-                "Maintenance notifications must remain managed by Maintenance schedules"
-        ));
-
-        mockMvc.perform(put("/api/admin/notifications/3")
-                        .contentType("application/json")
-                        .content("""
-                                {
-                                  "title": "Maintenance notice",
-                                  "message": "Message.",
-                                  "type": "UPDATE",
-                                  "status": "PUBLISHED"
-                                }
-                                """)
-                        .with(SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN")))
-                .andExpect(status().isBadRequest());
+                .andExpect(jsonPath("$.notifications[0].targetAudience").value("CONTENT_MANAGER"));
     }
 
     @Test
     void createsPublishedNotificationAsAdmin() throws Exception {
         when(notifications.createNotification(
-                new CreateNotificationRequestDto("New roadmap", "A new roadmap is available.", "UPDATE", "PUBLISHED"),
+                new CreateNotificationRequestDto(
+                        "New roadmap", "A new roadmap is available.", "UPDATE", "PUBLISHED", "CONTENT_MANAGER"),
                 "admin@example.com"
         )).thenReturn(new NotificationResponseDto(
                 17L,
@@ -150,6 +105,8 @@ class AdminNotificationControllerTest {
                 "A new roadmap is available.",
                 "UPDATE",
                 "PUBLISHED",
+                "CONTENT_MANAGER",
+                null,
                 LocalDateTime.of(2026, 10, 30, 12, 0)
         ));
 
@@ -160,16 +117,19 @@ class AdminNotificationControllerTest {
                                   "title": "New roadmap",
                                   "message": "A new roadmap is available.",
                                   "type": "UPDATE",
+                                  "targetAudience": "CONTENT_MANAGER",
                                   "status": "PUBLISHED"
                                 }
                                 """)
                         .with(SecurityMockMvcRequestPostProcessors.user("admin@example.com").roles("ADMIN")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(17))
-                .andExpect(jsonPath("$.status").value("PUBLISHED"));
+                .andExpect(jsonPath("$.status").value("PUBLISHED"))
+                .andExpect(jsonPath("$.targetAudience").value("CONTENT_MANAGER"));
 
         verify(notifications).createNotification(
-                new CreateNotificationRequestDto("New roadmap", "A new roadmap is available.", "UPDATE", "PUBLISHED"),
+                new CreateNotificationRequestDto(
+                        "New roadmap", "A new roadmap is available.", "UPDATE", "PUBLISHED", "CONTENT_MANAGER"),
                 "admin@example.com"
         );
     }

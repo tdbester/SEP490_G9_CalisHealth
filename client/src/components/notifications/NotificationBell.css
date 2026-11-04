@@ -1,0 +1,123 @@
+.notification-bell {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-family: Arial, sans-serif;
+}
+
+.notification-bell-trigger {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: #b6a5d5;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.notification-bell-trigger:hover,
+.notification-bell-trigger:focus-visible {
+  border-color: #3b2a6b;
+  background: #251a40;
+  color: #fff;
+}
+
+.notification-bell-trigger:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 2px;
+}
+
+.notification-bell-trigger svg {
+  font-size: 20px;
+}
+
+.notification-bell-badge {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border: 1px solid #1a1230;
+  border-radius: 999px;
+  background: #f472b6;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
+
+.notification-bell-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 1400;
+  width: min(340px, calc(100vw - 24px));
+  max-height: min(460px, calc(100vh - 80px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #3b2a6b;
+  border-radius: 14px;
+  background: #171126;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-family: Arial, sans-serif;
+}
+
+.notification-bell-heading {
+  flex: 0 0 auto;
+  padding: 4px 8px 10px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.notification-bell-popover .notification-popover-list {
+  min-height: 0;
+}
+
+.notification-bell-empty {
+  margin: 0;
+  padding: 10px 8px;
+  color: #a89bd0;
+  font-size: 12px;
+}
+
+.notification-bell-empty p {
+  margin: 0 0 8px;
+}
+
+.notification-bell-retry,
+.notification-bell-retry {
+  padding: 5px 10px;
+  border: 1px solid #62518f;
+  border-radius: 6px;
+  color: #e5ddf7;
+}
+
+.notification-bell-retry:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.notification-bell-retry:hover:not(:disabled) {
+  color: #fff;
+}
+
+@media (max-width: 480px) {
+  .notification-bell-popover {
+    position: fixed;
+    top: 64px;
+    right: 12px;
+  }
+}

@@ -4,7 +4,6 @@ import com.calishealth.dtos.BatchDeleteRequestDto;
 import com.calishealth.dtos.CreateNotificationRequestDto;
 import com.calishealth.dtos.NotificationListResponseDto;
 import com.calishealth.dtos.NotificationResponseDto;
-import com.calishealth.dtos.UpdateNotificationRequestDto;
 import com.calishealth.service.AdminNotificationService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -20,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/admin/notifications")
@@ -53,11 +53,8 @@ public class AdminNotificationController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<NotificationResponseDto> updateNotification(
-            @PathVariable Long id,
-            @Valid @RequestBody UpdateNotificationRequestDto request
-    ) {
-        return ResponseEntity.ok(notifications.updateNotification(id, request));
+    public ResponseEntity<Void> updateNotification(@PathVariable Long id) {
+        throw new ResponseStatusException(HttpStatus.METHOD_NOT_ALLOWED, "Notifications are read-only");
     }
 
     @DeleteMapping("/batch")

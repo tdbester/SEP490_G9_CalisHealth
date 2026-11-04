@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BuildRoundedIcon from "@mui/icons-material/BuildRounded";
+import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import api from "../api/client";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import notificationToast from "../utils/notificationToast";
 
 const AREAS = [
-  { value: "MEMBER_APP", label: "Member app" },
-  { value: "AI_CAMERA_TRAINING", label: "AI camera training" },
-  { value: "UPLOADS", label: "Uploads" },
-  { value: "ADMIN_AREA", label: "Admin area" },
+  { value: "MEMBER_APP_ACCESS", label: "Member App Access" },
+  { value: "MEMBER_VIDEO_UPLOADS", label: "Member Video Uploads" },
+  { value: "AI_POSE_ASSESSMENT", label: "AI Pose Assessment" },
+  { value: "SYSTEM_STORAGE_CDN", label: "System Storage & CDN" },
+  { value: "ADMIN_MANAGEMENT_PORTAL", label: "Admin Management Portal" },
 ];
 const REMINDERS = [
   { value: 1, label: "1 hour before" },
@@ -24,6 +26,10 @@ const fieldClass =
 function toLocalDateTimeValue(date) {
   const offset = date.getTimezoneOffset() * 60000;
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function toApiDateTimeValue(value) {
+  return value.length === 16 ? `${value}:00` : value;
 }
 
 function getDefaultWindow() {
@@ -65,7 +71,7 @@ export default function CreateMaintenanceSchedulePage() {
   const [message, setMessage] = useState("");
   const [startsAt, setStartsAt] = useState(defaultWindow.startsAt);
   const [endsAt, setEndsAt] = useState(defaultWindow.endsAt);
-  const [affectedAreas, setAffectedAreas] = useState(["MEMBER_APP"]);
+  const [affectedAreas, setAffectedAreas] = useState(["MEMBER_APP_ACCESS"]);
   const [notifyMembers, setNotifyMembers] = useState(true);
   const [reminderHours, setReminderHours] = useState(24);
   const [errors, setErrors] = useState({});
@@ -121,12 +127,17 @@ export default function CreateMaintenanceSchedulePage() {
       const payload = {
         title: title.trim(),
         message: message.trim() || null,
-        startsAt,
-        endsAt,
-        affectedAreas,
+        startsAt: toApiDateTimeValue(startsAt),
+        endsAt: toApiDateTimeValue(endsAt),
+        affectedAreas: AREAS
+          .filter((area) => affectedAreas.includes(area.value))
+          .map((area) => area.value),
         notifyMembers,
         reminderHours,
       };
+      if (import.meta.env.DEV) {
+        console.log("Submitting Payload:", payload);
+      }
       await api.post("/admin/maintenance-schedules", payload);
       notificationToast.success(notifyMembers
         ? "Maintenance schedule created and global notification published successfully!"
@@ -145,7 +156,9 @@ export default function CreateMaintenanceSchedulePage() {
         }));
       }
       notificationToast.error(
-        startError || endError || error.response?.data?.message ||
+        startError || endError ||
+        Object.values(validationErrors || {}).find((value) => typeof value === "string") ||
+        error.response?.data?.message ||
         "Could not create the maintenance schedule. Please try again.",
       );
     } finally {
@@ -247,25 +260,36 @@ export default function CreateMaintenanceSchedulePage() {
 
         <section className={sectionClass}>
           <h2 className="text-sm font-bold text-white">Affected areas</h2>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {AREAS.map((area) => {
               const checked = affectedAreas.includes(area.value);
               return (
                 <label
                   key={area.value}
-                  className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition ${
+                  className={`relative flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition ${
                     checked
-                      ? "border-violet-500/60 bg-violet-500/10 text-[#e5dfff]"
-                      : "border-[#302650] bg-[#100d26] text-[#b8b0cf] hover:border-[#514579]"
+                      ? "border-[#b49aff] bg-[#5331c7] shadow-[0_0_0_1px_rgba(180,154,255,0.3)]"
+                      : "border-[#81769d] bg-[#211a38] hover:border-[#b49aff] hover:bg-[#2b2049]"
                   }`}
                 >
+                  <span
+                    aria-hidden="true"
+                    className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                      checked
+                        ? "border-white bg-[#8b5cf6] text-white"
+                        : "border-[#b8acd0] bg-[#120d22] text-transparent"
+                    }`}
+                  >
+                    {checked && <CheckRoundedIcon sx={{ fontSize: 15 }} />}
+                  </span>
+                  <span className={`min-w-0 text-sm font-semibold ${checked ? "text-white" : "text-[#eee9f7]"}`}>{area.label}</span>
                   <input
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggleArea(area.value)}
-                    className="h-3.5 w-3.5 cursor-pointer accent-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#15112f] disabled:cursor-not-allowed disabled:opacity-60"
+                    aria-label={area.label}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0 focus-visible:rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
                   />
-                  {area.label}
                 </label>
               );
             })}
@@ -336,12 +360,14 @@ export default function CreateMaintenanceSchedulePage() {
 
         <section className={sectionClass}>
           <h2 className="text-sm font-bold text-white">Notification preview</h2>
-          <div className="mt-3 flex items-start gap-3 rounded-xl border border-[#302650] bg-[#0f0b22] px-3.5 py-3">
-            <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-400">
-              <BuildRoundedIcon sx={{ fontSize: 14 }} />
-            </span>
-            <div className="min-w-0">
-              <h3 className="text-xs font-bold text-white">Scheduled maintenance</h3>
+          <div className="mt-3 rounded-xl border border-[#302650] bg-[#0f0b22] px-3.5 py-3">
+            <div className="flex items-center gap-2">
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-400">
+                <BuildRoundedIcon sx={{ fontSize: 14 }} />
+              </span>
+              <h3 className="text-xs font-bold leading-4 text-white">Scheduled maintenance</h3>
+            </div>
+            <div className="mt-1">
               <p className="mt-0.5 text-[11px] leading-4 text-[#a89dbd]">{previewMessage}</p>
               <p className="text-[10px] font-medium text-[#d3c7ef]">Just now</p>
             </div>

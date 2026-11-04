@@ -1,5 +1,7 @@
 package com.calishealth.dtos;
 
+import com.calishealth.models.AffectedArea;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -17,13 +19,15 @@ public record CreateMaintenanceScheduleRequestDto(
         String message,
 
         @NotNull(message = "Start time is required")
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
         LocalDateTime startsAt,
 
         @NotNull(message = "End time is required")
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
         LocalDateTime endsAt,
 
         @NotEmpty(message = "Select at least one affected area")
-        Set<@NotBlank(message = "Affected area cannot be blank") String> affectedAreas,
+        Set<AffectedArea> affectedAreas,
 
         @NotNull(message = "Notify members selection is required")
         Boolean notifyMembers,

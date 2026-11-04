@@ -5,6 +5,7 @@ import com.calishealth.dtos.MaintenanceScheduleResponseDto;
 import com.calishealth.exception.RequestValidationException;
 import com.calishealth.exception.ResourceNotFoundException;
 import com.calishealth.models.MaintenanceSchedule;
+import com.calishealth.models.AffectedArea;
 import com.calishealth.models.Notification;
 import com.calishealth.models.User;
 import com.calishealth.repository.MaintenanceScheduleRepository;
@@ -22,6 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,15 +31,28 @@ import java.util.Set;
 @Service
 public class MaintenanceScheduleService {
     private static final Set<String> ALLOWED_AREAS =
-            Set.of("MEMBER_APP", "AI_CAMERA_TRAINING", "UPLOADS", "ADMIN_AREA");
+            Set.of(
+                    "MEMBER_APP_ACCESS",
+                    "MEMBER_VIDEO_UPLOADS",
+                    "AI_POSE_ASSESSMENT",
+                    "SYSTEM_STORAGE_CDN",
+                    "ADMIN_MANAGEMENT_PORTAL"
+            );
     private static final List<String> AREA_ORDER =
-            List.of("MEMBER_APP", "AI_CAMERA_TRAINING", "UPLOADS", "ADMIN_AREA");
+            List.of(
+                    "MEMBER_APP_ACCESS",
+                    "MEMBER_VIDEO_UPLOADS",
+                    "AI_POSE_ASSESSMENT",
+                    "SYSTEM_STORAGE_CDN",
+                    "ADMIN_MANAGEMENT_PORTAL"
+            );
     private static final Set<Integer> ALLOWED_REMINDERS = Set.of(1, 12, 24, 48);
     private static final Map<String, String> AREA_LABELS = Map.of(
-            "MEMBER_APP", "Member app",
-            "AI_CAMERA_TRAINING", "AI camera training",
-            "UPLOADS", "Uploads",
-            "ADMIN_AREA", "Admin area"
+            "MEMBER_APP_ACCESS", "Member App Access",
+            "MEMBER_VIDEO_UPLOADS", "Member Video Uploads",
+            "AI_POSE_ASSESSMENT", "AI Pose Assessment",
+            "SYSTEM_STORAGE_CDN", "System Storage & CDN",
+            "ADMIN_MANAGEMENT_PORTAL", "Admin Management Portal"
     );
     private static final DateTimeFormatter PREVIEW_DATE =
             DateTimeFormatter.ofPattern("MMM d, yyyy hh:mm a", java.util.Locale.ENGLISH);
@@ -86,6 +101,22 @@ public class MaintenanceScheduleService {
     @Transactional
     public MaintenanceScheduleResponseDto getSchedule(Long id) {
         return toResponse(getScheduleEntity(id));
+    }
+
+    public boolean isServiceUnderMaintenance(String serviceKey) {
+        if (!ALLOWED_AREAS.contains(serviceKey)) {
+            throw new IllegalArgumentException("Unsupported maintenance service key: " + serviceKey);
+        }
+        return schedules.countActiveSchedulesByArea(serviceKey, LocalDateTime.now()) > 0;
+    }
+
+    public Map<String, Boolean> getServiceMaintenanceStatus() {
+        Set<String> activeAreas = schedules.findActiveAreas(LocalDateTime.now());
+        Map<String, Boolean> status = new LinkedHashMap<>();
+        for (String area : AREA_ORDER) {
+            status.put(area, activeAreas.contains(area));
+        }
+        return status;
     }
 
     @Transactional
@@ -156,7 +187,8 @@ public class MaintenanceScheduleService {
         if (!ALLOWED_REMINDERS.contains(request.reminderHours())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported reminder interval");
         }
-        if (!ALLOWED_AREAS.containsAll(request.affectedAreas())) {
+        if (request.affectedAreas() == null
+                || !ALLOWED_AREAS.containsAll(request.affectedAreas().stream().map(Enum::name).toList())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported affected area");
         }
     }
@@ -186,7 +218,9 @@ public class MaintenanceScheduleService {
                 : request.message().trim());
         schedule.setStartsAt(request.startsAt());
         schedule.setEndsAt(request.endsAt());
-        schedule.setAffectedAreas(new LinkedHashSet<>(request.affectedAreas()));
+        schedule.setAffectedAreas(request.affectedAreas().stream()
+                .map(AffectedArea::name)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new)));
         schedule.setNotifyMembers(request.notifyMembers());
         schedule.setReminderHours(request.reminderHours());
     }
@@ -195,11 +229,13 @@ public class MaintenanceScheduleService {
         Notification notification = new Notification();
         notification.setCreatedBy(adminId);
         notification.setUserId(null);
+        notification.setTargetAudience("SYSTEM_WIDE");
         updateMaintenanceNotification(notification, schedule);
         return notification;
     }
 
     private static void updateMaintenanceNotification(Notification notification, MaintenanceSchedule schedule) {
+        notification.setTargetAudience("SYSTEM_WIDE");
         notification.setTitle("Scheduled maintenance");
         notification.setMessage(buildNotificationMessage(schedule));
         notification.setType("MAINTENANCE");

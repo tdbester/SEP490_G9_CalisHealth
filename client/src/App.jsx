@@ -59,7 +59,7 @@ import VerifyResetPassword from "./pages/VerifyResetPassword";
 import ResetPassword from "./pages/ResetPassword";
 import NotificationListPage from "./pages/NotificationListPage";
 import CreateNotificationPage from "./pages/CreateNotificationPage";
-import EditNotificationPage from "./pages/EditNotificationPage";
+import NotificationDetailPage from "./pages/NotificationDetailPage";
 import CreateMaintenanceSchedulePage from "./pages/CreateMaintenanceSchedulePage";
 import MaintenanceScheduleListPage from "./pages/MaintenanceScheduleListPage";
 import MaintenanceScheduleDetailPage from "./pages/MaintenanceScheduleDetailPage";
@@ -68,6 +68,7 @@ import SurveyFlow, { SurveyEntry } from "./pages/survey/SurveyFlow";
 import SurveyStepPage from "./pages/survey/SurveyStepPage";
 import SurveyResult from "./pages/survey/SurveyResult";
 import SurveyManagement from "./pages/content/SurveyManagement";
+import { ContentManagementPage } from "./features/content-manager/pages/ContentManagementPage";
 
 export default function App() {
   const memberPage = (page) => (
@@ -121,6 +122,7 @@ export default function App() {
           <Route path="/content" element={<ContentManagerLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<ContentManagerDashboard />} />
+          <Route path="management/:section" element={<ContentManagementPage />} />
           <Route path="daily-training-plans" element={<DailyPlanTemplateListPage />} />
           <Route path="daily-training-plans/new" element={<DailyPlanTemplateBuilderPage />} />
           <Route path="daily-training-plans/:code" element={<DailyPlanTemplateDetailPage />} />
@@ -196,7 +198,7 @@ export default function App() {
           <Route path="create" element={<Navigate to="/admin/users/create" replace />} />
           <Route path="notifications" element={<NotificationListPage />} />
           <Route path="notifications/new" element={<CreateNotificationPage />} />
-          <Route path="notifications/:id" element={<EditNotificationPage />} />
+          <Route path="notifications/:id" element={<NotificationDetailPage />} />
           <Route path="storage" element={<AdminSectionPage title="Media storage & infrastructure" />} />
           <Route path="maintenance" element={<MaintenanceScheduleListPage />} />
           <Route path="maintenance/create" element={<CreateMaintenanceSchedulePage />} />

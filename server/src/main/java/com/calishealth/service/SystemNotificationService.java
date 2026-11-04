@@ -22,11 +22,22 @@ public class SystemNotificationService {
 
         Notification notification = new Notification();
         notification.setUserId(memberId);
+        notification.setTargetAudience("SPECIFIC_USER");
         notification.setTitle(accepted ? "Exercise submission approved" : "Exercise submission rejected");
         notification.setMessage(accepted
-                ? "Your exercise submission '" + exerciseName + "' has been approved by the Content Manager."
-                : "Your exercise submission '" + exerciseName + "' was rejected. Reason: " + rejectionReason.trim());
-        notification.setType("SYSTEM");
+                ? "Your exercise submission \"" + exerciseName + "\" has been approved!"
+                : "Your exercise submission \"" + exerciseName + "\" was rejected. Reason: " + rejectionReason.trim());
+        notification.setType("ANNOUNCEMENT");
+        notification.setStatus("PUBLISHED");
+        notifications.save(notification);
+    }
+
+    public void notifyContentManagersPendingApproval(String exerciseTitle) {
+        Notification notification = new Notification();
+        notification.setTargetAudience("CONTENT_MANAGER");
+        notification.setTitle("New exercise pending approval");
+        notification.setMessage("Exercise \"" + exerciseTitle + "\" is waiting for moderation.");
+        notification.setType("ANNOUNCEMENT");
         notification.setStatus("PUBLISHED");
         notifications.save(notification);
     }

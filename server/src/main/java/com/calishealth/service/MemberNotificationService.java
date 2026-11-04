@@ -6,6 +6,7 @@ import com.calishealth.exception.ResourceNotFoundException;
 import com.calishealth.models.Notification;
 import com.calishealth.models.NotificationRead;
 import com.calishealth.models.User;
+import com.calishealth.models.UserRole;
 import com.calishealth.repository.NotificationReadRepository;
 import com.calishealth.repository.NotificationRepository;
 import com.calishealth.repository.UserRepository;
@@ -36,13 +37,16 @@ public class MemberNotificationService {
     public MemberNotificationListDto getNotifications(String memberEmail) {
         User member = getMember(memberEmail);
         List<Notification> published =
-                notifications.findVisibleToUserByStatusOrderByCreatedAtDesc(member.getId(), "PUBLISHED");
+                notifications.findVisibleToUserByStatusAudienceOrderByCreatedAtDesc(
+                        member.getId(), member.getRole().name(), "PUBLISHED");
         List<Long> ids = published.stream().map(Notification::getId).toList();
-        Set<Long> readIds = new HashSet<>(
-                reads.findAllByUserIdAndNotificationIdIn(member.getId(), ids).stream()
-                        .map(NotificationRead::getNotificationId)
-                        .toList()
-        );
+        Set<Long> readIds = ids.isEmpty()
+                ? Set.of()
+                : new HashSet<>(
+                        reads.findAllByUserIdAndNotificationIdIn(member.getId(), ids).stream()
+                                .map(NotificationRead::getNotificationId)
+                                .toList()
+                );
         List<MemberNotificationDto> items = published.stream()
                 .map(item -> toDto(item, readIds.contains(item.getId())))
                 .toList();
@@ -53,7 +57,7 @@ public class MemberNotificationService {
     public void markAsRead(Long notificationId, String memberEmail) {
         User member = getMember(memberEmail);
         Notification notification = notifications.findById(notificationId)
-                .filter(item -> "PUBLISHED".equals(item.getStatus()))
+                .filter(item -> isVisibleToUser(item, member))
                 .orElseThrow(() -> new ResourceNotFoundException("Published notification not found: " + notificationId));
         if (!reads.existsByUserIdAndNotificationId(member.getId(), notification.getId())) {
             reads.save(new NotificationRead(member.getId(), notification.getId()));
@@ -65,12 +69,38 @@ public class MemberNotificationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Authenticated member was not found"));
     }
 
+    private static boolean isVisibleToUser(Notification notification, User user) {
+        if (!"PUBLISHED".equals(notification.getStatus())) return false;
+        if ("SPECIFIC_USER".equals(notification.getTargetAudience())) {
+            return user.getRole() != UserRole.ADMIN
+                    && user.getId().equals(notification.getUserId());
+        }
+        String audience = notification.getTargetAudience();
+        if (audience == null) return false;
+        return switch (user.getRole()) {
+            case MEMBER -> "MEMBER".equals(audience) || "ALL_MEMBERS".equals(audience)
+                    || "SYSTEM_WIDE".equals(audience) || "ALL_USERS".equals(audience)
+                    || "GLOBAL".equals(audience) || "ALL_ROLES".equals(audience);
+            case CONTENT_MANAGER -> "CONTENT_MANAGER".equals(audience)
+                    || "SYSTEM_WIDE".equals(audience)
+                    || "ALL_USERS".equals(audience)
+                    || "GLOBAL".equals(audience)
+                    || "ALL_ROLES".equals(audience);
+            case ADMIN -> "SYSTEM_WIDE".equals(audience)
+                    || "ALL_USERS".equals(audience)
+                    || "GLOBAL".equals(audience)
+                    || "ALL_ROLES".equals(audience);
+        };
+    }
+
     private static MemberNotificationDto toDto(Notification notification, boolean read) {
         return new MemberNotificationDto(
                 notification.getId(),
                 notification.getTitle(),
                 notification.getMessage(),
                 notification.getType(),
+                notification.getTargetAudience(),
+                notification.getStatus(),
                 notification.getCreatedAt(),
                 read
         );

@@ -7,6 +7,7 @@ import {
   CircularProgress,
   CssBaseline,
   Drawer,
+  Alert,
   IconButton,
   List,
   ListItemButton,
@@ -14,7 +15,6 @@ import {
   ListItemText,
   Stack,
   ThemeProvider,
-  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
@@ -29,7 +29,9 @@ import BuildRoundedIcon from "@mui/icons-material/BuildRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import CalendarTodayRoundedIcon from "@mui/icons-material/CalendarTodayRounded";
+import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import api from "../../api/client";
+import NotificationBell from "../notifications/NotificationBell";
 import contentTheme, { CM } from "../../theme-content";
 import {
   AccountMenu,
@@ -160,11 +162,35 @@ function AdminShell({ user, logout, children }) {
   const navigate = useNavigate();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const [open, setOpen] = useState(false);
+  const [adminMaintenanceActive, setAdminMaintenanceActive] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
     setOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadMaintenanceStatus = async () => {
+      try {
+        const { data } = await api.get("/admin/maintenance-schedules/service-status", {
+          params: { serviceKey: "ADMIN_MANAGEMENT_PORTAL" },
+        });
+        if (!cancelled) {
+          setAdminMaintenanceActive(data?.ADMIN_MANAGEMENT_PORTAL === true);
+        }
+      } catch {
+        // The maintenance banner is optional; a status API failure must not interrupt Admin navigation.
+      }
+    };
+
+    loadMaintenanceStatus();
+    const intervalId = window.setInterval(loadMaintenanceStatus, 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   return (
     <Box className="admin-area-shell" sx={{ display: "flex", minHeight: "100vh", bgcolor: CM.bg }}>
@@ -232,36 +258,26 @@ function AdminShell({ user, logout, children }) {
               fontFamily: "Arial, sans-serif",
             }}
           />
-          <Tooltip title="Notifications">
-            <IconButton
-              aria-label="Open notifications"
-              onClick={() => navigate(ADMIN_PATHS.notifications)}
-              sx={{
-                position: "relative",
-                width: 34,
-                height: 34,
-                border: `1px solid ${CM.border}`,
-                color: CM.textMuted,
-                "&:hover": { color: CM.text, borderColor: CM.borderStrong },
-              }}
-            >
-              <NotificationsNoneRoundedIcon sx={{ fontSize: 19 }} />
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: 7,
-                  right: 8,
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  bgcolor: CM.pink,
-                }}
-              />
-            </IconButton>
-          </Tooltip>
+          <NotificationBell apiClient={api} ariaLabel="Open notifications" />
           <AccountMenu user={user} logout={logout} fallbackName="Admin" />
           <LogoutButton logout={logout} />
         </Stack>
+        {adminMaintenanceActive && (
+          <Alert
+            icon={<WarningAmberRoundedIcon fontSize="inherit" />}
+            severity="warning"
+            sx={{
+              mx: 2,
+              mt: 1.5,
+              bgcolor: "rgba(245, 158, 11, 0.14)",
+              color: "#fde68a",
+              border: "1px solid rgba(245, 158, 11, 0.4)",
+              "& .MuiAlert-icon": { color: "#fbbf24" },
+            }}
+          >
+            Admin Management Portal is under scheduled maintenance. Administrative access remains available.
+          </Alert>
+        )}
 
         <Box component="main" sx={{ flex: 1, pb: 5 }}>
           {children}

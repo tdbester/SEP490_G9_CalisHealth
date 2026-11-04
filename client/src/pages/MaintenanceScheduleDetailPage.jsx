@@ -9,10 +9,11 @@ import ScheduleRoundedIcon from "@mui/icons-material/ScheduleRounded";
 import api from "../api/client";
 
 const AREA_LABELS = {
-  MEMBER_APP: "Member app",
-  AI_CAMERA_TRAINING: "AI camera training",
-  UPLOADS: "Uploads",
-  ADMIN_AREA: "Admin area",
+  MEMBER_APP_ACCESS: "Member App Access",
+  MEMBER_VIDEO_UPLOADS: "Member Video Uploads",
+  AI_POSE_ASSESSMENT: "AI Pose Assessment",
+  SYSTEM_STORAGE_CDN: "System Storage & CDN",
+  ADMIN_MANAGEMENT_PORTAL: "Admin Management Portal",
 };
 
 const STATUS_STYLES = {

@@ -1,7 +1,6 @@
 package com.calishealth.service;
 
 import com.calishealth.dtos.CreateNotificationRequestDto;
-import com.calishealth.dtos.UpdateNotificationRequestDto;
 import com.calishealth.exception.ResourceNotFoundException;
 import com.calishealth.models.Notification;
 import com.calishealth.models.User;
@@ -21,7 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
-import static org.mockito.ArgumentMatchers.anyIterable;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -46,29 +44,61 @@ class AdminNotificationServiceTest {
         item.setMessage("A new progression is available.");
         item.setType("UPDATE");
         item.setStatus("PUBLISHED");
+        item.setTargetAudience("CONTENT_MANAGER");
+        item.setCreatedBy(42L);
         item.setCreatedAt(LocalDateTime.of(2026, 10, 10, 9, 0));
-        when(notifications.findAllByTypeOrderByCreatedAtDesc("UPDATE")).thenReturn(List.of(item));
-        when(notifications.count()).thenReturn(4L);
-        when(notifications.countByType("MAINTENANCE")).thenReturn(1L);
-        when(notifications.countByType("ANNOUNCEMENT")).thenReturn(2L);
-        when(notifications.countByType("UPDATE")).thenReturn(1L);
+        when(notifications.findAllByTypeAndCreatedByIsNotNullOrderByCreatedAtDesc("UPDATE"))
+                .thenReturn(List.of(item));
+        when(notifications.countByCreatedByIsNotNull()).thenReturn(4L);
+        when(notifications.countByTypeAndCreatedByIsNotNull("MAINTENANCE")).thenReturn(1L);
+        when(notifications.countByTypeAndCreatedByIsNotNull("ANNOUNCEMENT")).thenReturn(2L);
+        when(notifications.countByTypeAndCreatedByIsNotNull("UPDATE")).thenReturn(1L);
 
         var response = service.getNotifications("update");
 
         assertEquals(1, response.notifications().size());
         assertEquals(8L, response.notifications().get(0).id());
+        assertEquals("CONTENT_MANAGER", response.notifications().get(0).targetAudience());
         assertEquals(4L, response.counts().allCount());
         assertEquals(1L, response.counts().maintenanceCount());
         assertEquals(2L, response.counts().announcementCount());
         assertEquals(1L, response.counts().updateCount());
-        verify(notifications).findAllByTypeOrderByCreatedAtDesc("UPDATE");
+        verify(notifications).findAllByTypeAndCreatedByIsNotNullOrderByCreatedAtDesc("UPDATE");
+    }
+
+    @Test
+    void loadsAllAdminAndMaintenanceNotificationsButExcludesAutomatedModerationNotifications() {
+        Notification adminNotification = notification(20L, "Admin notice", "ANNOUNCEMENT", "PUBLISHED");
+        adminNotification.setCreatedBy(2L);
+        when(notifications.findAllByCreatedByIsNotNullOrderByCreatedAtDesc())
+                .thenReturn(List.of(adminNotification));
+        when(notifications.countByCreatedByIsNotNull()).thenReturn(1L);
+        when(notifications.countByTypeAndCreatedByIsNotNull("MAINTENANCE")).thenReturn(0L);
+        when(notifications.countByTypeAndCreatedByIsNotNull("ANNOUNCEMENT")).thenReturn(1L);
+        when(notifications.countByTypeAndCreatedByIsNotNull("UPDATE")).thenReturn(0L);
+
+        var response = service.getNotifications("ALL");
+
+        assertEquals(1, response.notifications().size());
+        assertEquals(20L, response.notifications().get(0).id());
+        assertEquals(1L, response.counts().allCount());
+        verify(notifications).findAllByCreatedByIsNotNullOrderByCreatedAtDesc();
+    }
+
+    @Test
+    void doesNotLoadAutomatedModerationNotificationById() {
+        when(notifications.findByIdAndCreatedByIsNotNull(21L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.getNotification(21L));
     }
 
     @Test
     void rejectsBatchDeleteIfAnyIdDoesNotExist() {
         Notification found = new Notification();
         found.setId(1L);
-        doReturn(List.of(found)).when(notifications).findAllById(anyIterable());
+        found.setCreatedBy(42L);
+        doReturn(List.of(found))
+                .when(notifications).findAllByIdInAndCreatedByIsNotNull(anyCollection());
 
         assertThrows(ResourceNotFoundException.class,
                 () -> service.deleteNotifications(List.of(1L, 999L)));
@@ -87,9 +117,26 @@ class AdminNotificationServiceTest {
     }
 
     @Test
+    void storesTheSelectedAudience() {
+        User admin = new User();
+        admin.setId(42L);
+        when(users.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(notifications.save(any(Notification.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.createNotification(
+                new CreateNotificationRequestDto(
+                        "CM notice", "Review the new submission.", "ANNOUNCEMENT", "PUBLISHED", "CONTENT_MANAGER"),
+                "admin@example.com");
+
+        assertEquals("CONTENT_MANAGER", response.targetAudience());
+        verify(notifications).save(org.mockito.ArgumentMatchers.argThat(saved ->
+                "CONTENT_MANAGER".equals(saved.getTargetAudience())));
+    }
+
+    @Test
     void loadsNotificationById() {
         Notification item = notification(15L, "Existing title", "ANNOUNCEMENT", "DRAFT");
-        when(notifications.findById(15L)).thenReturn(Optional.of(item));
+        when(notifications.findByIdAndCreatedByIsNotNull(15L)).thenReturn(Optional.of(item));
 
         var response = service.getNotification(15L);
 
@@ -101,46 +148,15 @@ class AdminNotificationServiceTest {
 
     @Test
     void throwsNotFoundWhenLoadingMissingNotification() {
-        when(notifications.findById(404L)).thenReturn(Optional.empty());
+        when(notifications.findByIdAndCreatedByIsNotNull(404L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> service.getNotification(404L));
-    }
-
-    @Test
-    void updatesNotificationFieldsAndStatus() {
-        Notification existing = notification(15L, "Old title", "UPDATE", "DRAFT");
-        when(notifications.findById(15L)).thenReturn(Optional.of(existing));
-        when(notifications.save(existing)).thenReturn(existing);
-
-        var response = service.updateNotification(
-                15L,
-                new UpdateNotificationRequestDto(" New title ", " New message ", "UPDATE", "PUBLISHED")
-        );
-
-        assertEquals("New title", response.title());
-        assertEquals("New message", response.message());
-        assertEquals("UPDATE", response.type());
-        assertEquals("PUBLISHED", response.status());
-        verify(notifications).save(existing);
-    }
-
-    @Test
-    void doesNotAllowMaintenanceNotificationToChangeType() {
-        Notification existing = notification(15L, "Maintenance", "MAINTENANCE", "PUBLISHED");
-        when(notifications.findById(15L)).thenReturn(Optional.of(existing));
-
-        assertThrows(org.springframework.web.server.ResponseStatusException.class, () ->
-                service.updateNotification(
-                        15L,
-                        new UpdateNotificationRequestDto("Maintenance", "Message", "UPDATE", "PUBLISHED")
-                )
-        );
-        verify(notifications, never()).save(any(Notification.class));
     }
 
     private Notification notification(Long id, String title, String type, String status) {
         Notification item = new Notification();
         item.setId(id);
+        item.setCreatedBy(42L);
         item.setTitle(title);
         item.setMessage("Notification message");
         item.setType(type);

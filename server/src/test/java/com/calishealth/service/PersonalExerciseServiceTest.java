@@ -35,6 +35,7 @@ class PersonalExerciseServiceTest {
     private ExerciseModerationHistoryRepository moderationHistory;
     private UserRepository users;
     private ProfanityWordRepository profanityWords;
+    private SystemNotificationService systemNotifications;
     private PersonalExerciseService service;
 
     @BeforeEach
@@ -43,6 +44,7 @@ class PersonalExerciseServiceTest {
         moderationHistory = mock(ExerciseModerationHistoryRepository.class);
         users = mock(UserRepository.class);
         profanityWords = mock(ProfanityWordRepository.class);
+        systemNotifications = mock(SystemNotificationService.class);
         when(profanityWords.findByActiveTrueOrderByIdAsc()).thenReturn(blockedWords());
         ExerciseVideoStorageService videoStorage = new ExerciseVideoStorageService(
                 temporaryDirectory.resolve("videos").toString(),
@@ -53,7 +55,8 @@ class PersonalExerciseServiceTest {
                 users,
                 new ContentModerationService(profanityWords),
                 videoStorage,
-                mock(ExerciseMuscleGroupCatalog.class));
+                mock(ExerciseMuscleGroupCatalog.class),
+                systemNotifications);
         User member = new User();
         member.setId(7L);
         member.setEmail("member@example.com");
@@ -89,6 +92,7 @@ class PersonalExerciseServiceTest {
         assertThat(saved.getDefaultDuration()).isNull();
         assertThat(saved.getAnatomyImageUrl()).isEqualTo(response.anatomyImageUrl());
         assertThat(saved.isShareWithCommunity()).isFalse();
+        verify(systemNotifications).notifyContentManagersPendingApproval("Tempo push-up");
     }
 
     @Test

@@ -54,6 +54,9 @@ class ExerciseServiceModerationReasonTest {
 
         service.updateStatus(exercise.getCode(), false, "  Unsafe execution form  ");
 
+        assertEquals(Exercise.EntryStatus.REJECTED.name(), exercise.getStatus());
+        assertEquals("REJECTED", exercise.getModerationStatus());
+        verify(exercises).saveAndFlush(exercise);
         verify(moderationHistory).insert(
                 eq(exercise.getCode()),
                 eq(exercise.getName()),
@@ -74,6 +77,22 @@ class ExerciseServiceModerationReasonTest {
                 eq("Community push-up"),
                 eq(false),
                 eq("Unsafe execution form")
+        );
+    }
+
+    @Test
+    void notifiesSubmissionAuthorWhenPendingExerciseIsApproved() {
+        Exercise exercise = customPendingExercise();
+        when(exercises.findByCode(exercise.getCode())).thenReturn(Optional.of(exercise));
+        when(exercises.saveAndFlush(exercise)).thenReturn(exercise);
+
+        service.updateStatus(exercise.getCode(), true, null);
+
+        verify(systemNotifications).notifyExerciseModeration(
+                eq(42L),
+                eq("Community push-up"),
+                eq(true),
+                eq(null)
         );
     }
 

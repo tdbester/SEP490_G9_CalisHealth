@@ -10,6 +10,13 @@ export const getLibraryOverview = async () => {
   return response.data;
 };
 
+export const getMaintenanceServiceStatus = async (serviceKey) => {
+  const response = await api.get("/public/maintenance/service-status", {
+    params: { serviceKey },
+  });
+  return response.data;
+};
+
 export const getExerciseCounts = async () => {
   const response = await api.get("/library/counts");
   return response.data;

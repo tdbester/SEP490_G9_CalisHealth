@@ -5,6 +5,7 @@ import com.calishealth.exception.RequestValidationException;
 import com.calishealth.models.MaintenanceSchedule;
 import com.calishealth.models.Notification;
 import com.calishealth.models.User;
+import com.calishealth.models.AffectedArea;
 import com.calishealth.repository.MaintenanceScheduleRepository;
 import com.calishealth.repository.NotificationRepository;
 import com.calishealth.repository.UserRepository;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Set;
 
@@ -50,10 +52,11 @@ class MaintenanceScheduleServiceTest {
 
     @Test
     void createsScheduleAndPublishedBroadcastWhenNotificationsAreEnabled() {
-        var response = service.create(request(true, startsAt(), startsAt().plusHours(2)), "admin@example.com");
+        LocalDateTime start = startsAt();
+        var response = service.create(request(true, start, start.plusHours(2)), "admin@example.com");
 
         assertEquals(12L, response.notificationId());
-        assertEquals(Set.of("MEMBER_APP"), response.affectedAreas());
+        assertEquals(Set.of("MEMBER_APP_ACCESS"), response.affectedAreas());
         org.mockito.ArgumentCaptor<Notification> notificationCaptor =
                 org.mockito.ArgumentCaptor.forClass(Notification.class);
         verify(notifications).save(notificationCaptor.capture());
@@ -62,7 +65,9 @@ class MaintenanceScheduleServiceTest {
         assertEquals("MAINTENANCE", notification.getType());
         assertEquals("PUBLISHED", notification.getStatus());
         assertEquals("UPCOMING", response.status());
-        assertEquals("Improving performance. Member app will be unavailable from Nov 4, 2026 02:00 AM to Nov 4, 2026 04:00 AM.",
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d, yyyy hh:mm a", java.util.Locale.ENGLISH);
+        assertEquals("Improving performance. Member App Access will be unavailable from "
+                        + start.format(formatter) + " to " + start.plusHours(2).format(formatter) + ".",
                 notification.getMessage());
         assertNull(notification.getUserId());
         verify(schedules).save(any(MaintenanceSchedule.class));
@@ -135,7 +140,7 @@ class MaintenanceScheduleServiceTest {
         schedule.setMessage("Improving performance.");
         schedule.setStartsAt(LocalDateTime.now().plusHours(23));
         schedule.setEndsAt(schedule.getStartsAt().plusHours(2));
-        schedule.setAffectedAreas(Set.of("MEMBER_APP"));
+        schedule.setAffectedAreas(Set.of("MEMBER_APP_ACCESS"));
         schedule.setNotifyMembers(true);
         schedule.setReminderHours(24);
         when(schedules.findAllByCancelledFalseAndNotifyMembersTrueAndReminderSentFalseAndStartsAtBetween(
@@ -165,6 +170,38 @@ class MaintenanceScheduleServiceTest {
         assertEquals(5, pageableCaptor.getValue().getPageSize());
     }
 
+    @Test
+    void reportsAreaUnderMaintenanceOnlyWhenAnActiveScheduleMatches() {
+        when(schedules.countActiveSchedulesByArea(
+                org.mockito.ArgumentMatchers.eq("MEMBER_VIDEO_UPLOADS"),
+                any(LocalDateTime.class)
+        )).thenReturn(1L);
+
+        assertEquals(true, service.isServiceUnderMaintenance("MEMBER_VIDEO_UPLOADS"));
+        verify(schedules).countActiveSchedulesByArea(
+                org.mockito.ArgumentMatchers.eq("MEMBER_VIDEO_UPLOADS"),
+                any(LocalDateTime.class)
+        );
+    }
+
+    @Test
+    void reportsAllDomainMaintenanceFlagsForAdmin() {
+        when(schedules.findActiveAreas(any(LocalDateTime.class)))
+                .thenReturn(Set.of("ADMIN_MANAGEMENT_PORTAL", "SYSTEM_STORAGE_CDN"));
+
+        var status = service.getServiceMaintenanceStatus();
+
+        assertEquals(5, status.size());
+        assertEquals(true, status.get("ADMIN_MANAGEMENT_PORTAL"));
+        assertEquals(true, status.get("SYSTEM_STORAGE_CDN"));
+        assertEquals(false, status.get("AI_POSE_ASSESSMENT"));
+    }
+
+    @Test
+    void rejectsUnknownMaintenanceServiceKey() {
+        assertThrows(IllegalArgumentException.class, () -> service.isServiceUnderMaintenance("UNKNOWN"));
+    }
+
     private static CreateMaintenanceScheduleRequestDto request(
             boolean notifyMembers,
             LocalDateTime startsAt,
@@ -175,13 +212,13 @@ class MaintenanceScheduleServiceTest {
                 "Improving performance.",
                 startsAt,
                 endsAt,
-                Set.of("MEMBER_APP"),
+                Set.of(AffectedArea.MEMBER_APP_ACCESS),
                 notifyMembers,
                 24
         );
     }
 
     private static LocalDateTime startsAt() {
-        return LocalDateTime.of(2026, 11, 4, 2, 0);
+        return LocalDateTime.now().plusDays(1).withHour(2).withMinute(0).withSecond(0).withNano(0);
     }
 }

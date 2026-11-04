@@ -1,13 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import { useCallback, useState, useEffect, useRef } from "react";
-import NotificationsNoneRoundedIcon from "@mui/icons-material/NotificationsNoneRounded";
+import { useState, useEffect, useRef } from "react";
 import LocalFireDepartmentRoundedIcon from "@mui/icons-material/LocalFireDepartmentRounded";
 import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import api from "../../api/client";
-import notificationToast from "../../utils/notificationToast";
-import "../../styles/notification.css";
+import NotificationBell from "../notifications/NotificationBell";
 import "./Topbar.css";
 
 function Logo() {
@@ -30,10 +28,6 @@ export default function Topbar() {
   const topbarRef = useRef(null);
   const [user, setUser] = useState(null);
   const [currentStreak, setCurrentStreak] = useState(null);
-  const [memberNotifications, setMemberNotifications] = useState([]);
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
-  const [notificationLoadError, setNotificationLoadError] = useState("");
-  const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [openPanel, setOpenPanel] = useState(null);
   const [language, setLanguage] = useState(
     () => localStorage.getItem("language") || "en",
@@ -74,69 +68,6 @@ export default function Topbar() {
       cancelled = true;
     };
   }, [user]);
-
-  const loadMemberNotifications = useCallback(async () => {
-    if (!user || !localStorage.getItem("token")) return;
-    setNotificationsLoading(true);
-    setNotificationLoadError("");
-    try {
-      const { data } = await api.get("/notifications");
-      const receivedNotifications = Array.isArray(data?.notifications) ? data.notifications : [];
-      setMemberNotifications(receivedNotifications);
-      setUnreadNotificationCount(
-        Number.isFinite(data?.unreadCount)
-          ? data.unreadCount
-          : receivedNotifications.filter((notification) => !notification.read).length,
-      );
-    } catch (error) {
-      console.error("Could not load member notifications:", error);
-      setNotificationLoadError(
-        error.response?.status === 404
-          ? "Notification service is unavailable. Restart the backend and try again."
-          : "Could not load notifications. Check the backend connection and try again.",
-      );
-    } finally {
-      setNotificationsLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return undefined;
-    loadMemberNotifications();
-    const intervalId = window.setInterval(loadMemberNotifications, 10000);
-    const refreshOnPublish = () => loadMemberNotifications();
-    const refreshWhenVisible = () => {
-      if (document.visibilityState === "visible") loadMemberNotifications();
-    };
-    window.addEventListener("member-notifications-updated", refreshOnPublish);
-    document.addEventListener("visibilitychange", refreshWhenVisible);
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener("member-notifications-updated", refreshOnPublish);
-      document.removeEventListener("visibilitychange", refreshWhenVisible);
-    };
-  }, [loadMemberNotifications, user]);
-
-  const toggleNotifications = () => {
-    const opening = openPanel !== "notifications";
-    setOpenPanel(opening ? "notifications" : null);
-    if (opening) loadMemberNotifications();
-  };
-
-  const markNotificationAsRead = async (notification) => {
-    if (notification.read) return;
-    setMemberNotifications((current) =>
-      current.map((item) => item.id === notification.id ? { ...item, read: true } : item),
-    );
-    setUnreadNotificationCount((count) => Math.max(0, count - 1));
-    try {
-      await api.post(`/notifications/${notification.id}/read`);
-    } catch (error) {
-      console.error("Could not mark member notification as read:", error);
-      notificationToast.error("Could not update notification status. Please try again.");
-      loadMemberNotifications();
-    }
-  };
 
   useEffect(() => {
     const closePanel = (event) => {
@@ -244,58 +175,10 @@ export default function Topbar() {
               <span className="topbar-streak-days">{currentStreak ?? "-"} days</span>
             </button>
 
-            <div className="topbar-notification-wrap">
-              <button
-                type="button"
-                className="topbar-icon-btn"
-                aria-label="Notifications"
-                aria-expanded={openPanel === "notifications"}
-                onClick={toggleNotifications}
-              >
-                <NotificationsNoneRoundedIcon />
-                {unreadNotificationCount > 0 && (
-                  <span className="topbar-notification-badge">
-                    {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
-                  </span>
-                )}
-              </button>
-              {openPanel === "notifications" && (
-                <section className="topbar-popover topbar-notification-popover">
-                  <div className="topbar-popover-heading">Notifications</div>
-                  {notificationLoadError ? (
-                    <div className="topbar-notification-empty" role="alert">
-                      <p>{notificationLoadError}</p>
-                      <button
-                        type="button"
-                        className="topbar-notification-retry"
-                        onClick={loadMemberNotifications}
-                        disabled={notificationsLoading}
-                      >
-                        {notificationsLoading ? "Retrying…" : "Retry"}
-                      </button>
-                    </div>
-                  ) : notificationsLoading && memberNotifications.length === 0 ? (
-                    <p className="topbar-notification-empty" role="status">Loading notifications…</p>
-                  ) : memberNotifications.length === 0 ? (
-                    <p className="topbar-notification-empty">No notifications yet.</p>
-                  ) : memberNotifications.map((notification) => (
-                    <button
-                      type="button"
-                      key={notification.id}
-                      className={`topbar-notification-item ${notification.read ? "is-read" : ""}`}
-                      onClick={() => markNotificationAsRead(notification)}
-                    >
-                      {!notification.read && <span className="topbar-notification-mark" />}
-                      <span className="topbar-notification-content">
-                        <strong>{notification.title}</strong>
-                        <span className="topbar-notification-message">{notification.message}</span>
-                        <time>{notification.type} · {new Date(notification.createdAt).toLocaleDateString("en-US")}</time>
-                      </span>
-                    </button>
-                  ))}
-                </section>
-              )}
-            </div>
+            <NotificationBell
+              apiClient={api}
+              onOpen={() => setOpenPanel(null)}
+            />
           </>
         )}
 

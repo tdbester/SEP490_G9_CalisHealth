@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
-import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
@@ -22,6 +22,24 @@ const TYPE_STYLES = {
   ANNOUNCEMENT: "border-cyan-500/30 bg-cyan-500/10 text-[#06B6D4]",
   UPDATE: "border-violet-500/30 bg-violet-500/10 text-[#8B5CF6]",
   SYSTEM: "border-indigo-500/30 bg-indigo-500/10 text-indigo-300",
+};
+const AUDIENCE_LABELS = {
+  MEMBER: "All Members",
+  ALL_MEMBERS: "All Members",
+  CONTENT_MANAGER: "Content Manager",
+  SYSTEM_WIDE: "System-wide",
+  ALL_USERS: "System-wide",
+  GLOBAL: "System-wide",
+  SPECIFIC_USER: "Direct User",
+};
+const AUDIENCE_STYLES = {
+  MEMBER: "border-cyan-500/30 bg-cyan-500/10 text-cyan-300",
+  ALL_MEMBERS: "border-cyan-500/30 bg-cyan-500/10 text-cyan-300",
+  CONTENT_MANAGER: "border-violet-500/30 bg-violet-500/10 text-violet-300",
+  SYSTEM_WIDE: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+  ALL_USERS: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+  GLOBAL: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+  SPECIFIC_USER: "border-amber-500/30 bg-amber-500/10 text-amber-300",
 };
 const PAGE_SIZE = 5;
 
@@ -79,6 +97,15 @@ function formatCreatedAt(value) {
   return Number.isNaN(date.getTime())
     ? "—"
     : date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function getNotificationAudience(notification) {
+  const value = notification.targetAudience ?? notification.target_audience ?? notification.audience;
+  return typeof value === "string" && value.trim()
+    ? value.trim().toUpperCase()
+    : notification.userId
+      ? "SPECIFIC_USER"
+      : "ALL_MEMBERS";
 }
 
 export default function NotificationListPage() {
@@ -240,7 +267,7 @@ export default function NotificationListPage() {
 
         <button
           type="button"
-          disabled={selectedIds.length === 0 || deleting}
+          disabled={selectedIds.length === 0}
           onClick={confirmDeleteSelected}
           className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#463b61] bg-[#17112d] px-3 text-xs font-medium text-[#d3cce4] transition hover:border-rose-400/50 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-40"
         >
@@ -256,7 +283,7 @@ export default function NotificationListPage() {
       )}
 
       <div className="overflow-x-auto rounded-xl border border-[#35275e] bg-[#21183c]">
-        <table className="w-full min-w-[900px] border-collapse text-left">
+        <table className="w-full min-w-[1020px] border-collapse text-left">
           <thead className="bg-[#1a1430] text-xs font-semibold uppercase tracking-wider text-[#a89bd0]">
             <tr>
               <th className="w-11 px-4 py-3">
@@ -278,6 +305,7 @@ export default function NotificationListPage() {
               </th>
               <th className="px-3 py-3">Notification</th>
               <th className="w-36 px-3 py-3 text-center">Type</th>
+              <th className="w-40 px-3 py-3 text-center">Audience</th>
               <th className="w-32 px-3 py-3 text-center">Status</th>
               <th className="w-32 px-3 py-3">Created</th>
               <th className="w-24 px-3 py-3 text-right">Actions</th>
@@ -286,19 +314,20 @@ export default function NotificationListPage() {
           <tbody className="divide-y divide-[#35275e]">
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-sm text-[#aaa0c5]">
+                <td colSpan={7} className="px-4 py-12 text-center text-sm text-[#aaa0c5]">
                   Loading notifications…
                 </td>
               </tr>
             ) : visibleNotifications.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-sm text-[#aaa0c5]">
+                <td colSpan={7} className="px-4 py-12 text-center text-sm text-[#aaa0c5]">
                   No notifications found.
                 </td>
               </tr>
             ) : (
               visibleNotifications.map((notification) => {
                 const normalizedType = String(notification.type || "").toUpperCase();
+                const audience = getNotificationAudience(notification);
                 const isPublished = String(notification.status || "").toUpperCase() === "PUBLISHED";
                 return (
                   <tr key={notification.id} className="transition hover:bg-white/[0.025]">
@@ -334,6 +363,20 @@ export default function NotificationListPage() {
                       </span>
                     </td>
                     <td className="px-3 py-3.5 text-center">
+                      <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${
+                        AUDIENCE_STYLES[audience] || "border-slate-500/30 bg-slate-500/10 text-slate-300"
+                      }`}>
+                        {audience === "CONTENT_MANAGER"
+                          ? "Content Manager"
+                          : audience === "SYSTEM_WIDE" || audience === "ALL_USERS" || audience === "GLOBAL"
+                            ? "System-wide"
+                            : audience === "MEMBER" || audience === "ALL_MEMBERS"
+                              ? "All Members"
+                              : AUDIENCE_LABELS[audience] || audience}
+                        {audience === "SPECIFIC_USER" && notification.userId ? ` #${notification.userId}` : ""}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3.5 text-center">
                       <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
                         isPublished
                           ? "border-emerald-500/40 bg-emerald-500/10 text-[#10B981]"
@@ -347,27 +390,15 @@ export default function NotificationListPage() {
                       {formatCreatedAt(notification.createdAt)}
                     </td>
                     <td className="px-3 py-3.5 text-right">
-                      {normalizedType === "SYSTEM" ? (
-                        <span className="text-xs text-[#a89bd0]">Automatic</span>
-                      ) : normalizedType === "MAINTENANCE" ? (
-                        <button
-                          type="button"
-                          onClick={() => navigate("/admin/maintenance")}
-                          aria-label={`Manage schedule for ${notification.title}`}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-[#1e202e] px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:bg-[#282a3d]"
-                        >
-                          <EditOutlinedIcon sx={{ fontSize: 15 }} />
-                          Schedule
-                        </button>
-                      ) : <button
+                      <button
                         type="button"
                         onClick={() => navigate(`/admin/notifications/${notification.id}`)}
-                        aria-label={`Edit ${notification.title}`}
+                        aria-label={`View ${notification.title}`}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-[#1e202e] px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:bg-[#282a3d]"
                       >
-                        <EditOutlinedIcon sx={{ fontSize: 15 }} />
-                        Edit
-                      </button>}
+                        <VisibilityOutlinedIcon sx={{ fontSize: 15 }} />
+                        View
+                      </button>
                     </td>
                   </tr>
                 );

@@ -20,6 +20,23 @@ const TYPE_OPTIONS = [
     description: "New content or features, such as a new skill roadmap.",
   },
 ];
+const AUDIENCE_OPTIONS = [
+  {
+    value: "MEMBER",
+    label: "All Members",
+    description: "Send only to Member accounts.",
+  },
+  {
+    value: "CONTENT_MANAGER",
+    label: "Content Manager",
+    description: "Send only to Content Manager accounts.",
+  },
+  {
+    value: "SYSTEM_WIDE",
+    label: "System-wide",
+    description: "Send to all users in the system (Members, Content Managers, and Admins).",
+  },
+];
 
 const inputClass =
   "mt-2 w-full rounded-xl border border-[#51456f] bg-[#17112d] px-3.5 py-3 text-sm text-white outline-none transition placeholder:text-[#81769d] focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20";
@@ -29,10 +46,13 @@ export default function CreateNotificationPage() {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [type, setType] = useState("ANNOUNCEMENT");
+  const [targetAudience, setTargetAudience] = useState("MEMBER");
   const [fieldErrors, setFieldErrors] = useState({});
   const [requestError, setRequestError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const isDirty = Boolean(title || message) || type !== "ANNOUNCEMENT";
+  const isDirty = Boolean(title || message)
+    || type !== "ANNOUNCEMENT"
+    || targetAudience !== "MEMBER";
   const {
     isLeaveConfirmationOpen,
     requestLeave,
@@ -56,6 +76,7 @@ export default function CreateNotificationPage() {
         message: message.trim(),
         type,
         status: "DRAFT",
+        targetAudience,
       });
       notificationToast.success("Draft saved successfully!");
       completeSave();
@@ -86,6 +107,7 @@ export default function CreateNotificationPage() {
         message: message.trim(),
         type,
         status: submitStatus,
+        targetAudience,
       });
       notificationToast.success(
         submitStatus === "PUBLISHED"
@@ -252,6 +274,39 @@ export default function CreateNotificationPage() {
             </p>
           </section>
 
+          <section className={sectionClass}>
+            <h2 className="text-sm font-semibold text-white">Target audience</h2>
+            <p className="mt-1 text-xs leading-5 text-[#a89bd0]">
+              Choose which roles can receive this notification.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {AUDIENCE_OPTIONS.map((option) => (
+                <label
+                  key={option.value}
+                  onClick={() => setTargetAudience(option.value)}
+                  className={`relative flex cursor-pointer gap-3 rounded-xl border p-4 transition ${
+                    targetAudience === option.value
+                      ? "border-violet-500 bg-[#30215f]/60"
+                      : "border-[#51456f] bg-[#17112d] hover:border-violet-400/60"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="notification-audience"
+                    value={option.value}
+                    checked={targetAudience === option.value}
+                    onChange={(event) => setTargetAudience(event.target.value)}
+                    className="mt-0.5 h-4 w-4 accent-[#7c5dfa]"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-white">{option.label}</span>
+                    <span className="mt-1 block text-xs leading-5 text-[#a89bd0]">{option.description}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </section>
+
         </div>
 
         <section className={sectionClass}>
@@ -262,7 +317,19 @@ export default function CreateNotificationPage() {
                 <span className="text-sm" aria-hidden="true">i</span>
               </span>
               <div className="min-w-0">
-                <p className="break-words text-sm font-semibold text-white">{previewTitle}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="break-words text-sm font-semibold text-white">{previewTitle}</p>
+                  <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                    targetAudience === "MEMBER"
+                      ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-300"
+                      : targetAudience === "CONTENT_MANAGER"
+                        ? "border-violet-500/30 bg-violet-500/10 text-violet-300"
+                        : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                  }`}>
+                    {AUDIENCE_OPTIONS.find((option) => option.value === targetAudience)?.label
+                      || AUDIENCE_OPTIONS[0].label}
+                  </span>
+                </div>
                 <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-[#a89bd0]">{previewMessage}</p>
                 <p className="mt-2 text-[10px] text-[#81769d]">Just now</p>
               </div>

@@ -18,5 +18,15 @@ public record CreateNotificationRequestDto(
 
         @NotBlank(message = "Status is required")
         @Pattern(regexp = "PUBLISHED|DRAFT", message = "Status must be PUBLISHED or DRAFT")
-        String status
-) {}
+        String status,
+
+        @Pattern(
+                regexp = "MEMBER|ALL_MEMBERS|CONTENT_MANAGER|SYSTEM_WIDE|ALL_USERS|GLOBAL",
+                message = "Audience must be MEMBER, CONTENT_MANAGER, or SYSTEM_WIDE"
+        )
+        String targetAudience
+) {
+    public CreateNotificationRequestDto(String title, String message, String type, String status) {
+        this(title, message, type, status, null);
+    }
+}

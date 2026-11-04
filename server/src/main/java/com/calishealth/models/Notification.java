@@ -42,6 +42,9 @@ public class Notification {
     @Column(name = "user_id")
     private Long userId;
 
+    @Column(name = "target_audience", nullable = false, length = 32)
+    private String targetAudience = "MEMBER";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

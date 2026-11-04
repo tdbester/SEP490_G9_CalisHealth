@@ -33,6 +33,7 @@ public class LibraryService {
     private final WorkoutRepository workoutRepository;
     private final UserRepository userRepository;
     private final ExerciseMuscleGroupCatalog muscleGroupCatalog;
+    private final SystemNotificationService systemNotifications;
 
     // Temporary session cache for member exercises created in memory if DB user record not found
     private final List<ExerciseListItem> customSessionExercises = new ArrayList<>();
@@ -271,6 +272,7 @@ public class LibraryService {
                 saved.setCode("CU_" + saved.getId());
                 muscleGroupCatalog.assign(saved, mg);
                 saved = exerciseRepository.save(saved);
+                systemNotifications.notifyContentManagersPendingApproval(saved.getName());
                 newId = saved.getId();
                 code = saved.getCode();
                 persisted = true;

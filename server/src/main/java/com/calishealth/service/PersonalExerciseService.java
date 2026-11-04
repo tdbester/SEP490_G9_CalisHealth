@@ -42,6 +42,7 @@ public class PersonalExerciseService {
     private final ContentModerationService moderation;
     private final ExerciseVideoStorageService videoStorage;
     private final ExerciseMuscleGroupCatalog muscleGroupCatalog;
+    private final SystemNotificationService systemNotifications;
 
     @Transactional(readOnly = true)
     public ContentTextCheckResponseDTO checkText(ContentTextCheckRequestDTO request) {
@@ -105,6 +106,8 @@ public class PersonalExerciseService {
             saved = exercises.save(saved);
             if (!result.isPassed()) {
                 recordRejection(saved, result.rejectionReason());
+            } else {
+                systemNotifications.notifyContentManagersPendingApproval(saved.getName());
             }
             return toResponse(saved, result.isPassed() ? null : result.rejectionReason());
         } catch (RuntimeException exception) {
@@ -244,6 +247,8 @@ public class PersonalExerciseService {
             Exercise saved = exercises.save(exercise);
             if (rejectionReason != null) {
                 recordRejection(saved, rejectionReason);
+            } else {
+                systemNotifications.notifyContentManagersPendingApproval(saved.getName());
             }
             if (replacementVideoUrl != null && previousVideoUrl != null) {
                 deleteVideoAfterCommit(previousVideoUrl);
