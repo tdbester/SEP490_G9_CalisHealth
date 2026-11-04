@@ -1,4 +1,4 @@
--- V25: Admin > Media storage & infrastructure (SGC-186).
+-- V34: Admin > Media storage & infrastructure (SGC-186).
 --
 -- media_files becomes the registry of every uploaded exercise video / anatomy image, so the admin
 -- can see what uses the storage and clean it up. Lifecycle of a file (status):
