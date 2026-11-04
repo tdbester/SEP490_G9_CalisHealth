@@ -21,10 +21,26 @@ const AUDIENCE_LABELS = {
 };
 
 const TYPE_COLORS = {
-  ANNOUNCEMENT: "#22d3ee",
-  UPDATE: "#a78bfa",
-  MAINTENANCE: "#fbbf24",
-  SYSTEM: "#818cf8",
+  ANNOUNCEMENT: {
+    color: "#67e8f9",
+    borderColor: "rgba(34, 211, 238, 0.35)",
+    bgcolor: "rgba(34, 211, 238, 0.12)",
+  },
+  UPDATE: {
+    color: "#c4b5fd",
+    borderColor: "rgba(167, 139, 250, 0.35)",
+    bgcolor: "rgba(167, 139, 250, 0.12)",
+  },
+  MAINTENANCE: {
+    color: "#fcd34d",
+    borderColor: "rgba(251, 191, 36, 0.35)",
+    bgcolor: "rgba(251, 191, 36, 0.12)",
+  },
+  SYSTEM: {
+    color: "#a5b4fc",
+    borderColor: "rgba(129, 140, 248, 0.35)",
+    bgcolor: "rgba(129, 140, 248, 0.12)",
+  },
 };
 
 function formatCreatedAt(value) {
@@ -52,6 +68,18 @@ export default function NotificationDetailModal({ notification, onClose }) {
       ?? (notification.userId ? "SPECIFIC_USER" : "MEMBER"),
   ).toUpperCase();
   const status = String(notification.status || (notification.read ? "READ" : "PUBLISHED")).toUpperCase();
+  const typeLabel = type.charAt(0) + type.slice(1).toLowerCase();
+  const statusLabel = status.charAt(0) + status.slice(1).toLowerCase();
+  const typeStyle = TYPE_COLORS[type] || {
+    color: "#c4b5fd",
+    borderColor: "rgba(196, 181, 253, 0.3)",
+    bgcolor: "rgba(139, 92, 246, 0.12)",
+  };
+  const statusColor = status === "PUBLISHED"
+    ? "#6ee7b7"
+    : status === "DRAFT"
+      ? "#cbd5e1"
+      : "#c4b5fd";
 
   return (
     <Dialog
@@ -79,10 +107,13 @@ export default function NotificationDetailModal({ notification, onClose }) {
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1.5 }}>
           <Chip
             size="small"
-            label={type.charAt(0) + type.slice(1).toLowerCase()}
+            label={typeLabel}
             sx={{
-              color: TYPE_COLORS[type] || "#c4b5fd",
-              bgcolor: "rgba(139,92,246,0.12)",
+              color: typeStyle.color,
+              border: "1px solid",
+              borderColor: typeStyle.borderColor,
+              bgcolor: typeStyle.bgcolor,
+              fontWeight: 600,
               fontFamily: "Arial, sans-serif",
             }}
           />
@@ -91,14 +122,16 @@ export default function NotificationDetailModal({ notification, onClose }) {
             label={AUDIENCE_LABELS[audience] || audience}
             sx={{
               color: "#c4b5fd",
+              border: "1px solid rgba(196, 181, 253, 0.28)",
               bgcolor: "rgba(139,92,246,0.12)",
+              fontWeight: 600,
               fontFamily: "Arial, sans-serif",
             }}
           />
         </Stack>
       </DialogTitle>
       <DialogContent dividers sx={{ borderColor: "#3b2b5b" }}>
-        <Typography sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", lineHeight: 1.7, fontFamily: "Arial, sans-serif" }}>
+        <Typography sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", lineHeight: 1.8, fontFamily: "Arial, sans-serif" }}>
           {notification.message}
         </Typography>
       </DialogContent>
@@ -107,11 +140,31 @@ export default function NotificationDetailModal({ notification, onClose }) {
           <Typography variant="caption" sx={{ color: "#a89bd0", fontFamily: "Arial, sans-serif" }}>
             {formatCreatedAt(notification.createdAt)}
           </Typography>
-          <Typography variant="caption" sx={{ color: "#a89bd0", fontFamily: "Arial, sans-serif" }}>
-            {status.charAt(0) + status.slice(1).toLowerCase()}
-          </Typography>
+          <Chip
+            size="small"
+            label={statusLabel}
+            sx={{
+              alignSelf: "flex-start",
+              height: 22,
+              color: statusColor,
+              border: `1px solid ${statusColor}55`,
+              bgcolor: `${statusColor}14`,
+              fontSize: 11,
+              fontFamily: "Arial, sans-serif",
+            }}
+          />
         </Stack>
-        <Button onClick={onClose} variant="contained" sx={{ bgcolor: "#6d4aff", fontFamily: "Arial, sans-serif" }}>
+        <Button
+          onClick={onClose}
+          variant="contained"
+          sx={{
+            borderRadius: 2,
+            px: 2.5,
+            bgcolor: "#6d4aff",
+            fontFamily: "Arial, sans-serif",
+            "&:hover": { bgcolor: "#7c5dfa" },
+          }}
+        >
           Close
         </Button>
       </DialogActions>

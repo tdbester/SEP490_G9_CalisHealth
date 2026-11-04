@@ -12,23 +12,13 @@ import java.util.List;
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
     List<Notification> findAllByOrderByCreatedAtDesc();
 
-    List<Notification> findAllByCreatedByIsNotNullOrderByCreatedAtDesc();
+    List<Notification> findAllByTypeInOrderByCreatedAtDesc(Collection<String> types);
 
     List<Notification> findAllByTypeOrderByCreatedAtDesc(String type);
 
-    List<Notification> findAllByTypeAndCreatedByIsNotNullOrderByCreatedAtDesc(String type);
-
     List<Notification> findAllByStatusOrderByCreatedAtDesc(String status);
 
-    long countByCreatedByIsNotNull();
-
-    long countByTypeAndCreatedByIsNotNull(String type);
-
-    List<Notification> findAllByIdInAndCreatedByIsNotNull(Collection<Long> ids);
-
-    boolean existsByIdAndCreatedByIsNotNull(Long id);
-
-    java.util.Optional<Notification> findByIdAndCreatedByIsNotNull(Long id);
+    List<Notification> findAllByIdIn(Collection<Long> ids);
 
     @Query("""
             select n from Notification n

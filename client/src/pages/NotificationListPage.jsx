@@ -8,6 +8,7 @@ import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import api from "../api/client";
 import useUndoDelete from "../hooks/useUndoDelete";
+import NotificationDetailModal from "../components/notifications/NotificationDetailModal";
 import "../styles/notification.css";
 
 const FILTERS = [
@@ -120,6 +121,7 @@ export default function NotificationListPage() {
     updateCount: 0,
   });
   const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedNotification, setSelectedNotification] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { requestDelete, confirmationModal } = useUndoDelete();
@@ -392,7 +394,7 @@ export default function NotificationListPage() {
                     <td className="px-3 py-3.5 text-right">
                       <button
                         type="button"
-                        onClick={() => navigate(`/admin/notifications/${notification.id}`)}
+                        onClick={() => setSelectedNotification(notification)}
                         aria-label={`View ${notification.title}`}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-[#1e202e] px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:bg-[#282a3d]"
                       >
@@ -427,6 +429,10 @@ export default function NotificationListPage() {
       </footer>
 
       {confirmationModal}
+      <NotificationDetailModal
+        notification={selectedNotification}
+        onClose={() => setSelectedNotification(null)}
+      />
     </section>
   );
 }

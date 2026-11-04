@@ -55,13 +55,13 @@ public class AdminNotificationService {
         }
 
         List<Notification> rows = "ALL".equals(type)
-                ? notifications.findAllByCreatedByIsNotNullOrderByCreatedAtDesc()
-                : notifications.findAllByTypeAndCreatedByIsNotNullOrderByCreatedAtDesc(type);
+                ? notifications.findAllByTypeInOrderByCreatedAtDesc(TYPES)
+                : notifications.findAllByTypeOrderByCreatedAtDesc(type);
         NotificationCountsDto counts = new NotificationCountsDto(
-                notifications.countByCreatedByIsNotNull(),
-                notifications.countByTypeAndCreatedByIsNotNull("MAINTENANCE"),
-                notifications.countByTypeAndCreatedByIsNotNull("ANNOUNCEMENT"),
-                notifications.countByTypeAndCreatedByIsNotNull("UPDATE")
+                TYPES.stream().mapToLong(notifications::countByType).sum(),
+                notifications.countByType("MAINTENANCE"),
+                notifications.countByType("ANNOUNCEMENT"),
+                notifications.countByType("UPDATE")
         );
         return new NotificationListResponseDto(
                 rows.stream().map(AdminNotificationService::toResponse).toList(),
@@ -71,7 +71,7 @@ public class AdminNotificationService {
 
     @Transactional
     public NotificationResponseDto getNotification(Long id) {
-        Notification notification = notifications.findByIdAndCreatedByIsNotNull(id)
+        Notification notification = notifications.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found: " + id));
         return toResponse(notification);
     }
@@ -79,7 +79,7 @@ public class AdminNotificationService {
     @Transactional
     public void deleteNotifications(List<Long> ids) {
         Set<Long> uniqueIds = new LinkedHashSet<>(ids);
-        List<Notification> found = notifications.findAllByIdInAndCreatedByIsNotNull(uniqueIds);
+        List<Notification> found = notifications.findAllByIdIn(uniqueIds);
         if (found.size() != uniqueIds.size()) {
             throw new ResourceNotFoundException("One or more notifications were not found");
         }
@@ -88,7 +88,7 @@ public class AdminNotificationService {
 
     @Transactional
     public void deleteNotification(Long id) {
-        if (!notifications.existsByIdAndCreatedByIsNotNull(id)) {
+        if (!notifications.existsById(id)) {
             throw new ResourceNotFoundException("Notification not found: " + id);
         }
         notifications.deleteById(id);

@@ -87,7 +87,7 @@ public class DashboardService {
                         WHERE e.type = 'SKILL'
                           AND e.source = 'SYSTEM'
                           AND e.active = TRUE
-                          AND e.status = 'ACCEPTED'
+                          AND UPPER(e.moderation_status) IN ('ACTIVE', 'ACCEPTED')
                           AND e.target_skill IS NOT NULL
                     ) dedup
                     WHERE dedup.rank_in_name = 1
@@ -138,7 +138,7 @@ public class DashboardService {
                     WHERE e.created_by = u.id
                       AND e.source = 'CUSTOM'
                       AND e.active = TRUE
-                      AND e.status = 'ACCEPTED'
+                      AND UPPER(e.moderation_status) IN ('ACTIVE', 'ACCEPTED')
                       AND e.share_with_community = TRUE
                 )
                    OR EXISTS (
@@ -156,11 +156,11 @@ public class DashboardService {
         Long exercises = jdbcTemplate.queryForObject(
                 """
                 SELECT COUNT(*)
-                FROM exercises
-                WHERE source = 'CUSTOM'
-                  AND active = TRUE
-                  AND status = 'ACCEPTED'
-                  AND share_with_community = TRUE
+                FROM exercises e
+                WHERE e.source = 'CUSTOM'
+                  AND e.active = TRUE
+                  AND UPPER(e.moderation_status) IN ('ACTIVE', 'ACCEPTED')
+                  AND e.share_with_community = TRUE
                 """,
                 Long.class
         );

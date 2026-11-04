@@ -47,12 +47,11 @@ class AdminNotificationServiceTest {
         item.setTargetAudience("CONTENT_MANAGER");
         item.setCreatedBy(42L);
         item.setCreatedAt(LocalDateTime.of(2026, 10, 10, 9, 0));
-        when(notifications.findAllByTypeAndCreatedByIsNotNullOrderByCreatedAtDesc("UPDATE"))
+        when(notifications.findAllByTypeOrderByCreatedAtDesc("UPDATE"))
                 .thenReturn(List.of(item));
-        when(notifications.countByCreatedByIsNotNull()).thenReturn(4L);
-        when(notifications.countByTypeAndCreatedByIsNotNull("MAINTENANCE")).thenReturn(1L);
-        when(notifications.countByTypeAndCreatedByIsNotNull("ANNOUNCEMENT")).thenReturn(2L);
-        when(notifications.countByTypeAndCreatedByIsNotNull("UPDATE")).thenReturn(1L);
+        when(notifications.countByType("MAINTENANCE")).thenReturn(1L);
+        when(notifications.countByType("ANNOUNCEMENT")).thenReturn(2L);
+        when(notifications.countByType("UPDATE")).thenReturn(1L);
 
         var response = service.getNotifications("update");
 
@@ -63,33 +62,34 @@ class AdminNotificationServiceTest {
         assertEquals(1L, response.counts().maintenanceCount());
         assertEquals(2L, response.counts().announcementCount());
         assertEquals(1L, response.counts().updateCount());
-        verify(notifications).findAllByTypeAndCreatedByIsNotNullOrderByCreatedAtDesc("UPDATE");
+        verify(notifications).findAllByTypeOrderByCreatedAtDesc("UPDATE");
     }
 
     @Test
-    void loadsAllAdminAndMaintenanceNotificationsButExcludesAutomatedModerationNotifications() {
-        Notification adminNotification = notification(20L, "Admin notice", "ANNOUNCEMENT", "PUBLISHED");
-        adminNotification.setCreatedBy(2L);
-        when(notifications.findAllByCreatedByIsNotNullOrderByCreatedAtDesc())
-                .thenReturn(List.of(adminNotification));
-        when(notifications.countByCreatedByIsNotNull()).thenReturn(1L);
-        when(notifications.countByTypeAndCreatedByIsNotNull("MAINTENANCE")).thenReturn(0L);
-        when(notifications.countByTypeAndCreatedByIsNotNull("ANNOUNCEMENT")).thenReturn(1L);
-        when(notifications.countByTypeAndCreatedByIsNotNull("UPDATE")).thenReturn(0L);
+    void loadsSupportedNotificationsIncludingRowsWithoutCreator() {
+        Notification seededNotification = notification(20L, "Seeded notice", "ANNOUNCEMENT", "PUBLISHED");
+        seededNotification.setCreatedBy(null);
+        when(notifications.findAllByTypeInOrderByCreatedAtDesc(anyCollection()))
+                .thenReturn(List.of(seededNotification));
+        when(notifications.countByType("MAINTENANCE")).thenReturn(0L);
+        when(notifications.countByType("ANNOUNCEMENT")).thenReturn(1L);
+        when(notifications.countByType("UPDATE")).thenReturn(0L);
 
         var response = service.getNotifications("ALL");
 
         assertEquals(1, response.notifications().size());
         assertEquals(20L, response.notifications().get(0).id());
         assertEquals(1L, response.counts().allCount());
-        verify(notifications).findAllByCreatedByIsNotNullOrderByCreatedAtDesc();
+        verify(notifications).findAllByTypeInOrderByCreatedAtDesc(anyCollection());
     }
 
     @Test
-    void doesNotLoadAutomatedModerationNotificationById() {
-        when(notifications.findByIdAndCreatedByIsNotNull(21L)).thenReturn(Optional.empty());
+    void loadsNotificationWithoutCreatorById() {
+        Notification notification = notification(21L, "System notice", "ANNOUNCEMENT", "PUBLISHED");
+        notification.setCreatedBy(null);
+        when(notifications.findById(21L)).thenReturn(Optional.of(notification));
 
-        assertThrows(ResourceNotFoundException.class, () -> service.getNotification(21L));
+        assertEquals(21L, service.getNotification(21L).id());
     }
 
     @Test
@@ -98,7 +98,7 @@ class AdminNotificationServiceTest {
         found.setId(1L);
         found.setCreatedBy(42L);
         doReturn(List.of(found))
-                .when(notifications).findAllByIdInAndCreatedByIsNotNull(anyCollection());
+                .when(notifications).findAllByIdIn(anyCollection());
 
         assertThrows(ResourceNotFoundException.class,
                 () -> service.deleteNotifications(List.of(1L, 999L)));
@@ -136,7 +136,7 @@ class AdminNotificationServiceTest {
     @Test
     void loadsNotificationById() {
         Notification item = notification(15L, "Existing title", "ANNOUNCEMENT", "DRAFT");
-        when(notifications.findByIdAndCreatedByIsNotNull(15L)).thenReturn(Optional.of(item));
+        when(notifications.findById(15L)).thenReturn(Optional.of(item));
 
         var response = service.getNotification(15L);
 
@@ -148,7 +148,7 @@ class AdminNotificationServiceTest {
 
     @Test
     void throwsNotFoundWhenLoadingMissingNotification() {
-        when(notifications.findByIdAndCreatedByIsNotNull(404L)).thenReturn(Optional.empty());
+        when(notifications.findById(404L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> service.getNotification(404L));
     }
