@@ -84,11 +84,16 @@ export default function CreateMaintenanceSchedulePage() {
     return () => window.clearInterval(timerId);
   }, []);
 
-  const startTimeError = startsAt && new Date(startsAt) <= clock
-    ? "Start time must be in the future."
+  const minimumStartTime = new Date(clock.getTime() + 3 * 60 * 60 * 1000);
+  const minimumEndTime = startsAt
+    ? new Date(new Date(startsAt).getTime() + 2 * 60 * 60 * 1000)
+    : null;
+  const startTimeError = startsAt && new Date(startsAt) < minimumStartTime
+    ? "Start time must be at least 3 hours from now."
     : "";
-  const endTimeError = startsAt && endsAt && new Date(endsAt) <= new Date(startsAt)
-    ? "End time must be after start time."
+  const endTimeError = startsAt && endsAt && minimumEndTime
+    && new Date(endsAt) < minimumEndTime
+    ? "Maintenance duration must be at least 2 hours."
     : "";
   const isTimeInvalid = Boolean(startTimeError || endTimeError);
 
@@ -228,6 +233,7 @@ export default function CreateMaintenanceSchedulePage() {
                   setStartsAt(event.target.value);
                   setErrors((current) => ({ ...current, startsAt: "" }));
                 }}
+                min={toLocalDateTimeValue(minimumStartTime)}
                 className={`${fieldClass} [color-scheme:dark]`}
                 aria-invalid={Boolean(startTimeError || errors.startsAt)}
               />
@@ -245,6 +251,7 @@ export default function CreateMaintenanceSchedulePage() {
                   setEndsAt(event.target.value);
                   setErrors((current) => ({ ...current, endsAt: "" }));
                 }}
+                min={minimumEndTime ? toLocalDateTimeValue(minimumEndTime) : undefined}
                 className={`${fieldClass} [color-scheme:dark]`}
                 aria-invalid={Boolean(endTimeError || errors.endsAt)}
               />
@@ -254,7 +261,7 @@ export default function CreateMaintenanceSchedulePage() {
             </div>
           </div>
           <span className="mt-2 inline-flex rounded-full border border-[#4c3888] bg-[#241950] px-3 py-1 text-[11px] font-semibold text-[#e2d6ff]">
-            {duration ? `Duration: ${duration}` : "End must be after start"}
+            {duration ? `Duration: ${duration}` : "Duration must be at least 2 hours"}
           </span>
         </section>
 

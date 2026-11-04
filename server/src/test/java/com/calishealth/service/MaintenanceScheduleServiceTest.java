@@ -84,10 +84,13 @@ class MaintenanceScheduleServiceTest {
     }
 
     @Test
-    void rejectsEndTimeThatIsNotAfterStart() {
+    void rejectsMaintenanceDurationShorterThanTwoHours() {
         assertThrows(
                 RequestValidationException.class,
-                () -> service.create(request(true, startsAt(), startsAt()), "admin@example.com")
+                () -> service.create(
+                        request(true, startsAt(), startsAt().plusHours(2).minusSeconds(1)),
+                        "admin@example.com"
+                )
         );
 
         verify(notifications, never()).save(any(Notification.class));
@@ -95,17 +98,18 @@ class MaintenanceScheduleServiceTest {
     }
 
     @Test
-    void rejectsPastStartTimeWhenCreating() {
+    void rejectsStartTimeLessThanThreeHoursInAdvance() {
         RequestValidationException exception = assertThrows(
                 RequestValidationException.class,
                 () -> service.create(
-                        request(true, LocalDateTime.now().minusMinutes(1), LocalDateTime.now().plusHours(1)),
+                        request(true, LocalDateTime.now().plusHours(3).minusSeconds(1),
+                                LocalDateTime.now().plusHours(6)),
                         "admin@example.com"
                 )
         );
 
         assertEquals("startsAt", exception.getField());
-        assertEquals("Start time must be in the future.", exception.getMessage());
+        assertEquals("Start time must be at least 3 hours from now.", exception.getMessage());
         verify(schedules, never()).save(any(MaintenanceSchedule.class));
     }
 
@@ -219,6 +223,6 @@ class MaintenanceScheduleServiceTest {
     }
 
     private static LocalDateTime startsAt() {
-        return LocalDateTime.now().plusDays(1).withHour(2).withMinute(0).withSecond(0).withNano(0);
+        return LocalDateTime.now().plusDays(2).withHour(2).withMinute(0).withSecond(0).withNano(0);
     }
 }

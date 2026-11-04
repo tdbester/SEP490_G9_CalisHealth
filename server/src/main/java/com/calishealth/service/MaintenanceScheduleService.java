@@ -175,14 +175,14 @@ public class MaintenanceScheduleService {
         if (request.startsAt() == null) {
             throw new RequestValidationException("startsAt", "Start time is required");
         }
-        if (!request.startsAt().isAfter(now)) {
-            throw new RequestValidationException("startsAt", "Start time must be in the future.");
+        if (request.startsAt().isBefore(now.plusHours(3))) {
+            throw new RequestValidationException("startsAt", "Start time must be at least 3 hours from now.");
         }
         if (request.endsAt() == null) {
             throw new RequestValidationException("endsAt", "End time is required");
         }
-        if (!request.endsAt().isAfter(request.startsAt())) {
-            throw new RequestValidationException("endsAt", "End time must be after start time.");
+        if (request.endsAt().isBefore(request.startsAt().plusHours(2))) {
+            throw new RequestValidationException("endsAt", "Maintenance duration must be at least 2 hours.");
         }
         if (!ALLOWED_REMINDERS.contains(request.reminderHours())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported reminder interval");
