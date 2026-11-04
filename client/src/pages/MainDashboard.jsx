@@ -16,7 +16,7 @@ import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import workoutPlanImage from "../image/Daily_Workout_Plan.png";
 import api from "../api/client";
 import OnboardingRedirect from "../components/survey/OnboardingRedirect";
-import "./Dashboard.css";
+import "./MainDashboard.css";
 
 const MUSCLE_ICONS = {
   fitness: FitnessCenterRoundedIcon,
@@ -26,6 +26,13 @@ const MUSCLE_ICONS = {
   martial: SportsMartialArtsRoundedIcon,
   self: SelfImprovementRoundedIcon,
 };
+
+/** `BEGINNER` -> `Beginner`, để chip level không hiển thị chữ IN HOA toàn bộ. */
+function levelLabel(value) {
+  if (!value) return "All levels";
+  const lowered = String(value).toLowerCase();
+  return lowered.charAt(0).toUpperCase() + lowered.slice(1);
+}
 
 /** Carousel ngang: cuộn mảnh theo từng bước, dùng chung cho Muscle & Skills. */
 function Carousel({ children, ariaLabel }) {
@@ -86,7 +93,7 @@ function Carousel({ children, ariaLabel }) {
   );
 }
 
-export default function Dashboard() {
+export default function MainDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [authStatus, setAuthStatus] = useState(() =>
@@ -134,7 +141,7 @@ export default function Dashboard() {
   }, []);
 
   const gotoLibrary = (params) => {
-    navigate({ pathname: "/library", search: params });
+    navigate({ pathname: "/library/exercises", search: params });
   };
 
   return (
@@ -197,7 +204,11 @@ export default function Dashboard() {
                 type="button"
                 key={group.id}
                 className={`dash-muscle-card tone-${group.tone}`}
-                onClick={() => gotoLibrary(`?muscle=${group.id}`)}
+                onClick={() =>
+                  gotoLibrary(
+                    `?type=health&muscle=${encodeURIComponent(group.name)}`,
+                  )
+                }
               >
                 <span className="dash-muscle-icon">
                   <Icon />
@@ -217,16 +228,24 @@ export default function Dashboard() {
               type="button"
               key={skill.id}
               className={`dash-skill-card tone-${skill.tone}`}
-              onClick={() => gotoLibrary(`?skill=${skill.id}`)}
+              onClick={() =>
+                navigate(`/library/exercises/system/${skill.exerciseId}`)
+              }
             >
               <span className="dash-skill-head">
                 <span className="dash-skill-icon">
                   <EmojiEventsRoundedIcon />
                 </span>
-                <span className="dash-skill-level">{skill.level}</span>
               </span>
               <span className="dash-skill-name">{skill.name}</span>
-              <span className="dash-skill-steps">{skill.steps} steps</span>
+              <span className="dash-skill-meta">
+                <span className="dash-skill-steps">
+                  {skill.steps > 0
+                    ? `${skill.steps} steps`
+                    : "View technique"}
+                </span>
+                <span className="dash-skill-level">{levelLabel(skill.level)}</span>
+              </span>
             </button>
           ))}
         </Carousel>

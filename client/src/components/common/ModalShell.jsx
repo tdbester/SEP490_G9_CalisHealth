@@ -1,10 +1,15 @@
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import "./ModalShell.css";
 
 /**
  * Khung popup dùng chung: lớp phủ mờ, đóng bằng Esc / bấm ra ngoài, khóa cuộn trang.
  * Nội dung và giao diện hộp thoại do component con quyết định qua `className`.
  * `as="form"` để hộp thoại là một form (onSubmit truyền qua props).
+ *
+ * Popup được render qua portal vào <body>: nếu nằm trong cây của trang, một tổ tiên có
+ * `transform` (ví dụ animation giữ `transform: translateY(0)` với fill-mode both) sẽ trở thành
+ * containing block của `position: fixed`, khiến popup cao hơn màn hình và bị tràn ra ngoài.
  */
 export default function ModalShell({ open, onClose, labelledBy, className = "", as: Tag = "div", children, ...rest }) {
   const dialogRef = useRef(null);
@@ -27,7 +32,7 @@ export default function ModalShell({ open, onClose, labelledBy, className = "", 
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onMouseDown={onClose}>
       <Tag
         {...rest}
@@ -41,6 +46,7 @@ export default function ModalShell({ open, onClose, labelledBy, className = "", 
       >
         {children}
       </Tag>
-    </div>
+    </div>,
+    document.body,
   );
 }

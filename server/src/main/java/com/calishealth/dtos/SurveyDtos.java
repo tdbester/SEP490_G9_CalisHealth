@@ -189,6 +189,19 @@ public class SurveyDtos {
             LocalDateTime completedAt,
             LocalDateTime skippedAt) {}
 
+    /**
+     * Kết quả bấm "Start my training plan": kế hoạch đã bắt đầu với level và nhịp tuần đã lưu.
+     */
+    public record PlanStartResponse(
+            Long sessionId,
+            String levelName,
+            String planName,
+            int weeks,
+            int sessionsPerWeek,
+            int minutesPerSession,
+            List<PlanDayItem> rhythm,
+            LocalDateTime startedAt) {}
+
     // ---------- Result (GET /api/survey-sessions/{id}/result) ----------
 
     public record SurveyResultResponse(

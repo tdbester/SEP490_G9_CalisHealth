@@ -42,6 +42,13 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long>, JpaSp
 
     @Query("""
             SELECT COUNT(e) FROM Exercise e
+            WHERE e.source = 'CUSTOM' AND e.active = true AND e.shareWithCommunity = true
+              AND UPPER(e.moderationStatus) IN ('ACTIVE', 'ACCEPTED')
+            """)
+    long countPublishedCommunityMemberExercises();
+
+    @Query("""
+            SELECT COUNT(e) FROM Exercise e
             WHERE e.createdBy.id = :authorId AND e.source = :source
               AND UPPER(e.moderationStatus) IN :statuses
             """)

@@ -60,9 +60,20 @@ export default function Login() {
         return;
       }
       setExistingRole(data.role);
+      let cachedAvatar = null;
+      try {
+        cachedAvatar = JSON.parse(localStorage.getItem("user") || "null")?.avatarUrl || null;
+      } catch {
+        // Ignore malformed cached account data.
+      }
       localStorage.setItem(
         "user",
-        JSON.stringify({ email: data.email, fullName: data.fullName, role: data.role }),
+        JSON.stringify({
+          email: data.email,
+          fullName: data.fullName,
+          role: data.role,
+          avatarUrl: data.avatarUrl || cachedAvatar,
+        }),
       );
     }).catch(() => {
       if (!cancelled) {

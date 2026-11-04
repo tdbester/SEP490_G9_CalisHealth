@@ -64,6 +64,7 @@ import CreateMaintenanceSchedulePage from "./pages/CreateMaintenanceSchedulePage
 import MaintenanceScheduleListPage from "./pages/MaintenanceScheduleListPage";
 import MaintenanceScheduleDetailPage from "./pages/MaintenanceScheduleDetailPage";
 import ChangePassword from "./pages/ChangePassword";
+import ProfilePage from "./pages/ProfilePage";
 import SurveyFlow, { SurveyEntry } from "./pages/survey/SurveyFlow";
 import SurveyStepPage from "./pages/survey/SurveyStepPage";
 import SurveyResult from "./pages/survey/SurveyResult";
@@ -151,6 +152,7 @@ export default function App() {
           <Route path="workouts/:code" element={<WorkoutDetailPage />} />
           <Route path="create" element={<ExerciseFormPage />} />
           <Route path="library" element={<Navigate to="/content/exercises" replace />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="*" element={<Navigate to="/content/dashboard" replace />} />
         </Route>
 
@@ -203,6 +205,7 @@ export default function App() {
           <Route path="maintenance" element={<MaintenanceScheduleListPage />} />
           <Route path="maintenance/create" element={<CreateMaintenanceSchedulePage />} />
           <Route path="maintenance/:id" element={<MaintenanceScheduleDetailPage />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
@@ -218,7 +221,17 @@ export default function App() {
           path="/tracking/assessment"
           element={memberPage(<PerformanceAnalytics />)}
         />
-        <Route path="/profile" element={<Navigate to="/" replace />} />
+        {/* Profile of a MEMBER (CONTENT_MANAGER and ADMIN have /content/profile and /admin/profile). */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <ProfilePage />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
         <Route path="/settings" element={<Navigate to="/" replace />} />
 
         <Route path="*" element={<Navigate to="/login" replace />} />

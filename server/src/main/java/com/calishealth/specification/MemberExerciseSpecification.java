@@ -32,6 +32,7 @@ public final class MemberExerciseSpecification {
                 }
             } else {
                 predicates.add(builder.upper(root.get("moderationStatus")).in("ACTIVE", "ACCEPTED"));
+                predicates.add(builder.isTrue(root.get("active")));
                 predicates.add(builder.isTrue(root.get("shareWithCommunity")));
             }
 

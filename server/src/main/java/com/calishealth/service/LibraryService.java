@@ -42,12 +42,7 @@ public class LibraryService {
     public ExerciseCounts getExerciseCounts(String userEmail) {
         long healthCount = exerciseRepository.countAcceptedSystemExercisesByType("HEALTH");
         long skillCount = exerciseRepository.countAcceptedSystemExercisesByType("SKILL");
-        long memberCount = userEmail == null || userEmail.isBlank()
-                ? 0
-                : userRepository.findByEmail(userEmail)
-                        .map(User::getId)
-                        .map(exerciseRepository::countAcceptedMemberExercisesByAuthorId)
-                        .orElse(0L);
+        long memberCount = exerciseRepository.countPublishedCommunityMemberExercises();
 
         return new ExerciseCounts(healthCount, skillCount, memberCount);
     }
@@ -63,12 +58,10 @@ public class LibraryService {
     @Transactional(readOnly = true)
     public LibrarySummaryResponse getSummary(String userEmail) {
         ExerciseCounts exerciseCounts = getExerciseCounts(userEmail);
-        Long memberId = userEmail == null || userEmail.isBlank()
-                ? null
-                : userRepository.findByEmail(userEmail).map(User::getId).orElse(null);
         long healthWorkouts = workoutRepository.countSystemWorkoutsByType("HEALTH");
         long skillWorkouts = workoutRepository.countSystemWorkoutsByType("SKILL");
-        long customWorkouts = memberId == null ? 0 : workoutRepository.countCustomWorkoutsByAuthorId(memberId);
+        long customWorkouts = workoutRepository
+                .countBySourceAndActiveTrueAndStatusAndSharedWithCommunityTrue("CUSTOM", "ACCEPTED");
 
         return new LibrarySummaryResponse(
             exerciseCounts,

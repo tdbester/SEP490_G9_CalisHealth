@@ -13,6 +13,18 @@
 
 .cs-modal--preview {
   width: min(760px, 100%);
+  /* Bước preview phải đọc như một màn hình: khung ngoài không cuộn, chỉ phần thân cuộn bên trong. */
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+  padding: 20px 24px 16px;
+  gap: 12px;
+}
+
+/* Chỉ thân bước co giãn; đầu, cảnh báo và chân giữ nguyên chiều cao để luôn nhìn thấy. */
+.cs-modal--preview > .cs-modal-head,
+.cs-modal--preview > .cs-modal-actions,
+.cs-modal--preview > .cs-alert {
+  flex: 0 0 auto;
 }
 
 .cs-modal-head {
@@ -642,11 +654,72 @@
   background: linear-gradient(180deg, #0d071b 0%, #0a0618 100%);
 }
 
+/* Trong popup preview: khung này là vùng co giãn duy nhất và tự cuộn,
+   nhờ vậy bước dài vẫn nằm gọn trong 1 khung hình. */
+.cs-modal--preview .cs-preview-frame {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 20px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .cs-preview-column {
   display: flex;
   flex-direction: column;
   width: 100%;
   max-width: 460px;
+}
+
+/* Nén nhịp dọc bên trong preview để nhiều bước vẫn vừa một màn hình. */
+.cs-modal--preview .survey-header {
+  margin-top: 18px;
+}
+
+.cs-modal--preview .survey-header-title {
+  margin-top: 6px !important;
+  font-size: 24px;
+}
+
+.cs-modal--preview .survey-header-subtitle {
+  margin-top: 6px !important;
+  font-size: 14px;
+}
+
+.cs-modal--preview .survey-questions {
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.cs-modal--preview .survey-question-title {
+  margin-bottom: 10px !important;
+  font-size: 15px;
+}
+
+.cs-modal--preview .cs-preview-continue {
+  margin-top: 18px;
+}
+
+/* Bước dài: nút Continue dính đáy khung để không phải cuộn mới bấm được. */
+.cs-modal--preview .cs-preview-continue {
+  position: sticky;
+  bottom: 0;
+  box-shadow: 0 -18px 18px -6px rgba(10, 6, 24, 0.95);
+}
+
+/* Thanh cuộn của khung preview theo tông tối. */
+.cs-modal--preview .cs-preview-frame {
+  scrollbar-width: thin;
+  scrollbar-color: #3b2a6b transparent;
+}
+
+.cs-modal--preview .cs-preview-frame::-webkit-scrollbar {
+  width: 8px;
+}
+
+.cs-modal--preview .cs-preview-frame::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #3b2a6b;
 }
 
 .cs-preview-column h3 {

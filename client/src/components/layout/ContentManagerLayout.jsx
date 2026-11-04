@@ -30,9 +30,11 @@ import RuleRoundedIcon from "@mui/icons-material/RuleRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
+import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import contentApi from "../../api/contentManager";
 import NotificationBell from "../notifications/NotificationBell";
+import { avatarUrl, profileApi } from "../../api/profile";
 import { CONTENT_PATHS } from "../ContentShared";
 import contentTheme, { CM } from "../../theme-content";
 
@@ -77,9 +79,20 @@ function useContentManagerGuard() {
       .then(({ data }) => {
         if (cancelled) return;
         setUser(data);
+        let cachedAvatar = null;
+        try {
+          cachedAvatar = JSON.parse(localStorage.getItem("user") || "null")?.avatarUrl || null;
+        } catch {
+          // Ignore malformed cached account data.
+        }
         localStorage.setItem(
           "user",
-          JSON.stringify({ email: data.email, fullName: data.fullName, role: data.role }),
+          JSON.stringify({
+            email: data.email,
+            fullName: data.fullName,
+            role: data.role,
+            avatarUrl: data.avatarUrl || cachedAvatar,
+          }),
         );
         setStatus(data?.role === "CONTENT_MANAGER" ? "allowed" : "forbidden");
       })
@@ -204,10 +217,49 @@ function SidebarContent({ onNavigate }) {
 }
 
 /** Same avatar treatment as the member top bar: gradient circle with initials. */
-export function AccountMenu({ user, logout, fallbackName = "Content Manager" }) {
+export function AccountMenu({
+  user,
+  logout,
+  onProfile,
+  onSettings,
+  fallbackName = "Content Manager",
+}) {
   const [anchor, setAnchor] = useState(null);
+  const [language, setLanguage] = useState(() => localStorage.getItem("language") || "en");
+  const [accountUser, setAccountUser] = useState(user);
+  useEffect(() => {
+    setAccountUser(user);
+    if (!user) return undefined;
+    let cancelled = false;
+    profileApi
+      .get()
+      .then((profile) => {
+        if (!cancelled) setAccountUser((current) => ({ ...current, ...profile }));
+      })
+      .catch(() => {
+        // Keep the cached account details if the profile refresh is unavailable.
+      });
+    const handleProfileUpdated = (event) => {
+      setAccountUser((current) => ({ ...current, ...event.detail }));
+    };
+    const handleStorageUpdated = (event) => {
+      if (event.key !== "user" || !event.newValue) return;
+      try {
+        setAccountUser(JSON.parse(event.newValue));
+      } catch {
+        // Ignore malformed cache updates and keep the current account.
+      }
+    };
+    window.addEventListener("profile-updated", handleProfileUpdated);
+    window.addEventListener("storage", handleStorageUpdated);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("profile-updated", handleProfileUpdated);
+      window.removeEventListener("storage", handleStorageUpdated);
+    };
+  }, [user?.email]);
   const initials =
-    user?.fullName
+    accountUser?.fullName
       ?.split(" ")
       .filter(Boolean)
       .slice(0, 2)
@@ -216,12 +268,26 @@ export function AccountMenu({ user, logout, fallbackName = "Content Manager" }) 
 
   return (
     <>
-      <Tooltip title={user?.fullName || "Account"}>
+      <Tooltip title={accountUser?.fullName || "Account"}>
         <button
           type="button"
           aria-label="Open account menu"
           aria-expanded={Boolean(anchor)}
-          onClick={(event) => setAnchor(event.currentTarget)}
+          onClick={(event) => {
+            setAnchor(event.currentTarget);
+            profileApi.get().then((profile) => {
+              setAccountUser((current) => ({ ...current, ...profile }));
+              localStorage.setItem(
+                "user",
+                JSON.stringify({
+                  email: profile.email,
+                  fullName: profile.fullName,
+                  role: profile.role,
+                  avatarUrl: profile.avatarUrl || null,
+                }),
+              );
+            }).catch(() => {});
+          }}
           style={{
             width: 34,
             height: 34,
@@ -241,7 +307,15 @@ export function AccountMenu({ user, logout, fallbackName = "Content Manager" }) 
             flexShrink: 0,
           }}
         >
-          {initials}
+          {accountUser?.avatarUrl ? (
+            <img
+              src={avatarUrl(accountUser.avatarUrl)}
+              alt=""
+              style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+            />
+          ) : (
+            initials
+          )}
         </button>
       </Tooltip>
       <Menu
@@ -252,21 +326,52 @@ export function AccountMenu({ user, logout, fallbackName = "Content Manager" }) 
         transformOrigin={{ vertical: "top", horizontal: "right" }}
       >
         <Box sx={{ px: 2, py: 1, minWidth: 200 }}>
-          <Typography variant="body2" fontWeight={700} sx={{ color: "#fff" }} noWrap>
-            {user?.fullName || fallbackName}
-          </Typography>
-          <Typography variant="caption" sx={{ color: CM.textDim }} noWrap display="block">
-            {user?.email || ""}
+          <Typography variant="body2" sx={{ color: "#fff", fontWeight: 700 }}>
+            Account &amp; settings
           </Typography>
         </Box>
-        <Divider sx={{ my: 0.5 }} />
-        <MenuItem onClick={() => setAnchor(null)}>
+        <MenuItem onClick={() => { setAnchor(null); onProfile?.(); }}>
           <PersonOutlineRoundedIcon sx={{ fontSize: 17, mr: 1.25, color: CM.textDim }} />
           Profile
         </MenuItem>
-        <MenuItem onClick={logout}>
-          <LogoutRoundedIcon sx={{ fontSize: 17, mr: 1.25, color: CM.textDim }} />
-          Logout
+        <Box
+          component="label"
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 2,
+            px: 2,
+            py: 1,
+            color: CM.textMuted,
+            fontSize: 13,
+          }}
+        >
+          <span>Change language</span>
+          <select
+            value={language}
+            aria-label="Change language"
+            onChange={(event) => {
+              const nextLanguage = event.target.value;
+              setLanguage(nextLanguage);
+              localStorage.setItem("language", nextLanguage);
+            }}
+            style={{
+              color: "#fff",
+              background: CM.surfaceSoft,
+              border: `1px solid ${CM.borderStrong}`,
+              borderRadius: 8,
+              padding: "7px 9px",
+              font: "inherit",
+            }}
+          >
+            <option value="en">English</option>
+            <option value="vi">Tiếng Việt</option>
+          </select>
+        </Box>
+        <MenuItem onClick={() => { setAnchor(null); onSettings?.(); }}>
+          <SettingsOutlinedIcon sx={{ fontSize: 17, mr: 1.25, color: CM.textDim }} />
+          Settings
         </MenuItem>
       </Menu>
     </>
@@ -301,6 +406,7 @@ export function LogoutButton({ logout }) {
 
 function ContentShell({ user, logout, children }) {
   const theme = useTheme();
+  const navigate = useNavigate();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const [open, setOpen] = useState(false);
   const location = useLocation();
@@ -356,7 +462,12 @@ function ContentShell({ user, logout, children }) {
 
           <NotificationBell apiClient={contentApi} />
 
-          <AccountMenu user={user} logout={logout} />
+          <AccountMenu
+            user={user}
+            logout={logout}
+            onProfile={() => navigate(CONTENT_PATHS.profile)}
+            onSettings={() => navigate(CONTENT_PATHS.profile)}
+          />
 
           <LogoutButton logout={logout} />
         </Stack>

@@ -6,6 +6,7 @@ import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import api from "../../api/client";
 import NotificationBell from "../notifications/NotificationBell";
+import { avatarUrl, profileApi } from "../../api/profile";
 import "./Topbar.css";
 
 function Logo() {
@@ -44,6 +45,52 @@ export default function Topbar() {
       console.error("Could not read the cached member profile:", error);
       setUser(null);
     }
+  }, []);
+
+  useEffect(() => {
+    if (!user) return undefined;
+    let cancelled = false;
+    profileApi
+      .get()
+      .then((profile) => {
+        if (cancelled) return;
+        setUser((current) => ({ ...current, ...profile }));
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            email: profile.email,
+            fullName: profile.fullName,
+            role: profile.role,
+            avatarUrl: profile.avatarUrl || null,
+          }),
+        );
+      })
+      .catch(() => {
+        // The topbar keeps the cached account when the profile refresh is unavailable.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.email]);
+
+  useEffect(() => {
+    const handleProfileUpdated = (event) => {
+      setUser((current) => ({ ...current, ...event.detail }));
+    };
+    const handleStorageUpdated = (event) => {
+      if (event.key !== "user" || !event.newValue) return;
+      try {
+        setUser(JSON.parse(event.newValue));
+      } catch {
+        // Ignore malformed cache updates and keep the current account.
+      }
+    };
+    window.addEventListener("profile-updated", handleProfileUpdated);
+    window.addEventListener("storage", handleStorageUpdated);
+    return () => {
+      window.removeEventListener("profile-updated", handleProfileUpdated);
+      window.removeEventListener("storage", handleStorageUpdated);
+    };
   }, []);
 
   useEffect(() => {
@@ -190,11 +237,27 @@ export default function Topbar() {
               title={user.fullName || "Profile"}
               aria-label="Open account menu"
               aria-expanded={openPanel === "settings"}
-              onClick={() =>
-                setOpenPanel(openPanel === "settings" ? null : "settings")
-              }
+              onClick={() => {
+                setOpenPanel(openPanel === "settings" ? null : "settings");
+                profileApi.get().then((profile) => {
+                  setUser((current) => ({ ...current, ...profile }));
+                  localStorage.setItem(
+                    "user",
+                    JSON.stringify({
+                      email: profile.email,
+                      fullName: profile.fullName,
+                      role: profile.role,
+                      avatarUrl: profile.avatarUrl || null,
+                    }),
+                  );
+                }).catch(() => {});
+              }}
             >
-              {initials}
+              {user.avatarUrl ? (
+                <img src={avatarUrl(user.avatarUrl)} alt="" className="topbar-avatar-image" />
+              ) : (
+                initials
+              )}
             </button>
             <button type="button" className="topbar-logout-btn" onClick={handleLogout}>
               <LogoutRoundedIcon />

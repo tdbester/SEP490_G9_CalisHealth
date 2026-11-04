@@ -20,6 +20,7 @@ public final class WorkoutSpecification {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
             predicates.add(builder.equal(root.get("source"), "CUSTOM"));
             if (community) {
+                predicates.add(builder.isTrue(root.get("active")));
                 predicates.add(builder.isTrue(root.get("sharedWithCommunity")));
                 predicates.add(builder.equal(root.get("status"), "ACCEPTED"));
             } else {
