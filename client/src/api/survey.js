@@ -35,14 +35,22 @@ export const surveyApi = {
   resume: (sessionId) => api.post(`/survey-sessions/${sessionId}/resume`).then((res) => res.data),
 
   result: (sessionId) => api.get(`/survey-sessions/${sessionId}/result`).then((res) => res.data),
+
+  /** "Start my training plan": chốt kế hoạch gợi ý của phiên đã hoàn thành. */
+  startPlan: (sessionId) => api.post(`/survey-sessions/${sessionId}/start-plan`).then((res) => res.data),
+
+  /** "Back to level test": mở lại phiên đã hoàn thành để sửa câu trả lời level test. */
+  reopen: (sessionId) => api.post(`/survey-sessions/${sessionId}/reopen`).then((res) => res.data),
 };
 
 /**
  * Member cần làm onboarding khi chưa từng hoàn thành hoặc bỏ qua khảo sát.
+ * Chỉ yêu cầu onboarding nếu có survey ACTIVE và chưa có phiên hoàn tất/bỏ qua.
  * Lỗi (vd survey chưa được seed) -> không chặn member, coi như không cần.
  */
 export async function needsOnboarding() {
   try {
+    await surveyApi.definition();
     const sessions = await surveyApi.sessions();
     return !sessions.some((s) => s.status === "COMPLETED" || s.status === "SKIPPED");
   } catch {

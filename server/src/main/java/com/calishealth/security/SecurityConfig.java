@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -22,15 +22,16 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(c -> c.disable())
-                .cors(Customizer.withDefaults())
-                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        http.csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // lỗi chưa có handler được Spring chuyển sang /error: không mở thì mọi lỗi thành 401 (FE tự logout)
@@ -47,14 +48,28 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/media/exercise-demos/**").permitAll()
                         .requestMatchers("/media/exercise-anatomy/**").permitAll()
+                        .requestMatchers("/api/public/library/**").permitAll()
+                        // Profile photos are rendered by <img>, which cannot send the JWT header.
+                        .requestMatchers(HttpMethod.GET, "/media/profile-avatars/**").permitAll()
                         // Survey Management now belongs to the Admin area (must stay before /api/content/**).
                         .requestMatchers("/api/content/surveys/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/content/**").hasRole("CONTENT_MANAGER")
                         .requestMatchers("/api/content/**").hasRole("CONTENT_MANAGER")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/library/exercises/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/muscle-groups").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/exercise-tree/**").hasAnyRole("MEMBER", "CONTENT_MANAGER")
+                        .requestMatchers("/api/v1/library/member-exercises/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/personal-exercises/**").authenticated()
+                        .requestMatchers("/api/v1/library/custom-workouts/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/my-workouts/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/workout-exercises/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/overview").hasRole("MEMBER")
+                        .requestMatchers("/api/library/**").permitAll()
+                        .requestMatchers("/api/exercises/**").permitAll()
                         .anyRequest().authenticated())
-                .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
+        http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
@@ -69,6 +84,7 @@ public class SecurityConfig {
         cfg.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
+        cfg.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
         src.registerCorsConfiguration("/**", cfg);
         return src;

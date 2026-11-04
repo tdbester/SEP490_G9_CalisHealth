@@ -295,7 +295,7 @@ export default function LevelBenchmarkCriteriaPage() {
         </Box>
         <Box>
           <Typography sx={{ color: "#fff", fontWeight: 700 }}>Exercise point rules</Typography>
-          <Typography variant="caption" sx={{ color: CM.textMuted }}>Every level is decided by the same {rules.length || ""} exercise{rules.length === 1 ? "" : "s"}. Each one scores 1, 2, or 3 points from the member's survey result; the total picks the level.</Typography>
+          <Typography variant="caption" sx={{ color: CM.textMuted }}>Every level is decided by the same {rules.length || ""} exercise{rules.length === 1 ? "" : "s"}. Each one scores 1, 2, or 3 points from the member's survey result; the total picks the level. A member who scores 0 on any exercise is always placed in the lowest active level.</Typography>
         </Box>
       </Box>
       <PointRules rules={rules} />
@@ -352,7 +352,7 @@ export function LevelBenchmarkDetailPage() {
             <Typography variant="body2" sx={{ color: CM.textMuted }}>total score out of {maxTotal}</Typography>
           </Stack>
           <Typography variant="body2" sx={{ color: CM.textMuted, mt: 0.75 }}>
-            Each of the {rules.length} exercise{rules.length === 1 ? "" : "s"} below scores 1, 2, or 3 points. Add them up: a member whose total is {row.scoreMin}–{row.scoreMax} is placed in {name}.
+            Each of the {rules.length} exercise{rules.length === 1 ? "" : "s"} below scores 1, 2, or 3 points. Add them up: a member whose total is {row.scoreMin}–{row.scoreMax} is placed in {name}. A member who scores 0 on any exercise is always placed in the lowest active level, whatever the total.
           </Typography>
           <Box sx={{ mt: 2, display: "flex", gap: 0.6, flexWrap: "wrap" }} role="img" aria-label={`Total scores ${minTotal} to ${maxTotal}; ${name} covers ${row.scoreMin} to ${row.scoreMax}`}>
             {totals.map((total) => {

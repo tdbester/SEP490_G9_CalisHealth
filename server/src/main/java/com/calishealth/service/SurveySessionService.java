@@ -2,6 +2,7 @@ package com.calishealth.service;
 
 import com.calishealth.dtos.SurveyDtos.AnswerItem;
 import com.calishealth.dtos.SurveyDtos.LevelAssessment;
+import com.calishealth.dtos.SurveyDtos.PlanStartResponse;
 import com.calishealth.dtos.SurveyDtos.SaveAnswersRequest;
 import com.calishealth.dtos.SurveyDtos.SessionQuestionResponse;
 import com.calishealth.dtos.SurveyDtos.SessionResponse;
@@ -301,6 +302,61 @@ public class SurveySessionService {
         });
         return new SurveyResultResponse(session.getId(), session.getSurvey().getSurveyCode(),
                 session.getSurveyVersion(), session.getCompletedAt(), assessment);
+    }
+
+    /**
+     * "Start my training plan": chốt kế hoạch gợi ý của phiên đã hoàn thành và lưu vào hồ sơ member
+     * (level + số buổi/tuần). Level đã được chấm và lưu lúc hoàn thành khảo sát; hành động này chỉ xác nhận
+     * member bắt đầu theo kế hoạch đó.
+     */
+    @Transactional
+    public PlanStartResponse startPlan(String email, Long sessionId) {
+        User user = currentUser(email);
+        SurveySession session = owned(sessions.findWithSurveyById(sessionId), user);
+        if (session.getStatus() != SurveySession.Status.COMPLETED) {
+            throw SurveyException.conflict("SESSION_NOT_COMPLETED",
+                    "The plan can only be started after the survey is completed (current status: "
+                            + session.getStatus() + ")");
+        }
+        LevelAssessment assessment = levels.find(session).orElseThrow(() ->
+                SurveyException.conflict("RESULT_NOT_AVAILABLE",
+                        "The result of this session is not available yet; please take the survey again"));
+        if (assessment.plan() == null) {
+            throw SurveyException.conflict("PLAN_NOT_AVAILABLE",
+                    "There is no recommended training plan for this session yet");
+        }
+        levels.activatePlan(user.getId(), assessment);
+        return new PlanStartResponse(session.getId(),
+                assessment.level() == null ? null : assessment.level().name(),
+                assessment.plan().name(), assessment.plan().weeks(), assessment.plan().sessionsPerWeek(),
+                assessment.plan().minutesPerSession(), assessment.plan().rhythm(), LocalDateTime.now());
+    }
+
+    /**
+     * "Back to level test": mở lại phiên đã hoàn thành để member sửa/xem lại câu trả lời level test.
+     * Kết quả chấm cũ bị xoá để lần hoàn thành sau chấm lại từ đầu.
+     */
+    @Transactional
+    public SessionResponse reopen(String email, Long sessionId) {
+        User user = currentUser(email);
+        SurveySession session = owned(sessions.findByIdForUpdate(sessionId), user);
+        if (session.getStatus() != SurveySession.Status.COMPLETED) {
+            throw SurveyException.conflict("INVALID_SESSION_STATE",
+                    "Only a completed session can be reopened (current status: " + session.getStatus() + ")");
+        }
+        if (findInProgress(user, session.getSurvey().getSurveyCode())
+                .filter(other -> !other.getId().equals(session.getId()))
+                .isPresent()) {
+            throw SurveyException.conflict("ACTIVE_SESSION_EXISTS",
+                    "Another in-progress session exists for this survey; continue that one instead");
+        }
+        levels.clearResult(session);
+        LocalDateTime now = LocalDateTime.now();
+        session.setStatus(SurveySession.Status.IN_PROGRESS);
+        session.setCompletedAt(null);
+        session.setUpdatedAt(now);
+        sessions.saveAndFlush(session);
+        return view(session);
     }
 
     /** Bỏ qua: giữ nguyên câu trả lời đã lưu. */

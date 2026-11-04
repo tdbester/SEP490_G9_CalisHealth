@@ -1,0 +1,58 @@
+-- Recover values for the V25 demo exercises from their original seed data.
+-- Existing non-empty values are retained.
+UPDATE exercises
+SET difficulty_level = CASE code
+        WHEN 'EX-001' THEN 'BEGINNER'
+        WHEN 'EX-002' THEN 'INTERMEDIATE'
+        WHEN 'EX-003' THEN 'INTERMEDIATE'
+        WHEN 'EX-004' THEN 'BEGINNER'
+        WHEN 'EX-005' THEN 'INTERMEDIATE'
+        WHEN 'EX-006' THEN 'BEGINNER'
+        WHEN 'EX-007' THEN 'INTERMEDIATE'
+        WHEN 'EX-008' THEN 'BEGINNER'
+        WHEN 'EX-009' THEN 'INTERMEDIATE'
+        WHEN 'EX-010' THEN 'BEGINNER'
+        WHEN 'EX-011' THEN 'INTERMEDIATE'
+        WHEN 'EX-012' THEN 'BEGINNER'
+        WHEN 'EX-013' THEN 'BEGINNER'
+        WHEN 'EX-014' THEN 'INTERMEDIATE'
+        WHEN 'EX-015' THEN 'INTERMEDIATE'
+        WHEN 'EX-016' THEN 'INTERMEDIATE'
+        WHEN 'EX-017' THEN 'INTERMEDIATE'
+        WHEN 'EX-018' THEN 'BEGINNER'
+        WHEN 'SK-001' THEN 'BEGINNER'
+        WHEN 'SK-002' THEN 'ADVANCED'
+        WHEN 'SK-003' THEN 'INTERMEDIATE'
+        WHEN 'SK-004' THEN 'INTERMEDIATE'
+        WHEN 'SK-005' THEN 'INTERMEDIATE'
+        WHEN 'SK-006' THEN 'ADVANCED'
+        WHEN 'MEMBER-DEMO-001' THEN 'INTERMEDIATE'
+        WHEN 'MEMBER-DEMO-002' THEN 'BEGINNER'
+        WHEN 'MEMBER-DEMO-003' THEN 'BEGINNER'
+        WHEN 'MEMBER-DEMO-004' THEN 'INTERMEDIATE'
+        WHEN 'PERSONAL-DEMO-PENDING-001' THEN 'ADVANCED'
+        WHEN 'PERSONAL-DEMO-REJECTED-001' THEN 'BEGINNER'
+        WHEN 'PERSONAL-DEMO-REJECTED-002' THEN 'INTERMEDIATE'
+        WHEN 'PERSONAL-DEMO-ACCEPTED-001' THEN 'INTERMEDIATE'
+        WHEN 'PERSONAL-DEMO-ACCEPTED-002' THEN 'BEGINNER'
+        WHEN 'PERSONAL-DEMO-ACCEPTED-003' THEN 'ADVANCED'
+        WHEN 'PERSONAL-DEMO-ACCEPTED-004' THEN 'BEGINNER'
+    END
+WHERE (difficulty_level IS NULL OR TRIM(difficulty_level) = '')
+  AND code IN (
+      'EX-001', 'EX-002', 'EX-003', 'EX-004', 'EX-005', 'EX-006',
+      'EX-007', 'EX-008', 'EX-009', 'EX-010', 'EX-011', 'EX-012',
+      'EX-013', 'EX-014', 'EX-015', 'EX-016', 'EX-017', 'EX-018',
+      'SK-001', 'SK-002', 'SK-003', 'SK-004', 'SK-005', 'SK-006',
+      'MEMBER-DEMO-001', 'MEMBER-DEMO-002', 'MEMBER-DEMO-003', 'MEMBER-DEMO-004',
+      'PERSONAL-DEMO-PENDING-001',
+      'PERSONAL-DEMO-REJECTED-001', 'PERSONAL-DEMO-REJECTED-002',
+      'PERSONAL-DEMO-ACCEPTED-001', 'PERSONAL-DEMO-ACCEPTED-002',
+      'PERSONAL-DEMO-ACCEPTED-003', 'PERSONAL-DEMO-ACCEPTED-004'
+  );
+
+-- A description is a truthful fallback when a row has no recoverable
+-- execution guide. Do not invent exercise-specific movements.
+UPDATE exercises
+SET execution_steps = COALESCE(NULLIF(execution_steps, ''), NULLIF(instructions, ''))
+WHERE execution_steps IS NULL OR TRIM(execution_steps) = '';

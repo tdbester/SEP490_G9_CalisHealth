@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import {
   Alert,
@@ -83,7 +83,7 @@ function SourceChip({ source }) {
 }
 
 function LevelChip({ level, toneOf }) {
-  return <DarkPill tone={toneOf(level)}>{level}</DarkPill>;
+  return <DarkPill tone={toneOf(level)}>{level || "—"}</DarkPill>;
 }
 
 function StatusDot({ active }) {
@@ -114,7 +114,7 @@ export default function ExerciseListPage() {
   const [level, setLevel] = useState("all");
   const { levels: levelNames, levelTone } = useLevelNames();
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const rowsPerPage = 5;
   const [menu, setMenu] = useState({ anchor: null, entry: null });
 
   const statusMutation = useApiMutation(
@@ -174,7 +174,15 @@ export default function ExerciseListPage() {
   const closeMenu = () => setMenu({ anchor: null, entry: null });
 
   return (
-    <Box sx={{ maxWidth: 1280, mx: "auto", px: { xs: 2, sm: 3 }, py: { xs: 2.5, sm: 3 } }}>
+    <Box
+      sx={{
+        maxWidth: 1280,
+        mx: "auto",
+        px: { xs: 2, sm: 3 },
+        py: { xs: 2.5, sm: 3 },
+        "&, & *": { fontFamily: "Arial, sans-serif !important" },
+      }}
+    >
       <ContentPageHeader
         breadcrumb={BREADCRUMB}
         title="Exercise & workout"
@@ -466,11 +474,7 @@ export default function ExerciseListPage() {
               page={Math.min(page, Math.max(0, Math.ceil(filtered.length / rowsPerPage) - 1))}
               onPageChange={(_, nextPage) => setPage(nextPage)}
               rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={(event) => {
-                setRowsPerPage(parseInt(event.target.value, 10));
-                setPage(0);
-              }}
-              rowsPerPageOptions={[10, 20, 50]}
+              rowsPerPageOptions={[]}
               labelDisplayedRows={({ from, to, count }) => `Showing ${from}-${to} of ${count}`}
             />
           </>

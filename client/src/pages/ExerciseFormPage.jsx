@@ -36,8 +36,10 @@ import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
 import { contentManagerApi } from "../api/contentManager";
 import { useLevelNames } from "../useLevelNames";
 import { useApiMutation, useApiQuery } from "../hooks";
+import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { CONTENT_PATHS, ContentPageHeader, DarkPill, TONE_STYLES } from "../components/ContentShared";
 import { CM } from "../theme-content";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 
 const rise = keyframes`
   from { opacity: 0; transform: translateY(8px); }
@@ -53,6 +55,23 @@ const ITEM_PAGE_SIZE = 2;
 const MUSCLE_OPTIONS = ["Chest", "Back", "Shoulders", "Arms", "Core", "Legs", "Glutes"];
 const CATEGORY_OPTIONS = ["REPS", "HOLD"];
 const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+const CATEGORY_LABELS = {
+  REPS: "Count reps",
+  HOLD: "Hold (plank / timed)",
+};
+
+export function workoutTypeFromExercises(items, exercises) {
+  const typeByCode = new Map(
+    exercises.map((exercise) => [exercise.code, String(exercise.type || "").toUpperCase()]),
+  );
+  const types = new Set(
+    items
+      .map((item) => typeByCode.get(item.exerciseCode))
+      .filter((type) => type === "HEALTH" || type === "SKILL"),
+  );
+  return types.size === 1 ? [...types][0] : "FLEX";
+}
 
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
@@ -396,14 +415,25 @@ export function ExerciseFields({
                 label="Category"
                 size="small"
                 fullWidth
-                value={value.category}
-                onChange={(event) => onChange({ ...value, category: event.target.value })}
+                value={CATEGORY_OPTIONS.includes(value.category) ? value.category : ""}
+                onChange={(event) => onChange({ ...value, category: event.target.value || "REPS" })}
                 helperText=" "
+                SelectProps={{
+                  displayEmpty: true,
+                  renderValue: (selected) => (
+                    <Box
+                      component="span"
+                      sx={{ color: selected ? CM.text : CM.textDim }}
+                    >
+                      {CATEGORY_LABELS[selected] || "Select a category"}
+                    </Box>
+                  ),
+                }}
               >
                 <MenuItem value="">Select a category</MenuItem>
                 {CATEGORY_OPTIONS.map((category) => (
                   <MenuItem key={category} value={category}>
-                    {category === "REPS" ? "Count reps" : "Hold (plank / timed)"}
+                    {CATEGORY_LABELS[category]}
                   </MenuItem>
                 ))}
               </TextField>
@@ -805,6 +835,10 @@ function LevelDot({ tone }) {
 }
 
 function ExercisePickerRow({ entry, onAdd, toneOf }) {
+  const level = entry.level || entry.difficultyLevel || "Intermediate";
+  const isStandardLevel = ["BEGINNER", "INTERMEDIATE", "ADVANCED"]
+    .includes(String(level).trim().toUpperCase());
+
   return (
     <Stack
       direction="row"
@@ -837,7 +871,13 @@ function ExercisePickerRow({ entry, onAdd, toneOf }) {
             color={String(entry.type).toUpperCase() === "SKILL" ? "secondary" : "info"}
             sx={{ height: 18, fontSize: 10, fontWeight: 700 }}
           />
-          <DarkPill tone={toneOf(entry.level)} sx={{ height: 18, fontSize: 10 }}>{entry.level}</DarkPill>
+          {isStandardLevel ? (
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${getLevelBadgeStyle(level)}`}>
+              {level}
+            </span>
+          ) : (
+            <DarkPill tone={toneOf(level)} sx={{ height: 18, fontSize: 10 }}>{level}</DarkPill>
+          )}
         </Stack>
         <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ minHeight: 18 }}>
           {entry.muscleGroup || " "}
@@ -1009,16 +1049,13 @@ export function WorkoutFields({
             />
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
               <TextField
-                select
                 label="Type"
                 size="small"
                 fullWidth
-                value={value.type}
-                onChange={(event) => onChange({ ...value, type: event.target.value })}
+                value={value.type === "HEALTH" ? "Health" : value.type === "SKILL" ? "Skill" : "Flex"}
+                InputProps={{ readOnly: true }}
+                helperText="Automatically based on the selected exercises."
               >
-                <MenuItem value="HEALTH">Health</MenuItem>
-                <MenuItem value="SKILL">Skill</MenuItem>
-                <MenuItem value="FLEX">Flex</MenuItem>
               </TextField>
               <TextField
                 select
@@ -1362,6 +1399,7 @@ export default function ExerciseFormPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const kind = searchParams.get("type") === "workout" ? "workout" : "exercise";
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   const [exercise, setExercise] = useState(EMPTY_EXERCISE);
   const [selectedMuscles, setSelectedMuscles] = useState([]);
@@ -1399,6 +1437,12 @@ export default function ExerciseFormPage() {
     () => (Array.isArray(systemExercises) ? systemExercises : []).filter((entry) => entry.source === "SYSTEM"),
     [systemExercises],
   );
+
+  useEffect(() => {
+    if (kind !== "workout") return;
+    const nextType = workoutTypeFromExercises(workout.items, allExercises);
+    setWorkout((current) => (current.type === nextType ? current : { ...current, type: nextType }));
+  }, [allExercises, kind, workout.items]);
 
   const filteredExercises = useMemo(() => {
     const term = exerciseSearch.trim().toLowerCase();
@@ -1683,6 +1727,10 @@ export default function ExerciseFormPage() {
           component={RouterLink}
           to={kind === "exercise" ? CONTENT_PATHS.exercises : CONTENT_PATHS.workouts}
           variant="outlined"
+          onClick={(event) => {
+            event.preventDefault();
+            setConfirmCancel(true);
+          }}
         >
           Cancel
         </Button>
@@ -1696,6 +1744,14 @@ export default function ExerciseFormPage() {
           {isSaving ? "Creating…" : `Create ${kind}`}
         </Button>
       </Stack>
+      <ConfirmDialog
+        open={confirmCancel}
+        title={`Discard this ${kind}?`}
+        message={`Are you sure you want to cancel? Your unsaved ${kind} details will be lost.`}
+        confirmLabel="Discard"
+        onCancel={() => setConfirmCancel(false)}
+        onConfirm={() => navigate(kind === "exercise" ? CONTENT_PATHS.exercises : CONTENT_PATHS.workouts)}
+      />
     </Box>
   );
 }

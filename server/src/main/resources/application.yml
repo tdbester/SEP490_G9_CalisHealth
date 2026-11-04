@@ -40,6 +40,7 @@ app:
   storage:
     exercise-video-dir: ${EXERCISE_VIDEO_DIR:${user.home}/calishealth/uploads/exercise-videos}
     exercise-anatomy-dir: ${EXERCISE_ANATOMY_DIR:${user.home}/calishealth/uploads/exercise-anatomy}
+    profile-avatar-dir: ${PROFILE_AVATAR_DIR:${user.home}/calishealth/uploads/profile-avatars}
   cloudinary:
     cloud-name: ${CLOUDINARY_CLOUD_NAME:u9vojlr2}
     api-key: ${CLOUDINARY_API_KEY:722157934773437}

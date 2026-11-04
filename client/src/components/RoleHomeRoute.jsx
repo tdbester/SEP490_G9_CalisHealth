@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { Box, CircularProgress } from "@mui/material";
-import api from "../api/client";
+import api, { getStoredAuthToken } from "../api/client";
 import AdminLayout from "./layout/AdminLayout";
-import Dashboard from "../pages/Dashboard";
+import MainDashboard from "../pages/MainDashboard";
+
+function clearAuthState() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("jwt");
+  localStorage.removeItem("user");
+}
 
 /**
  * Trang chủ theo vai trò:
@@ -18,7 +25,9 @@ export default function RoleHomeRoute() {
   const [state, setState] = useState({ status: "loading", role: null });
 
   useEffect(() => {
-    if (!localStorage.getItem("token")) {
+    const { token } = getStoredAuthToken();
+    if (!token) {
+      clearAuthState();
       setState({ status: "guest", role: null });
       return undefined;
     }
@@ -28,14 +37,39 @@ export default function RoleHomeRoute() {
       .get("/auth/me")
       .then(({ data }) => {
         if (cancelled) return;
+        if (
+          typeof data?.email !== "string" ||
+          !data.email.trim() ||
+          typeof data?.role !== "string" ||
+          !data.role.trim()
+        ) {
+          clearAuthState();
+          setState({ status: "guest", role: null });
+          return;
+        }
+        let cachedAvatar = null;
+        try {
+          cachedAvatar = JSON.parse(localStorage.getItem("user") || "null")?.avatarUrl || null;
+        } catch {
+          // Ignore malformed cached account data.
+        }
         localStorage.setItem(
           "user",
-          JSON.stringify({ email: data.email, fullName: data.fullName, role: data.role }),
+          JSON.stringify({
+            email: data.email,
+            fullName: data.fullName,
+            role: data.role,
+            avatarUrl: data.avatarUrl || cachedAvatar,
+          }),
         );
+        window.dispatchEvent(new CustomEvent("profile-updated", { detail: data }));
         setState({ status: "ready", role: data.role });
       })
       .catch(() => {
-        if (!cancelled) setState({ status: "guest", role: null });
+        if (!cancelled) {
+          clearAuthState();
+          setState({ status: "guest", role: null });
+        }
       });
 
     return () => {
@@ -62,7 +96,7 @@ export default function RoleHomeRoute() {
 
   return (
     <AdminLayout>
-      <Dashboard />
+      <MainDashboard />
     </AdminLayout>
   );
 }

@@ -189,4 +189,5 @@ export const CONTENT_PATHS = {
   exerciseApprovalHistory: "/content/exercises/approval-history",
   workouts: "/content/workouts",
   create: "/content/create",
+  profile: "/content/profile",
 };

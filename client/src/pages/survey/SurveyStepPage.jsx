@@ -93,7 +93,9 @@ export default function SurveyStepPage() {
     }
   };
 
-  const continueLabel = busy === "save" ? "Saving…" : isLast ? "See my result" : "Continue";
+  // Bước Level test là bước cuối trước màn Result -> nút là "Finish" (không phải "See my result").
+  const continueLabel =
+    busy === "save" ? "Saving…" : step.stepCode === "LEVEL_TEST" ? "Finish" : isLast ? "See my result" : "Continue";
 
   return (
     <div className={`survey-page${isFirst ? " survey-page--intro" : ""}`}>

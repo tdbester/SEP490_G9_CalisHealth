@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/library")
+@RequestMapping("/api/public/library")
 @RequiredArgsConstructor
 public class PublicLibraryController {
     private final ExerciseService exercises;

@@ -8,6 +8,7 @@ public final class ExerciseDtos {
 
     public record ExerciseResponse(
             String code,
+            String movementGroup,
             String name,
             String type,
             String description,

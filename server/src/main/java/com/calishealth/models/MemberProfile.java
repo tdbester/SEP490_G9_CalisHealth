@@ -56,4 +56,8 @@ public class MemberProfile {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "avatar_media_id")
     private MediaFile avatarMedia;
+
+    /** Target training days per week; the onboarding survey seeds it, 3 until then. */
+    @Column(name = "days_per_week", nullable = false, columnDefinition = "int not null default 3")
+    private int daysPerWeek = 3;
 }

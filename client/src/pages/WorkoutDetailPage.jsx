@@ -31,6 +31,7 @@ import {
   DarkPill,
 } from "../components/ContentShared";
 import { CM } from "../theme-content";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 import {
   WorkoutFields,
   defaultWorkoutItem,
@@ -93,6 +94,7 @@ export default function WorkoutDetailPage() {
     { enabled: Boolean(code), deps: [code] },
   );
   const [editing, setEditing] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [form, setForm] = useState(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [exerciseSearch, setExerciseSearch] = useState("");
@@ -276,7 +278,7 @@ export default function WorkoutDetailPage() {
                   zIndex: 5,
                 }}
               >
-                <Button startIcon={<CloseRoundedIcon />} onClick={cancelEditing} disabled={saveMutation.isPending}>
+                <Button startIcon={<CloseRoundedIcon />} onClick={() => setConfirmCancel(true)} disabled={saveMutation.isPending}>
                   Cancel
                 </Button>
                 <Button
@@ -462,6 +464,17 @@ export default function WorkoutDetailPage() {
           )}
         </CardContent>
       </Card>
+      <ConfirmDialog
+        open={confirmCancel}
+        title="Discard your changes?"
+        message="Are you sure you want to cancel? Any unsaved workout changes will be lost."
+        confirmLabel="Discard"
+        onCancel={() => setConfirmCancel(false)}
+        onConfirm={() => {
+          setConfirmCancel(false);
+          cancelEditing();
+        }}
+      />
     </Box>
   );
 }

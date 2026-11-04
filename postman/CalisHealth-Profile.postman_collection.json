@@ -1,0 +1,223 @@
+{
+  "info": {
+    "name": "CalisHealth - Profile API",
+    "description": "Test profile information and change-password endpoints. Set memberEmail, memberPassword and newPassword before running.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "memberEmail",
+      "value": "test1@example.com"
+    },
+    {
+      "key": "memberPassword",
+      "value": "",
+      "type": "secret"
+    },
+    {
+      "key": "newPassword",
+      "value": "NewTest@123",
+      "type": "secret"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "secret"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Login (save JWT)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{memberEmail}}\",\n  \"password\": \"{{memberPassword}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/auth/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text",
+            "exec": [
+              "pm.test('Login returns HTTP 200', function () { pm.response.to.have.status(200); });",
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.test('Login returns JWT', function () { pm.expect(body.token).to.be.a('string').and.not.empty; });",
+              "  pm.collectionVariables.set('token', body.token);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Get profile",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "url": "{{baseUrl}}/api/profile"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text",
+            "exec": [
+              "pm.test('Get profile returns HTTP 200', function () { pm.response.to.have.status(200); });",
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.test('Profile has account fields', function () {",
+              "    pm.expect(body).to.have.property('id');",
+              "    pm.expect(body).to.have.property('email');",
+              "    pm.expect(body).to.have.property('role');",
+              "    pm.expect(body).to.have.property('security');",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Update profile",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Postman Profile Test\",\n  \"phone\": \"0912345678\",\n  \"gender\": \"Prefer not to say\",\n  \"dateOfBirth\": \"1998-01-15\",\n  \"clearDateOfBirth\": false,\n  \"bio\": \"Profile updated by Postman\",\n  \"fitnessLevel\": null\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/profile"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text",
+            "exec": [
+              "pm.test('Update profile returns HTTP 200', function () { pm.response.to.have.status(200); });",
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.test('Profile name was updated', function () { pm.expect(body.fullName).to.eql('Postman Profile Test'); });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Change password",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"currentPassword\": \"{{memberPassword}}\",\n  \"newPassword\": \"{{newPassword}}\",\n  \"confirmNewPassword\": \"{{newPassword}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/profile/password",
+        "description": "This changes the real account password. After a successful run, use newPassword as memberPassword for the next login."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text",
+            "exec": [
+              "pm.test('Change password returns HTTP 200', function () { pm.response.to.have.status(200); });",
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.test('Response contains refreshed profile', function () { pm.expect(body).to.have.property('security'); });",
+              "  pm.collectionVariables.set('memberPassword', pm.collectionVariables.get('newPassword'));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Profile without token (negative)",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/profile"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text",
+            "exec": [
+              "pm.test('Unauthenticated profile request returns HTTP 401', function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

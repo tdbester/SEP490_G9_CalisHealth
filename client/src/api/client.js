@@ -7,14 +7,33 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+export const getStoredAuthToken = () => {
+  const normalizeToken = (value) => {
+    if (typeof value !== "string") return null;
+    let token = value.trim();
+    if (token.startsWith('"') && token.endsWith('"')) {
+      token = token.slice(1, -1).trim();
+    }
+    while (/^Bearer\s+/i.test(token)) {
+      token = token.replace(/^Bearer\s+/i, "").trim();
+    }
+    return token || null;
+  };
+
+  const token = normalizeToken(localStorage.getItem("token"));
+  return { token, source: token ? "token" : null };
+};
+
 // Attach JWT token to every request
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  const { token } = getStoredAuthToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+    config.headers.delete("Content-Type");
+  }
   return config;
 });
 
-// Auto-logout on 401
 api.interceptors.response.use(
   (res) => res,
   (err) => {
@@ -26,8 +45,16 @@ api.interceptors.response.use(
     ) {
       window.location.href = "/change-password";
     }
-    const isLoginRequest = err.config?.url?.includes("/auth/login");
-    if (err.response?.status === 401 && !isLoginRequest) {
+    const isLoginRequest = /\/auth\/login(?:\?|$)/i.test(err.config?.url || "");
+    const isPublicDashboardRequest = /^\/dashboard(?:\?|$)/i.test(err.config?.url || "");
+    const isCurrentUserRequest = /\/auth\/me(?:\?|$)/i.test(err.config?.url || "");
+    const isHomeAuthCheck = isCurrentUserRequest && window.location.pathname === "/";
+    if (
+      err.response?.status === 401 &&
+      !isLoginRequest &&
+      !isPublicDashboardRequest &&
+      !isHomeAuthCheck
+    ) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       if (window.location.pathname !== "/login") {
@@ -40,8 +67,8 @@ api.interceptors.response.use(
 );
 
 export const libraryApi = {
-  exercises: () => api.get("/library/exercises").then((response) => response.data),
-  workouts: () => api.get("/library/workouts").then((response) => response.data),
+  exercises: () => api.get("/public/library/exercises").then((response) => response.data),
+  workouts: () => api.get("/public/library/workouts").then((response) => response.data),
 };
 
 export default api;

@@ -1,6 +1,7 @@
 package com.calishealth.service;
 
 import com.calishealth.models.MediaFile;
+import com.calishealth.models.StorageSettings;
 import com.calishealth.models.User;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
@@ -9,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
+import com.calishealth.exception.RequestValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,6 +88,32 @@ public class ExerciseVideoStorageService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Uploaded file must be a video");
         }
         return storeChecked(file, extension, MediaFile.DEMO_VIDEO, uploaderEmail);
+    }
+
+    /**
+     * Checks a member's video before content moderation reads it. Formats and the size limit come from
+     * the admin storage settings; quotas are checked again when the file is stored.
+     */
+    public void validateVideoFile(MultipartFile file, boolean required) {
+        if (file == null || file.isEmpty()) {
+            if (required) {
+                throw new RequestValidationException("videoFile", "Vui lòng chọn video bài tập");
+            }
+            return;
+        }
+        StorageSettings settings = registry.settings();
+        List<String> formats = settings.videoFormatList();
+        if (!formats.contains(MediaRegistryService.normalizeFormat(getExtension(file.getOriginalFilename())))) {
+            throw new RequestValidationException("videoFile", "Video phải có định dạng " + String.join(", ", formats));
+        }
+        if (file.getSize() > settings.getMaxVideoMb() * 1024L * 1024L) {
+            throw new RequestValidationException("videoFile", "Video không được vượt quá " + settings.getMaxVideoMb() + " MB");
+        }
+        String contentType = file.getContentType();
+        if (contentType != null && !contentType.isBlank()
+                && !contentType.toLowerCase(Locale.ROOT).startsWith("video/")) {
+            throw new RequestValidationException("videoFile", "Tệp tải lên phải là video");
+        }
     }
 
     /** Stores an anatomy image and returns its public URL. */

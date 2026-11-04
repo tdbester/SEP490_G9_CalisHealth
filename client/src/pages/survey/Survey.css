@@ -758,6 +758,20 @@
   margin-top: 14px;
 }
 
+.result-scores--count-2,
+.result-scores--count-4 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.result-scores--count-5,
+.result-scores--count-6 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.result-scores--count-7 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .result-score {
   padding: 14px 16px;
   border-radius: 12px;
@@ -794,6 +808,13 @@
   margin-top: 6px !important;
   font-size: 12px;
   color: #a78bfa;
+}
+
+.result-score-points {
+  margin-top: 4px !important;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8a85a8;
 }
 
 .result-plan {
@@ -872,6 +893,26 @@
   font-size: 14px;
   font-weight: 500;
   line-height: 1.25;
+}
+
+.result-rhythm-exercises {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result-rhythm-exercises li {
+  padding: 0;
+  background: none;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #8a85a8;
+}
+
+.result-rhythm-exercises em {
+  display: block;
+  font-style: normal;
+  color: #6f6a91;
 }
 
 .result-note {

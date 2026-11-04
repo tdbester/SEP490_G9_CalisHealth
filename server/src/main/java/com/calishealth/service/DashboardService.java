@@ -1,5 +1,6 @@
 package com.calishealth.service;
 
+import com.calishealth.service.MuscleGroupStatsService.MuscleGroupStat;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class DashboardService {
     private final JdbcTemplate jdbcTemplate;
+    private final MuscleGroupStatsService muscleGroupStatsService;
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
     public ObjectNode getDashboard(String email) {
@@ -27,56 +29,86 @@ public class DashboardService {
     }
 
     private ArrayNode muscleGroups() {
-        List<MuscleGroupRow> rows = jdbcTemplate.query(
-                """
-                SELECT mg.id AS muscle_group_id, mg.dashboard_code, mg.name, mg.icon_key, mg.tone,
-                       COUNT(DISTINCT e.id) AS exercise_count
-                FROM muscle_groups mg
-                LEFT JOIN exercise_muscle_groups emg ON emg.muscle_group_id = mg.id
-                LEFT JOIN exercises e ON e.id = emg.exercise_id AND e.moderation_status = 'ACTIVE'
-                GROUP BY mg.id, mg.dashboard_code, mg.name, mg.icon_key, mg.tone
-                ORDER BY mg.id
-                """,
-                (rs, rowNum) -> new MuscleGroupRow(
-                        // Nhóm cơ tạo mới từ Library (ExerciseService) chỉ có `name`,
-                        // nên dashboard_code/icon_key/tone có thể NULL -> fallback để
-                        // client luôn nhận id và icon hợp lệ.
-                        rs.getString("dashboard_code") != null ? rs.getString("dashboard_code")
-                                : String.valueOf(rs.getLong("muscle_group_id")),
-                        rs.getString("name"),
-                        rs.getInt("exercise_count"),
-                        rs.getString("icon_key") != null ? rs.getString("icon_key") : "fitness",
-                        rs.getString("tone") != null ? rs.getString("tone") : "purple"
-                )
-        );
+        // Muscle Focus đọc thẳng từ catalog `muscle_groups` của Library (bảng nối
+        // exercise_muscle_groups) qua MuscleGroupStatsService, dùng chung nguồn với
+        // sidebar MUSCLE GROUP của trang Library.
+        // Chỉ đếm bài HEALTH vì bấm vào card sẽ mở tab Health đã lọc sẵn nhóm cơ đó;
+        // bài SKILL đã có khu "Skills" riêng ngay bên dưới.
+        List<MuscleGroupStat> rows = muscleGroupStatsService.findAll();
         ArrayNode result = jsonMapper.createArrayNode();
-        rows.forEach(row -> result.addObject()
-                .put("id", row.id()).put("name", row.name()).put("count", row.count())
-                .put("icon", row.icon()).put("tone", row.tone()));
+        rows.stream()
+                .filter(row -> row.healthCount() > 0)
+                .forEach(row -> result.addObject()
+                        .put("id", row.code())
+                        .put("name", row.name())
+                        .put("count", row.healthCount())
+                        .put("icon", row.icon())
+                        .put("tone", row.tone()));
         return result;
     }
 
     private ArrayNode skills() {
+        // Carousel "Skills" lấy 2 bài tượng trưng cho mỗi đích đến
+        // (handstand / muscle-up / front lever / planche): bậc dễ nhất làm điểm bắt đầu
+        // và bậc kế tiếp để thấy lộ trình. Bước 1 khử trùng theo tên vì seed có nhiều
+        // bài trùng (vd. "Tuck front lever" xuất hiện 2 lần), bước 2 mới xếp hạng trong
+        // từng nhóm. Không có target_skill thì bỏ qua, nếu không carousel sẽ tràn toàn
+        // bài tập skill rời rạc.
         List<SkillRow> rows = jdbcTemplate.query(
                 """
-                SELECT e.id, e.name, e.difficulty_level,
-                       COUNT(DISTINCT pr.prerequisite_exercise_id) + 1 AS step_count
-                FROM exercises e
-                LEFT JOIN progression_rules pr ON pr.exercise_id = e.id AND pr.status = 'ACTIVE'
-                WHERE e.type = 'SKILL' AND e.moderation_status = 'ACTIVE'
-                GROUP BY e.id, e.name, e.difficulty_level
-                ORDER BY e.id
+                SELECT picked.id, picked.name, picked.difficulty_level,
+                       CASE
+                           WHEN picked.guide_text IS NULL OR picked.guide_text = '' THEN 0
+                           ELSE 1 + LENGTH(picked.guide_text)
+                               - LENGTH(REPLACE(picked.guide_text, CHAR(10), ''))
+                       END AS step_count
+                FROM (
+                    SELECT dedup.id, dedup.name, dedup.difficulty_level, dedup.target_skill,
+                           dedup.guide_text,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY dedup.target_skill
+                               ORDER BY (dedup.guide_text IS NULL),
+                                        FIELD(dedup.difficulty_level, 'BEGINNER', 'INTERMEDIATE', 'ADVANCED'),
+                                        dedup.id
+                           ) AS rank_in_skill
+                    FROM (
+                        SELECT e.id, e.name, e.difficulty_level, e.target_skill,
+                               COALESCE(
+                                   NULLIF(TRIM(e.execution_steps), ''),
+                                   NULLIF(TRIM(e.instructions), '')
+                               ) AS guide_text,
+                               ROW_NUMBER() OVER (
+                                   PARTITION BY e.target_skill, LOWER(e.name)
+                                   ORDER BY (COALESCE(NULLIF(TRIM(e.execution_steps), ''),
+                                                      NULLIF(TRIM(e.instructions), '')) IS NULL),
+                                            e.id
+                               ) AS rank_in_name
+                        FROM exercises e
+                        WHERE e.type = 'SKILL'
+                          AND e.source = 'SYSTEM'
+                          AND e.active = TRUE
+                          AND e.status = 'ACCEPTED'
+                          AND e.target_skill IS NOT NULL
+                    ) dedup
+                    WHERE dedup.rank_in_name = 1
+                      -- Bài chưa có nội dung hướng dẫn sẽ hiện "0 steps" vô nghĩa trên card,
+                      -- nên chỉ lấy bài đã có guide text (execution_steps hoặc instructions).
+                      AND dedup.guide_text IS NOT NULL
+                ) picked
+                WHERE picked.rank_in_skill <= 2
+                ORDER BY FIELD(picked.target_skill, 'HANDSTAND', 'MUSCLE_UP', 'FRONT_LEVER', 'PLANCHE'),
+                         picked.rank_in_skill
                 """,
                 (rs, rowNum) -> new SkillRow(
-                        slug(rs.getString("name")), rs.getString("name"),
+                        rs.getLong("id"), slug(rs.getString("name")), rs.getString("name"),
                         rs.getInt("step_count"), rs.getString("difficulty_level")
                 )
         );
-        String[] tones = {"purple", "blue", "green", "orange", "pink", "cyan"};
+        String[] tones = {"purple", "blue", "green", "orange", "pink", "cyan", "violet", "teal"};
         ArrayNode result = jsonMapper.createArrayNode();
         for (int index = 0; index < rows.size(); index++) {
             SkillRow row = rows.get(index);
-            result.addObject().put("id", row.id()).put("name", row.name())
+            result.addObject().put("exerciseId", row.exerciseId()).put("id", row.id()).put("name", row.name())
                     .put("steps", row.steps()).put("level", row.level())
                     .put("tone", tones[index % tones.length]);
         }
@@ -84,23 +116,52 @@ public class DashboardService {
     }
 
     private ObjectNode community() {
-        // Community = user-created content only (source CUSTOM); SYSTEM library items are excluded.
+        // Predicate giữ khớp với quy tắc hiển thị của Library Community.
         Long workouts = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM workout_entries WHERE active = TRUE AND UPPER(source) = 'CUSTOM'",
+                """
+                SELECT COUNT(*)
+                FROM workout_entries
+                WHERE source = 'CUSTOM'
+                  AND active = TRUE
+                  AND status = 'ACCEPTED'
+                  AND is_shared_with_community = TRUE
+                """,
                 Long.class
         );
-        // Athletes = distinct creators who contributed CUSTOM exercises or workouts (at least one active item).
         Long athletes = jdbcTemplate.queryForObject(
                 """
                 SELECT COUNT(DISTINCT u.id)
                 FROM users u
-                WHERE EXISTS (SELECT 1 FROM exercises e WHERE e.created_by = u.id AND e.active = TRUE AND UPPER(e.source) = 'CUSTOM')
-                   OR EXISTS (SELECT 1 FROM workout_entries w WHERE w.created_by = u.id AND w.active = TRUE AND UPPER(w.source) = 'CUSTOM')
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM exercises e
+                    WHERE e.created_by = u.id
+                      AND e.source = 'CUSTOM'
+                      AND e.active = TRUE
+                      AND e.status = 'ACCEPTED'
+                      AND e.share_with_community = TRUE
+                )
+                   OR EXISTS (
+                       SELECT 1
+                       FROM workout_entries w
+                       WHERE w.created_by = u.id
+                         AND w.source = 'CUSTOM'
+                         AND w.active = TRUE
+                         AND w.status = 'ACCEPTED'
+                         AND w.is_shared_with_community = TRUE
+                   )
                 """,
                 Long.class
         );
         Long exercises = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM exercises WHERE active = TRUE AND UPPER(source) = 'CUSTOM'",
+                """
+                SELECT COUNT(*)
+                FROM exercises
+                WHERE source = 'CUSTOM'
+                  AND active = TRUE
+                  AND status = 'ACCEPTED'
+                  AND share_with_community = TRUE
+                """,
                 Long.class
         );
         return jsonMapper.createObjectNode()
@@ -128,21 +189,19 @@ public class DashboardService {
                 (rs, rowNum) -> new MeasurementRow(rs.getBigDecimal("weight"), rs.getBigDecimal("height")),
                 email
         );
-        if (rows.isEmpty()) {
-            return result;
-        }
-
-        MeasurementRow measurement = rows.get(0);
-        if (measurement.weight() != null) {
-            result.put("weight", measurement.weight());
-        }
-        if (measurement.weight() != null && measurement.height() != null) {
-            BigDecimal heightMeters = measurement.height().compareTo(BigDecimal.valueOf(3)) > 0
-                    ? measurement.height().movePointLeft(2) : measurement.height();
-            if (heightMeters.signum() > 0) {
-                double bmi = measurement.weight().doubleValue() / Math.pow(heightMeters.doubleValue(), 2);
-                result.put("bmi", Math.round(bmi * 10.0) / 10.0);
-                result.put("bmiLabel", bmi < 18.5 ? "Underweight" : bmi < 25 ? "Normal" : bmi < 30 ? "Overweight" : "Obesity");
+        if (!rows.isEmpty()) {
+            MeasurementRow measurement = rows.get(0);
+            if (measurement.weight() != null) {
+                result.put("weight", measurement.weight());
+            }
+            if (measurement.weight() != null && measurement.height() != null) {
+                BigDecimal heightMeters = measurement.height().compareTo(BigDecimal.valueOf(3)) > 0
+                        ? measurement.height().movePointLeft(2) : measurement.height();
+                if (heightMeters.signum() > 0) {
+                    double bmi = measurement.weight().doubleValue() / Math.pow(heightMeters.doubleValue(), 2);
+                    result.put("bmi", Math.round(bmi * 10.0) / 10.0);
+                    result.put("bmiLabel", bmi < 18.5 ? "Underweight" : bmi < 25 ? "Normal" : bmi < 30 ? "Overweight" : "Obesity");
+                }
             }
         }
 
@@ -167,7 +226,6 @@ public class DashboardService {
         return value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
     }
 
-    private record MuscleGroupRow(String id, String name, int count, String icon, String tone) {}
-    private record SkillRow(String id, String name, int steps, String level) {}
+    private record SkillRow(Long exerciseId, String id, String name, int steps, String level) {}
     private record MeasurementRow(BigDecimal weight, BigDecimal height) {}
 }
