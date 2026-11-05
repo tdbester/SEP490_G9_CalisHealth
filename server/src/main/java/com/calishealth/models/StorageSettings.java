@@ -58,6 +58,9 @@ public class StorageSettings {
     @Column(name = "trash_retention_days", nullable = false)
     private int trashRetentionDays;
 
+    @Column(name = "restore_grace_days", nullable = false)
+    private int restoreGraceDays;
+
     @Column(name = "auto_cleanup_enabled", nullable = false)
     private boolean autoCleanupEnabled;
 

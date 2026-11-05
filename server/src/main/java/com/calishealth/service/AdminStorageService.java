@@ -88,11 +88,15 @@ public class AdminStorageService {
                 .map(row -> new TopMember(num(row[0]), (String) row[1], num(row[2]), num(row[3])))
                 .toList();
 
-        long[] trash = statusTotals().getOrDefault(MediaFile.TRASHED, new long[2]);
+        Map<String, long[]> totals = statusTotals();
+        long[] trash = totals.getOrDefault(MediaFile.TRASHED, new long[2]);
+        long[] orphaned = totals.getOrDefault(MediaFile.ORPHANED, new long[2]);
+        long[] rejected = totals.getOrDefault(MediaFile.REJECTED, new long[2]);
         LocalDateTime nextRun = now.toLocalDate().atTime(LocalTime.parse(StorageCleanupJob.RUN_AT));
         if (!nextRun.isAfter(now)) nextRun = nextRun.plusDays(1);
         AutoCleanup autoCleanup = new AutoCleanup(s.isAutoCleanupEnabled(), StorageCleanupJob.RUN_AT, s.getLastCleanupAt(),
-                s.getLastCleanupFreedBytes(), media.sumExpiringBy(nextRun), trash[0], trash[1], s.getTrashRetentionDays());
+                s.getLastCleanupFreedBytes(), media.sumExpiringBy(nextRun), trash[0], trash[1], s.getTrashRetentionDays(),
+                orphaned[0] + rejected[0], orphaned[1] + rejected[1]);
 
         return new Overview(quota, used, s.getWarningPercent(), s.getCriticalPercent(), videos + images, videos, images,
                 growth, estimatedFull, s.getMemberQuotaMb() * MB,
@@ -190,7 +194,7 @@ public class AdminStorageService {
         User admin = admin(adminEmail);
         List<MediaFile> restored = cleanup.restore(ids);
         if (!restored.isEmpty()) log(admin, "Restored " + describe(restored) + " from the trash");
-        return new RestoreResult(restored.size(), MediaCleanupService.RESTORE_GRACE_DAYS);
+        return new RestoreResult(restored.size(), registry.settings().getRestoreGraceDays());
     }
 
     @Transactional
@@ -243,6 +247,7 @@ public class AdminStorageService {
         range("Rejected media retention", r.rejectedRetentionDays(), 7, 90);
         range("Orphaned file grace period", r.orphanGraceHours(), 1, 72);
         range("Trash retention", r.trashRetentionDays(), 0, 30);
+        range("Restored file protection", r.restoreGraceDays(), 0, 30);
         range("Total storage quota", r.quotaGb(), 1, 1000);
         range("Warning threshold", r.warningPercent(), 50, 95);
         range("Critical threshold", r.criticalPercent(), 51, 99);
@@ -269,6 +274,7 @@ public class AdminStorageService {
         s.setRejectedRetentionDays(r.rejectedRetentionDays());
         s.setOrphanGraceHours(r.orphanGraceHours());
         s.setTrashRetentionDays(r.trashRetentionDays());
+        s.setRestoreGraceDays(r.restoreGraceDays());
         s.setAutoCleanupEnabled(r.autoCleanupEnabled());
         s.setQuotaGb(r.quotaGb());
         s.setWarningPercent(r.warningPercent());
@@ -284,7 +290,7 @@ public class AdminStorageService {
         return new Settings(s.getMaxVideoMb(), s.getMaxImageMb(), s.videoFormatList(), s.imageFormatList(),
                 s.getFormCheckMaxSeconds(), s.getDemoMaxSeconds(), s.getMemberQuotaMb(), s.getUploadsPerDay(),
                 s.getFormCheckRetentionDays(), s.getRejectedRetentionDays(), s.getOrphanGraceHours(),
-                s.getTrashRetentionDays(), s.isAutoCleanupEnabled(), s.getQuotaGb(), s.getWarningPercent(),
+                s.getTrashRetentionDays(), s.getRestoreGraceDays(), s.isAutoCleanupEnabled(), s.getQuotaGb(), s.getWarningPercent(),
                 s.getCriticalPercent(), media.sumBytesOnDisk(),
                 s.getUpdatedBy() == null ? null : s.getUpdatedBy().getEmail(), s.getUpdatedAt());
     }

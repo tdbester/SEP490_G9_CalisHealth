@@ -68,6 +68,7 @@ const SECTIONS = [
       { key: "rejectedRetentionDays", label: "Keep rejected media for", desc: "Counted from the moderation rejection date, so the member can read the reason and resubmit.", unit: "days", min: 7, max: 90, icon: DeleteOutlineRoundedIcon, tone: "pink" },
       { key: "orphanGraceHours", label: "Grace period for orphaned files", desc: "Protects files that were just uploaded but whose form is not saved yet.", unit: "hours", min: 1, max: 72, icon: LinkOffRoundedIcon, tone: "amber" },
       { key: "trashRetentionDays", label: "Keep deleted files in trash for", desc: "Deleted and expired files stay restorable in the trash, then are deleted permanently. Storage is freed only at that point. 0 = delete immediately.", unit: "days", min: 0, max: 30, icon: RestoreFromTrashOutlinedIcon, tone: "violet", tag: "Soft delete" },
+      { key: "restoreGraceDays", label: "Protect restored files for", desc: "After a file is restored from the trash, auto-cleanup leaves it alone for this long. Admins can still move it to the trash by hand. 0 = only until its original cleanup date.", unit: "days", min: 0, max: 30, icon: HistoryRoundedIcon, tone: "green" },
     ],
     toggle: { key: "autoCleanupEnabled", label: "Daily auto-cleanup", desc: "Runs every day at 03:00 (server time): moves expired files to the trash and permanently deletes trash past its period. Duplicate files are stored once (content hash).", icon: AutoDeleteOutlinedIcon, tone: "green" },
   },

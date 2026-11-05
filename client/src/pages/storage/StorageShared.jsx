@@ -18,11 +18,15 @@ export function formatBytes(bytes) {
   return `${mb >= 10 ? Math.round(mb) : mb.toFixed(1)} MB`;
 }
 
-/** Duration between an ISO time and now, e.g. "3 hours", "12 days". */
+/** Duration between an ISO time and now, e.g. "5 minutes", "3 hours", "12 days". */
 export function formatDuration(iso, now = Date.now()) {
   const ms = Math.abs(now - new Date(iso).getTime());
   const hours = Math.round(ms / 3600000);
-  if (hours < 1) return "less than 1 hour";
+  if (hours < 1) {
+    const minutes = Math.round(ms / 60000);
+    if (minutes < 1) return "less than a minute";
+    return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+  }
   if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"}`;
   const days = Math.round(hours / 24);
   return `${days} day${days === 1 ? "" : "s"}`;

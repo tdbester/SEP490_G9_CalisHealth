@@ -40,9 +40,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class MediaCleanupService {
-    /** A restored file is skipped by auto-cleanup for at least this long. */
-    public static final int RESTORE_GRACE_DAYS = 7;
-
     private final MediaFileRepository media;
     private final StorageSettingsRepository settingsRepository;
     private final MediaRegistryService registry;
@@ -61,13 +58,16 @@ public class MediaCleanupService {
     // Admin actions
     // ---------------------------------------------------------------------------------
 
-    /** Soft-deletes ORPHANED / REJECTED files whose grace period is over. Purges at once when the trash period is 0. */
+    /**
+     * Soft-deletes ORPHANED / REJECTED files picked by an admin, also during their grace period: the grace
+     * period only holds back the daily auto-cleanup. Purges at once when the trash period is 0.
+     */
     @Transactional
     public TrashOutcome trash(Collection<Long> ids, User admin) {
         LocalDateTime now = LocalDateTime.now();
         int trashDays = registry.settings().getTrashRetentionDays();
         List<MediaFile> eligible = media.findAllByIdIn(ids).stream()
-                .filter(file -> file.getCategory() != null && isExpired(file, now))
+                .filter(file -> file.getCategory() != null && isInactive(file))
                 .toList();
         if (trashDays == 0) {
             PurgeOutcome outcome = purgeAll(eligible, now);
@@ -78,10 +78,13 @@ public class MediaCleanupService {
         return new TrashOutcome(eligible, List.of(), 0, ids.size() - eligible.size(), purgeAt);
     }
 
-    /** Puts trashed files back in their previous status; auto-cleanup skips them for {@link #RESTORE_GRACE_DAYS}. */
+    /**
+     * Puts trashed files back in their previous status; auto-cleanup skips them for the "restored file
+     * protection" days of the storage settings. An admin can still move them to the trash again at any time.
+     */
     @Transactional
     public List<MediaFile> restore(Collection<Long> ids) {
-        LocalDateTime keepUntil = LocalDateTime.now().plusDays(RESTORE_GRACE_DAYS);
+        LocalDateTime keepUntil = LocalDateTime.now().plusDays(registry.settings().getRestoreGraceDays());
         List<MediaFile> restored = new ArrayList<>();
         for (MediaFile file : media.findAllByIdIn(ids)) {
             if (!MediaFile.TRASHED.equals(file.getStatus())) continue;
@@ -249,9 +252,8 @@ public class MediaCleanupService {
 
     // ---------------------------------------------------------------------------------
 
-    private static boolean isExpired(MediaFile file, LocalDateTime now) {
-        boolean inactive = MediaFile.ORPHANED.equals(file.getStatus()) || MediaFile.REJECTED.equals(file.getStatus());
-        return inactive && file.getDeletableAt() != null && !file.getDeletableAt().isAfter(now);
+    private static boolean isInactive(MediaFile file) {
+        return MediaFile.ORPHANED.equals(file.getStatus()) || MediaFile.REJECTED.equals(file.getStatus());
     }
 
     private static void moveToTrash(MediaFile file, User by, LocalDateTime now, LocalDateTime purgeAt) {

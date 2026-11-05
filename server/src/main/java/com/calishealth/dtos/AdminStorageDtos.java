@@ -30,7 +30,10 @@ public class AdminStorageDtos {
             long nextExpiringBytes,
             long trashFiles,
             long trashBytes,
-            int trashRetentionDays) {}
+            int trashRetentionDays,
+            /** ORPHANED + REJECTED files an admin can move to the trash right away. */
+            long inactiveFiles,
+            long inactiveBytes) {}
 
     public record Overview(
             long quotaBytes,
@@ -118,6 +121,7 @@ public class AdminStorageDtos {
             int rejectedRetentionDays,
             int orphanGraceHours,
             int trashRetentionDays,
+            int restoreGraceDays,
             boolean autoCleanupEnabled,
             int quotaGb,
             int warningPercent,
@@ -140,6 +144,7 @@ public class AdminStorageDtos {
             @NotNull Integer rejectedRetentionDays,
             @NotNull Integer orphanGraceHours,
             @NotNull Integer trashRetentionDays,
+            @NotNull Integer restoreGraceDays,
             @NotNull Boolean autoCleanupEnabled,
             @NotNull Integer quotaGb,
             @NotNull Integer warningPercent,

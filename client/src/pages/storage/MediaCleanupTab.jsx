@@ -70,7 +70,8 @@ const EXTEND_OPTIONS = [7, 14, 30];
 
 const isTrashed = (m) => m.status === "TRASHED";
 const statusOf = (m) => STATUS[isTrashed(m) ? m.previousStatus : m.status];
-const isDeletable = (m) => isTrashed(m) || new Date(m.deletableAt) <= new Date();
+/** Still protected from the daily auto-cleanup; an admin can clean it up anyway after a warning. */
+const inGrace = (m) => !isTrashed(m) && m.deletableAt != null && new Date(m.deletableAt) > new Date();
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 const headCellSx = {
@@ -168,6 +169,7 @@ function ConfirmDialog({ request, busy, trashDays, onCancel, onConfirm }) {
   const bytes = request.bytes ?? files.reduce((sum, m) => sum + m.sizeBytes, 0);
   const soft = kind === "trash" && trashDays > 0;
   const rejected = files.filter((m) => (isTrashed(m) ? m.previousStatus : m.status) === "REJECTED").length;
+  const graced = files.filter(inGrace);
   const purgeDate = new Date(Date.now() + trashDays * DAY).toISOString();
 
   const title = soft
@@ -190,6 +192,18 @@ function ConfirmDialog({ request, busy, trashDays, onCancel, onConfirm }) {
             : `${formatBytes(bytes)} will be freed. Files are removed from storage and cannot be restored.`}
         </Typography>
         {files.length > 0 && <FileList files={files} />}
+        {graced.length > 0 && (
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            {graced.length === 1
+              ? `${graced[0].fileName} became ${STATUS[graced[0].status]?.label.toLowerCase() ?? "inactive"} only ${formatDuration(graced[0].inactiveSince)} ago`
+              : `${graced.length} of these files became inactive recently (the newest ${formatDuration(
+                  graced.reduce((latest, m) => (new Date(m.inactiveSince) > new Date(latest.inactiveSince) ? m : latest)).inactiveSince,
+                )} ago)`}{" "}
+            and {graced.length === 1 ? "is" : "are"} still in the grace period, so auto-cleanup would keep{" "}
+            {graced.length === 1 ? "it" : "them"} for now. Continue only if you are sure{" "}
+            {graced.length === 1 ? "it is" : "they are"} not needed, e.g. not part of a form that is still being saved.
+          </Alert>
+        )}
         {rejected > 0 && (
           <Alert severity="warning" sx={{ mt: 2 }}>
             {rejected} file{rejected === 1 ? " belongs" : "s belong"} to a rejected exercise.{" "}
@@ -316,7 +330,7 @@ export default function MediaCleanupTab() {
   const items = useMemo(() => data?.items ?? [], [data]);
   const summary = data?.summary;
   const trashDays = summary?.trashRetentionDays ?? 7;
-  const selectableOnPage = items.filter(isDeletable);
+  const selectableOnPage = items;
   const selectedOnPage = selectableOnPage.filter((m) => selected.has(m.id)).length;
   const allOnPageSelected = selectableOnPage.length > 0 && selectedOnPage === selectableOnPage.length;
   const selectedFiles = [...selected.values()];
@@ -376,7 +390,7 @@ export default function MediaCleanupTab() {
     if (confirm.kind === "trash") {
       return run(async () => {
         const res = await adminStorageApi.trashMedia(ids);
-        const skipped = res.skipped ? ` ${res.skipped} skipped (still in their grace period).` : "";
+        const skipped = res.skipped ? ` ${res.skipped} skipped (no longer inactive).` : "";
         return res.purged
           ? `${res.purged} file(s) deleted · ${formatBytes(res.freedBytes)} freed.${skipped}`
           : `${res.trashed} file(s) moved to trash · deleted permanently on ${fmtDate(res.purgeAt)}.${skipped}`;
@@ -397,7 +411,9 @@ export default function MediaCleanupTab() {
   const restore = (files) =>
     run(async () => {
       const res = await adminStorageApi.restoreMedia(files.map((m) => m.id));
-      return `${res.restored} file(s) restored · auto-cleanup skips them for ${res.graceDays} days.`;
+      return res.graceDays > 0
+        ? `${res.restored} file(s) restored · auto-cleanup skips them for ${res.graceDays} day(s) (you can still move them to the trash by hand).`
+        : `${res.restored} file(s) restored · auto-cleanup follows their original cleanup date.`;
     }, "Could not restore the selected files.");
 
   const extend = (days) =>
@@ -440,7 +456,7 @@ export default function MediaCleanupTab() {
         <Box sx={{ display: "grid", gap: 0.75, fontSize: 13, color: CM.textMuted }}>
           <Typography sx={{ fontSize: 13, color: "inherit" }}>
             <Box component="strong" sx={{ color: CM.text }}>Orphaned:</Box> file no longer linked to any exercise, skill or
-            profile. It can be cleaned up once its grace period has passed.
+            profile. Auto-cleanup leaves it alone during its grace period; you can clean it up earlier by hand.
           </Typography>
           <Typography sx={{ fontSize: 13, color: "inherit" }}>
             <Box component="strong" sx={{ color: CM.text }}>Rejected:</Box> media of a member exercise rejected by
@@ -598,22 +614,17 @@ export default function MediaCleanupTab() {
                   </TableRow>
                 ))
               : items.map((m) => {
-                  const selectable = isDeletable(m);
+                  const graced = inGrace(m);
                   const st = statusOf(m);
                   const purgeSoon = trashView && new Date(m.purgeAt) - Date.now() <= DAY;
                   return (
                     <TableRow key={m.id} hover selected={selected.has(m.id)} sx={{ opacity: isFetching ? 0.6 : 1, transition: "opacity .15s" }}>
                       <TableCell padding="checkbox" sx={bodyCellSx}>
-                        <Tooltip title={selectable ? "" : `In grace period · can be cleaned up in ${formatDuration(m.deletableAt)}`}>
-                          <span>
-                            <Checkbox
-                              checked={selected.has(m.id)}
-                              disabled={!selectable}
-                              onChange={() => toggleOne(m)}
-                              inputProps={{ "aria-label": `Select ${m.fileName}` }}
-                            />
-                          </span>
-                        </Tooltip>
+                        <Checkbox
+                          checked={selected.has(m.id)}
+                          onChange={() => toggleOne(m)}
+                          inputProps={{ "aria-label": `Select ${m.fileName}` }}
+                        />
                       </TableCell>
                       <TableCell sx={leftCellSx}>
                         <FileCell m={m} />
@@ -641,11 +652,13 @@ export default function MediaCleanupTab() {
                           </>
                         ) : (
                           <>
-                            <Typography sx={{ fontSize: 13.5, color: selectable ? CM.text : CM.textMuted }}>{formatDuration(m.inactiveSince)}</Typography>
-                            {!selectable && (
-                              <Typography sx={{ mt: 0.25, fontSize: 12, fontWeight: 600, color: CM.amber, display: "inline-flex", alignItems: "center", gap: 0.5 }}>
-                                <ScheduleRoundedIcon sx={{ fontSize: 13 }} /> Kept for {formatDuration(m.deletableAt)} more
-                              </Typography>
+                            <Typography sx={{ fontSize: 13.5, color: graced ? CM.textMuted : CM.text }}>{formatDuration(m.inactiveSince)}</Typography>
+                            {graced && (
+                              <Tooltip title={`In grace period until ${fmtDateTime(m.deletableAt)}. Auto-cleanup skips it until then; you can still clean it up by hand.`}>
+                                <Typography sx={{ mt: 0.25, fontSize: 12, fontWeight: 600, color: CM.amber, display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+                                  <ScheduleRoundedIcon sx={{ fontSize: 13 }} /> Auto-cleanup in {formatDuration(m.deletableAt)}
+                                </Typography>
+                              </Tooltip>
                             )}
                           </>
                         )}

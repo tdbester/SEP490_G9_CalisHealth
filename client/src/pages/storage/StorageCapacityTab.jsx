@@ -192,6 +192,7 @@ export default function StorageCapacityTab() {
   const usedPercent = pct(data.usedBytes, data.quotaBytes);
   const status = usageStatus(usedPercent, data.warningPercent, data.criticalPercent);
   const cleanup = data.autoCleanup;
+  const reclaimableBytes = cleanup.inactiveBytes + cleanup.trashBytes;
   const categoryRows = data.byCategory.map((c) => ({ ...c, ...CATEGORY[c.key] }));
   const sourceRows = data.bySource.map((s) => ({ ...s, ...SOURCE[s.key] }));
 
@@ -214,6 +215,35 @@ export default function StorageCapacityTab() {
           </Typography>
         </Box>
         <UsageBar percent={usedPercent} warning={data.warningPercent} critical={data.criticalPercent} />
+        {usedPercent >= data.criticalPercent && reclaimableBytes > 0 && (
+          <Alert
+            severity="error"
+            sx={{ mt: 2.5, alignItems: "center" }}
+            action={
+              <Box sx={{ display: "flex", gap: 1 }}>
+                {cleanup.inactiveFiles > 0 && (
+                  <Button size="small" variant="contained" color="error" component={RouterLink} to={STORAGE_PATHS.cleanup} sx={{ backgroundImage: "none" }}>
+                    Clean up now
+                  </Button>
+                )}
+                {cleanup.trashFiles > 0 && (
+                  <Button size="small" variant="outlined" color="error" component={RouterLink} to={`${STORAGE_PATHS.cleanup}?view=trash`}>
+                    Open trash
+                  </Button>
+                )}
+              </Box>
+            }
+          >
+            {formatBytes(reclaimableBytes)} can be freed:{" "}
+            {[
+              cleanup.inactiveFiles > 0 && `${formatBytes(cleanup.inactiveBytes)} in ${cleanup.inactiveFiles} orphaned / rejected file(s)`,
+              cleanup.trashFiles > 0 && `${formatBytes(cleanup.trashBytes)} in the trash`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            . Storage is freed only when files are deleted permanently.
+          </Alert>
+        )}
         <Box sx={{ mt: 2.5, display: "flex", gap: 2, flexWrap: "wrap" }}>
           <StatTile
             label="Remaining"
