@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Alert, Avatar, Box, Button, Card, CircularProgress, Dialog, DialogActions, DialogContent,
-  DialogContentText, DialogTitle, InputAdornment, MenuItem, Snackbar, Stack, Table,
+  DialogContentText, DialogTitle, InputAdornment, MenuItem, Stack, Table,
   TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField,
   Tooltip, Typography,
 } from "@mui/material";
@@ -59,37 +59,16 @@ export default function PendingModerationPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [confirmAction, setConfirmAction] = useState(null);
-  const [undoNotice, setUndoNotice] = useState(null);
   const [hiddenCodes, setHiddenCodes] = useState(() => new Set());
   const [successNotice, setSuccessNotice] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
-  const rejectTimer = useRef(null);
-
-  useEffect(() => () => clearTimeout(rejectTimer.current), []);
 
   useEffect(() => {
     const routedSuccess = location.state?.successMessage;
     if (routedSuccess) {
       setSuccessNotice(routedSuccess);
       navigate(location.pathname, { replace: true, state: null });
-      return;
     }
-    const routedReject = location.state?.pendingReject;
-    if (!routedReject || undoNotice) return;
-    setHiddenCodes((current) => new Set(current).add(routedReject.code));
-    setUndoNotice({ row: routedReject, seconds: 10 });
-    navigate(location.pathname, { replace: true, state: null });
-    const startedAt = Date.now();
-    const tick = () => {
-      const seconds = Math.max(0, 10 - Math.floor((Date.now() - startedAt) / 1000));
-      setUndoNotice((current) => current ? { ...current, seconds } : current);
-      if (seconds > 0) rejectTimer.current = setTimeout(tick, 250);
-      else {
-        setUndoNotice(null);
-        reject.mutate({ code: routedReject.code, reason: routedReject.rejectionReason });
-      }
-    };
-    rejectTimer.current = setTimeout(tick, 250);
   }, [location, navigate]);
 
   const approve = useApiMutation(({ code }) => contentManagerApi.updateExerciseStatus(code, true), {
@@ -98,11 +77,11 @@ export default function PendingModerationPage() {
   });
   const reject = useApiMutation(({ code, reason }) => contentManagerApi.updateExerciseStatus(code, false, reason), {
     onSuccess: () => { setBusyCode(null); query.refetch(); historyQuery.refetch(); },
-    onError: (_, code) => {
+    onError: (_, variables) => {
       setBusyCode(null);
       setHiddenCodes((current) => {
         const next = new Set(current);
-        next.delete(code);
+        next.delete(variables.code);
         return next;
       });
     },
@@ -145,34 +124,7 @@ export default function PendingModerationPage() {
       return;
     }
     setHiddenCodes((current) => new Set(current).add(actionWithReason.row.code));
-    setUndoNotice({ row: actionWithReason.row, seconds: 10, rejectionReason: actionWithReason.reason });
-    const startedAt = Date.now();
-    const tick = () => {
-      const seconds = Math.max(0, 10 - Math.floor((Date.now() - startedAt) / 1000));
-      setUndoNotice((current) => current ? { ...current, seconds } : current);
-      if (seconds > 0) rejectTimer.current = setTimeout(tick, 250);
-      else {
-        setUndoNotice(null);
-        reject.mutate({ code: actionWithReason.row.code, reason: actionWithReason.reason }, {
-          onError: () => setHiddenCodes((current) => {
-            const next = new Set(current);
-            next.delete(action.row.code);
-            return next;
-          }),
-        });
-      }
-    };
-    rejectTimer.current = setTimeout(tick, 250);
-  };
-  const undoReject = () => {
-    clearTimeout(rejectTimer.current);
-    setHiddenCodes((current) => {
-      const next = new Set(current);
-      next.delete(undoNotice.row.code);
-      return next;
-    });
-    setUndoNotice(null);
-    setBusyCode(null);
+    reject.mutate({ code: actionWithReason.row.code, reason: actionWithReason.reason });
   };
 
   return (
@@ -271,7 +223,7 @@ export default function PendingModerationPage() {
           <DialogContentText>
             {confirmAction?.type === "approve"
               ? `Approve “${confirmAction?.row.name}” and add it to the active exercise list?`
-              : `Reject “${confirmAction?.row.name}”? Please provide the reason. You will have 10 seconds to undo before its status is changed to rejected.`}
+              : `Reject “${confirmAction?.row.name}”? Please provide the reason. The status will change to rejected immediately.`}
           </DialogContentText>
           {confirmAction?.type === "reject" && (
             <TextField
@@ -297,7 +249,6 @@ export default function PendingModerationPage() {
           </Button>
         </DialogActions>
       </Dialog>
-      <Snackbar open={Boolean(undoNotice)} message={`“${undoNotice?.row.name}” will be removed in ${undoNotice?.seconds}s`} action={<Button color="inherit" size="small" onClick={undoReject}>Undo</Button>} />
     </Box>
   );
 }

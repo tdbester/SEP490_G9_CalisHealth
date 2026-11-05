@@ -36,8 +36,8 @@ public class Exercise {
     @Column(nullable = false, length = 40)
     private String type;
 
-    @Column(length = 80)
-    private String category;
+    @Column(nullable = false, length = 80)
+    private String category = "REPS";
 
     @Column(name = "difficulty_level", length = 40)
     private String difficultyLevel;
@@ -64,14 +64,11 @@ public class Exercise {
     @Column(name = "duration")
     private Integer duration;
 
-    @Column(length = 60)
-    private String source;
+    @Column(nullable = false, length = 60)
+    private String source = "SYSTEM";
 
     @Column(name = "moderation_status", length = 40)
     private String moderationStatus;
-
-    @Column(name = "status", length = 20)
-    private String status;
 
     /** Content Manager publish flag: false = đang chờ duyệt / đã ẩn khỏi thư viện. */
     @Column(nullable = false)
@@ -130,11 +127,8 @@ public class Exercise {
         if (createdAt == null) {
             createdAt = updatedAt;
         }
-        if (status == null) {
-            status = "ACCEPTED";
-        }
         if (moderationStatus == null) {
-            moderationStatus = toModerationStatus(status);
+            moderationStatus = "ACTIVE";
         }
         source = normalizeSource(source);
         if (saveCount == null) {
@@ -241,20 +235,28 @@ public class Exercise {
         this.type = type;
     }
 
+    @Transient
+    public String getStatus() {
+        return switch (moderationStatus == null ? "" : moderationStatus.toUpperCase(java.util.Locale.ROOT)) {
+            case "PENDING" -> EntryStatus.PENDING.name();
+            case "REJECTED" -> EntryStatus.REJECTED.name();
+            default -> EntryStatus.ACCEPTED.name();
+        };
+    }
+
+    @Transient
     public void setStatus(EntryStatus status) {
         setStatus(status == null ? null : status.name());
     }
 
+    @Transient
     public void setStatus(String status) {
-        this.status = status;
-        if (status != null) {
-            this.moderationStatus = toModerationStatus(status);
+        if (status == null) {
+            this.moderationStatus = null;
+            return;
         }
-    }
-
-    private String toModerationStatus(String status) {
-        return switch (status) {
-            case "ACCEPTED" -> "ACTIVE";
+        this.moderationStatus = switch (status.toUpperCase(java.util.Locale.ROOT)) {
+            case "ACCEPTED", "ACTIVE" -> "ACTIVE";
             case "PENDING" -> "PENDING";
             case "REJECTED" -> "REJECTED";
             default -> status;

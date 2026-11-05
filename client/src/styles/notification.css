@@ -1,0 +1,27 @@
+.notification-module,
+.notification-module *,
+.admin-area-shell,
+.admin-area-shell *,
+.topbar-notification-popover,
+.topbar-notification-popover *,
+.topbar-notification-badge,
+.notification-toast,
+.notification-toast * {
+  font-family: Arial, sans-serif !important;
+}
+
+.notification-module input::placeholder,
+.notification-module textarea::placeholder,
+.notification-module select::placeholder,
+.topbar-notification-popover input::placeholder,
+.topbar-notification-popover textarea::placeholder,
+.topbar-notification-popover select::placeholder {
+  font-family: Arial, sans-serif !important;
+  color: #81769d;
+  font-style: normal;
+  opacity: 1;
+}
+
+.notification-toast .Toastify__toast-body {
+  font-family: Arial, sans-serif !important;
+}

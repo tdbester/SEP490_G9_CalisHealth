@@ -50,6 +50,11 @@ class DashboardServiceTest {
                 .anyMatch(sql -> sql.contains("workout_entries")
                         && sql.contains("source = 'CUSTOM'")));
         assertTrue(sqlCaptor.getAllValues().stream()
+                .filter(sql -> sql.contains("FROM exercises"))
+                .allMatch(sql -> sql.contains("moderation_status")
+                        && !sql.contains("e.status = 'ACCEPTED'")
+                        && !sql.contains("AND status = 'ACCEPTED'")));
+        assertTrue(sqlCaptor.getAllValues().stream()
                 .noneMatch(sql -> sql.contains("author_id") || sql.contains("is_system")));
     }
 
@@ -69,7 +74,7 @@ class DashboardServiceTest {
         String skillSql = sqlCaptor.getValue();
         assertTrue(skillSql.contains("source = 'SYSTEM'")
                 && skillSql.contains("active = TRUE")
-                && skillSql.contains("status = 'ACCEPTED'"));
+                && skillSql.contains("UPPER(e.moderation_status) IN ('ACTIVE', 'ACCEPTED')"));
         // Two representative skills per target_skill entry point (easiest + next step).
         assertTrue(skillSql.contains("target_skill IS NOT NULL")
                 && skillSql.contains("rank_in_skill <= 2"));

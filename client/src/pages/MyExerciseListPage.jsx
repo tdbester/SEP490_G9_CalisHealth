@@ -65,126 +65,6 @@ function LevelBadge({ level }) {
   );
 }
 
-/* -------------------- MOCK DATA -------------------- */
-const INITIAL_PENDING = [
-  {
-    id: "pend-1",
-    slug: "diamond-push-up",
-    title: "Diamond push-up",
-    level: "Intermediate",
-    meta: "Chest, triceps · 3 sets · 8 reps · Submitted today, 09:12",
-    scanText: "Scanning video with MediaPipe...",
-    status: "pending",
-  },
-  {
-    id: "pend-2",
-    slug: "archer-pull-up",
-    title: "Archer pull-up",
-    level: "Advanced",
-    meta: "Back, biceps · 3 sets · 5 reps per side · Submitted today, 08:40",
-    scanText: "Checking text for inappropriate words...",
-    status: "pending",
-  },
-  {
-    id: "pend-3",
-    slug: "incline-plank-hold",
-    title: "Incline plank hold",
-    level: "Beginner",
-    meta: "Core · 3 sets · 40 sec · Submitted yesterday, 21:05",
-    scanText: "Waiting in the scan queue",
-    status: "pending",
-  },
-];
-const INITIAL_REJECTED = [
-  {
-    id: 999,
-    slug: "test-rejected-push-up",
-    title: "Test Rejected Push-up",
-    level: "Intermediate",
-    targetMuscle: "Chest",
-    defaultSets: 3,
-    defaultReps: 10,
-    defaultDuration: null,
-    meta: "Chest · 3 sets · 10 reps · Submitted 10:00:00 27/10/2026",
-    reason: "Video demo không rõ động tác, vui lòng quay lại.",
-    description: "Mock exercise for testing the rejected edit and resubmit flow.",
-    guideSteps: ["Start in a push-up position", "Lower your chest with control", "Push back to the starting position"],
-    video: { name: "test-rejected-push-up.mp4", size: "Mock video" },
-    videoUrl: "mock://test-rejected-push-up.mp4",
-    status: "REJECTED",
-    isMock: true,
-  },
-  {
-    id: "rej-1",
-    slug: "wall-sit-challenge",
-    title: "Wall sit challenge",
-    level: "Beginner",
-    meta: "Legs · 3 sets · 60 sec · Rejected 15 Oct",
-    reason: "Reason: Text check: the description contains inappropriate wording (\"stupid\"). Edit the description and submit again.",
-    description: "A stupid simple wall sit to build leg endurance.",
-    guide: ["Find a wall and lean your back against it", "Slide down until your knees are bent", "Hold position for 60 seconds"],
-    video: { name: "wall-sit.mp4", size: "8.2 MB" },
-    status: "rejected",
-  },
-  {
-    id: "rej-2",
-    slug: "l-sit-on-parallettes",
-    title: "L-sit on parallettes",
-    level: "Intermediate",
-    meta: "Core, triceps · 4 sets · 15 sec · Rejected 12 Oct",
-    reason: "Reason: Video check: we could not detect a full body in most frames. Re-record in better light with your whole body in frame.",
-    description: "",
-    guide: [],
-    video: { name: "l-sit.mp4", size: "10.4 MB" },
-    status: "rejected",
-  },
-];
-const MOCK_PENDING_STORAGE_KEY = "calishealth.mock-resubmitted-exercise";
-
-const getMockPendingExercise = () => {
-  try {
-    const storedExercise = sessionStorage.getItem(MOCK_PENDING_STORAGE_KEY);
-    return storedExercise ? JSON.parse(storedExercise) : null;
-  } catch (error) {
-    console.warn("Could not read temporary mock exercise state:", error);
-    return null;
-  }
-};
-const INITIAL_ACCEPTED = [
-  {
-    id: "acc-1",
-    slug: "pike-push-up",
-    title: "Pike push-up",
-    level: "Intermediate",
-    meta: "Shoulders, triceps · 3 sets · 8 reps · Accepted 14 Oct",
-    status: "accepted",
-  },
-  {
-    id: "acc-2",
-    slug: "australian-row",
-    title: "Australian row",
-    level: "Beginner",
-    meta: "Back, biceps · 3 sets · 10 reps · Accepted 10 Oct",
-    status: "accepted",
-  },
-  {
-    id: "acc-3",
-    slug: "pseudo-planche-push-up",
-    title: "Pseudo planche push-up",
-    level: "Advanced",
-    meta: "Shoulders, chest · 4 sets · 6 reps · Accepted 03 Oct",
-    status: "accepted",
-  },
-  {
-    id: "acc-4",
-    slug: "bodyweight-squat",
-    title: "Bodyweight squat",
-    level: "Beginner",
-    meta: "Legs, glutes · 3 sets · 15 reps · Accepted 26 Sep",
-    status: "accepted",
-  },
-];
-
 /* -------------------- CARD COMPONENT -------------------- */
 function ExerciseCard({ item, activeTab, onCancelPending, onDeleteRejected, onDeleteAccepted, navigate }) {
   const openDetail = () => navigate(`/library/community/${item.slug || item.id}`);
@@ -315,6 +195,22 @@ export default function MyExerciseListPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
+    const refreshWhenActive = () => {
+      if (document.visibilityState === "visible") {
+        setRefreshKey((value) => value + 1);
+      }
+    };
+    const intervalId = window.setInterval(refreshWhenActive, 15000);
+    window.addEventListener("focus", refreshWhenActive);
+    document.addEventListener("visibilitychange", refreshWhenActive);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshWhenActive);
+      document.removeEventListener("visibilitychange", refreshWhenActive);
+    };
+  }, []);
+
+  useEffect(() => {
     let active = true;
     setLoading(true);
     setLoadError("");
@@ -354,33 +250,15 @@ export default function MyExerciseListPage() {
               : undefined,
           };
         });
-        const mockPending = getMockPendingExercise();
-        const hasMockPending = Boolean(mockPending && !items.some((item) => item.id === mockPending.id));
-        const hasRejectedMock = (counts?.rejectedCount || 0) === 0 && !mockPending;
-        const showRejectedMock = activeTab === "rejected"
-          && items.length === 0
-          && hasRejectedMock
-          && !searchInput.trim()
-          && selectedLevel === "All levels"
-          && currentPage === 1;
-        const visibleItems = activeTab === "pending" && mockPending
-          ? [mockPending, ...items.filter((item) => item.id !== mockPending.id)]
-          : showRejectedMock
-              ? INITIAL_REJECTED.filter((item) => item.isMock)
-              : items;
-        const totalElementsWithMock = (pageData?.totalElements || 0)
-          + (showRejectedMock || (activeTab === "pending" && hasMockPending) ? 1 : 0);
-        setExercises(visibleItems);
-        setTotalElements(totalElementsWithMock);
-        setTotalPages(showRejectedMock || (activeTab === "pending" && hasMockPending && !pageData?.totalPages)
-          ? 1
-          : pageData?.totalPages || 0);
+        setExercises(items);
+        setTotalElements(pageData?.totalElements || 0);
+        setTotalPages(pageData?.totalPages || 0);
         if (pageData?.totalPages > 0 && currentPage > pageData.totalPages) {
           setCurrentPage(pageData.totalPages);
         }
         setStatusCounts({
-          pending: (counts?.pendingCount || 0) + (hasMockPending ? 1 : 0),
-          rejected: (counts?.rejectedCount || 0) + (hasRejectedMock ? 1 : 0),
+          pending: counts?.pendingCount || 0,
+          rejected: counts?.rejectedCount || 0,
           accepted: counts?.acceptedCount || 0,
         });
       })

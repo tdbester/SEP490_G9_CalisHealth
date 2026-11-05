@@ -57,12 +57,19 @@ import ForgotPassword from "./pages/ForgotPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import VerifyResetPassword from "./pages/VerifyResetPassword";
 import ResetPassword from "./pages/ResetPassword";
+import NotificationListPage from "./pages/NotificationListPage";
+import CreateNotificationPage from "./pages/CreateNotificationPage";
+import NotificationDetailPage from "./pages/NotificationDetailPage";
+import CreateMaintenanceSchedulePage from "./pages/CreateMaintenanceSchedulePage";
+import MaintenanceScheduleListPage from "./pages/MaintenanceScheduleListPage";
+import MaintenanceScheduleDetailPage from "./pages/MaintenanceScheduleDetailPage";
 import ChangePassword from "./pages/ChangePassword";
 import ProfilePage from "./pages/ProfilePage";
 import SurveyFlow, { SurveyEntry } from "./pages/survey/SurveyFlow";
 import SurveyStepPage from "./pages/survey/SurveyStepPage";
 import SurveyResult from "./pages/survey/SurveyResult";
 import SurveyManagement from "./pages/content/SurveyManagement";
+import { ContentManagementPage } from "./features/content-manager/pages/ContentManagementPage";
 
 export default function App() {
   const memberPage = (page) => (
@@ -70,7 +77,6 @@ export default function App() {
       <AdminLayout>{page}</AdminLayout>
     </ProtectedRoute>
   );
-
   return (
     <>
       <ToastContainer
@@ -94,29 +100,30 @@ export default function App() {
           <Route path="/dashboard" element={<Navigate to="/" replace />} />
           <Route path="/day-streak" element={memberPage(<DayStreak />)} />
           {/* Onboarding survey của member (sau khi đăng nhập); URL theo Figma: /survey/body-information … */}
-        <Route
-          path="/survey"
-          element={
-            <ProtectedRoute>
-              <SurveyFlow />
-            </ProtectedRoute>
-          }
+          <Route
+            path="/survey"
+            element={
+              <ProtectedRoute>
+                <SurveyFlow />
+              </ProtectedRoute>
+            }
           >
-          <Route index element={<SurveyEntry />} />
-          <Route path=":stepSlug" element={<SurveyStepPage />} />
+            <Route index element={<SurveyEntry />} />
+            <Route path=":stepSlug" element={<SurveyStepPage />} />
           </Route>
           <Route
-          path="/survey/result"
-          element={
-            <ProtectedRoute>
-              <SurveyResult />
-            </ProtectedRoute>
-          }
+            path="/survey/result"
+            element={
+              <ProtectedRoute>
+                <SurveyResult />
+              </ProtectedRoute>
+            }
           />
 
           <Route path="/content" element={<ContentManagerLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<ContentManagerDashboard />} />
+          <Route path="management/:section" element={<ContentManagementPage />} />
           <Route path="daily-training-plans" element={<DailyPlanTemplateListPage />} />
           <Route path="daily-training-plans/new" element={<DailyPlanTemplateBuilderPage />} />
           <Route path="daily-training-plans/:code" element={<DailyPlanTemplateDetailPage />} />
@@ -191,9 +198,13 @@ export default function App() {
           <Route path="users/:id" element={<AdminUserDetailPage />} />
           <Route path="surveys" element={<SurveyManagement />} />
           <Route path="create" element={<Navigate to="/admin/users/create" replace />} />
-          <Route path="notifications" element={<AdminSectionPage title="Notifications" />} />
+          <Route path="notifications" element={<NotificationListPage />} />
+          <Route path="notifications/new" element={<CreateNotificationPage />} />
+          <Route path="notifications/:id" element={<NotificationDetailPage />} />
           <Route path="storage" element={<AdminSectionPage title="Media storage & infrastructure" />} />
-          <Route path="maintenance" element={<AdminSectionPage title="Create maintenance schedule" />} />
+          <Route path="maintenance" element={<MaintenanceScheduleListPage />} />
+          <Route path="maintenance/create" element={<CreateMaintenanceSchedulePage />} />
+          <Route path="maintenance/:id" element={<MaintenanceScheduleDetailPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>

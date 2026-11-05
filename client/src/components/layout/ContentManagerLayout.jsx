@@ -29,11 +29,11 @@ import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import RuleRoundedIcon from "@mui/icons-material/RuleRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
-import NotificationsNoneRoundedIcon from "@mui/icons-material/NotificationsNoneRounded";
 import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import contentApi from "../../api/contentManager";
+import NotificationBell from "../notifications/NotificationBell";
 import { avatarUrl, profileApi } from "../../api/profile";
 import { CONTENT_PATHS } from "../ContentShared";
 import contentTheme, { CM } from "../../theme-content";
@@ -460,35 +460,7 @@ function ContentShell({ user, logout, children }) {
 
           <Box sx={{ flex: 1 }} />
 
-          <Tooltip title="Notifications">
-            <Box
-              sx={{
-                position: "relative",
-                width: 34,
-                height: 34,
-                display: "grid",
-                placeItems: "center",
-                borderRadius: "50%",
-                border: `1px solid ${CM.border}`,
-                color: CM.textMuted,
-                cursor: "pointer",
-                "&:hover": { color: CM.text, borderColor: CM.borderStrong },
-              }}
-            >
-              <NotificationsNoneRoundedIcon sx={{ fontSize: 19 }} />
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: 7,
-                  right: 8,
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  bgcolor: CM.pink,
-                }}
-              />
-            </Box>
-          </Tooltip>
+          <NotificationBell apiClient={contentApi} />
 
           <AccountMenu
             user={user}

@@ -1,5 +1,6 @@
 package com.calishealth.security;
 
+import com.calishealth.service.MaintenanceScheduleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
+    private final MaintenanceScheduleService maintenanceSchedules;
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -49,6 +51,7 @@ public class SecurityConfig {
                         .requestMatchers("/media/exercise-demos/**").permitAll()
                         .requestMatchers("/media/exercise-anatomy/**").permitAll()
                         .requestMatchers("/api/public/library/**").permitAll()
+                        .requestMatchers("/api/public/maintenance/**").permitAll()
                         // Profile photos are rendered by <img>, which cannot send the JWT header.
                         .requestMatchers(HttpMethod.GET, "/media/profile-avatars/**").permitAll()
                         // Survey Management now belongs to the Admin area (must stay before /api/content/**).
@@ -70,6 +73,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(new MaintenanceEnforcementFilter(maintenanceSchedules), JwtAuthFilter.class);
         return http.build();
     }
 
