@@ -2,6 +2,7 @@ package com.calishealth.service;
 
 import com.calishealth.dtos.MemberScheduleDtos.AvailableWorkoutResponse;
 import com.calishealth.dtos.MemberScheduleDtos.MemberScheduleResponse;
+import com.calishealth.dtos.MemberScheduleDtos.PlanDayResponse;
 import com.calishealth.dtos.MemberScheduleDtos.PlanInfoResponse;
 import com.calishealth.dtos.MemberScheduleDtos.SaveScheduleRequest;
 import com.calishealth.dtos.MemberScheduleDtos.SaveWeekRequest;
@@ -11,6 +12,7 @@ import com.calishealth.dtos.MemberScheduleDtos.TodayExerciseResponse;
 import com.calishealth.dtos.MemberScheduleDtos.TodayWorkoutResponse;
 import com.calishealth.dtos.MemberScheduleDtos.WeekRuleResponse;
 import com.calishealth.models.DailyPlanTemplate;
+import com.calishealth.models.DailyPlanDay;
 import com.calishealth.models.Exercise;
 import com.calishealth.models.MemberProfile;
 import com.calishealth.models.MemberSchedule;
@@ -109,7 +111,26 @@ public class MemberScheduleService {
                         template.getLevel(),
                         template.getMonthNumber(),
                         template.getDaysPerWeek(),
-                        LocalDate.now().getYear()));
+                        LocalDate.now().getYear(),
+                        templateDays(template)));
+    }
+
+    /**
+     * Các ngày tập của template, sắp theo Day 1..N.
+     *
+     * <p>Đây là phần Content Manager dựng và member "nhận" trong lịch của
+     * mình: màn "Workout schedule" xếp sẵn các workout này vào đúng thứ tự
+     * ngày tập, thay vì để member tự kéo thủ công từ sidebar.</p>
+     */
+    private List<PlanDayResponse> templateDays(DailyPlanTemplate template) {
+        return template.getDays().stream()
+                .filter(day -> day.getWorkout() != null)
+                .sorted(Comparator.comparingInt(DailyPlanDay::getDayNumber))
+                .map(day -> new PlanDayResponse(
+                        day.getDayNumber(),
+                        day.getWorkout().getCode(),
+                        day.getWorkout().getName()))
+                .toList();
     }
 
     // ------------------------------------------------------------------ schedule
@@ -180,6 +201,13 @@ public class MemberScheduleService {
         // "mỗi workout một lần" được tính đúng cả khi tuần qua ranh giới tháng.
         validateWeekEntries(requests, weekStart, weekEnd, Math.max(maxDays, existingDays));
 
+        // Ngày đã trôi qua là lịch sử: member không được thay đổi. Client gửi lên
+        // cả các entry của ngày quá khứ (để giữ nguyên lịch đã tập) — ta giữ
+        // chúng nguyên vẹn trong DB và chỉ xoá/thay các ngày chưa qua.
+        List<ScheduleEntryRequest> editableRequests = requests.stream()
+                .filter(item -> item != null && item.date() != null && !item.date().isBefore(today))
+                .toList();
+
         // Xoá các entry của tuần này ở mọi tháng liên quan rồi flush NGAY:
         // nếu chỉ remove rồi addAll, Hibernate sẽ INSERT dòng mới trước khi
         // DELETE dòng cũ và đụng unique key theo ngày.
@@ -188,6 +216,8 @@ public class MemberScheduleService {
             List<MemberScheduleEntry> stale = schedule.getEntries().stream()
                     .filter(entry -> !entry.getScheduleDate().isBefore(weekStart)
                             && !entry.getScheduleDate().isAfter(weekEnd))
+                    // Giữ nguyên entry của ngày đã trôi qua.
+                    .filter(entry -> !entry.getScheduleDate().isBefore(today))
                     .toList();
             stale.forEach(schedule.getEntries()::remove);
             schedules.saveAndFlush(schedule);
@@ -207,7 +237,7 @@ public class MemberScheduleService {
 
         // Build entry cho từng tháng mà tuần chạm tới.
         for (LocalDate month : months) {
-            List<ScheduleEntryRequest> forMonth = requests.stream()
+            List<ScheduleEntryRequest> forMonth = editableRequests.stream()
                     .filter(item -> item != null && item.date() != null)
                     .filter(item -> firstOfMonth(item.date()).equals(month))
                     .toList();
@@ -607,6 +637,9 @@ public class MemberScheduleService {
 
     private ScheduleEntryResponse toEntryResponse(MemberScheduleEntry entry) {
         WorkoutEntry workout = entry.getWorkout();
+        List<TodayExerciseResponse> exercises = workout.getExercises().stream()
+                .map(this::toTodayExercise)
+                .toList();
         return new ScheduleEntryResponse(
                 entry.getId(),
                 entry.getScheduleDate(),
@@ -615,9 +648,10 @@ public class MemberScheduleService {
                 workout.getLevel(),
                 primaryCategory(workout),
                 estimatedMinutes(workout),
-                workout.getExercises().size(),
+                exercises.size(),
                 entry.getOrderInDay(),
-                entry.getStatus());
+                entry.getStatus(),
+                exercises);
     }
 
     private AvailableWorkoutResponse toWorkoutCard(WorkoutEntry workout) {

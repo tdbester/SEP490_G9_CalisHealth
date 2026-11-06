@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import LibraryDetailPlaceholder from "./LibraryDetailPlaceholder";
-import { deleteMyWorkout, getMyWorkouts } from "../api/library";
+import { deleteMyWorkout, getMyWorkout, getMyWorkouts } from "../api/library";
 import useUndoDelete from "../hooks/useUndoDelete";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { startLibraryWorkout } from "../utils/libraryWorkout";
 
 const STORAGE_KEY = "my_custom_workouts";
 const INITIALIZED_KEY = `${STORAGE_KEY}_initialized`;
@@ -157,6 +158,7 @@ export default function MyCustomWorkoutListPage() {
   const [length, setLength] = useState("all");
   const [sort, setSort] = useState("newest");
   const [errorMessage, setErrorMessage] = useState("");
+  const [startingWorkoutId, setStartingWorkoutId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
@@ -235,6 +237,25 @@ export default function MyCustomWorkoutListPage() {
       },
       successMessage: "Deleted successfully",
     });
+  };
+
+  /**
+   * Bấm "Start" trên 1 workout của tôi -> tải chi tiết workout rồi mở buổi tập
+   * với AI Pose Tracking, giống luồng kế hoạch ngày.
+   */
+  const handleStartWorkout = async (workout) => {
+    setStartingWorkoutId(workout.id);
+    try {
+      const detail = await getMyWorkout(workout.id);
+      const started = startLibraryWorkout(navigate, detail.exercises || []);
+      if (!started) {
+        setErrorMessage("This workout has no exercise you can start yet.");
+      }
+    } catch (error) {
+      setErrorMessage(error.response?.data?.message || "Could not start this workout.");
+    } finally {
+      setStartingWorkoutId(null);
+    }
   };
 
   if (searchParams.get("source") === "system") {
@@ -383,6 +404,14 @@ export default function MyCustomWorkoutListPage() {
                   className="rounded-lg border border-[#8065ff] bg-[#643bf6] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#7554ff]"
                 >
                   Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStartWorkout(workout)}
+                  disabled={startingWorkoutId === workout.id}
+                  className="rounded-lg border border-emerald-600/80 bg-emerald-700 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {startingWorkoutId === workout.id ? "Starting..." : "Start"}
                 </button>
               </div>
             </div>

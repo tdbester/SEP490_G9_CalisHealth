@@ -3,8 +3,8 @@ import Modal from "../Modal";
 import "./ExerciseModals.css";
 
 const MAX_BYTES = 500 * 1024 * 1024;
-const ACCEPTED_TYPES = ["video/mp4", "video/quicktime"];
-const ACCEPTED_EXT = /\.(mp4|mov)$/i;
+const ACCEPTED_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
+const ACCEPTED_EXT = /\.(mp4|mov|webm)$/i;
 
 const UploadIcon = (
   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -49,7 +49,11 @@ function validate(file) {
 
 /**
  * Popup chọn video để phân tích bằng MediaPipe Pose.
- * `onAnalyze(files)` nhận mảng File; việc upload / chạy MediaPipe do component cha xử lý.
+ *
+ * Mỗi lần chỉ chọn 1 file: hệ thống quét từng video một (xem `VideoScanPage`)
+ * rồi mới chấm điểm, nên chọn nhiều file cùng lúc sẽ gây nhầm lẫn.
+ *
+ * `onAnalyze(files)` nhận mảng File; việc chạy MediaPipe do component cha xử lý.
  */
 export default function UploadVideoModal({ initialFiles = [], onAnalyze, onClose }) {
   const inputRef = useRef(null);
@@ -76,8 +80,9 @@ export default function UploadVideoModal({ initialFiles = [], onAnalyze, onClose
     });
     setError(errors.join(" "));
     if (accepted.length === 0) return;
-    setItems((current) => [...current, ...accepted]);
-    accepted.forEach((item) => {
+    // Chỉ giữ 1 file: mỗi lần quét 1 video rồi chấm điểm.
+    setItems(accepted.slice(0, 1));
+    accepted.slice(0, 1).forEach((item) => {
       readDuration(item.file).then((duration) => {
         if (!mounted.current) return;
         setItems((current) =>
@@ -107,8 +112,7 @@ export default function UploadVideoModal({ initialFiles = [], onAnalyze, onClose
       <input
         ref={inputRef}
         type="file"
-        accept="video/mp4,video/quicktime,.mp4,.mov"
-        multiple
+        accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
         hidden
         onChange={(event) => {
           if (event.target.files?.length) addFiles(event.target.files);
@@ -188,7 +192,7 @@ export default function UploadVideoModal({ initialFiles = [], onAnalyze, onClose
         disabled={count === 0}
         onClick={() => onAnalyze?.(items.map((item) => item.file))}
       >
-        {count > 0 ? `Analyze ${count} video${count > 1 ? "s" : ""}` : "Analyze videos"}
+        {count > 0 ? "Analyze video" : "Analyze videos"}
       </button>
     </Modal>
   );

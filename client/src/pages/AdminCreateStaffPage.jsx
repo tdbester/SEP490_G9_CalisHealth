@@ -4,6 +4,9 @@ import {
   Alert,
   Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
   TextField,
   Typography,
 } from "@mui/material";
@@ -103,6 +106,75 @@ function RoleCard({ option, selected, onSelect }) {
   );
 }
 
+/**
+ * Popup xác nhận trước khi rời màn tạo tài khoản.
+ *
+ * Member (admin) đang nhập dữ liệu chưa lưu — bấm Back sẽ mất sạch form nên
+ * cần hỏi lại trước.
+ */
+function DiscardDialog({ open, busy, onCancel, onConfirm }) {
+  return (
+    <Dialog
+      open={open}
+      onClose={busy ? undefined : onCancel}
+      aria-labelledby="discard-title"
+      aria-describedby="discard-desc"
+      PaperProps={{
+        sx: {
+          width: 440,
+          maxWidth: "calc(100% - 32px)",
+          p: 1,
+          borderRadius: "16px",
+          bgcolor: CM.surface,
+          border: `1px solid ${CM.borderStrong}`,
+        },
+      }}
+    >
+      <DialogContent>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2.5 }}>
+          <Box
+            aria-hidden
+            sx={{
+              width: 36,
+              height: 36,
+              display: "grid",
+              placeItems: "center",
+              borderRadius: "50%",
+              fontWeight: 800,
+              color: CM.pink,
+              bgcolor: "rgba(255,119,153,0.16)",
+            }}
+          >
+            !
+          </Box>
+          <Box>
+            <Typography id="discard-title" component="h2" sx={{ fontSize: 17, fontWeight: 700 }}>
+              Discard this account?
+            </Typography>
+          </Box>
+        </Box>
+        <Typography id="discard-desc" sx={{ fontSize: 13, lineHeight: 1.7, color: CM.textMuted }}>
+          You have unsaved changes. If you go back now, everything you have typed in
+          this form will be lost.
+        </Typography>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2.5 }}>
+        <Button color="inherit" onClick={onCancel} disabled={busy} sx={{ borderRadius: "10px" }}>
+          Keep editing
+        </Button>
+        <Button
+          variant="contained"
+          onClick={onConfirm}
+          disabled={busy}
+          sx={{ borderRadius: "10px", bgcolor: CM.pink, color: "#2A0A14", "&:hover": { bgcolor: "#FF5C85" } }}
+        >
+          {busy ? "Leaving…" : "Back and discard"}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 /** Admin creates an Admin or Content Manager account (Figma create_staff_account_ui 1, node 146:1395). */
 export default function AdminCreateStaffPage() {
   const navigate = useNavigate();
@@ -115,6 +187,8 @@ export default function AdminCreateStaffPage() {
   const [busy, setBusy] = useState(false);
   const [serverError, setServerError] = useState("");
   const [emailTaken, setEmailTaken] = useState(false);
+  /** Mở popup xác nhận khi bấm Back mà form còn dữ liệu. */
+  const [discardOpen, setDiscardOpen] = useState(false);
 
   const set = (key) => (e) => {
     const value = e.target.value;
@@ -165,49 +239,41 @@ export default function AdminCreateStaffPage() {
 
   const show = (key) => touched && errors[key];
 
+  /** Form còn dữ liệu chưa lưu — dùng để quyết định có cảnh báo khi Back. */
+  const hasChanges =
+    form.fullName.trim() !== "" || form.email.trim() !== "";
+
+  /**
+   * Bấm Back.
+   *
+   * Nếu form còn dữ liệu thì hỏi lại trước (sẽ mất dữ liệu nếu đi). Nếu
+   * form trống thì ra luôn — không có gì để mất.
+   */
+  const handleBack = () => {
+    if (busy) return;
+    if (hasChanges) {
+      setDiscardOpen(true);
+      return;
+    }
+    navigate("/admin/users");
+  };
+
+  /** Xác nhận bỏ form -> rời màn. */
+  const confirmDiscard = () => {
+    navigate("/admin/users");
+  };
+
   return (
     <Box component="form" onSubmit={submit} noValidate sx={{ p: { xs: 2, md: 3.5 }, maxWidth: 760 }}>
       <Typography sx={{ fontSize: 13, color: CM.textMuted }}>Admin / Users / Create</Typography>
 
-      <Box
-        sx={{
-          mt: 1,
-          mb: 3,
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 2,
-        }}
-      >
-        <Box>
-          <Typography component="h1" sx={{ fontSize: 28, fontWeight: 700, lineHeight: 1.2 }}>
-            Create staff account
-          </Typography>
-          <Typography sx={{ mt: 0.75, fontSize: 13.5, color: CM.textMuted }}>
-            Create an admin or content manager account. Any admin can create these accounts.
-          </Typography>
-        </Box>
-        <Box sx={{ display: "flex", gap: 1.25 }}>
-          <Button
-            variant="outlined"
-            color="inherit"
-            startIcon={<ArrowBackRoundedIcon />}
-            onClick={() => navigate("/admin/users")}
-            disabled={busy}
-            sx={{ borderRadius: "10px", borderColor: CM.borderStrong }}
-          >
-            Back
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={busy}
-            sx={{ borderRadius: "10px", px: 3, background: CM.buttonGradient }}
-          >
-            {busy ? "Creating..." : "Create"}
-          </Button>
-        </Box>
+      <Box sx={{ mt: 1, mb: 3 }}>
+        <Typography component="h1" sx={{ fontSize: 28, fontWeight: 700, lineHeight: 1.2 }}>
+          Create staff account
+        </Typography>
+        <Typography sx={{ mt: 0.75, fontSize: 13.5, color: CM.textMuted }}>
+          Create an admin or content manager account. Any admin can create these accounts.
+        </Typography>
       </Box>
 
       {serverError && (
@@ -274,6 +340,46 @@ export default function AdminCreateStaffPage() {
           </Typography>
         </Section>
       </Box>
+
+      {/* Thanh thao tác dưới cùng: Back bên trái, Create bên phải. */}
+      <Box
+        sx={{
+          mt: 3,
+          pt: 2.5,
+          borderTop: `1px solid ${CM.border}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 2,
+          flexWrap: "wrap",
+        }}
+      >
+        <Button
+          variant="outlined"
+          color="inherit"
+          startIcon={<ArrowBackRoundedIcon />}
+          onClick={handleBack}
+          disabled={busy}
+          sx={{ borderRadius: "10px", borderColor: CM.borderStrong }}
+        >
+          Back
+        </Button>
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={busy}
+          sx={{ borderRadius: "10px", px: 3, background: CM.buttonGradient, ml: "auto" }}
+        >
+          {busy ? "Creating..." : "Create"}
+        </Button>
+      </Box>
+
+      <DiscardDialog
+        open={discardOpen}
+        busy={busy}
+        onCancel={() => setDiscardOpen(false)}
+        onConfirm={confirmDiscard}
+      />
     </Box>
   );
 }

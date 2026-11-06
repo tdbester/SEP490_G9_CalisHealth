@@ -20,7 +20,7 @@ const todayStr = () => dayjs().format("YYYY-MM-DD");
  * Danh sách không có số rep / giây giữ nên clean rep ratio và hold time để trống.
  */
 function summarize(workouts) {
-  const totalMinutes = workouts.reduce((sum, w) => sum + w.durationMin, 0);
+  const totalMinutes = workouts.reduce((sum, w) => sum + (w.durationMin || 0), 0);
   return { totalWorkouts: workouts.length, totalMinutes, cleanRepRatio: null, totalHoldSeconds: null };
 }
 

@@ -15,6 +15,8 @@ public record SystemExerciseDetailResponseDTO(
         Integer defaultSets,
         Integer defaultReps,
         Integer defaultDuration,
+        /** HOLD | REPS — quyết định đo theo giây hay theo số lần. */
+        String category,
         String equipment,
         String type,
         String goal,

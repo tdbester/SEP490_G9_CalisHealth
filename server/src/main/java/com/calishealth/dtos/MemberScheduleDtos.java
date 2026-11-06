@@ -34,7 +34,9 @@ public final class MemberScheduleDtos {
             int durationMinutes,
             int exerciseCount,
             int orderInDay,
-            String status
+            String status,
+            /** Danh sách bài tập trong workout (rỗng nếu không lấy được chi tiết). */
+            List<TodayExerciseResponse> exercises
     ) {}
 
     public record MemberScheduleResponse(
@@ -71,7 +73,21 @@ public final class MemberScheduleDtos {
             String level,
             int monthNumber,
             int daysPerWeek,
-            int year
+            int year,
+            /**
+             * Các ngày tập của template do Content Manager dựng: Day 1..N và
+             * workout tương ứng. Màn "Workout schedule" dùng để xếp sẵn lịch
+             * tuần cho member theo đúng kế hoạch đã được duyệt.
+             */
+            List<PlanDayResponse> days
+    ) {}
+
+    /** Một ngày tập trong Daily Training Plan Template. */
+    public record PlanDayResponse(
+            /** Số thứ tự ngày tập trong tuần (1..daysPerWeek). */
+            int dayNumber,
+            String workoutCode,
+            String workoutName
     ) {}
 
     /**

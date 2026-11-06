@@ -200,6 +200,74 @@
   color: #ffd08a;
 }
 
+/* ------------------------------------------------- kế hoạch của Content Manager */
+
+.schedule-plan {
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+}
+
+.schedule-plan__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.schedule-plan__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a78bfa;
+}
+
+.schedule-plan__name {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.schedule-plan__meta {
+  margin-left: auto;
+  font-size: 12px;
+  color: #8b82b8;
+}
+
+.schedule-plan__days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.schedule-plan__day {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  font-size: 12.5px;
+}
+
+.schedule-plan__daynum {
+  font-weight: 700;
+  color: #c4b5fd;
+  white-space: nowrap;
+}
+
+.schedule-plan__workout {
+  color: #d6d1f0;
+}
+
 /* --------------------------------------------------------------- layout */
 
 .schedule-body {
@@ -591,6 +659,22 @@
   pointer-events: none;
 }
 
+/* Ngày đã trôi qua trong tuần hiện tại: vẫn xem được lịch đã tập nhưng
+   không thay đổi được (không kéo ra sidebar, không đổi ngày, không xoá). */
+.calendar-cell.is-past {
+  cursor: default;
+  filter: grayscale(0.35);
+}
+
+.calendar-cell.is-past .event-chip {
+  cursor: default;
+  pointer-events: none;
+}
+
+.calendar-cell.is-past .calendar-cell__date {
+  color: #8f86b8;
+}
+
 /* Ô thuộc tuần hiện tại nhưng rơi sang tháng kề (vd tuần 30/11 – 06/12):
    phải nổi bật như ô trong tháng, không mờ như ô ngoài tháng. */
 .calendar-cell.is-week-cell.is-outside-month {
@@ -673,6 +757,15 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #e9e3ff;
+}
+
+/* Nhãn "Past" cho ngày đã trôi qua — bất biến, không kéo thả được. */
+.calendar-cell__past-tag {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8f86b8;
 }
 
 @media (max-width: 900px) {

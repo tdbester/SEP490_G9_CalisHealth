@@ -5,6 +5,8 @@ import { mediaUrl } from "../api/contentManager";
 import VideoDemoModal from "../components/exercise/VideoDemoModal";
 import CameraCheckModal from "../components/exercise/CameraCheckModal";
 import UploadVideoModal from "../components/exercise/UploadVideoModal";
+import { startWorkoutSession } from "../utils/workoutResults";
+import { resolveExerciseCategory } from "../utils/libraryWorkout";
 import "./ExerciseDetailPreview.css";
 
 // Exercise has no rest field yet; the plan can pass one through route state.
@@ -33,6 +35,15 @@ export default function ExerciseDetailPreview() {
   // null | "video" | "camera" | "upload"
   const [activeModal, setActiveModal] = useState(null);
   const closeModal = () => setActiveModal(null);
+
+  /**
+   * Member mở bài từ thư viện (không có `index` trong route state) -> đây là
+   * buổi tập lẻ, bắt đầu phiên tích lũy kết quả mới.
+   */
+  useEffect(() => {
+    if (state?.index) return;
+    startWorkoutSession();
+  }, [state?.index]);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,7 +86,11 @@ export default function ExerciseDetailPreview() {
     );
   }
 
-  const isHold = exercise.category === "HOLD";
+  // Bài mở từ kế hoạch ngày / từ workout trong thư viện đều truyền kèm
+  // `category` (HOLD | REPS) trong route state -> ưu tiên giá trị này.
+  // Bài mở lẻ không có state thì suy ra từ cấu hình mặc định của chính bài đó.
+  const category = state?.category || resolveExerciseCategory(exercise);
+  const isHold = category === "HOLD";
   const steps = splitGuide(exercise.guide);
   const muscles = splitMuscles(exercise.muscleGroup);
   const rest = state?.restSeconds ?? DEFAULT_REST_SECONDS;
@@ -203,17 +218,22 @@ export default function ExerciseDetailPreview() {
           onClose={closeModal}
           onUpload={() => setActiveModal("upload")}
           // Bấm "Ready · Start counting" -> màn đếm reps thời gian thực.
+          // `category` quyết định cách đo: HOLD (plank) tính theo giây + set,
+          // REPS tính theo số lần. `nextExercises` là các bài còn lại trong
+          // buổi tập — màn tracking dùng để chuyển sang bài tiếp theo.
           onReady={() =>
             navigate("/session/tracking", {
               state: {
                 exerciseCode: code,
                 exerciseName: exercise.name,
+                category,
                 sets,
                 reps,
                 durationSeconds: hold,
                 restSeconds: rest,
                 index: state?.index,
                 total: state?.total,
+                nextExercises: state?.nextExercises || [],
               },
             })
           }
@@ -222,8 +242,26 @@ export default function ExerciseDetailPreview() {
       {activeModal === "upload" && (
         <UploadVideoModal
           onClose={closeModal}
-          // MediaPipe processing isn't wired yet; hand the files over here when it is.
-          onAnalyze={closeModal}
+          // Chọn file video -> sang màn quét video để hệ thống chấm điểm.
+          onAnalyze={(files) => {
+            const picked = files?.[0];
+            if (!picked) return;
+            closeModal();
+            navigate("/session/scan", {
+              state: {
+                exerciseCode: code,
+                exerciseName: exercise.name,
+                category,
+                sets,
+                reps,
+                durationSeconds: hold,
+                restSeconds: rest,
+                index: state?.index,
+                total: state?.total,
+                nextExercises: state?.nextExercises || [],
+              },
+            });
+          }}
         />
       )}
     </div>

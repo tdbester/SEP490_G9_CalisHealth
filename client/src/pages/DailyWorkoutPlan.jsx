@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { memberScheduleApi } from '../api/memberSchedule';
+import { startWorkoutSession, setWorkoutOrigin } from '../utils/workoutResults';
 import './DailyWorkoutPlan.css';
 
 function formatDate() {
@@ -104,8 +105,20 @@ export default function DailyWorkoutPlan() {
 
   useEffect(() => load(), [load]);
 
-  /** Mở màn Exercise detail, giữ cấu hình hiệp/lần của buổi tập và vị trí bài trong buổi. */
+  /**
+   * Mở màn Exercise detail, giữ cấu hình hiệp/lần của buổi tập và vị trí bài trong buổi.
+   *
+   * `nextExercises` là các bài còn lại của buổi tập — màn tracking dùng để
+   * chuyển sang bài tiếp theo khi member bấm "Finish".
+   */
   const openExercise = (workout, exercise, index) => {
+    // Vào bài đầu tiên của buổi -> bắt đầu phiên tập mới, xoá kết quả cũ
+    // để màn kết quả cuối chỉ tổng hợp đúng các bài của buổi này.
+    if (index === 0) {
+      startWorkoutSession();
+      // Màn kết quả cuối buổi quay lại "/plan".
+      setWorkoutOrigin('/plan');
+    }
     navigate(`/exercises/${encodeURIComponent(exercise.exerciseCode)}`, {
       state: {
         sets: exercise.sets,
@@ -114,16 +127,26 @@ export default function DailyWorkoutPlan() {
         restSeconds: exercise.restSeconds,
         index: index + 1,
         total: workout.exercises.length,
+        nextExercises: workout.exercises.slice(index + 1).map((item) => ({
+          exerciseCode: item.exerciseCode,
+          exerciseName: item.exerciseName,
+          category: item.category,
+          sets: item.sets,
+          reps: item.reps,
+          durationSeconds: item.durationSeconds,
+          restSeconds: item.restSeconds,
+        })),
       },
     });
   };
 
-  /** Start workout: vào bài đầu tiên của buổi tập hôm nay. */
+  /**
+   * Start workout: vào bài đầu tiên của buổi tập hôm nay.
+   */
   const startWorkout = (workout) => {
     if (!workout.exercises?.length) return;
     openExercise(workout, workout.exercises[0], 0);
   };
-
   const header = (
     <div className="plan-header">
       <div className="plan-date">{formatDate()}</div>

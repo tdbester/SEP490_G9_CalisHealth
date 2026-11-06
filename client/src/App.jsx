@@ -19,6 +19,10 @@ import MemberSchedulePage from "./pages/MemberSchedulePage";
 import ReviewTrainingPlanPage from "./pages/ReviewTrainingPlanPage";
 import ExerciseDetailPreview from "./pages/ExerciseDetailPreview";
 import PoseTrackingPage from "./pages/PoseTrackingPage";
+import RestCountdownPage from "./pages/RestCountdownPage";
+import VideoScanPage from "./pages/VideoScanPage";
+import ExerciseResultPage from "./pages/ExerciseResultPage";
+import FormCorrectionPage from "./pages/FormCorrectionPage";
 import Library from "./pages/Library";
 import LibraryExerciseListPage from "./pages/LibraryExerciseListPage";
 import ExerciseDetailPage from "./pages/ExerciseDetailPage";
@@ -215,6 +219,44 @@ export default function App() {
           element={
             <ProtectedRoute>
               <PoseTrackingPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Đếm ngược nghỉ giữa các set — mở từ nút "Continue" của màn tracking. */}
+        <Route
+          path="/session/rest"
+          element={
+            <ProtectedRoute>
+              <RestCountdownPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Quét video để chấm điểm — mở từ nút "Browse file" ở màn exercise detail.
+            Màn này fullscreen nên không dùng layout sidebar của member. */}
+        <Route
+          path="/session/scan"
+          element={
+            <ProtectedRoute>
+              <VideoScanPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Kết quả CUỐI CÙNG của buổi tập — mở khi bấm "Finish workout" ở bài
+            cuối, hoặc sau khi hệ thống quét xong video member đẩy lên. */}
+        <Route
+          path="/session/result"
+          element={
+            <ProtectedRoute>
+              <ExerciseResultPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Form correction — mở từ nút "View form correction" ở màn kết quả. */}
+        <Route
+          path="/session/correction"
+          element={
+            <ProtectedRoute>
+              <FormCorrectionPage />
             </ProtectedRoute>
           }
         />

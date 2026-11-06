@@ -5,6 +5,7 @@ import { mockSystemWorkouts } from "./WorkoutSystemListPage";
 import { getAnatomyImage } from "../utils/anatomyImages";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { getExerciseMovementGroup } from "../utils/exerciseMedia";
+import { startLibraryExercise } from "../utils/libraryWorkout";
 
 function getUploadedDemoVideoUrl(exercise) {
   const value = exercise?.videoUrl || exercise?.demoVideoUrl || exercise?.video_url;
@@ -645,6 +646,20 @@ export default function ExerciseDetailPage() {
         .exercise-detail-page button.exercise-tree-btn:hover {
           background-color: #6c47ff !important;
         }
+        .exercise-detail-page button.exercise-start-btn {
+          min-width: 150px !important;
+          height: 42px !important;
+          justify-content: center !important;
+          color: #fff !important;
+          background-color: #22c55e !important;
+          border: 0 !important;
+          border-radius: 16px !important;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.18) !important;
+          transition: background-color 150ms ease !important;
+        }
+        .exercise-detail-page button.exercise-start-btn:hover {
+          background-color: #16a34a !important;
+        }
       `}</style>
 
       {/* 1. TOPBAR & NÚT QUAY LẠI */}
@@ -703,7 +718,20 @@ export default function ExerciseDetailPage() {
               </p>
             )}
           </div>
-          <button
+          <div className="flex shrink-0 items-center gap-3">
+            {exercise.code && (
+              <button
+                type="button"
+                onClick={() => startLibraryExercise(navigate, exercise)}
+                className="exercise-start-btn flex items-center gap-2 rounded-2xl bg-[#22c55e] px-5 py-2 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#16a34a]"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                Start workout
+              </button>
+            )}
+            <button
               type="button"
               onClick={() => {
                 const movementGroup = getExerciseMovementGroup(exercise);
@@ -728,7 +756,8 @@ export default function ExerciseDetailPage() {
               className="exercise-tree-btn shrink-0 flex items-center gap-2 rounded-2xl bg-[#7c5dfa] px-5 py-2 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#6c47ff]"
             >
               Exercise tree
-          </button>
+            </button>
+          </div>
         </div>
       </div>
 

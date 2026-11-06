@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { getSystemWorkout } from "../api/library";
 import { mockSystemWorkouts } from "./WorkoutSystemListPage";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { startLibraryWorkout } from "../utils/libraryWorkout";
 
 export default function SystemWorkoutDetailPage() {
   const { id, workoutId } = useParams();
@@ -79,6 +80,17 @@ export default function SystemWorkoutDetailPage() {
     });
   };
 
+  /**
+   * Bấm "Start workout" -> xếp hàng toàn bộ bài trong workout và mở buổi tập với
+   * AI Pose Tracking, giống luồng kế hoạch ngày (Exercise 1 of N -> ... -> kết quả).
+   */
+  const startWorkout = () => {
+    const started = startLibraryWorkout(navigate, workout?.exercises || []);
+    if (!started) {
+      setErrorMessage("This workout has no exercise you can start yet.");
+    }
+  };
+
   return (
     <div className="mx-auto max-w-5xl space-y-5 pb-12 text-white">
       <button
@@ -109,6 +121,18 @@ export default function SystemWorkoutDetailPage() {
               <span className="rounded-full bg-[#201748] px-3 py-1">{workout.totalSets} sets</span>
               <span className="rounded-full bg-[#201748] px-3 py-1">Total time: {workout.estimatedDuration} min</span>
             </div>
+            {!isMock && (
+              <button
+                type="button"
+                onClick={startWorkout}
+                className="inline-flex items-center gap-2 rounded-xl border border-emerald-600/80 bg-emerald-700 px-5 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-600"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                Start workout
+              </button>
+            )}
           </section>
           <section className="space-y-3">
             <h2 className="text-lg font-semibold">Exercises</h2>

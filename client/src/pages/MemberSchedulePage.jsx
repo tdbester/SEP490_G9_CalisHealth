@@ -52,6 +52,92 @@ function SearchIcon() {
   );
 }
 
+/**
+ * Thứ trong tuần, thứ hai trước — cùng quy ước với backend
+ * (`RecommendedPlanService`) để nhịp tuần hiển thị giống nhau ở màn Result
+ * và màn lịch.
+ */
+const TEMPLATE_WEEK_DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+
+/**
+ * Ngày trong tuần (Thứ 2 -> Chủ nhật) mà một "ngày tập" của template rơi vào.
+ *
+ * Template chỉ quy định "Day 1..N" chứ không phải thứ cụ thể, nên ta trải
+ * đều các ngày tập trong tuần: 3 ngày/tuần -> MON, WED, FRI;
+ * 4 ngày/tuần -> MON, TUE, THU, SAT.
+ */
+function templateWeekdayIndex(index, totalDays) {
+  const slot = Math.floor((index * TEMPLATE_WEEK_DAYS.length) / Math.max(totalDays, 1));
+  return Math.min(slot, TEMPLATE_WEEK_DAYS.length - 1);
+}
+
+/**
+ * Xếp sẵn lịch tuần từ Daily Training Plan Template của Content Manager.
+ *
+ * Template quy định: Day 1..N và workout tương ứng. Ta trải các ngày tập đều
+ * trong tuần theo nhịp chuẩn, bỏ qua ngày đã trôi qua, và nếu ngày tập rơi
+ * vào quá khứ thì dồn sang ngày trống gần nhất — để member vẫn nhận đủ N buổi
+ * trong tuần như kế hoạch đã được duyệt.
+ *
+ * @param {Array} planDays - `planInfo.days` từ backend
+ * @param {Array} weekDates - 7 ngày của tuần (Thứ 2 → Chủ nhật)
+ * @param {Array} workouts - danh sách workout khả dụng để lấy metadata
+ * @param {string} todayIso - hôm nay (YYYY-MM-DD)
+ * @returns {Object} map { isoDate: [entry, ...] }
+ */
+export function buildPlannedFromTemplate(planDays, weekDates, workouts, todayIso) {
+  const result = {};
+  if (!Array.isArray(planDays) || planDays.length === 0) return result;
+  if (!Array.isArray(weekDates) || weekDates.length === 0) return result;
+
+  const totalDays = planDays.length;
+
+  // Thứ trong tuần của mỗi ngày tập (0 = Thứ 2) -> ngày cụ thể trong tuần.
+  const slots = planDays.map((day, index) => ({
+    day,
+    weekdayIndex: templateWeekdayIndex(index, totalDays),
+  }));
+
+  // Đi theo thứ tự trong tuần để các ngày tập không bị lộn xộn.
+  slots.sort((a, b) => a.weekdayIndex - b.weekdayIndex);
+
+  const taken = new Set();
+  const usedCodes = new Set();
+
+  slots.forEach(({ day, weekdayIndex }) => {
+    const code = day?.workoutCode;
+    if (!code) return;
+    // Mỗi workout chỉ xuất hiện một lần trong tuần.
+    if (usedCodes.has(code)) return;
+
+    const workout = workouts.find((item) => item.code === code);
+    if (!workout) return;
+
+    // Ưu tiên đúng ngày theo nhịp; nếu ngày đó đã trôi qua hoặc đã có buổi
+    // tập khác thì dồn sang ngày trống gần nhất phía sau.
+    let slot = weekDates[weekdayIndex];
+    if (!slot || slot < todayIso || taken.has(slot)) {
+      slot = weekDates.find((iso) => iso >= todayIso && !taken.has(iso));
+    }
+    if (!slot) return;
+
+    taken.add(slot);
+    usedCodes.add(code);
+    result[slot] = [
+      {
+        key: `${code}-${slot}-template-${day.dayNumber ?? 0}`,
+        workoutCode: code,
+        workoutName: workout.name,
+        category: workout.category,
+        durationMinutes: workout.durationMinutes,
+        exerciseCount: workout.exerciseCount,
+      },
+    ];
+  });
+
+  return result;
+}
+
 /** Card workout kéo được ở sidebar trái. */
 function WorkoutCard({ workout, dragging, used, onDragStart, onDragEnd }) {
   return (
@@ -137,17 +223,20 @@ function EventChip({ entry, dragging, locked, onDragStart, onDragEnd, onRemove }
     >
       <span className="event-chip__name">{entry.workoutName}</span>
       <span className="event-chip__time">{entry.durationMinutes} min</span>
-      <button
-        type="button"
-        className="event-chip__remove"
-        aria-label={`Remove ${entry.workoutName}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          onRemove();
-        }}
-      >
-        ×
-      </button>
+      {locked ? null : (
+        <button
+          type="button"
+          className="event-chip__remove"
+          aria-label={`Remove ${entry.workoutName}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onRemove();
+          }}
+        >
+          ×
+        </button>
+      )}
+
     </div>
   );
 }
@@ -220,7 +309,21 @@ export default function MemberSchedulePage() {
         setWeekRule(rule || null);
         // Lịch hiển thị chỉ gồm tuần hiện tại — backend đã gộp cả 2 tháng nếu
         // tuần trải qua ranh giới tháng.
-        setPlanned(groupEntries(rule?.entries || []));
+        const savedEntries = groupEntries(rule?.entries || []);
+
+        // Member chưa có lịch trong tuần này -> xếp sẵn theo Daily Training
+        // Plan Template mà Content Manager đã dựng (Day 1..N). Đây là nơi
+        // "kế hoạch của CM" thực sự đến với member.
+        if (savedEntries.length === 0 && plan?.days?.length) {
+          const dates = rule?.weekStart
+            ? weekRangeFromStart(rule.weekStart).dates
+            : currentWeekRange(new Date()).dates;
+          setPlanned(
+            buildPlannedFromTemplate(plan.days, dates, available || [], todayIso),
+          );
+        } else {
+          setPlanned(savedEntries);
+        }
       } catch (loadError) {
         if (!cancelled) {
           setError(readApiError(loadError,
@@ -274,6 +377,12 @@ export default function MemberSchedulePage() {
   /** Đã đủ số ngày tập cho phép trong tuần chưa. */
   const daysLimitReached = weekUsedDays >= maxDaysPerWeek;
 
+  /** Tuần hiện tại có ngày đã trôi qua không (những ngày này bị khoá). */
+  const hasPastDays = useMemo(
+    () => currentWeek.dates.some((iso) => isPastDay(iso)),
+    [currentWeek],
+  );
+
   /** Tháng đang xem có chứa tuần hiện tại không. */
   const isViewingCurrentMonth = useMemo(
     () => currentWeek.dates.some((iso) => iso.startsWith(toIsoDate(viewMonth))),
@@ -300,14 +409,44 @@ export default function MemberSchedulePage() {
   }
 
   /**
+   * Ngày đã trôi qua (so với hôm nay) — lịch sử, không được thay đổi.
+   * Chuỗi ISO YYYY-MM-DD so sánh lexicographic cũng đúng thứ tự ngày.
+   */
+  function isPastDay(iso) {
+    return iso < todayIso;
+  }
+
+  /** Ô ngày vẫn chỉnh sửa được: trong tuần hiện tại và chưa qua. */
+  function isEditableDay(iso) {
+    return isWeekCell(iso) && !isPastDay(iso);
+  }
+
+  /**
+   * Số ngày đang có workout trong tuần hiện tại, tính từ một snapshot của
+   * {@code planned}. Dùng snapshot (không phải state trong closure) vì các
+   * handler drop chạy cùng tick với state update.
+   */
+  function countUsedDays(snapshot) {
+    let count = 0;
+    weekDaySet.forEach((iso) => {
+      if ((snapshot[iso] || []).length) count += 1;
+    });
+    return count;
+  }
+
+  /**
    * Thêm workout từ sidebar vào một ngày. Trả về lý do nếu bị chặn:
    * - ngoài tuần hiện tại → không cho xếp.
+   * - ngày đã trôi qua → không cho xếp (lịch quá khứ là bất biến).
    * - workout đã có trong tuần → không cho xếp lần hai.
    * - đã đủ số ngày tập → không cho thêm ngày mới.
    */
   function addToDay(iso, workout) {
     if (!isWeekCell(iso)) {
       return "You can only plan workouts for the current week.";
+    }
+    if (isPastDay(iso)) {
+      return "You cannot plan workouts on a day that has already passed.";
     }
     const snapshot = plannedRef.current;
 
@@ -321,7 +460,7 @@ export default function MemberSchedulePage() {
 
     // Ngày đích đã có workout chưa → nếu rỗng thì đây là ngày tập mới.
     const targetIsEmpty = !(snapshot[iso] || []).length;
-    if (targetIsEmpty && daysLimitReached) {
+    if (targetIsEmpty && countUsedDays(snapshot) >= maxDaysPerWeek) {
       return `You can train on at most ${maxDaysPerWeek} days per week.`;
     }
 
@@ -363,12 +502,29 @@ export default function MemberSchedulePage() {
   }, []);
 
   /**
-   * Đổi ngày cho một workout đã xếp. Chỉ được đổi trong tuần hiện tại và
-   * không được vượt số ngày tập cho phép.
+   * Đổi ngày cho một workout đã xếp. Chỉ được đổi trong tuần hiện tại, sang
+   * một ngày chưa trôi qua, và không được vượt số ngày tập cho phép.
+   *
+   * Ràng buộc "N ngày/tuần" được tính trên SỐ NGÀY SAU KHI thao tác, chứ
+   * không phải số ngày hiện tại. Nhờ vậy khi đã đủ hạn mức, member vẫn có thể
+   * sắp xếp lại (đổi chỗ giữa các ngày, hoặc chuyển sang ngày trống trong
+   * tuần) — những thao tác đó không làm tăng số ngày tập.
+   *
+   * - Thả vào ngày TRỐNG → chuyển (move).
+   * - Thả vào ngày ĐÃ CÓ bài → đổi chỗ (swap): bài ở ngày đích lấy chỗ của
+   *   bài đang kéo. Số ngày tập không đổi.
    */
   function moveEntry(fromIso, key, toIso) {
     if (!isWeekCell(toIso)) {
       setError("You can only move workouts within the current week.");
+      return;
+    }
+    if (isPastDay(toIso)) {
+      setError("You cannot move a workout to a day that has already passed.");
+      return;
+    }
+    if (isPastDay(fromIso)) {
+      setError("Workouts on a day that has already passed cannot be moved.");
       return;
     }
 
@@ -377,26 +533,59 @@ export default function MemberSchedulePage() {
     const entry = source.find((item) => item.key === key);
     if (!entry || fromIso === toIso) return;
 
+    const target = snapshot[toIso] || [];
+
     // Đích đã có workout này rồi thì chỉ cần bỏ ở nguồn.
-    if ((snapshot[toIso] || []).some((item) => item.workoutCode === entry.workoutCode)) {
+    if (target.some((item) => item.workoutCode === entry.workoutCode)) {
       removeFromDay(fromIso, key);
       return;
     }
 
-    // Đổi sang ngày mới sẽ tăng số ngày tập trong tuần — check giới hạn.
     const sourceHasOthers = source.some((item) => item.key !== key);
-    const targetIsEmpty = !(snapshot[toIso] || []).length;
-    if (!sourceHasOthers && targetIsEmpty && daysLimitReached) {
+    const targetIsEmpty = target.length === 0;
+    // Bài sẽ đổi chỗ với bài đầu tiên của ngày đích.
+    const swapped = targetIsEmpty ? null : target[0];
+
+    // Số ngày tập sau khi thao tác:
+    //  - ngày nguồn còn workout không (đã có bài khác, hoặc nhận bài đổi chỗ),
+    //  - ngày đích có rỗng không (rỗng thì đây là ngày tập mới).
+    const currentDays = countUsedDays(snapshot);
+    const sourceStillActive = sourceHasOthers || Boolean(swapped);
+    const resultingDays =
+      currentDays - 1 + (sourceStillActive ? 1 : 0) + (targetIsEmpty ? 1 : 0);
+
+    if (resultingDays > maxDaysPerWeek) {
       setError(`You can train on at most ${maxDaysPerWeek} days per week.`);
       return;
     }
 
     setPlanned((previous) => {
-      const trimmed = (previous[fromIso] || []).filter((item) => item.key !== key);
+      const sourceList = previous[fromIso] || [];
+      const sourceIndex = sourceList.findIndex((item) => item.key === key);
+      if (sourceIndex < 0) return previous;
+      const moved = sourceList[sourceIndex];
+
+      const targetList = previous[toIso] || [];
+      // Bài ở ngày đích đổi chỗ với bài đang kéo (nếu ngày đích không rỗng).
+      const swapIndex = swapped
+        ? targetList.findIndex((item) => item.key === swapped.key)
+        : -1;
+      const nextTarget = [...targetList];
+      const nextSource = sourceList.filter((item) => item.key !== key);
+
+      if (swapIndex >= 0) {
+        // Bài đổi chỗ lấp đúng vị trí của bài vừa kéo ở ngày đích,
+        // và bài vừa kéo lấp chỗ của nó ở ngày nguồn.
+        nextTarget[swapIndex] = moved;
+        nextSource.splice(sourceIndex, 0, targetList[swapIndex]);
+      } else {
+        nextTarget.push(moved);
+      }
+
       const next = { ...previous };
-      if (trimmed.length === 0) delete next[fromIso];
-      else next[fromIso] = trimmed;
-      next[toIso] = [...(previous[toIso] || []), entry];
+      if (nextSource.length === 0) delete next[fromIso];
+      else next[fromIso] = nextSource;
+      next[toIso] = nextTarget;
       return next;
     });
   }
@@ -455,7 +644,10 @@ export default function MemberSchedulePage() {
     event.preventDefault();
     const dragged = readDragged(event, "entry");
     if (dragged?.type === "entry" || dragged?.fromIso) {
-      removeFromDay(dragged.fromIso, dragged.key);
+      // Không cho gỡ bài của ngày đã trôi qua (lịch quá khứ là bất biến).
+      if (!isPastDay(dragged.fromIso)) {
+        removeFromDay(dragged.fromIso, dragged.key);
+      }
     }
     resetDrag();
   }
@@ -525,6 +717,28 @@ export default function MemberSchedulePage() {
 
       {error && <div className="schedule-alert">{error}</div>}
 
+      {/* Kế hoạch do Content Manager dựng: Day 1..N và workout tương ứng.
+          Lịch của tuần đã được xếp sẵn theo kế hoạch này. */}
+      {planInfo?.days?.length > 0 && (
+        <section className="schedule-plan">
+          <div className="schedule-plan__head">
+            <span className="schedule-plan__label">Your training plan</span>
+            <span className="schedule-plan__name">{planInfo.templateName}</span>
+            <span className="schedule-plan__meta">
+              {planInfo.level} · {planInfo.daysPerWeek} days/week
+            </span>
+          </div>
+          <ol className="schedule-plan__days">
+            {planInfo.days.map((day) => (
+              <li key={day.dayNumber} className="schedule-plan__day">
+                <span className="schedule-plan__daynum">Day {day.dayNumber}</span>
+                <span className="schedule-plan__workout">{day.workoutName}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
       <div className="schedule-week-banner">
         <span className="schedule-week-banner__label">This week</span>
         <span className="schedule-week-banner__range">
@@ -551,6 +765,14 @@ export default function MemberSchedulePage() {
       {!isViewingCurrentMonth && (
         <div className="schedule-notice">
           You can only plan workouts for the current week. Other weeks are locked.
+        </div>
+      )}
+
+      {/* Ngày đã trôi qua trong tuần hiện tại: xem được nhưng không sửa được. */}
+      {isViewingCurrentMonth && hasPastDays && (
+        <div className="schedule-notice">
+          Days that have already passed are locked. You can still rearrange the workouts
+          planned for the rest of the week.
         </div>
       )}
 
@@ -685,8 +907,9 @@ export default function MemberSchedulePage() {
               if (!dragSession.current) return;
               const host = event.target.closest?.("[data-iso]");
               const nextIso = host?.getAttribute("data-iso") ?? null;
-              // Chỉ ô trong tuần hiện tại mới nhận drop — ô khác bị khoá.
-              if (!nextIso || !isWeekCell(nextIso)) return;
+              // Chỉ ô trong tuần hiện tại VÀ chưa trôi qua mới nhận drop —
+              // ô khác (ngoài tuần / ngày đã qua) bị khoá.
+              if (!nextIso || !isEditableDay(nextIso)) return;
               event.preventDefault();
               event.dataTransfer.dropEffect =
                 dragSession.current.type === "entry" ? "move" : "copy";
@@ -708,6 +931,11 @@ export default function MemberSchedulePage() {
                 resetDrag();
                 return;
               }
+              // Chặn ở tầng drop: ô ngoài tuần / ngày đã qua không nhận thao tác.
+              if (!isEditableDay(iso)) {
+                resetDrag();
+                return;
+              }
               handleDropOnDay(event, iso);
             }}
           >
@@ -721,7 +949,10 @@ export default function MemberSchedulePage() {
               // Ô nằm trong tuần hiện tại (kể cả khi rơi sang tháng kề) thì vẫn
               // được tô sáng và cho phép kéo thả.
               const isWeekCellNow = isWeekCell(cell.iso);
-              const isEditable = isWeekCellNow;
+              // Ngày đã trôi qua trong tuần hiện tại: xem lịch được nhưng không
+              // thay đổi được (không kéo ra, không kéo vào, không xoá).
+              const isPast = isWeekCellNow && isPastDay(cell.iso);
+              const isEditable = isWeekCellNow && !isPast;
               const isOver =
                 isEditable && overDate === cell.iso && Boolean(dragging);
               const shown = entries.slice(0, MAX_CHIPS_PER_CELL);
@@ -740,7 +971,10 @@ export default function MemberSchedulePage() {
                     isCurrentWeek ? "is-current-week" : "",
                     isWeekCellNow ? "is-week-cell" : "",
                     isToday ? "is-today" : "",
-                    isEditable ? "" : "is-locked",
+                    // Ô ngoài tuần hiện tại → khoá hoàn toàn (mờ, không tương tác).
+                    // Ô ngày đã qua → vẫn đọc được, chỉ không sửa được.
+                    isEditable || isPast ? "" : "is-locked",
+                    isPast ? "is-past" : "",
                     isOver ? "is-drop-target" : "",
                   ]
                     .filter(Boolean)
@@ -749,6 +983,7 @@ export default function MemberSchedulePage() {
                   <span className="calendar-cell__date">
                     {cell.dayOfMonth}
                     {isToday && <span className="calendar-cell__today-tag">Today</span>}
+                    {isPast && <span className="calendar-cell__past-tag">Past</span>}
                   </span>
 
                   <div
@@ -843,7 +1078,7 @@ function tipText(dragging, overLibrary) {
   if (dragging?.type === "entry") {
     return overLibrary
       ? "Drop here to remove the workout from your schedule."
-      : "Drag the workout to another day of this week to move it.";
+      : "Drag the workout to another day of this week to move it, or drop it on a day that already has a workout to swap them.";
   }
   if (dragging) {
     return "Drop the workout on a day of this week to schedule it.";

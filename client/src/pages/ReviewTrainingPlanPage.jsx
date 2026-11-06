@@ -13,6 +13,21 @@ function parseIso(value) {
   return new Date(year, month - 1, day);
 }
 
+/** Danh sách bài tập của một entry — backend có thể không gửi (mẫu cũ). */
+function exerciseList(entry) {
+  return Array.isArray(entry.exercises) ? entry.exercises : [];
+}
+
+/** "3 sets × 12 reps" — bài HOLD hiển thị giây thay vì số lần. */
+function exerciseSummary(exercise) {
+  const count =
+    exercise.category === "HOLD"
+      ? `${exercise.durationSeconds ?? 0}s`
+      : `${exercise.reps ?? 0} reps`;
+  const muscles = exercise.muscleGroup ? ` · ${exercise.muscleGroup}` : "";
+  return `${exercise.sets} × ${count}${muscles}`;
+}
+
 function mondayOf(date) {
   const monday = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const weekday = (monday.getDay() + 6) % 7; // 0 = Thứ 2
@@ -168,6 +183,22 @@ export default function ReviewTrainingPlanPage() {
                       <p className="review-workout__meta review-workout__meta--dim">
                         {entry.durationMinutes} min
                       </p>
+
+                      {/* Danh sách bài tập của buổi tập trong ngày này. */}
+                      {exerciseList(entry).length > 0 && (
+                        <ul className="review-exercises">
+                          {exerciseList(entry).map((exercise) => (
+                            <li key={exercise.exerciseCode} className="review-exercise">
+                              <span className="review-exercise__name">
+                                {exercise.exerciseName}
+                              </span>
+                              <span className="review-exercise__detail">
+                                {exerciseSummary(exercise)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </article>
                   ))
                 ) : (

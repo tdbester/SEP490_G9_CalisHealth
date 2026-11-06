@@ -228,6 +228,35 @@
   color: var(--text-dim);
 }
 
+/* Danh sách bài tập trong buổi tập của ngày. */
+.review-exercises {
+  margin: 6px 0 0;
+  padding: 6px 0 0;
+  list-style: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.review-exercise {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.review-exercise__name {
+  font-size: 11px;
+  line-height: 1.35;
+  color: #e6e0ff;
+  font-weight: 500;
+}
+
+.review-exercise__detail {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
 /* footer */
 .review-summary {
   margin: 0;
