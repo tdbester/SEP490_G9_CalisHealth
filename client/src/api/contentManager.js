@@ -1,4 +1,5 @@
 import axios from "axios";
+import { handleMaintenanceError } from "../utils/maintenanceNotifications";
 
 /**
  * API client riêng cho khu Content Manager. Không tự đăng xuất khi nhận 401
@@ -17,7 +18,13 @@ contentApi.interceptors.request.use((config) => {
   return config;
 });
 
-contentApi.interceptors.response.use((response) => response);
+contentApi.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    handleMaintenanceError(error);
+    return Promise.reject(error);
+  },
+);
 
 /** Media (video/anatomy) được backend phục vụ ở origin gốc, không kèm /api. */
 export function mediaUrl(value) {

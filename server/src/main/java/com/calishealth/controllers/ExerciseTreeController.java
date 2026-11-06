@@ -1,7 +1,6 @@
 package com.calishealth.controllers;
 
 import com.calishealth.dtos.ExerciseTreeResponseDTO;
-import com.calishealth.models.Exercise;
 import com.calishealth.service.ExerciseTreeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,12 +18,10 @@ public class ExerciseTreeController {
 
     @GetMapping
     public ResponseEntity<ExerciseTreeResponseDTO> getTree(
-            @RequestParam(defaultValue = "PUSH") Exercise.MovementGroup movementGroup,
             @RequestParam(defaultValue = "EASY_TO_HARD") ExerciseTreeService.TreeOrder order,
             Authentication authentication
     ) {
         return ResponseEntity.ok(exerciseTreeService.getTree(
-                movementGroup,
                 order,
                 authentication.getName()));
     }

@@ -32,7 +32,7 @@ public class MuscleGroupStatsService {
                 LEFT JOIN exercises e ON e.id = emg.exercise_id
                     AND e.source = 'SYSTEM'
                     AND e.active = TRUE
-                    AND e.status = 'ACCEPTED'
+                    AND UPPER(e.moderation_status) IN ('ACTIVE', 'ACCEPTED')
                 GROUP BY mg.id, mg.dashboard_code, mg.name, mg.icon_key, mg.tone
                 ORDER BY mg.id
                 """,

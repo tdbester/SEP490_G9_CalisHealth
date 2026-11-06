@@ -20,7 +20,7 @@ public final class ExerciseSpecification {
             query.distinct(true);
             predicates.add(builder.equal(root.get("source"), "SYSTEM"));
             predicates.add(builder.isTrue(root.get("active")));
-            predicates.add(builder.equal(root.get("status"), "ACCEPTED"));
+            predicates.add(builder.upper(root.get("moderationStatus")).in("ACTIVE", "ACCEPTED"));
             predicates.add(builder.equal(root.get("type"), filter.getType().name()));
 
             if (filter.getSearch() != null && !filter.getSearch().isBlank()) {

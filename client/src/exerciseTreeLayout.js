@@ -10,7 +10,20 @@ export const GAP_Y = 48;
 /** Bài gốc của mỗi chuỗi: có xuất hiện trong rule nhưng không là bài đích của rule nào. */
 export function rootsOf(nodes, edges) {
   const targets = new Set(edges.map((edge) => edge.exerciseCode));
-  return nodes.filter((node) => !targets.has(node.code));
+  const firstEdgeIndex = new Map();
+  edges.forEach((edge, index) => {
+    if (!firstEdgeIndex.has(edge.prerequisiteCode)) {
+      firstEdgeIndex.set(edge.prerequisiteCode, index);
+    }
+  });
+  return nodes
+    .map((node, index) => ({ node, index }))
+    .filter(({ node }) => !targets.has(node.code))
+    .sort((a, b) =>
+      (firstEdgeIndex.get(a.node.code) ?? Number.MAX_SAFE_INTEGER)
+        - (firstEdgeIndex.get(b.node.code) ?? Number.MAX_SAFE_INTEGER)
+      || a.index - b.index)
+    .map(({ node }) => node);
 }
 
 /** Mọi bài đi tới được từ bài gốc theo chiều "mở khóa" (gồm cả bài gốc). */

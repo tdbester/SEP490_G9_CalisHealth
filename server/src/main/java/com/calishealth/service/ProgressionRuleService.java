@@ -91,9 +91,7 @@ public class ProgressionRuleService {
     /** Đồ thị cho màn Exercise Tree: mọi rule là một cạnh, chỉ các bài có trong rule mới thành node. */
     @Transactional(readOnly = true)
     public RuleTree tree() {
-        List<ProgressionRule> all = rules.findAll().stream()
-                .sorted(Comparator.comparing(ProgressionRule::getId))
-                .toList();
+        List<ProgressionRule> all = orderedTreeRules();
         Map<Long, Exercise> used = new LinkedHashMap<>();
         for (ProgressionRule rule : all) {
             used.putIfAbsent(rule.getPrerequisiteExercise().getId(), rule.getPrerequisiteExercise());
@@ -113,6 +111,13 @@ public class ProgressionRuleService {
                         rule.getPrerequisiteExercise().getCode(), rule.getExercise().getCode()))
                 .toList();
         return new RuleTree(nodes, edges);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProgressionRule> orderedTreeRules() {
+        return rules.findAll().stream()
+                .sorted(Comparator.comparing(ProgressionRule::getId))
+                .toList();
     }
 
     @Transactional(readOnly = true)

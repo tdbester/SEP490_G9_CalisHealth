@@ -99,11 +99,12 @@ export default function Login() {
     setImeWarn({ email: hasNonAscii(email.value), password: hasNonAscii(password.value) });
   };
 
-  if (existingRole === "CONTENT_MANAGER") {
-    return <Navigate to="/content/dashboard" replace />;
-  }
   if (existingRole === "ADMIN") {
     return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  if (existingRole === "CONTENT_MANAGER") {
+    return <Navigate to="/content/dashboard" replace />;
   }
 
   const handleSubmit = async (e) => {
@@ -154,8 +155,9 @@ export default function Login() {
       if (res.data.role === "CONTENT_MANAGER") {
         destination = "/content/dashboard";
       } else if (res.data.role === "ADMIN") {
-        // Admins only land inside the admin area; honour returnTo only when it points there.
-        destination = isSafeReturnTo && returnTo.startsWith("/admin") ? returnTo : "/admin/dashboard";
+        destination = isSafeReturnTo && returnTo.startsWith("/admin")
+          ? returnTo
+          : "/admin/dashboard";
       }
       navigate(destination, { replace: true });
     } catch (err) {

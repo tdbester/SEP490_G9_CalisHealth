@@ -1,11 +1,9 @@
 package com.calishealth.service;
 
 import com.calishealth.models.Exercise;
-import com.calishealth.models.ExerciseTreeEdge;
 import com.calishealth.models.MemberExerciseProgress;
+import com.calishealth.models.ProgressionRule;
 import com.calishealth.models.User;
-import com.calishealth.repository.ExerciseRepository;
-import com.calishealth.repository.ExerciseTreeEdgeRepository;
 import com.calishealth.repository.MemberExerciseProgressRepository;
 import com.calishealth.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,19 +19,17 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class ExerciseTreeServiceTest {
-    private ExerciseRepository exercises;
-    private ExerciseTreeEdgeRepository edges;
+    private ProgressionRuleService progressionRules;
     private MemberExerciseProgressRepository progress;
     private UserRepository users;
     private ExerciseTreeService service;
 
     @BeforeEach
     void setUp() {
-        exercises = mock(ExerciseRepository.class);
-        edges = mock(ExerciseTreeEdgeRepository.class);
+        progressionRules = mock(ProgressionRuleService.class);
         progress = mock(MemberExerciseProgressRepository.class);
         users = mock(UserRepository.class);
-        service = new ExerciseTreeService(exercises, edges, progress, users);
+        service = new ExerciseTreeService(progressionRules, progress, users);
     }
 
     @Test
@@ -45,13 +41,9 @@ class ExerciseTreeServiceTest {
         Exercise levelOne = entry(101L, "Incline push-up", 1);
         Exercise levelTwo = entry(102L, "Push-up", 2);
         Exercise levelThree = entry(103L, "Diamond push-up", 3);
-        when(exercises.findAllByMovementGroupAndSourceAndStatus(
-                Exercise.MovementGroup.PUSH,
-                "SYSTEM",
-                Exercise.EntryStatus.ACCEPTED.name()))
-                .thenReturn(List.of(levelThree, levelOne, levelTwo));
-        when(edges.findAllConnectedTo(anyCollection()))
-                .thenReturn(List.of(edge(101L, 102L), edge(102L, 103L)));
+        when(progressionRules.orderedTreeRules()).thenReturn(List.of(
+                rule(levelTwo, levelOne),
+                rule(levelThree, levelTwo)));
 
         MemberExerciseProgress mastered = new MemberExerciseProgress();
         mastered.setExerciseId(101L);
@@ -60,7 +52,6 @@ class ExerciseTreeServiceTest {
                 .thenReturn(List.of(mastered));
 
         var result = service.getTree(
-                Exercise.MovementGroup.PUSH,
                 ExerciseTreeService.TreeOrder.HARD_TO_EASY,
                 "member@example.com");
 
@@ -75,6 +66,40 @@ class ExerciseTreeServiceTest {
                 .containsOnly("Beginner");
         assertThat(result.nodes().get(1).prerequisiteIds()).containsExactly(101L);
         assertThat(result.nodes().get(1).nextExerciseIds()).containsExactly(103L);
+        assertThat(result.edges()).hasSize(2);
+        assertThat(result.edges()).allMatch(edge -> "ACTIVE".equals(edge.status()));
+    }
+
+    @Test
+    void includesInactiveCrossGroupRulesLikeContentManagerTree() {
+        User member = new User();
+        member.setId(5L);
+        when(users.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+
+        Exercise plank = entry(201L, "Plank", 1);
+        Exercise handstand = entry(202L, "Handstand", 2);
+        handstand.setMovementGroup(Exercise.MovementGroup.PUSH);
+        ProgressionRule activeRule = rule(handstand, plank);
+        ProgressionRule inactiveRule = rule(entry(203L, "Hollow Body Hold", 2), plank);
+        inactiveRule.setStatus("INACTIVE");
+        when(progressionRules.orderedTreeRules()).thenReturn(List.of(activeRule, inactiveRule));
+        when(progress.findAllByMemberIdAndExerciseIdIn(eq(5L), anyCollection())).thenReturn(List.of());
+
+        var result = service.getTree(
+                ExerciseTreeService.TreeOrder.EASY_TO_HARD,
+                "member@example.com");
+
+        assertThat(result.movementGroup()).isEqualTo("ALL");
+        assertThat(result.nodes()).extracting(
+                com.calishealth.dtos.ExerciseTreeNodeDTO::code)
+                .containsExactly("EX-201", "EX-202", "EX-203");
+        assertThat(result.edges()).extracting(
+                com.calishealth.dtos.ExerciseTreeEdgeDTO::status)
+                .containsExactly("ACTIVE", "INACTIVE");
+        assertThat(result.nodes()).filteredOn(
+                node -> "EX-203".equals(node.code()))
+                .extracting(com.calishealth.dtos.ExerciseTreeNodeDTO::state)
+                .containsExactly("CURRENT");
     }
 
     private Exercise entry(Long id, String name, int level) {
@@ -82,6 +107,7 @@ class ExerciseTreeServiceTest {
         entry.setId(id);
         entry.setCode("EX-" + id);
         entry.setName(name);
+        entry.setSource("SYSTEM");
         entry.setMovementGroup(Exercise.MovementGroup.PUSH);
         entry.setTreeLevel(level);
         entry.setDifficultyLevel("BEGINNER");
@@ -89,10 +115,11 @@ class ExerciseTreeServiceTest {
         return entry;
     }
 
-    private ExerciseTreeEdge edge(Long parentId, Long childId) {
-        ExerciseTreeEdge edge = new ExerciseTreeEdge();
-        edge.setParentExerciseId(parentId);
-        edge.setChildExerciseId(childId);
-        return edge;
+    private ProgressionRule rule(Exercise exercise, Exercise prerequisite) {
+        ProgressionRule rule = new ProgressionRule();
+        rule.setExercise(exercise);
+        rule.setPrerequisiteExercise(prerequisite);
+        rule.setStatus("ACTIVE");
+        return rule;
     }
 }

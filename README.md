@@ -62,6 +62,7 @@ src/
 | `/survey/level-test` | `LevelTestPage` | ✅ UI + validation (bước 4/4) |
 | `/survey/result` | `SurveyResultPage` | ✅ UI + data mẫu (kết quả & plan) |
 | `/content/*` | Content manager | ✅ CRUD bài tập & chương trình |
+| `/admin/notifications` | Notification management (ADMIN) | ✅ Danh sách, lọc và xóa |
 | `/404` | `NotFoundPage` | — |
 
 > Survey flow: `/survey` → `body-information` → `goals-and-motivation` → `current-training-routine` → `level-test` → `result`.
@@ -86,6 +87,21 @@ Import collection `postman/CalisHealth-Auth-Pro.postman_collection.json` vào Po
 - `POST /api/auth/change-password`
 - `GET  /api/auth/me`
 - `GET  /api/auth/verify-email?token=…`
+
+### Admin notifications
+
+Các API quản lý thông báo yêu cầu tài khoản có role `ADMIN`:
+
+- `GET    /api/admin/notifications?type=ALL`
+- `GET    /api/admin/notifications/{id}`
+- `POST   /api/admin/notifications`
+- `PUT    /api/admin/notifications/{id}`
+- `DELETE /api/admin/notifications/batch`
+- `DELETE /api/admin/notifications/{id}`
+
+Request tạo thông báo gồm `title`, `message`, `type` (`ANNOUNCEMENT` hoặc `UPDATE`) và `status` (`PUBLISHED` hoặc `DRAFT`). Tài khoản đăng nhập phải có role `ADMIN`; `created_by` được gán theo tài khoản đang xác thực.
+
+Request cập nhật thông báo dùng cùng các trường; thông báo `MAINTENANCE` có thể cập nhật nội dung/trạng thái nhưng không thể đổi loại.
 
 ### Onboarding survey
 
