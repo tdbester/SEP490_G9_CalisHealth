@@ -4,6 +4,8 @@ import com.calishealth.models.MemberProfile;
 import com.calishealth.models.User;
 import com.calishealth.validation.StrongPassword;
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
@@ -99,7 +101,14 @@ public class ProfileDtos {
             boolean mustChangePassword,
             boolean temporaryPassword) {}
 
-    /** Fitness summary of a MEMBER; null for the other roles. */
+    /**
+     * Fitness summary of a MEMBER; null for the other roles.
+     * <p>
+     * daysPerWeek is the training frequency the member picked in the onboarding survey
+     * ({@code HOW_MANY_DAYS_PER_WEEK_DO_YOU_WANT_TO_TRAIN_WITH_CALISHE}), which
+     * {@code SurveyProfileSync} copies onto {@code member_profiles.days_per_week}. It seeds the
+     * "Training days per week" field on the profile screen and can be changed there afterwards.
+     */
     public record MemberSummary(
             String levelName,
             Integer levelRank,
@@ -107,15 +116,25 @@ public class ProfileDtos {
             java.math.BigDecimal heightCm,
             java.math.BigDecimal weightKg,
             int streakDays,
-            int longestStreak) {
+            int longestStreak,
+            int daysPerWeek) {
 
         /** Raw row values; levelRank is filled in by ProfileService from the ordered level ladder. */
         public static MemberSummary of(MemberProfile p) {
             if (p == null) return null;
             return new MemberSummary(
                     p.getFitnessLevel() == null ? null : p.getFitnessLevel().getName(),
-                    null, p.getGoals(), p.getHeight(), p.getWeight(),
-                    p.getStreakCount(), p.getLongestStreak());
+                    null, goalCode(p.getGoals()), p.getHeight(), p.getWeight(),
+                    p.getStreakCount(), p.getLongestStreak(), p.getDaysPerWeek());
+        }
+
+        /** Keeps the profile select compatible with both survey codes and legacy display labels. */
+        private static String goalCode(String value) {
+            if (value == null) return null;
+            String normalized = value.trim().toUpperCase(java.util.Locale.ROOT);
+            if (normalized.contains("SKILL")) return "SKILLS";
+            if (normalized.contains("HEALTH")) return "HEALTH";
+            return value;
         }
     }
 
@@ -142,7 +161,19 @@ public class ProfileDtos {
             @Size(max = 500, message = "Bio must be 500 characters or fewer")
             String bio,
 
-            String fitnessLevel) {}
+            String fitnessLevel,
+
+            /**
+             * Training days per week, 1..7. Null means "leave unchanged"; the survey answer is the
+             * starting value, so a member who never opens this field keeps what onboarding stored.
+             */
+            @Min(value = 1, message = "Train at least 1 day per week")
+            @Max(value = 7, message = "Train at most 7 days per week")
+            Integer daysPerWeek,
+
+            @Pattern(regexp = "^$|^(?i:HEALTH|SKILLS)$",
+                    message = "Goal must be HEALTH or SKILLS")
+            String goal) {}
 
     /**
      * Change password from the profile screen. Unlike the first-login endpoint in AuthDtos, the
