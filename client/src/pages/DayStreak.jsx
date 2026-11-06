@@ -339,7 +339,7 @@ export default function DayStreak() {
                 : streakLoading ? "Loading your weekly goal..." : "Weekly goal unavailable"}
             </p>
 
-            <button type="button" className="streak-start-btn" onClick={() => navigate("/tracking")}>
+            <button type="button" className="streak-start-btn" onClick={() => navigate("/schedule")}>
               Start Workout
               <PlayArrowRoundedIcon />
             </button>

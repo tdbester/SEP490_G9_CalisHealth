@@ -105,18 +105,26 @@ public class MemberScheduleService {
     }
 
     /**
-     * Thẻ "Plan info" của màn Review: template đang active khớp level của member.
-     * Trả rỗng khi member chưa có template phù hợp để FE tự ẩn thẻ này.
+     * Thẻ "Plan info" của màn Review: template đang active khớp level và số
+     * buổi/tuần của member.
+     *
+     * <p>Số buổi/tuần lấy từ {@code member_profiles.days_per_week} — member tự
+     * chọn ở profile/onboarding. Template được chọn theo (level, daysPerWeek);
+     * nếu không có template nào khớp chính xác thì lấy template của level đó có
+     * số buổi gần nhất (giống cách {@code RecommendedPlanService} chọn).</p>
+     *
+     * <p>Trả rỗng khi member chưa có template phù hợp để FE tự ẩn thẻ này.</p>
      */
     @Transactional(readOnly = true)
     public Optional<PlanInfoResponse> planInfo(String email) {
         User user = loadUser(email);
         Optional<String> memberLevel = memberLevel(user);
+        int desiredDays = memberDaysPerWeek(user);
         return templates.findAll().stream()
                 .filter(DailyPlanTemplate::isActive)
                 .filter(template -> memberLevel.isEmpty()
                         || memberLevel.get().equalsIgnoreCase(template.getLevel()))
-                .min(MOST_RECENT_TEMPLATE)
+                .min(templateComparator(desiredDays))
                 .map(template -> new PlanInfoResponse(
                         template.getCode(),
                         template.getName(),
@@ -124,6 +132,17 @@ public class MemberScheduleService {
                         template.getDaysPerWeek(),
                         LocalDate.now().getYear(),
                         templateDays(template)));
+    }
+
+    /**
+     * Ưu tiên template có đúng số buổi/tuần member đăng ký; khi không có thì
+     * lấy template gần nhất. Cùng (level, số buổi) thì lấy plan cập nhật mới nhất.
+     */
+    private Comparator<DailyPlanTemplate> templateComparator(int desiredDays) {
+        return Comparator
+                .comparingInt((DailyPlanTemplate item) ->
+                        Math.abs(item.getDaysPerWeek() - desiredDays))
+                .thenComparing(MOST_RECENT_TEMPLATE);
     }
 
     /**
@@ -349,22 +368,22 @@ public class MemberScheduleService {
     }
 
     /**
-     * Số ngày tập tối đa mỗi tuần của member. Ưu tiên template mà member đang
-     * dùng (lịch đã lưu), sau đó mới tới template active khớp level, cuối cùng
-     * là giá trị mặc định.
+     * Số ngày tập tối đa mỗi tuần của member.
+     *
+     * <p>Nguồn chính là {@code member_profiles.days_per_week} — member tự chọn
+     * ở profile/onboarding và đó là số buổi mà lịch tập được dựng theo.</p>
+     *
+     * <p>Nếu member đã lưu lịch với một template nhiều buổi hơn thì lấy giá trị
+     * đó, để không khóa chính lịch họ đang dùng.</p>
      */
     private int maxDaysPerWeek(User user) {
+        int fromProfile = memberDaysPerWeek(user);
         Optional<Integer> fromSchedule = weekSchedules(user).stream()
                 .map(MemberSchedule::getTemplate)
                 .filter(template -> template != null)
                 .map(DailyPlanTemplate::getDaysPerWeek)
                 .findFirst();
-        if (fromSchedule.isPresent()) {
-            return fromSchedule.get();
-        }
-        return planInfo(user.getEmail())
-                .map(PlanInfoResponse::daysPerWeek)
-                .orElse(DEFAULT_MAX_DAYS_PER_WEEK);
+        return fromSchedule.map(days -> Math.max(days, fromProfile)).orElse(fromProfile);
     }
 
     /**
@@ -500,6 +519,18 @@ public class MemberScheduleService {
         return profiles.findByUserId(user.getId())
                 .map(MemberProfile::getFitnessLevel)
                 .map(level -> level.getName());
+    }
+
+    /**
+     * Số buổi tập mỗi tuần member đăng ký trong hồ sơ (profile / onboarding).
+     * Đây là nguồn quyết định lịch tập: template active được chọn theo level và
+     * đúng số buổi này, thay vì template bất kỳ của level đó.
+     */
+    private int memberDaysPerWeek(User user) {
+        return profiles.findByUserId(user.getId())
+                .map(MemberProfile::getDaysPerWeek)
+                .filter(days -> days > 0)
+                .orElse(DEFAULT_MAX_DAYS_PER_WEEK);
     }
 
     /** Workout hệ thống, đang publish, không phải template daily plan. */
