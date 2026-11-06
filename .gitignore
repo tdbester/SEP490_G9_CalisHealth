@@ -65,3 +65,10 @@ coverage/
 # tsc -b emit ra JS từ file .ts cấu hình (vite.config.ts -> vite.config.js)
 vite.config.js
 vite.config.d.ts
+
+# ===== Backup / file tam khi sync git =====
+.git-local-backup-*/
+mockup-result.png
+calishealth@0.1.0
+/npm
+/cd

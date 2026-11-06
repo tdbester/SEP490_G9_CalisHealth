@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>CalisHealth — BF-04: Track Health &amp; Progress Flow</title>
+<style>
+  body {
+    margin: 0;
+    padding: 28px;
+    background: #f6f4fc;
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #2a2140;
+  }
+  h1 { font-size: 23px; margin: 0 0 6px; color: #2b1b4d; }
+  p.lede { margin: 0 0 18px; max-width: 1080px; font-size: 14px; line-height: 1.65; color: #5b4b7d; }
+  .story { max-width: 1080px; font-size: 14px; line-height: 1.7; color: #4a3d68; }
+  .story h2 { font-size: 16px; color: #4a2d86; margin: 26px 0 6px; }
+  .story p { margin: 0 0 10px; }
+  .card { background: #fff; border-radius: 14px; padding: 18px 22px; margin: 18px 0; box-shadow: 0 8px 26px rgba(43,27,77,.08); }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #ece7f7; vertical-align: top; }
+  th { color: #4a2d86; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  code { background: #f2effa; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+  ul.legend { margin: 0 0 14px; padding-left: 18px; color: #5b4b7d; font-size: 12.5px; }
+  ul.legend li { margin: 3px 0; }
+  .sw { display: inline-block; width: 26px; height: 3px; vertical-align: middle; margin-right: 7px; border-radius: 2px; }
+  svg { background: #fff; border-radius: 14px; box-shadow: 0 10px 34px rgba(43,27,77,.10); max-width: 100%; height: auto; }
+  text { font-family: "Segoe UI", Roboto, Arial, sans-serif; fill: #241a3a; }
+  .lane-bg { fill: #fbfaff; stroke: #ded3f3; stroke-width: 1; }
+  .lane-hdr { fill: #efe7ff; stroke: #c9b6f0; stroke-width: 1; }
+  .lane-title { font-size: 14px; font-weight: 700; fill: #4a2d86; }
+  .lane-sub { font-size: 11.5px; fill: #7b6a9e; }
+  .node { stroke-width: 1.6; }
+  .member { fill: #ffffff; stroke: #8b5cf6; }
+  .sys { fill: #f2f7ff; stroke: #3b82f6; }
+  .data { fill: #f0fdf4; stroke: #10b981; }
+  .warn { fill: #fff7ed; stroke: #f59e0b; }
+  .t { font-size: 12.5px; }
+  .tb { font-size: 12.5px; font-weight: 700; }
+  .lbl { font-size: 11.5px; fill: #6b5b8f; }
+  .flow { stroke: #7c3aed; stroke-width: 1.9; fill: none; }
+  .flow-soft { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+  .flow-dash { stroke: #d9a441; stroke-width: 1.6; fill: none; stroke-dasharray: 7 5; }
+  .phase-line { stroke: #c4b5e3; stroke-width: 1.2; stroke-dasharray: 9 7; }
+  .phase-bg { fill: #ffffff; }
+  .phase-t { font-size: 13px; font-weight: 700; fill: #7c3aed; letter-spacing: .5px; }
+  .callout { fill: #fffdf1; stroke: #d9a441; stroke-width: 1.4; stroke-dasharray: 6 4; }
+  .callout-t { font-size: 12.5px; font-weight: 700; fill: #8a6412; }
+  .callout-b { font-size: 12px; fill: #6f5a2c; }
+</style>
+</head>
+<body>
+
+<h1>BF-04 · Track Health &amp; Progress</h1>
+<p class="lede">
+  How a member's training turns into numbers they can actually read: the workout they just finished,
+  the health score on the overview, the BMI story over six months, the archive of past sessions,
+  the deep-dive analytics, and the streak calendar. Everything here is traced straight from the current source code.
+</p>
+
+<div class="card">
+<ul class="legend">
+  <li><span class="sw" style="background:#7c3aed"></span>the happy path</li>
+  <li><span class="sw" style="background:#94a3b8"></span>optional detour (filters, drill-down, day report)</li>
+  <li><span class="sw" style="background:#d9a441"></span>the friendly reminder / gap filler</li>
+</ul>
+
+<svg width="1460" height="2500" viewBox="0 0 1460 2500" role="img" aria-label="BF-04 Track Health and Progress business workflow">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c3aed" />
+    </marker>
+    <marker id="arrS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+    </marker>
+    <marker id="arrD" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#d9a441" />
+    </marker>
+  </defs>
+
+  <!-- ============ lanes ============ -->
+  <rect class="lane-bg" x="40" y="20" width="420" height="2460" rx="14" />
+  <rect class="lane-bg" x="480" y="20" width="440" height="2460" rx="14" />
+  <rect class="lane-bg" x="980" y="20" width="420" height="2460" rx="14" />
+  <rect class="lane-hdr" x="40" y="20" width="420" height="62" rx="14" />
+  <rect class="lane-hdr" x="480" y="20" width="440" height="62" rx="14" />
+  <rect class="lane-hdr" x="980" y="20" width="420" height="62" rx="14" />
+
+  <text class="lane-title" x="250" y="48" text-anchor="middle">Member</text>
+  <text class="lane-sub" x="250" y="67" text-anchor="middle">training, then reading the results</text>
+  <text class="lane-title" x="700" y="48" text-anchor="middle">CalisHealth</text>
+  <text class="lane-sub" x="700" y="67" text-anchor="middle">turning sessions into a story</text>
+  <text class="lane-title" x="1190" y="48" text-anchor="middle">Where the numbers live</text>
+  <text class="lane-sub" x="1190" y="67" text-anchor="middle">the tables behind every card</text>
+
+  <!-- ============ phase bands ============ -->
+  <line class="phase-line" x1="40" y1="1000" x2="1420" y2="1000" />
+  <line class="phase-line" x1="40" y1="1700" x2="1420" y2="1700" />
+  <rect class="phase-bg" x="48" y="92" width="360" height="22" rx="6" />
+  <text class="phase-t" x="56" y="108">PART 1 · TRAINING AND DATA COLLECTION</text>
+  <rect class="phase-bg" x="48" y="1012" width="360" height="22" rx="6" />
+  <text class="phase-t" x="56" y="1028">PART 2 · THE HEALTH TRACKING OVERVIEW</text>
+  <rect class="phase-bg" x="48" y="1712" width="400" height="22" rx="6" />
+  <text class="phase-t" x="56" y="1728">PART 3 · HISTORY, ANALYTICS AND STREAK</text>
+
+  <!-- ================= lane A · member · part 1 ================= -->
+  <rect class="node member" x="60" y="140" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="168" text-anchor="middle">Starts a workout</text>
+  <text class="t" x="250" y="188" text-anchor="middle">From the dashboard, the day streak</text>
+  <text class="t" x="250" y="205" text-anchor="middle">or the plan they were given</text>
+
+  <rect class="node member" x="60" y="254" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="282" text-anchor="middle">Counts the reps</text>
+  <text class="t" x="250" y="302" text-anchor="middle">The camera on the phone watches</text>
+  <text class="t" x="250" y="319" text-anchor="middle">the form and counts every set</text>
+
+  <rect class="node member" x="60" y="368" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="396" text-anchor="middle">Sends the raw counts</text>
+  <text class="t" x="250" y="416" text-anchor="middle">Just the numbers per set —</text>
+  <text class="t" x="250" y="433" text-anchor="middle">no judgement from the client</text>
+
+  <rect class="node member" x="60" y="482" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="510" text-anchor="middle">Sees what just unlocked</text>
+  <text class="t" x="250" y="530" text-anchor="middle">The next exercise opens up</text>
+  <text class="t" x="250" y="547" text-anchor="middle">right after a good session</text>
+
+  <!-- ================= lane B · system · part 1 ================= -->
+  <rect class="node sys" x="500" y="140" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="168" text-anchor="middle">Recalculates the clean %</text>
+  <text class="t" x="700" y="188" text-anchor="middle">The server never trusts the phone —</text>
+  <text class="t" x="700" y="205" text-anchor="middle">it works it out from the counts</text>
+
+  <rect class="node sys" x="500" y="254" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="282" text-anchor="middle">Writes the session down</text>
+  <text class="t" x="700" y="302" text-anchor="middle">One completed session,</text>
+  <text class="t" x="700" y="319" text-anchor="middle">with its start, end and active time</text>
+
+  <rect class="node sys" x="500" y="368" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="396" text-anchor="middle">Stores every set</text>
+  <text class="t" x="700" y="416" text-anchor="middle">Valid reps, invalid reps, seconds held,</text>
+  <text class="t" x="700" y="433" text-anchor="middle">clean seconds and the AI accuracy</text>
+
+  <rect class="node sys" x="500" y="482" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="510" text-anchor="middle">Checks the progression rules</text>
+  <text class="t" x="700" y="530" text-anchor="middle">Enough sets, enough clean reps</text>
+  <text class="t" x="700" y="547" text-anchor="middle">or enough clean seconds</text>
+
+  <rect class="node sys" x="500" y="596" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="624" text-anchor="middle">Unlocks the next exercise</text>
+  <text class="t" x="700" y="644" text-anchor="middle">Also keeps the personal bests:</text>
+  <text class="t" x="700" y="661" text-anchor="middle">best reps and best accuracy</text>
+
+  <!-- ================= lane C · data · part 1 ================= -->
+  <rect class="node data" x="1000" y="140" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="168" text-anchor="middle">workout_sessions</text>
+  <text class="t" x="1190" y="188" text-anchor="middle">One row per finished session —</text>
+  <text class="t" x="1190" y="205" text-anchor="middle">the backbone of everything else</text>
+
+  <rect class="node data" x="1000" y="254" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="282" text-anchor="middle">session_exercise_results</text>
+  <text class="t" x="1190" y="302" text-anchor="middle">Per exercise: how many reps were</text>
+  <text class="t" x="1190" y="319" text-anchor="middle">clean, and how accurate the form was</text>
+
+  <rect class="node data" x="1000" y="368" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="396" text-anchor="middle">session_set_results</text>
+  <text class="t" x="1190" y="416" text-anchor="middle">Per set: total and clean reps,</text>
+  <text class="t" x="1190" y="433" text-anchor="middle">total and clean seconds</text>
+
+  <rect class="node data" x="1000" y="482" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="510" text-anchor="middle">form_error_logs</text>
+  <text class="t" x="1190" y="530" text-anchor="middle">What the AI coaching flagged</text>
+  <text class="t" x="1190" y="547" text-anchor="middle">and how often it happened</text>
+
+  <rect class="node data" x="1000" y="596" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="624" text-anchor="middle">member_skill_progress</text>
+  <text class="t" x="1190" y="644" text-anchor="middle">Personal bests and the unlocked</text>
+  <text class="t" x="1190" y="661" text-anchor="middle">status of each skill</text>
+
+  <!-- ================= lane A · member · part 2 ================= -->
+  <rect class="node member" x="60" y="1060" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="1088" text-anchor="middle">Opens the health overview</text>
+  <text class="t" x="250" y="1108" text-anchor="middle">"Your health, in motion."</text>
+  <text class="t" x="250" y="1125" text-anchor="middle">One screen for the whole picture</text>
+
+  <rect class="node member" x="60" y="1174" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="1202" text-anchor="middle">Reads the health score</text>
+  <text class="t" x="250" y="1222" text-anchor="middle">The dial, the headline and how</text>
+  <text class="t" x="250" y="1239" text-anchor="middle">they compare to similar goals</text>
+
+  <rect class="node member" x="60" y="1288" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="1316" text-anchor="middle">Checks the body metrics</text>
+  <text class="t" x="250" y="1336" text-anchor="middle">Weight, height and what changed</text>
+  <text class="t" x="250" y="1353" text-anchor="middle">since the start of the month</text>
+
+  <rect class="node member" x="60" y="1402" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="1430" text-anchor="middle">Follows the BMI story</text>
+  <text class="t" x="250" y="1450" text-anchor="middle">Six months of readings,</text>
+  <text class="t" x="250" y="1467" text-anchor="middle">one bar per month</text>
+
+  <rect class="node member" x="60" y="1516" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="1544" text-anchor="middle">Updates their stats</text>
+  <text class="t" x="250" y="1564" text-anchor="middle">The little dial popup: weight and</text>
+  <text class="t" x="250" y="1581" text-anchor="middle">height, with BMI shown live</text>
+
+  <rect class="node warn" x="60" y="1610" width="380" height="70" rx="12" />
+  <text class="tb" x="250" y="1638" text-anchor="middle">Might still be asked to survey</text>
+  <text class="t" x="250" y="1658" text-anchor="middle">A banner invites them to find their level</text>
+  <text class="t" x="250" y="1673" text-anchor="middle">if the onboarding survey is unfinished</text>
+
+  <!-- ================= lane B · system · part 2 ================= -->
+  <rect class="node sys" x="500" y="1060" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="1088" text-anchor="middle">Pulls the overview together</text>
+  <text class="t" x="700" y="1108" text-anchor="middle">One call for the score, the metrics</text>
+  <text class="t" x="700" y="1125" text-anchor="middle">and the BMI series</text>
+
+  <rect class="node sys" x="500" y="1174" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="1202" text-anchor="middle">Fills the gaps from the survey</text>
+  <text class="t" x="700" y="1222" text-anchor="middle">No weight on file yet? Take it from</text>
+  <text class="t" x="700" y="1239" text-anchor="middle">their completed onboarding answers</text>
+
+  <rect class="node sys" x="500" y="1288" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="1316" text-anchor="middle">Reads the latest measurement</text>
+  <text class="t" x="700" y="1336" text-anchor="middle">The history wins; the profile is</text>
+  <text class="t" x="700" y="1353" text-anchor="middle">only a fallback</text>
+
+  <rect class="node sys" x="500" y="1402" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="1430" text-anchor="middle">Builds the monthly BMI series</text>
+  <text class="t" x="700" y="1450" text-anchor="middle">The last reading of each month,</text>
+  <text class="t" x="700" y="1467" text-anchor="middle">carried forward if a month is empty</text>
+
+  <rect class="node sys" x="500" y="1516" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="1544" text-anchor="middle">Records a new measurement</text>
+  <text class="t" x="700" y="1564" text-anchor="middle">BMI computed, weight change for the</text>
+  <text class="t" x="700" y="1581" text-anchor="middle">month, both profile and history</text>
+
+  <rect class="node sys" x="500" y="1610" width="400" height="70" rx="12" />
+  <text class="tb" x="700" y="1638" text-anchor="middle">Adds up the health score</text>
+  <text class="t" x="700" y="1658" text-anchor="middle">Consistency 30% · Accuracy 30%</text>
+  <text class="t" x="700" y="1673" text-anchor="middle">Streak 20% · BMI 20%</text>
+
+  <!-- ================= lane C · data · part 2 ================= -->
+  <rect class="node data" x="1000" y="1060" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="1088" text-anchor="middle">member_profiles</text>
+  <text class="t" x="1190" y="1108" text-anchor="middle">Weight, height, goal and the</text>
+  <text class="t" x="1190" y="1125" text-anchor="middle">weekly training goal</text>
+
+  <rect class="node data" x="1000" y="1174" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="1202" text-anchor="middle">assessment_answers</text>
+  <text class="t" x="1190" y="1222" text-anchor="middle">The onboarding survey: weight,</text>
+  <text class="t" x="1190" y="1239" text-anchor="middle">height, goal and days per week</text>
+
+  <rect class="node data" x="1000" y="1288" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="1316" text-anchor="middle">member_body_metrics</text>
+  <text class="t" x="1190" y="1336" text-anchor="middle">Every measurement ever taken,</text>
+  <text class="t" x="1190" y="1353" text-anchor="middle">with its BMI and timestamp</text>
+
+  <rect class="node data" x="1000" y="1402" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="1430" text-anchor="middle">workout_sessions</text>
+  <text class="t" x="1190" y="1450" text-anchor="middle">Training days are counted from here,</text>
+  <text class="t" x="1190" y="1467" text-anchor="middle">one day per completed session</text>
+
+  <!-- ================= lane A · member · part 3 ================= -->
+  <rect class="node member" x="60" y="1760" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="1788" text-anchor="middle">Opens the workout history</text>
+  <text class="t" x="250" y="1808" text-anchor="middle">The training archive — workouts,</text>
+  <text class="t" x="250" y="1825" text-anchor="middle">time, clean reps, hold time</text>
+
+  <rect class="node member" x="60" y="1874" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="1902" text-anchor="middle">Picks a day or a category</text>
+  <text class="t" x="250" y="1922" text-anchor="middle">Filters the archive, and jumps</text>
+  <text class="t" x="250" y="1939" text-anchor="middle">back to today in one click</text>
+
+  <rect class="node member" x="60" y="1988" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="2016" text-anchor="middle">Opens a workout log</text>
+  <text class="t" x="250" y="2036" text-anchor="middle">Every exercise, its sets, reps</text>
+  <text class="t" x="250" y="2053" text-anchor="middle">or hold seconds, and the accuracy</text>
+
+  <rect class="node member" x="60" y="2102" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="2130" text-anchor="middle">Opens performance analytics</text>
+  <text class="t" x="250" y="2150" text-anchor="middle">Form errors, clean rep ratio,</text>
+  <text class="t" x="250" y="2167" text-anchor="middle">volume load and time split</text>
+
+  <rect class="node member" x="60" y="2216" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="2244" text-anchor="middle">Switches the time range</text>
+  <text class="t" x="250" y="2264" text-anchor="middle">This month, the last three months</text>
+  <text class="t" x="250" y="2281" text-anchor="middle">or this year — the charts follow</text>
+
+  <rect class="node member" x="60" y="2330" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="2358" text-anchor="middle">Checks the day streak</text>
+  <text class="t" x="250" y="2378" text-anchor="middle">A month calendar of training days,</text>
+  <text class="t" x="250" y="2395" text-anchor="middle">current streak and weekly goal</text>
+
+  <rect class="node member" x="60" y="2444" width="380" height="70" rx="12" />
+  <text class="tb" x="250" y="2472" text-anchor="middle">Opens a day report</text>
+  <text class="t" x="250" y="2492" text-anchor="middle">Taps one day to see what they did that day</text>
+
+  <!-- ================= lane B · system · part 3 ================= -->
+  <rect class="node sys" x="500" y="1760" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="1788" text-anchor="middle">Lists the completed sessions</text>
+  <text class="t" x="700" y="1808" text-anchor="middle">Newest first, filtered by day</text>
+  <text class="t" x="700" y="1825" text-anchor="middle">or by workout type</text>
+
+  <rect class="node sys" x="500" y="1874" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="1902" text-anchor="middle">Totals it up</text>
+  <text class="t" x="700" y="1922" text-anchor="middle">Workouts, hours, clean rep ratio</text>
+  <text class="t" x="700" y="1939" text-anchor="middle">and total hold time</text>
+
+  <rect class="node sys" x="500" y="1988" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="2016" text-anchor="middle">Opens one session in detail</text>
+  <text class="t" x="700" y="2036" text-anchor="middle">Checks it really belongs to this</text>
+  <text class="t" x="700" y="2053" text-anchor="middle">member before showing anything</text>
+
+  <rect class="node sys" x="500" y="2102" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="2130" text-anchor="middle">Aggregates the chosen period</text>
+  <text class="t" x="700" y="2150" text-anchor="middle">Weeks for a month, months for a</text>
+  <text class="t" x="700" y="2167" text-anchor="middle">quarter, quarters for a year</text>
+
+  <rect class="node sys" x="500" y="2216" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="2244" text-anchor="middle">Writes a plain-language insight</text>
+  <text class="t" x="700" y="2264" text-anchor="middle">Built from their own numbers —</text>
+  <text class="t" x="700" y="2281" text-anchor="middle">never a made-up benchmark</text>
+
+  <rect class="node sys" x="500" y="2330" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="2358" text-anchor="middle">Reads the streak</text>
+  <text class="t" x="700" y="2378" text-anchor="middle">Current run, personal best and</text>
+  <text class="t" x="700" y="2395" text-anchor="middle">the weekly goal progress</text>
+
+  <rect class="node sys" x="500" y="2444" width="400" height="70" rx="12" />
+  <text class="tb" x="700" y="2472" text-anchor="middle">Builds one day report</text>
+  <text class="t" x="700" y="2492" text-anchor="middle">Duration, total volume and every exercise of that day</text>
+
+  <!-- ================= lane C · data · part 3 ================= -->
+  <rect class="node data" x="1000" y="1760" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="1788" text-anchor="middle">workout_sessions</text>
+  <text class="t" x="1190" y="1808" text-anchor="middle">The archive: category, date,</text>
+  <text class="t" x="1190" y="1825" text-anchor="middle">started and finished</text>
+
+  <rect class="node data" x="1000" y="1988" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="2016" text-anchor="middle">session_exercise_results</text>
+  <text class="t" x="1190" y="2036" text-anchor="middle">Sets, reps, hold seconds and</text>
+  <text class="t" x="1190" y="2053" text-anchor="middle">form accuracy per exercise</text>
+
+  <rect class="node data" x="1000" y="2102" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="2130" text-anchor="middle">form_error_logs + exercises</text>
+  <text class="t" x="1190" y="2150" text-anchor="middle">Which mistakes came up, and how</text>
+  <text class="t" x="1190" y="2167" text-anchor="middle">reps versus holds are told apart</text>
+
+  <rect class="node data" x="1000" y="2330" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="2358" text-anchor="middle">session_date</text>
+  <text class="t" x="1190" y="2378" text-anchor="middle">The column the calendar is built</text>
+  <text class="t" x="1190" y="2395" text-anchor="middle">from — one mark per training day</text>
+
+  <!-- ================= the friendly reminder ================= -->
+  <rect class="callout" x="980" y="1610" width="420" height="70" rx="12" />
+  <text class="callout-t" x="1190" y="1636" text-anchor="middle">The survey feeds this screen</text>
+  <text class="callout-b" x="1190" y="1656" text-anchor="middle">Weight, height and the weekly goal come</text>
+  <text class="callout-b" x="1190" y="1672" text-anchor="middle">straight from the onboarding answers</text>
+
+  <!-- ================= arrows ================= -->
+  <!-- lane A vertical (part 1) -->
+  <path class="flow" d="M250,214 V254" marker-end="url(#arr)" />
+  <path class="flow" d="M250,328 V368" marker-end="url(#arr)" />
+  <path class="flow" d="M250,442 V482" marker-end="url(#arr)" />
+
+  <!-- lane B vertical (part 1) -->
+  <path class="flow" d="M700,214 V254" marker-end="url(#arr)" />
+  <path class="flow" d="M700,328 V368" marker-end="url(#arr)" />
+  <path class="flow" d="M700,442 V482" marker-end="url(#arr)" />
+  <path class="flow" d="M700,556 V596" marker-end="url(#arr)" />
+
+  <!-- lane A ↔ lane B (part 1) -->
+  <path class="flow" d="M440,405 H498" marker-end="url(#arr)" />
+  <path class="flow" d="M500,177 H440" marker-end="url(#arr)" />
+  <path class="flow" d="M500,519 H442" marker-end="url(#arr)" />
+
+  <!-- lane B → lane C (part 1) -->
+  <path class="flow" d="M900,177 H998" marker-end="url(#arr)" />
+  <path class="flow" d="M900,291 H998" marker-end="url(#arr)" />
+  <path class="flow" d="M900,405 H998" marker-end="url(#arr)" />
+  <path class="flow" d="M900,633 H998" marker-end="url(#arr)" />
+  <path class="flow-dash" d="M900,519 H960 V455 H998" marker-end="url(#arrD)" />
+
+  <!-- lane C → lane B (part 1) -->
+  <path class="flow-soft" d="M1000,455 H960 V633 H902" marker-end="url(#arrS)" />
+
+  <!-- part 1 → part 2 -->
+  <path class="flow" d="M700,670 V1040 H250 V1058" marker-end="url(#arr)" />
+
+  <!-- lane A vertical (part 2) -->
+  <path class="flow" d="M250,1134 V1174" marker-end="url(#arr)" />
+  <path class="flow" d="M250,1248 V1288" marker-end="url(#arr)" />
+  <path class="flow" d="M250,1362 V1402" marker-end="url(#arr)" />
+  <path class="flow" d="M250,1476 V1516" marker-end="url(#arr)" />
+
+  <!-- lane B vertical (part 2) -->
+  <path class="flow" d="M700,1134 V1174" marker-end="url(#arr)" />
+  <path class="flow" d="M700,1248 V1288" marker-end="url(#arr)" />
+  <path class="flow" d="M700,1362 V1402" marker-end="url(#arr)" />
+  <path class="flow" d="M700,1476 V1516" marker-end="url(#arr)" />
+  <path class="flow" d="M700,1590 V1610" marker-end="url(#arr)" />
+
+  <!-- lane A ↔ lane B (part 2) -->
+  <path class="flow" d="M440,1097 H498" marker-end="url(#arr)" />
+  <path class="flow" d="M500,1114 H442" marker-end="url(#arr)" />
+  <path class="flow" d="M440,1553 H498" marker-end="url(#arr)" />
+  <path class="flow" d="M500,1645 H442" marker-end="url(#arr)" />
+
+  <!-- lane B ↔ lane C (part 2) -->
+  <path class="flow" d="M900,1097 H998" marker-end="url(#arr)" />
+  <path class="flow-dash" d="M900,1209 H998" marker-end="url(#arrD)" />
+  <path class="flow" d="M900,1325 H998" marker-end="url(#arr)" />
+  <path class="flow" d="M900,1439 H998" marker-end="url(#arr)" />
+
+  <!-- the reminder -->
+  <path class="flow-dash" d="M440,1640 H960 V1206 H998" marker-end="url(#arrD)" />
+  <text class="lbl" x="952" y="1200" text-anchor="end">fills the gaps</text>
+
+  <!-- part 2 → part 3 -->
+  <path class="flow" d="M250,1680 V1740 H700 V1758" marker-end="url(#arr)" />
+
+  <!-- lane A vertical (part 3) -->
+  <path class="flow" d="M250,1834 V1874" marker-end="url(#arr)" />
+  <path class="flow" d="M250,1948 V1988" marker-end="url(#arr)" />
+  <path class="flow" d="M250,2062 V2102" marker-end="url(#arr)" />
+  <path class="flow" d="M250,2176 V2216" marker-end="url(#arr)" />
+  <path class="flow" d="M250,2290 V2330" marker-end="url(#arr)" />
+  <path class="flow" d="M250,2404 V2442" marker-end="url(#arr)" />
+
+  <!-- lane B vertical (part 3) -->
+  <path class="flow" d="M700,1834 V1874" marker-end="url(#arr)" />
+  <path class="flow" d="M700,1948 V1988" marker-end="url(#arr)" />
+  <path class="flow" d="M700,2062 V2102" marker-end="url(#arr)" />
+  <path class="flow" d="M700,2176 V2216" marker-end="url(#arr)" />
+  <path class="flow" d="M700,2290 V2330" marker-end="url(#arr)" />
+  <path class="flow" d="M700,2404 V2442" marker-end="url(#arr)" />
+
+  <!-- lane A ↔ lane B (part 3) -->
+  <path class="flow" d="M440,1797 H498" marker-end="url(#arr)" />
+  <path class="flow" d="M500,1814 H442" marker-end="url(#arr)" />
+  <path class="flow" d="M440,2025 H498" marker-end="url(#arr)" />
+  <path class="flow" d="M500,2042 H442" marker-end="url(#arr)" />
+  <path class="flow" d="M440,2139 H498" marker-end="url(#arr)" />
+  <path class="flow" d="M500,2156 H442" marker-end="url(#arr)" />
+  <path class="flow-soft" d="M440,2367 H498" marker-end="url(#arrS)" />
+  <path class="flow-soft" d="M440,2479 H498" marker-end="url(#arrS)" />
+
+  <!-- lane B ↔ lane C (part 3) -->
+  <path class="flow" d="M900,1797 H998" marker-end="url(#arr)" />
+  <path class="flow" d="M900,2025 H998" marker-end="url(#arr)" />
+  <path class="flow" d="M900,2139 H998" marker-end="url(#arr)" />
+  <path class="flow" d="M900,2367 H998" marker-end="url(#arr)" />
+
+  <!-- labels -->
+  <text class="lbl" x="452" y="399" text-anchor="start">sends</text>
+  <text class="lbl" x="452" y="170" text-anchor="end">learns</text>
+  <text class="lbl" x="452" y="512" text-anchor="end">unlocks</text>
+  <text class="lbl" x="452" y="1090" text-anchor="start">opens</text>
+  <text class="lbl" x="452" y="1546" text-anchor="start">saves</text>
+  <text class="lbl" x="452" y="1638" text-anchor="start">reminder</text>
+  <text class="lbl" x="960" y="511" text-anchor="middle">reads</text>
+  <text class="lbl" x="960" y="627" text-anchor="middle">reads</text>
+  <text class="lbl" x="960" y="1200" text-anchor="middle">reads</text>
+  <text class="lbl" x="960" y="1712" text-anchor="middle">one place</text>
+  <text class="lbl" x="700" y="1040" text-anchor="middle">everything starts here</text>
+  <text class="lbl" x="700" y="1740" text-anchor="middle">and now they dig deeper</text>
+</svg>
+</div>
+
+<div class="story">
+  <h2>How to read it</h2>
+  <p>
+    Three lanes again: what the <strong>Member</strong> does, what <strong>CalisHealth</strong> does with it,
+    and which <strong>tables</strong> the numbers actually come from. The whole flow is a loop — every workout
+    writes fresh rows, and those same rows feed every card on the tracking screens.
+  </p>
+
+  <h2>Part 1 — A workout becomes data</h2>
+  <p>
+    It starts like any other workout: the member picks something to train and the camera on their phone counts
+    the reps while they do it. What gets sent to the server is deliberately plain — the raw counts per set, nothing
+    more. The server always recomputes the clean percentage itself, so a buggy or tampered client can never inflate
+    a score.
+  </p>
+  <p>
+    The session is stored, then every exercise, then every set. From there the progression rules are checked:
+    did enough sets reach the required clean reps (or clean seconds, for holds), and was the overall clean rate high
+    enough? When a rule passes, the next exercise unlocks and the member's personal bests are updated. That single
+    moment is what the whole tracking area is later built on.
+  </p>
+
+  <h2>Part 2 — The health overview</h2>
+  <p>
+    One screen shows the health score as a dial, the current body metrics with the change since the start of the
+    month, and six months of BMI in one chart. The score itself is a weighted mix of consistency (30%), form
+    accuracy (30%), training streak (20%) and BMI (20%). A part with no data is left out and the remaining
+    weights are shared out, so the score never quietly invents a number it doesn't have.
+  </p>
+  <p>
+    If the member never logged a measurement, the system quietly borrows theirs from the onboarding survey rather
+    than showing an empty screen. And if that survey is still unfinished, a friendly banner on the same page
+    invites them to finish it — because their answers are exactly what feeds this screen.
+  </p>
+
+  <h2>Part 3 — History, analytics and streak</h2>
+  <p>
+    The archive lists every completed session and can be narrowed to a day or a workout type. Opening one gives the
+    full log: every exercise, its sets, its reps or hold seconds and its accuracy — and the server checks the
+    session really belongs to that member before showing a single detail.
+  </p>
+  <p>
+    Performance analytics goes further: the form errors AI coaching flagged most often, the clean rep ratio, the
+    clean hold ratio, the volume progression, and how the time splits between active work and rest. The buckets
+    follow the range — weeks for a month, months for a quarter, quarters for a year — so the chart always matches
+    the summary cards above it. The closing insight is written from the member's own numbers, never from a
+    borrowed benchmark.
+  </p>
+  <p>
+    And the day streak ties it together: a calendar of training days, the current run, the personal best, and how
+    far along the weekly goal they are. Tapping any day opens that day's report.
+  </p>
+</div>
+
+<div class="card">
+  <h2 style="font-size:16px;margin:0 0 10px;color:#4a2d86">Where each box lives in the code</h2>
+  <table>
+    <thead>
+      <tr><th>Part of the flow</th><th>Backend</th><th>Frontend</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Collecting the workout and unlocking the next exercise</td>
+        <td><code>MemberProgressionController</code>, <code>ProgressionRuleService</code></td>
+        <td>MediaPipe counting on the workout screen</td>
+      </tr>
+      <tr>
+        <td>Health overview (score, body metrics, BMI)</td>
+        <td><code>MemberTrackingController</code> <code>/overview</code>, <code>MemberTrackingService</code>, <code>MemberTrackingRepository</code></td>
+        <td><code>pages/HealthTracking.jsx</code></td>
+      </tr>
+      <tr>
+        <td>Updating body measurements</td>
+        <td><code>MemberTrackingController</code> <code>/measurements</code></td>
+        <td><code>components/tracking/UpdateStatsModal.jsx</code>, <code>utils/bmi.js</code></td>
+      </tr>
+      <tr>
+        <td>Workout history and the session log</td>
+        <td><code>/workout-history</code>, <code>/workout-sessions/{id}</code></td>
+        <td><code>pages/WorkoutHistory.jsx</code>, <code>components/tracking/WorkoutLogModal.jsx</code></td>
+      </tr>
+      <tr>
+        <td>Performance analytics</td>
+        <td><code>/analytics</code> (<code>findPerformanceAnalytics</code>)</td>
+        <td><code>pages/PerformanceAnalytics.jsx</code></td>
+      </tr>
+      <tr>
+        <td>Day streak and the day report</td>
+        <td><code>DayStreakController</code>, <code>DayStreakService</code>, <code>DayStreakRepository</code></td>
+        <td><code>pages/DayStreak.jsx</code>, <code>components/DayReportModal.jsx</code></td>
+      </tr>
+      <tr>
+        <td>Survey answers filling the gaps</td>
+        <td><code>SurveyProfileSync</code>, <code>syncFromSurveyIfMissing</code></td>
+        <td><code>components/survey/SurveyReminder.jsx</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

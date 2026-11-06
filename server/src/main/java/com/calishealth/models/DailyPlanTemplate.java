@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * Daily Training Plan Template: schedules existing workouts onto the training days of one
- * (level, month, days per week) combination. A day without an entry is a rest day.
+ * (level, days per week) combination. A day without an entry is a rest day.
  */
 @Entity
 @Table(name = "daily_plan_templates")
@@ -34,9 +34,6 @@ public class DailyPlanTemplate {
 
     @Column(nullable = false, length = 30)
     private String level;
-
-    @Column(name = "month_number", nullable = false)
-    private int monthNumber = 1;
 
     @Column(name = "days_per_week", nullable = false)
     private int daysPerWeek = 3;

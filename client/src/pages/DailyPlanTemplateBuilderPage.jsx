@@ -44,8 +44,6 @@ function validate(form) {
   const errors = [];
   if (!form.name.trim()) errors.push("Enter a plan name.");
   if (!form.level) errors.push("Choose a level.");
-  const month = Number(form.monthNumber);
-  if (!Number.isInteger(month) || month < 1 || month > 24) errors.push("Training month must be between 1 and 24.");
   const missing = DAY_OPTIONS.slice(0, form.daysPerWeek).filter((day) => !form.days[day]);
   if (missing.length) errors.push(`Assign a workout to ${missing.map((day) => `Day ${day}`).join(", ")}.`);
   return errors;
@@ -136,7 +134,6 @@ export default function DailyPlanTemplateBuilderPage() {
     name: existing?.name || "",
     description: existing?.description || "",
     level: existing?.level || activeLevels[0] || "",
-    monthNumber: existing?.monthNumber ?? 1,
     daysPerWeek: existing?.daysPerWeek ?? 3,
     active: existing ? existing.active : true,
     days: Object.fromEntries((existing?.days || []).map((day) => [day.dayNumber, day.workoutCode])),
@@ -198,7 +195,6 @@ export default function DailyPlanTemplateBuilderPage() {
       name: form.name.trim(),
       description: form.description.trim(),
       level: form.level,
-      monthNumber: Number(form.monthNumber),
       daysPerWeek: Number(form.daysPerWeek),
       active: form.active,
       days: dayList.map((day) => ({ dayNumber: day, workoutCode: form.days[day] })),
@@ -227,13 +223,12 @@ export default function DailyPlanTemplateBuilderPage() {
           {save.error && <Alert severity="error" sx={{ mb: 2 }}>{save.error.message}</Alert>}
           {touched && errors.map((message) => <Alert key={message} severity="error" sx={{ mb: 1.5 }}>{message}</Alert>)}
 
-          <SectionTitle icon={TuneRoundedIcon} title="Plan information" caption="Members whose level, month, and training days match are given this plan." />
-          <Box sx={{ mt: 2, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "2fr 1fr 1fr 1fr" } }}>
+          <SectionTitle icon={TuneRoundedIcon} title="Plan information" caption="Members whose level and training days match are given this plan." />
+          <Box sx={{ mt: 2, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "2fr 1fr 1fr" } }}>
             <TextField size="small" label="Plan name" value={form.name} onChange={(e) => set({ name: e.target.value })} inputProps={{ maxLength: 60 }} />
             <TextField select size="small" label="Level" value={form.level} onChange={(e) => changeLevel(e.target.value)}>
               {(editing && form.level && !activeLevels.includes(form.level) ? [form.level, ...activeLevels] : activeLevels).map((name) => <MenuItem key={name} value={name}>{name}</MenuItem>)}
             </TextField>
-            <TextField size="small" type="number" label="Training month" value={form.monthNumber} onChange={(e) => set({ monthNumber: e.target.value })} inputProps={{ min: 1, max: 24 }} />
             <TextField select size="small" label="Days per week" value={form.daysPerWeek} onChange={(e) => changeDays(Number(e.target.value))}>
               {DAY_OPTIONS.map((value) => <MenuItem key={value} value={value}>{value} {value === 1 ? "day" : "days"}</MenuItem>)}
             </TextField>

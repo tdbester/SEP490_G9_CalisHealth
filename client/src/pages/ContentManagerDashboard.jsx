@@ -195,7 +195,7 @@ export default function ContentManagerDashboard() {
         <Box sx={enter(80)}>
           <ManagementCard
             title="Daily training plans"
-            description="Schedule existing workouts onto training days by level, month, and days per week."
+            description="Schedule existing workouts onto training days by level and days per week."
             to={CONTENT_PATHS.templates}
             action="Manage plans"
             icon={EventNoteRoundedIcon}

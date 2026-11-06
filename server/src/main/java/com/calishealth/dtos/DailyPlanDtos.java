@@ -23,7 +23,6 @@ public final class DailyPlanDtos {
             String name,
             String description,
             String level,
-            int monthNumber,
             int daysPerWeek,
             boolean active,
             LocalDateTime updatedAt,
@@ -37,7 +36,6 @@ public final class DailyPlanDtos {
             String name,
             String description,
             String level,
-            Integer monthNumber,
             Integer daysPerWeek,
             Boolean active,
             List<DailyPlanDayRequest> days
