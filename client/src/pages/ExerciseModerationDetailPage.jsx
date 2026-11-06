@@ -82,8 +82,8 @@ export default function ExerciseModerationDetailPage() {
     onSuccess: () => navigate(CONTENT_PATHS.pendingExerciseModeration, { state: { successMessage: `“${entry?.name || "Exercise"}” approved successfully.` } }),
     onError: (error) => setActionError(error.message),
   });
-  const reject = useApiMutation(() => contentManagerApi.updateExerciseStatus(code, false), {
-    onSuccess: () => navigate(CONTENT_PATHS.pendingExerciseModeration),
+  const reject = useApiMutation((reason) => contentManagerApi.updateExerciseStatus(code, false, reason), {
+    onSuccess: () => navigate(CONTENT_PATHS.pendingExerciseModeration, { state: { successMessage: `“${entry?.name || "Exercise"}” rejected successfully.` } }),
     onError: (error) => setActionError(error.message),
   });
   const busy = approve.isPending || reject.isPending;
@@ -197,7 +197,7 @@ export default function ExerciseModerationDetailPage() {
       >
         <DialogTitle>{confirmAction === "approve" ? "Approve exercise?" : "Reject exercise?"}</DialogTitle>
         <DialogContent>
-          <DialogContentText>{confirmAction === "approve" ? `Approve “${entry.name}” and add it to the active exercise list?` : `Reject “${entry.name}”? You will have 10 seconds to undo before its status is changed to rejected.`}</DialogContentText>
+          <DialogContentText>{confirmAction === "approve" ? `Approve “${entry.name}” and add it to the active exercise list?` : `Reject “${entry.name}”? The status will change to rejected immediately.`}</DialogContentText>
           {confirmAction === "reject" && <TextField autoFocus required fullWidth multiline minRows={3} margin="dense" label="Rejection reason" placeholder="Explain why this exercise is rejected" value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)} error={!rejectionReason.trim()} helperText={!rejectionReason.trim() ? "A rejection reason is required." : ""} />}
         </DialogContent>
         <DialogActions>
@@ -207,7 +207,7 @@ export default function ExerciseModerationDetailPage() {
             setConfirmAction(null);
             setActionError("");
             if (action === "approve") { approve.mutate(); return; }
-            navigate(CONTENT_PATHS.pendingExerciseModeration, { state: { pendingReject: { ...entry, rejectionReason: rejectionReason.trim() } } });
+            reject.mutate(rejectionReason.trim());
           }}>{confirmAction === "reject" ? "Reject" : "Approve"}</Button>
         </DialogActions>
       </Dialog>

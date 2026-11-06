@@ -1,4 +1,5 @@
 import axios from "axios";
+import { handleMaintenanceError } from "../utils/maintenanceNotifications";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
 
@@ -37,6 +38,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
+  handleMaintenanceError(err);
     // Admin-issued temporary password: every API except /auth/me and change-password is refused.
     if (
       err.response?.status === 403 &&

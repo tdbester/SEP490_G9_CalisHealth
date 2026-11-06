@@ -2,6 +2,7 @@ package com.calishealth.service;
 
 import com.calishealth.dtos.ExerciseDtos.ExerciseModerationHistoryResponse;
 import com.calishealth.models.Exercise;
+import com.calishealth.models.User;
 import com.calishealth.repository.ExerciseModerationHistoryRepository;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.ExerciseTreeEdgeRepository;
@@ -28,11 +29,13 @@ class ExerciseServiceModerationReasonTest {
     private final UserRepository users = mock(UserRepository.class);
     private final JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
     private final MediaRegistryService mediaRegistry = mock(MediaRegistryService.class);
+    private final SystemNotificationService systemNotifications = mock(SystemNotificationService.class);
     private final ExerciseService service = new ExerciseService(
             exercises, moderationHistory, users, jdbcTemplate, mediaRegistry,
             mock(ExerciseTreeEdgeRepository.class),
             mock(FitnessLevelRepository.class),
-            mock(ExerciseMuscleGroupCatalog.class)
+            mock(ExerciseMuscleGroupCatalog.class),
+            systemNotifications
     );
 
     @Test
@@ -51,6 +54,9 @@ class ExerciseServiceModerationReasonTest {
 
         service.updateStatus(exercise.getCode(), false, "  Unsafe execution form  ");
 
+        assertEquals(Exercise.EntryStatus.REJECTED.name(), exercise.getStatus());
+        assertEquals("REJECTED", exercise.getModerationStatus());
+        verify(exercises).saveAndFlush(exercise);
         verify(moderationHistory).insert(
                 eq(exercise.getCode()),
                 eq(exercise.getName()),
@@ -65,6 +71,28 @@ class ExerciseServiceModerationReasonTest {
                 eq(null),
                 eq("REJECTED"),
                 eq("Unsafe execution form")
+        );
+        verify(systemNotifications).notifyExerciseModeration(
+                eq(42L),
+                eq("Community push-up"),
+                eq(false),
+                eq("Unsafe execution form")
+        );
+    }
+
+    @Test
+    void notifiesSubmissionAuthorWhenPendingExerciseIsApproved() {
+        Exercise exercise = customPendingExercise();
+        when(exercises.findByCode(exercise.getCode())).thenReturn(Optional.of(exercise));
+        when(exercises.saveAndFlush(exercise)).thenReturn(exercise);
+
+        service.updateStatus(exercise.getCode(), true, null);
+
+        verify(systemNotifications).notifyExerciseModeration(
+                eq(42L),
+                eq("Community push-up"),
+                eq(true),
+                eq(null)
         );
     }
 
@@ -106,7 +134,11 @@ class ExerciseServiceModerationReasonTest {
         exercise.setInstructions("Description");
         exercise.setExecutionSteps("Keep your body straight");
         exercise.setSource(ExerciseService.SOURCE_CUSTOM);
+        exercise.setStatus("PENDING");
         exercise.setActive(false);
+        User author = new User();
+        author.setId(42L);
+        exercise.setCreatedBy(author);
         exercise.setUpdatedAt(LocalDateTime.of(2026, 10, 28, 9, 0));
         return exercise;
     }

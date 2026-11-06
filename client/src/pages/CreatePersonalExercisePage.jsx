@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { checkPersonalExerciseText, createPersonalExercise } from "../api/library";
+import {
+  checkPersonalExerciseText,
+  createPersonalExercise,
+  getMaintenanceServiceStatus,
+} from "../api/library";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import {
   getApiErrorMessage,
@@ -40,7 +44,35 @@ export default function CreatePersonalExercisePage() {
     "",
   ]);
   const [videoFile, setVideoFile] = useState(null);
+  const [videoUploadsUnderMaintenance, setVideoUploadsUnderMaintenance] = useState(false);
+  const [maintenanceStatusLoading, setMaintenanceStatusLoading] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    getMaintenanceServiceStatus("MEMBER_VIDEO_UPLOADS")
+      .then((status) => {
+        if (!cancelled) {
+          setVideoUploadsUnderMaintenance(status?.isUnderMaintenance === true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setVideoUploadsUnderMaintenance(false);
+          toast.warning("Could not check video upload maintenance status. The server will verify availability when you submit.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setMaintenanceStatusLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (videoUploadsUnderMaintenance) setVideoFile(null);
+  }, [videoUploadsUnderMaintenance]);
   useEffect(() => {
     if (!anatomyImageFile) {
       setAnatomyPreview("");
@@ -134,6 +166,7 @@ export default function CreatePersonalExercisePage() {
 
   // Video upload handlers
   const handleFileSelect = (e) => {
+    if (videoUploadsUnderMaintenance || maintenanceStatusLoading) return;
     markFieldTouched("video");
     const file = e.target.files?.[0];
     if (file) {
@@ -146,6 +179,7 @@ export default function CreatePersonalExercisePage() {
 
   const handleDragOver = (e) => {
     e.preventDefault();
+    if (videoUploadsUnderMaintenance || maintenanceStatusLoading) return;
     setIsDragging(true);
   };
 
@@ -156,6 +190,7 @@ export default function CreatePersonalExercisePage() {
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
+    if (videoUploadsUnderMaintenance || maintenanceStatusLoading) return;
     markFieldTouched("video");
     const file = e.dataTransfer.files?.[0];
     if (file) {
@@ -194,6 +229,16 @@ export default function CreatePersonalExercisePage() {
       e.stopPropagation();
     }
     setHasSubmitted(true);
+    if (videoUploadsUnderMaintenance) {
+      const message = "Dịch vụ tải lên video bài tập đang trong thời gian bảo trì. Vui lòng thử lại sau!";
+      setErrorMessage(message);
+      toast.warning(message);
+      return;
+    }
+    if (maintenanceStatusLoading) {
+      toast.info("Checking video upload availability. Please wait a moment.");
+      return;
+    }
     if (submissionLock.current) return;
     if (Object.keys(validationErrors).length > 0 || targetMuscles.length === 0) {
       setErrorMessage("");
@@ -261,6 +306,11 @@ export default function CreatePersonalExercisePage() {
       const errorMsg = typeof responseData === "string"
         ? responseData
         : responseData?.message || getApiErrorMessage(err, "Could not save the exercise.");
+      if (err?.response?.status === 503) {
+        setVideoCheckStatus("failed");
+        setErrorMessage(errorMsg);
+        return;
+      }
       const flaggedWordsMatch = errorMsg.match(/Flagged words:\s*(.+)$/i);
       if (flaggedWordsMatch) {
         setFlaggedWords(flaggedWordsMatch[1].split(",").map((word) => word.trim()).filter(Boolean));
@@ -726,20 +776,37 @@ export default function CreatePersonalExercisePage() {
           type="file"
           accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
           onChange={handleFileSelect}
+          disabled={videoUploadsUnderMaintenance || maintenanceStatusLoading}
           className="hidden"
         />
+
+        {videoUploadsUnderMaintenance && (
+          <div
+            role="alert"
+            className="rounded-xl border border-amber-400/50 bg-amber-500/15 px-4 py-3 text-xs font-medium text-amber-200"
+          >
+            ⚠️ Dịch vụ tải lên video bài tập đang bảo trì. Vui lòng thử lại sau!
+          </div>
+        )}
 
         <div
           id="exercise-video"
           tabIndex={-1}
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => {
+            if (!videoUploadsUnderMaintenance && !maintenanceStatusLoading) {
+              fileInputRef.current?.click();
+            }
+          }}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`rounded-2xl border border-dashed p-8 flex flex-col items-center justify-center cursor-pointer transition-all select-none ${
-            isDragging
+          aria-disabled={videoUploadsUnderMaintenance || maintenanceStatusLoading}
+          className={`rounded-2xl border border-dashed p-8 flex flex-col items-center justify-center transition-all select-none ${
+            videoUploadsUnderMaintenance || maintenanceStatusLoading
+              ? "cursor-not-allowed border-[#5b32e8]/40 bg-[#161036]/30 opacity-60"
+              : isDragging
               ? "border-[#a855f7] bg-[#22174c]/60"
-              : "border-[#5b32e8]/60 bg-[#161036]/40 hover:bg-[#1a1340]/60"
+              : "cursor-pointer border-[#5b32e8]/60 bg-[#161036]/40 hover:bg-[#1a1340]/60"
           }`}
         >
           {/* Upload icon */}
@@ -927,9 +994,9 @@ export default function CreatePersonalExercisePage() {
         {/* Nút Create */}
         <button
           type="button"
-          disabled={isCreating}
+          disabled={isCreating || videoUploadsUnderMaintenance || maintenanceStatusLoading}
           onClick={handleCreate}
-          className="rounded-xl bg-[#643bf6] hover:bg-[#522cd9] text-white text-xs font-semibold px-7 py-2.5 shadow-md active:scale-95 transition-all cursor-pointer flex items-center gap-2 disabled:cursor-wait disabled:opacity-100"
+          className="rounded-xl bg-[#643bf6] hover:bg-[#522cd9] text-white text-xs font-semibold px-7 py-2.5 shadow-md active:scale-95 transition-all cursor-pointer flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isCreating && (
             <div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />

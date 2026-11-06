@@ -32,7 +32,26 @@ const ROLE_HOME = {
   MEMBER: "/",
 };
 
-const EMPTY_FORM = { fullName: "", phone: "", gender: "", dateOfBirth: "", bio: "", fitnessLevel: "" };
+const EMPTY_FORM = {
+  fullName: "",
+  phone: "",
+  gender: "",
+  dateOfBirth: "",
+  bio: "",
+  fitnessLevel: "",
+  daysPerWeek: "",
+  goal: "",
+};
+
+/** 1..7 training days; the label spells out what the number means at a glance. */
+const DAYS_PER_WEEK_OPTIONS = [1, 2, 3, 4, 5, 6, 7];
+
+function normalizeGoal(value) {
+  const normalized = String(value || "").toUpperCase();
+  if (normalized.includes("SKILL")) return "SKILLS";
+  if (normalized.includes("HEALTH")) return "HEALTH";
+  return "";
+}
 
 function toForm(profile) {
   if (!profile) return EMPTY_FORM;
@@ -43,6 +62,9 @@ function toForm(profile) {
     dateOfBirth: toDateInputValue(profile.dateOfBirth),
     bio: profile.bio || "",
     fitnessLevel: profile.member?.levelName || "",
+    // Seeded from the onboarding survey answer, then owned by this screen.
+    daysPerWeek: profile.member?.daysPerWeek ? String(profile.member.daysPerWeek) : "",
+    goal: normalizeGoal(profile.member?.goal),
   };
 }
 
@@ -111,7 +133,9 @@ export default function ProfilePage() {
       form.gender !== (profile.gender || "") ||
       form.dateOfBirth !== toDateInputValue(profile.dateOfBirth) ||
       form.bio !== (profile.bio || "") ||
-      form.fitnessLevel !== (profile.member?.levelName || "")
+      form.fitnessLevel !== (profile.member?.levelName || "") ||
+      form.daysPerWeek !== (profile.member?.daysPerWeek ? String(profile.member.daysPerWeek) : "") ||
+      form.goal !== normalizeGoal(profile.member?.goal)
     );
   }, [form, profile]);
 
@@ -150,6 +174,8 @@ export default function ProfilePage() {
         clearDateOfBirth: !form.dateOfBirth,
         bio: form.bio,
         fitnessLevel: form.fitnessLevel,
+        daysPerWeek: form.daysPerWeek ? Number(form.daysPerWeek) : null,
+        goal: form.goal,
       });
       applyProfile(updated, "Your profile has been updated.");
       setFieldError({});
@@ -390,6 +416,52 @@ export default function ProfilePage() {
                       InputProps={{ readOnly: true }}
                       helperText="Taken from your onboarding survey answers."
                     />
+                    <TextField
+                      select
+                      label="Training days per week"
+                      value={form.daysPerWeek}
+                      onChange={set("daysPerWeek")}
+                      fullWidth
+                      size="small"
+                      disabled={!profile?.member || saving}
+                      error={Boolean(fieldError.daysPerWeek)}
+                      helperText={
+                        fieldError.daysPerWeek ||
+                        "Starts from your onboarding survey answer. Your weekly plan follows this."
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      SelectProps={{
+                        displayEmpty: true,
+                        renderValue: (selected) =>
+                          selected ? `${selected} ${Number(selected) === 1 ? "day" : "days"} per week` : (
+                            <Box component="span" sx={{ color: CM.textDim }}>
+                              Not set
+                            </Box>
+                          ),
+                        SelectDisplayProps: { "aria-label": "Training days per week" },
+                      }}
+                    >
+                      {DAYS_PER_WEEK_OPTIONS.map((days) => (
+                        <MenuItem key={days} value={String(days)}>
+                          {days} {days === 1 ? "day" : "days"} per week
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                    <TextField
+                      select
+                      label="Goal"
+                      value={form.goal}
+                      onChange={set("goal")}
+                      fullWidth
+                      size="small"
+                      disabled={!profile?.member || saving}
+                      error={Boolean(fieldError.goal)}
+                      helperText={fieldError.goal || "Choose the focus for your training plan."}
+                      InputLabelProps={{ shrink: true }}
+                    >
+                      <MenuItem value="SKILLS">SKILLS</MenuItem>
+                      <MenuItem value="HEALTH">HEALTH</MenuItem>
+                    </TextField>
                     <FitnessLevelField
                       value={form.fitnessLevel}
                       options={profile?.fitnessLevelOptions || []}

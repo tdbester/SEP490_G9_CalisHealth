@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link as RouterLink, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Alert, Box, Button, Card, CircularProgress, Stack, Typography } from "@mui/material";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
-import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import EventNoteRoundedIcon from "@mui/icons-material/EventNoteRounded";
 import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
@@ -83,9 +82,8 @@ export default function DailyPlanTemplateDetailPage() {
         )}
       />
 
-      <Box sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(0, 1fr))" } }}>
+      <Box sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", md: "repeat(2, minmax(0, 1fr))" } }}>
         <InfoCard icon={SignalCellularAltRoundedIcon} label="Level"><DarkPill tone={levelTone(plan.level)}>{plan.level}</DarkPill></InfoCard>
-        <InfoCard icon={CalendarMonthRoundedIcon} label="Training month"><Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>Month {plan.monthNumber}</Typography></InfoCard>
         <InfoCard icon={EventNoteRoundedIcon} label="Days per week"><Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>{plan.daysPerWeek}</Typography></InfoCard>
       </Box>
 

@@ -7,5 +7,6 @@ public record ExerciseTreeResponseDTO(
         String movementGroup,
         String order,
         List<ExerciseTreeNodeDTO> nodes,
+        List<ExerciseTreeEdgeDTO> edges,
         Map<String, String> legend
 ) {}

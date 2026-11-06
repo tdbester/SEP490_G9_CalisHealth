@@ -50,6 +50,9 @@ public class ProfileService {
 
     private static final String AGE_QUESTION = "AGE";
 
+    /** Same fallback {@code member_profiles.days_per_week} declares as its column default. */
+    private static final int DEFAULT_DAYS_PER_WEEK = 3;
+
     private static ResponseStatusException err(HttpStatus status, String message) {
         return new ResponseStatusException(status, message);
     }
@@ -181,11 +184,11 @@ public class ProfileService {
         if (u.getRole() != UserRole.MEMBER) return null;
         MemberProfile profile = memberProfiles.findByUser_Id(u.getId()).orElse(null);
         if (profile == null) {
-            return new MemberSummary(null, null, null, null, null, 0, 0);
+            return new MemberSummary(null, null, null, null, null, 0, 0, DEFAULT_DAYS_PER_WEEK);
         }
         MemberSummary base = MemberSummary.of(profile);
         return new MemberSummary(base.levelName(), levelRank(profile), base.goal(), base.heightCm(),
-                base.weightKg(), base.streakDays(), base.longestStreak());
+                base.weightKg(), base.streakDays(), base.longestStreak(), base.daysPerWeek());
     }
 
     /** 1-based position of the member's level in the ordered ladder; null when it has no level yet. */
@@ -216,6 +219,11 @@ public class ProfileService {
                     .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
                     .orElseThrow(() -> err(HttpStatus.BAD_REQUEST, "Choose a valid active fitness level"));
             profile.setFitnessLevel(level);
+        }
+        // The onboarding answer is only the starting value; once saved here it wins.
+        if (r.daysPerWeek() != null) profile.setDaysPerWeek(r.daysPerWeek());
+        if (r.goal() != null && !r.goal().isBlank()) {
+            profile.setGoals(r.goal().trim().toUpperCase(Locale.ROOT));
         }
         memberProfiles.save(profile);
     }

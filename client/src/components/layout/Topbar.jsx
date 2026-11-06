@@ -1,11 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import NotificationsNoneRoundedIcon from "@mui/icons-material/NotificationsNoneRounded";
 import LocalFireDepartmentRoundedIcon from "@mui/icons-material/LocalFireDepartmentRounded";
 import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import api from "../../api/client";
+import NotificationBell from "../notifications/NotificationBell";
 import { avatarUrl, profileApi } from "../../api/profile";
 import "./Topbar.css";
 
@@ -38,7 +38,13 @@ export default function Topbar() {
     const cached = localStorage.getItem("token")
       ? localStorage.getItem("user")
       : null;
-    if (cached) setUser(JSON.parse(cached));
+    if (!cached) return;
+    try {
+      setUser(JSON.parse(cached));
+    } catch (error) {
+      console.error("Could not read the cached member profile:", error);
+      setUser(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -216,43 +222,10 @@ export default function Topbar() {
               <span className="topbar-streak-days">{currentStreak ?? "-"} days</span>
             </button>
 
-            <div className="topbar-notification-wrap">
-              <button
-                type="button"
-                className="topbar-icon-btn"
-                aria-label="Notifications"
-                aria-expanded={openPanel === "notifications"}
-                onClick={() =>
-                  setOpenPanel(
-                    openPanel === "notifications" ? null : "notifications",
-                  )
-                }
-              >
-                <NotificationsNoneRoundedIcon />
-                <span className="topbar-notification-dot" />
-              </button>
-              {openPanel === "notifications" && (
-                <section className="topbar-popover topbar-notification-popover">
-                  <div className="topbar-popover-heading">Notifications</div>
-                  <article className="topbar-notification-item">
-                    <span className="topbar-notification-mark" />
-                    <div>
-                      <strong>Your workout is ready</strong>
-                      <p>Today&apos;s full-body plan is waiting for you.</p>
-                      <time>Today</time>
-                    </div>
-                  </article>
-                  <article className="topbar-notification-item">
-                    <span className="topbar-notification-mark" />
-                    <div>
-                      <strong>Keep your streak going</strong>
-                      <p>Complete a workout to keep your streak going.</p>
-                      <time>Today</time>
-                    </div>
-                  </article>
-                </section>
-              )}
-            </div>
+            <NotificationBell
+              apiClient={api}
+              onOpen={() => setOpenPanel(null)}
+            />
           </>
         )}
 

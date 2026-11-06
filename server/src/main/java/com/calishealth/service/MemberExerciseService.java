@@ -41,7 +41,8 @@ public class MemberExerciseService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated member not found"));
         Exercise exercise = exercises.findById(exerciseId)
                 .filter(item -> !item.isSystem())
-                .filter(item -> "ACCEPTED".equals(item.getStatus()))
+                .filter(item -> "ACTIVE".equalsIgnoreCase(item.getModerationStatus())
+                        || "ACCEPTED".equalsIgnoreCase(item.getModerationStatus()))
                 .filter(item -> item.isShareWithCommunity()
                         || (item.getAuthor() != null && member.getId().equals(item.getAuthor().getId())))
                 .orElseThrow(() -> new ResourceNotFoundException("Community exercise not found"));

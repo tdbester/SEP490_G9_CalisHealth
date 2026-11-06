@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Daily auto-cleanup (03:00 server time by default, see the "Upload limits" tab).
- * On startup the registry is reconciled with the disk, so files uploaded before V25 show up too.
+ * On startup the registry is reconciled with the disk, so files uploaded before V47 show up too.
  */
 @Slf4j
 @Component

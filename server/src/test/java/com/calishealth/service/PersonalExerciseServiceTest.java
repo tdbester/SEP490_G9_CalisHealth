@@ -37,6 +37,7 @@ class PersonalExerciseServiceTest {
     private ExerciseModerationHistoryRepository moderationHistory;
     private UserRepository users;
     private ProfanityWordRepository profanityWords;
+    private SystemNotificationService systemNotifications;
     private PersonalExerciseService service;
 
     @BeforeEach
@@ -45,6 +46,7 @@ class PersonalExerciseServiceTest {
         moderationHistory = mock(ExerciseModerationHistoryRepository.class);
         users = mock(UserRepository.class);
         profanityWords = mock(ProfanityWordRepository.class);
+        systemNotifications = mock(SystemNotificationService.class);
         when(profanityWords.findByActiveTrueOrderByIdAsc()).thenReturn(blockedWords());
         StorageSettings settings = new StorageSettings();
         settings.setMaxVideoMb(50);
@@ -67,7 +69,8 @@ class PersonalExerciseServiceTest {
                 new ContentModerationService(profanityWords),
                 videoStorage,
                 mediaRegistry,
-                mock(ExerciseMuscleGroupCatalog.class));
+                mock(ExerciseMuscleGroupCatalog.class),
+                systemNotifications);
         User member = new User();
         member.setId(7L);
         member.setEmail("member@example.com");
@@ -97,9 +100,41 @@ class PersonalExerciseServiceTest {
         verify(exercises, org.mockito.Mockito.times(2)).save(captor.capture());
         Exercise saved = captor.getValue();
         assertThat(saved.isSystem()).isFalse();
+        assertThat(saved.getCode()).isEqualTo("CU_31");
         assertThat(saved.getAuthor().getId()).isEqualTo(7L);
+        assertThat(saved.getCategory()).isEqualTo("REPS");
+        assertThat(saved.getDefaultDuration()).isNull();
         assertThat(saved.getAnatomyImageUrl()).isEqualTo(response.anatomyImageUrl());
         assertThat(saved.isShareWithCommunity()).isFalse();
+        verify(systemNotifications).notifyContentManagersPendingApproval("Tempo push-up");
+    }
+
+    @Test
+    void storesHoldAsExerciseCategoryAndClearsRepCount() {
+        var holdRequest = new CreatePersonalExerciseRequestDTO(
+                "Plank hold",
+                "A controlled bodyweight hold.",
+                Exercise.EntryLevel.BEGINNER,
+                List.of("Brace your core", "Hold steady"),
+                "Core",
+                3,
+                null,
+                30,
+                false,
+                null,
+                "duration",
+                3,
+                null,
+                30);
+
+        service.createPersonalExercise("member@example.com", holdRequest, validMp4());
+
+        var captor = org.mockito.ArgumentCaptor.forClass(Exercise.class);
+        verify(exercises, org.mockito.Mockito.times(2)).save(captor.capture());
+        Exercise saved = captor.getValue();
+        assertThat(saved.getCategory()).isEqualTo("HOLD");
+        assertThat(saved.getDefaultReps()).isNull();
+        assertThat(saved.getDefaultDuration()).isEqualTo(30);
     }
 
     @Test

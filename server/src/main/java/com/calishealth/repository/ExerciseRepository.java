@@ -15,18 +15,47 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long>, JpaSp
     List<Exercise> findAllByCodeIn(List<String> codes);
     Optional<Exercise> findByNameIgnoreCase(String name);
     boolean existsByNameIgnoreCaseAndSource(String name, String source);
-    Optional<Exercise> findByIdAndSourceAndStatus(Long id, String source, String status);
-    long countByTypeAndSourceAndStatus(String type, String source, String status);
-    /** Library counts only ever show published (active) rows, so the flag is part of the derived query. */
-    long countByTypeAndSourceAndActiveTrueAndStatus(String type, String source, String status);
-    /** Community exercise count: published, accepted rows shared by members. */
-    long countBySourceAndActiveTrueAndStatusAndShareWithCommunityTrue(String source, String status);
-    long countByCreatedBy_IdAndSourceAndStatus(Long authorId, String source, String status);
     Optional<Exercise> findByIdAndCreatedBy_IdAndSource(Long id, Long authorId, String source);
-    List<Exercise> findAllByMovementGroupAndSourceAndStatus(
-            Exercise.MovementGroup movementGroup,
-            String source,
-            String status);
+    @Query("""
+            SELECT e FROM Exercise e
+            WHERE e.id = :id AND e.source = :source
+              AND UPPER(e.moderationStatus) IN ('ACTIVE', 'ACCEPTED')
+            """)
+    Optional<Exercise> findAcceptedByIdAndSource(
+            @Param("id") Long id,
+            @Param("source") String source);
+
+    @Query("""
+            SELECT COUNT(e) FROM Exercise e
+            WHERE e.type = :type AND e.source = 'SYSTEM'
+              AND UPPER(e.moderationStatus) IN ('ACTIVE', 'ACCEPTED')
+              AND e.active = true
+            """)
+    long countAcceptedSystemExercisesByType(@Param("type") String type);
+
+    @Query("""
+            SELECT COUNT(e) FROM Exercise e
+            WHERE e.createdBy.id = :authorId AND e.source = 'CUSTOM'
+              AND UPPER(e.moderationStatus) IN ('ACTIVE', 'ACCEPTED')
+            """)
+    long countAcceptedMemberExercisesByAuthorId(@Param("authorId") Long authorId);
+
+    @Query("""
+            SELECT COUNT(e) FROM Exercise e
+            WHERE e.source = 'CUSTOM' AND e.active = true AND e.shareWithCommunity = true
+              AND UPPER(e.moderationStatus) IN ('ACTIVE', 'ACCEPTED')
+            """)
+    long countPublishedCommunityMemberExercises();
+
+    @Query("""
+            SELECT COUNT(e) FROM Exercise e
+            WHERE e.createdBy.id = :authorId AND e.source = :source
+              AND UPPER(e.moderationStatus) IN :statuses
+            """)
+    long countByAuthorAndSourceAndModerationStatuses(
+            @Param("authorId") Long authorId,
+            @Param("source") String source,
+            @Param("statuses") List<String> statuses);
 
     @Query("""
             SELECT COUNT(e) FROM Exercise e
@@ -39,19 +68,6 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long>, JpaSp
             WHERE e.source IN ('MEMBER', 'CUSTOM') AND e.createdBy.email = :email
             """)
     List<Exercise> findMemberExercisesByEmail(String email);
-
-    @Query("""
-            SELECT COUNT(e) FROM Exercise e
-            WHERE e.source = 'SYSTEM' AND e.status = 'ACCEPTED' AND e.type = :type
-            """)
-    long countAcceptedSystemExercisesByType(String type);
-
-    @Query("""
-            SELECT COUNT(e) FROM Exercise e
-            WHERE e.createdBy.id = :authorId AND e.source = 'CUSTOM'
-              AND e.status = 'ACCEPTED'
-            """)
-    long countAcceptedMemberExercisesByAuthorId(Long authorId);
 
     /** True when a (not soft-deleted) exercise is still tagged with this level name. */
     @Query("select count(e) > 0 from Exercise e where lower(e.difficultyLevel) = lower(:level) "
