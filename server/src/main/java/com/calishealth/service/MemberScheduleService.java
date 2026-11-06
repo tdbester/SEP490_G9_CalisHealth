@@ -82,7 +82,18 @@ public class MemberScheduleService {
 
     // ------------------------------------------------------------------ workouts
 
-    /** Card workout ở sidebar trái: workout hệ thống đang publish và có thể xếp lịch. */
+    /**
+     * Card workout ở sidebar trái: chỉ những workout nằm trong Daily Training
+     * Plan Template mà Content Manager đã duyệt cho member.
+     *
+     * <p>Template được chọn theo (level, số buổi/tuần của profile) — cùng quy
+     * tắc với {@link #planInfo(String)}. Member chỉ xếp được những buổi tập mà
+     * kế hoạch đã định, không tự ý kéo workout ngoài kế hoạch vào lịch.</p>
+     *
+     * <p>Chưa có template phù hợp (member chưa làm survey, hoặc CM chưa dựng
+     * template cho level đó) thì trả toàn bộ workout cùng level để sidebar
+     * không rỗng và member vẫn tự xếp được.</p>
+     */
     @Transactional(readOnly = true)
     public List<AvailableWorkoutResponse> availableWorkouts(String email) {
         User user = loadUser(email);
@@ -96,7 +107,24 @@ public class MemberScheduleService {
         // Chưa xếp được level (member chưa làm survey) thì trả toàn bộ để sidebar không rỗng.
         List<WorkoutEntry> target = pool.isEmpty() ? schedulableWorkouts() : pool;
 
+        // Chỉ những workout trong template đã duyệt mới được xếp lịch.
+        Optional<List<String>> plannedCodes = planInfo(email)
+                .map(PlanInfoResponse::days)
+                .filter(days -> !days.isEmpty())
+                .map(days -> days.stream().map(PlanDayResponse::workoutCode).toList());
+
+        if (plannedCodes.isEmpty()) {
+            return target.stream()
+                    .map(this::toWorkoutCard)
+                    .sorted(Comparator.comparing(AvailableWorkoutResponse::category)
+                            .thenComparing(AvailableWorkoutResponse::level)
+                            .thenComparing(AvailableWorkoutResponse::name))
+                    .toList();
+        }
+
+        List<String> allowed = plannedCodes.get();
         return target.stream()
+                .filter(workout -> allowed.contains(workout.getCode()))
                 .map(this::toWorkoutCard)
                 .sorted(Comparator.comparing(AvailableWorkoutResponse::category)
                         .thenComparing(AvailableWorkoutResponse::level)
