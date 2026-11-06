@@ -58,5 +58,5 @@ SET w.type = CASE WHEN EXISTS (
         WHERE we.workout_id = w.id
           AND UPPER(e.type) = 'SKILL'
     ) THEN 'SKILL' ELSE 'HEALTH' END
-WHERE w.type IS NULL
+WHERE w.type IS NULL  
    OR UPPER(w.type) = 'WORKOUT';
