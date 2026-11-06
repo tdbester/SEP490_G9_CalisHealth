@@ -35,6 +35,13 @@ public class RecommendedPlanService {
     /** Thứ trong tuần, thứ hai trước. */
     private static final String[] WEEK_DAYS = {"MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"};
 
+    /** Cùng level + cùng số buổi/tuần: lấy plan cập nhật gần nhất (mỗi cặp chỉ nên có 1 plan active). */
+    private static final Comparator<DailyPlanTemplate> MOST_RECENT =
+            Comparator.comparing(DailyPlanTemplate::getUpdatedAt,
+                            Comparator.nullsFirst(Comparator.naturalOrder()))
+                    .thenComparing(DailyPlanTemplate::getId)
+                    .reversed();
+
     private final DailyPlanTemplateRepository templates;
 
     /**
@@ -94,8 +101,7 @@ public class RecommendedPlanService {
         if (desiredDaysPerWeek != null && desiredDaysPerWeek > 0) {
             DailyPlanTemplate exact = forLevel.stream()
                     .filter(item -> item.getDaysPerWeek() == desiredDaysPerWeek)
-                    .min(Comparator.comparingInt(DailyPlanTemplate::getMonthNumber)
-                            .thenComparing(DailyPlanTemplate::getId))
+                    .min(MOST_RECENT)
                     .orElse(null);
             if (exact != null) {
                 return exact;
@@ -104,8 +110,7 @@ public class RecommendedPlanService {
         return forLevel.stream()
                 .min(Comparator.comparingInt((DailyPlanTemplate item) ->
                                 desiredDaysPerWeek == null ? 0 : Math.abs(item.getDaysPerWeek() - desiredDaysPerWeek))
-                        .thenComparingInt(DailyPlanTemplate::getMonthNumber)
-                        .thenComparing(DailyPlanTemplate::getId))
+                        .thenComparing(MOST_RECENT))
                 .orElse(null);
     }
 
