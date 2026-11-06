@@ -29,7 +29,7 @@ import java.util.UUID;
 
 /**
  * Daily Training Plan Templates: the Content Manager schedules existing system workouts onto the
- * training days of a (level, month, days per week) combination.
+ * training days of a (level, days per week) combination.
  */
 @Service
 @RequiredArgsConstructor
@@ -74,7 +74,7 @@ public class DailyPlanTemplateService {
         DailyPlanTemplate template = load(code);
         if (active) {
             assertLevelActive(template.getLevel());
-            assertNoOtherActive(template, template.getLevel(), template.getMonthNumber(), template.getDaysPerWeek());
+            assertNoOtherActive(template, template.getLevel(), template.getDaysPerWeek());
             if (template.getDays().stream().anyMatch(day -> !day.getWorkout().isActive())) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                         "Replace the inactive workouts in this plan before activating it");
@@ -109,11 +109,7 @@ public class DailyPlanTemplateService {
         }
         String level = resolveLevelName(request.level());
         if (requireActiveLevel) assertLevelActive(level);
-        int month = request.monthNumber() == null ? 1 : request.monthNumber();
         int daysPerWeek = request.daysPerWeek() == null ? 3 : request.daysPerWeek();
-        if (month < 1 || month > 24) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Training month must be between 1 and 24");
-        }
         if (daysPerWeek < 1 || daysPerWeek > 7) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Days per week must be between 1 and 7");
         }
@@ -122,13 +118,12 @@ public class DailyPlanTemplateService {
         List<DailyPlanDay> days = buildDays(request.days(), daysPerWeek, level, active);
         if (active) {
             assertLevelActive(level);
-            assertNoOtherActive(template, level, month, daysPerWeek);
+            assertNoOtherActive(template, level, daysPerWeek);
         }
 
         template.setName(name);
         template.setDescription(description);
         template.setLevel(level);
-        template.setMonthNumber(month);
         template.setDaysPerWeek(daysPerWeek);
         template.setActive(active);
         template.getDays().clear();
@@ -179,17 +174,16 @@ public class DailyPlanTemplateService {
         return days;
     }
 
-    /** One active plan per (level, month, days per week), so a member always maps to a single plan. */
-    private void assertNoOtherActive(DailyPlanTemplate self, String level, int month, int daysPerWeek) {
+    /** One active plan per (level, days per week), so a member always maps to a single plan. */
+    private void assertNoOtherActive(DailyPlanTemplate self, String level, int daysPerWeek) {
         boolean conflict = templates.findAll().stream().anyMatch(other ->
                 other.isActive()
                         && !other.getCode().equals(self.getCode())
                         && other.getLevel().equalsIgnoreCase(level)
-                        && other.getMonthNumber() == month
                         && other.getDaysPerWeek() == daysPerWeek);
         if (conflict) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "An active plan already exists for " + level + " · Month " + month + " · " + daysPerWeek
+                    "An active plan already exists for " + level + " · " + daysPerWeek
                             + " days/week. Set it inactive first or save this plan as Inactive");
         }
     }
@@ -228,7 +222,7 @@ public class DailyPlanTemplateService {
                 .toList();
         return new DailyPlanTemplateResponse(
                 template.getId(), template.getCode(), template.getName(), template.getDescription(), template.getLevel(),
-                template.getMonthNumber(), template.getDaysPerWeek(), template.isActive(), template.getUpdatedAt(),
+                template.getDaysPerWeek(), template.isActive(), template.getUpdatedAt(),
                 template.getCreatedBy() == null ? null : template.getCreatedBy().getFullName(),
                 days);
     }

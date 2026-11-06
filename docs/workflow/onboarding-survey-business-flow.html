@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>CalisHealth — Onboarding Survey &amp; Training Plan Recommendation (Business Workflow)</title>
+<style>
+  body {
+    margin: 0;
+    padding: 28px;
+    background: #f6f4fc;
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #2a2140;
+  }
+  h1 { font-size: 23px; margin: 0 0 6px; color: #2b1b4d; }
+  p.lede { margin: 0 0 18px; max-width: 1080px; font-size: 14px; line-height: 1.65; color: #5b4b7d; }
+  .story { max-width: 1080px; font-size: 14px; line-height: 1.7; color: #4a3d68; }
+  .story h2 { font-size: 16px; color: #4a2d86; margin: 26px 0 6px; }
+  .story p { margin: 0 0 10px; }
+  .card { background: #fff; border-radius: 14px; padding: 18px 22px; margin: 18px 0; box-shadow: 0 8px 26px rgba(43,27,77,.08); }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #ece7f7; vertical-align: top; }
+  th { color: #4a2d86; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  code { background: #f2effa; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+  ul.legend { margin: 0 0 14px; padding-left: 18px; color: #5b4b7d; font-size: 12.5px; }
+  ul.legend li { margin: 3px 0; }
+  .sw { display: inline-block; width: 26px; height: 3px; vertical-align: middle; margin-right: 7px; border-radius: 2px; }
+  svg { background: #fff; border-radius: 14px; box-shadow: 0 10px 34px rgba(43,27,77,.10); max-width: 100%; height: auto; }
+  text { font-family: "Segoe UI", Roboto, Arial, sans-serif; fill: #241a3a; }
+  .lane-bg { fill: #fbfaff; stroke: #ded3f3; stroke-width: 1; }
+  .lane-hdr { fill: #efe7ff; stroke: #c9b6f0; stroke-width: 1; }
+  .lane-title { font-size: 14px; font-weight: 700; fill: #4a2d86; }
+  .lane-sub { font-size: 11.5px; fill: #7b6a9e; }
+  .node { stroke-width: 1.6; }
+  .admin { fill: #ffffff; stroke: #8b5cf6; }
+  .sys { fill: #f2f7ff; stroke: #3b82f6; }
+  .member { fill: #f0fdf4; stroke: #10b981; }
+  .warn { fill: #fff7ed; stroke: #f59e0b; }
+  .t { font-size: 12.5px; }
+  .tb { font-size: 12.5px; font-weight: 700; }
+  .lbl { font-size: 11.5px; fill: #6b5b8f; }
+  .flow { stroke: #7c3aed; stroke-width: 1.9; fill: none; }
+  .flow-soft { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+  .phase-line { stroke: #c4b5e3; stroke-width: 1.2; stroke-dasharray: 9 7; }
+  .phase-bg { fill: #ffffff; }
+  .phase-t { font-size: 13px; font-weight: 700; fill: #7c3aed; letter-spacing: .5px; }
+</style>
+</head>
+<body>
+
+<h1>CalisHealth — Onboarding Survey &amp; Training Plan Recommendation</h1>
+<p class="lede">
+  The whole journey in one picture: how the Content Manager shapes the onboarding survey, how a new member
+  walks through it, and how the answers turn into a fitness level plus a training plan they can preview and start.
+  Everything below is traced straight from the current source code.
+</p>
+
+<div class="card">
+<ul class="legend">
+  <li><span class="sw" style="background:#7c3aed"></span>the happy path</li>
+  <li><span class="sw" style="background:#94a3b8"></span>optional detour (preview, skip, retake, go back)</li>
+</ul>
+
+<svg width="1460" height="2360" viewBox="0 0 1460 2360" role="img" aria-label="Business workflow of the onboarding survey and training plan recommendation">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c3aed" />
+    </marker>
+    <marker id="arrS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+    </marker>
+  </defs>
+
+  <!-- ============ lanes ============ -->
+  <rect class="lane-bg" x="40" y="20" width="420" height="2320" rx="14" />
+  <rect class="lane-bg" x="480" y="20" width="440" height="2320" rx="14" />
+  <rect class="lane-bg" x="980" y="20" width="420" height="2320" rx="14" />
+  <rect class="lane-hdr" x="40" y="20" width="420" height="62" rx="14" />
+  <rect class="lane-hdr" x="480" y="20" width="440" height="62" rx="14" />
+  <rect class="lane-hdr" x="980" y="20" width="420" height="62" rx="14" />
+
+  <text class="lane-title" x="250" y="48" text-anchor="middle">Content Manager</text>
+  <text class="lane-sub" x="250" y="67" text-anchor="middle">shaping the onboarding survey</text>
+  <text class="lane-title" x="700" y="48" text-anchor="middle">CalisHealth</text>
+  <text class="lane-sub" x="700" y="67" text-anchor="middle">keeping the rules straight</text>
+  <text class="lane-title" x="1190" y="48" text-anchor="middle">New Member</text>
+  <text class="lane-sub" x="1190" y="67" text-anchor="middle">on the onboarding journey</text>
+
+  <!-- ============ phase bands ============ -->
+  <line class="phase-line" x1="40" y1="950" x2="1420" y2="950" />
+  <line class="phase-line" x1="40" y1="1690" x2="1420" y2="1690" />
+  <rect class="phase-bg" x="48" y="92" width="330" height="22" rx="6" />
+  <text class="phase-t" x="56" y="108">PART 1 · BUILDING THE SURVEY</text>
+  <rect class="phase-bg" x="48" y="962" width="330" height="22" rx="6" />
+  <text class="phase-t" x="56" y="978">PART 2 · TAKING THE SURVEY</text>
+  <rect class="phase-bg" x="48" y="1702" width="400" height="22" rx="6" />
+  <text class="phase-t" x="56" y="1718">PART 3 · RESULT, PLAN &amp; TRAINING</text>
+
+  <!-- ================= lane A · Content Manager ================= -->
+  <rect class="node admin" x="60" y="140" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="168" text-anchor="middle">Opens Survey Management</text>
+  <text class="t" x="250" y="188" text-anchor="middle">Admin area → /admin/surveys</text>
+  <text class="t" x="250" y="205" text-anchor="middle">Picks the survey version to work on</text>
+
+  <rect class="node admin" x="60" y="254" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="282" text-anchor="middle">Creates a step</text>
+  <text class="t" x="250" y="302" text-anchor="middle">Gives it a name and a short description</text>
+  <text class="t" x="250" y="319" text-anchor="middle">A brand new step starts life as a draft</text>
+
+  <rect class="node admin" x="60" y="368" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="396" text-anchor="middle">Adds the questions</text>
+  <text class="t" x="250" y="416" text-anchor="middle">Takes one from the question bank,</text>
+  <text class="t" x="250" y="433" text-anchor="middle">or writes a brand new one</text>
+
+  <rect class="node admin" x="60" y="482" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="510" text-anchor="middle">Sets the ground rules</text>
+  <text class="t" x="250" y="530" text-anchor="middle">Required, allowed ranges, options</text>
+  <text class="t" x="250" y="547" text-anchor="middle">and when a question should show up</text>
+
+  <rect class="node admin" x="60" y="596" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="624" text-anchor="middle">Previews the step</text>
+  <text class="t" x="250" y="644" text-anchor="middle">Exactly what a member will see,</text>
+  <text class="t" x="250" y="661" text-anchor="middle">plus a dry run of the answers</text>
+
+  <rect class="node admin" x="60" y="710" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="738" text-anchor="middle">Tidies the order</text>
+  <text class="t" x="250" y="758" text-anchor="middle">Drags steps into place and saves</text>
+  <text class="t" x="250" y="775" text-anchor="middle">The Result step always stays last</text>
+
+  <rect class="node admin" x="60" y="824" width="380" height="74" rx="12" />
+  <text class="tb" x="250" y="852" text-anchor="middle">Switches the step on</text>
+  <text class="t" x="250" y="872" text-anchor="middle">Draft → live, once it has at least</text>
+  <text class="t" x="250" y="889" text-anchor="middle">one active question</text>
+
+  <!-- ================= lane B · system · part 1 ================= -->
+  <rect class="node sys" x="500" y="140" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="168" text-anchor="middle">Holds the survey still for a moment</text>
+  <text class="t" x="700" y="188" text-anchor="middle">One editor writes at a time</text>
+  <text class="t" x="700" y="205" text-anchor="middle">Archived versions are read only</text>
+
+  <rect class="node sys" x="500" y="254" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="282" text-anchor="middle">Checks the questions</text>
+  <text class="t" x="700" y="302" text-anchor="middle">Every type is understood, every rule is legal</text>
+  <text class="t" x="700" y="319" text-anchor="middle">A question may only be used in one step</text>
+
+  <rect class="node sys" x="500" y="368" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="396" text-anchor="middle">Saves it all down</text>
+  <text class="t" x="700" y="416" text-anchor="middle">Steps, questions, choices and links</text>
+  <text class="t" x="700" y="433" text-anchor="middle">Nothing is half written</text>
+
+  <rect class="node sys" x="500" y="482" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="510" text-anchor="middle">Runs the answers as a rehearsal</text>
+  <text class="t" x="700" y="530" text-anchor="middle">The member's own checks, but nothing</text>
+  <text class="t" x="700" y="547" text-anchor="middle">is written and no session is created</text>
+
+  <rect class="node sys" x="500" y="596" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="624" text-anchor="middle">Looks over the whole survey again</text>
+  <text class="t" x="700" y="644" text-anchor="middle">Catches clashes with other editors</text>
+  <text class="t" x="700" y="661" text-anchor="middle">If the change breaks something, nothing is saved</text>
+
+  <rect class="node sys" x="500" y="710" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="738" text-anchor="middle">Shows only the live steps</text>
+  <text class="t" x="700" y="758" text-anchor="middle">Members never see a draft or a hidden step</text>
+  <text class="t" x="700" y="775" text-anchor="middle">A step with answers is kept, not deleted</text>
+
+  <rect class="node sys" x="500" y="824" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="852" text-anchor="middle">Remembers the plan settings</text>
+  <text class="t" x="700" y="872" text-anchor="middle">Weeks, sessions per week, minutes per session,</text>
+  <text class="t" x="700" y="889" text-anchor="middle">score breakdown, preview and fallback level</text>
+
+  <!-- ================= lane B · system · part 2 ================= -->
+  <rect class="node sys" x="500" y="990" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="1018" text-anchor="middle">Opens a session for them</text>
+  <text class="t" x="700" y="1038" text-anchor="middle">One open session per member,</text>
+  <text class="t" x="700" y="1055" text-anchor="middle">pinned to the live survey version</text>
+
+  <rect class="node sys" x="500" y="1104" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="1132" text-anchor="middle">Hands over the questions</text>
+  <text class="t" x="700" y="1152" text-anchor="middle">Steps, choices and the conditions</text>
+  <text class="t" x="700" y="1169" text-anchor="middle">that decide what shows up</text>
+
+  <rect class="node sys" x="500" y="1218" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="1246" text-anchor="middle">Saves the answers</text>
+  <text class="t" x="700" y="1266" text-anchor="middle">All or nothing, one step at a time</text>
+  <text class="t" x="700" y="1283" text-anchor="middle">Sending an empty value clears an answer</text>
+
+  <rect class="node sys" x="500" y="1332" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="1360" text-anchor="middle">Validates the values</text>
+  <text class="t" x="700" y="1380" text-anchor="middle">Right type, inside the range, required filled in</text>
+  <text class="t" x="700" y="1397" text-anchor="middle">Every mistake is reported at once</text>
+
+  <rect class="node sys" x="500" y="1446" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="1474" text-anchor="middle">Marks the session as skipped</text>
+  <text class="t" x="700" y="1494" text-anchor="middle">Nothing is thrown away — it can be</text>
+  <text class="t" x="700" y="1511" text-anchor="middle">picked up again with the same answers</text>
+
+  <rect class="node sys" x="500" y="1560" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="1588" text-anchor="middle">Checks the whole survey</text>
+  <text class="t" x="700" y="1608" text-anchor="middle">Every required question that applies</text>
+  <text class="t" x="700" y="1625" text-anchor="middle">must be answered before it can close</text>
+
+  <!-- ================= lane C · member · part 2 ================= -->
+  <rect class="node member" x="1000" y="990" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="1018" text-anchor="middle">Signs in and lands on the survey</text>
+  <text class="t" x="1190" y="1038" text-anchor="middle">First time here? We send you straight</text>
+  <text class="t" x="1190" y="1055" text-anchor="middle">into the onboarding questions</text>
+
+  <rect class="node member" x="1000" y="1104" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="1132" text-anchor="middle">Picks up where they left off</text>
+  <text class="t" x="1190" y="1152" text-anchor="middle">Continue the open session, or pick a</text>
+  <text class="t" x="1190" y="1169" text-anchor="middle">skipped one back up</text>
+
+  <rect class="node member" x="1000" y="1218" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="1246" text-anchor="middle">Fills the step in and continues</text>
+  <text class="t" x="1190" y="1266" text-anchor="middle">Required questions need an answer</text>
+  <text class="t" x="1190" y="1283" text-anchor="middle">Back and Continue keep their input</text>
+
+  <rect class="node member" x="1000" y="1332" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="1360" text-anchor="middle">Watches questions come and go</text>
+  <text class="t" x="1190" y="1380" text-anchor="middle">Follow-up questions appear and hide again</text>
+  <text class="t" x="1190" y="1397" text-anchor="middle">as they change an earlier answer</text>
+
+  <rect class="node warn" x="1000" y="1446" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="1474" text-anchor="middle">Skips it for now</text>
+  <text class="t" x="1190" y="1494" text-anchor="middle">Keeps every answer so far</text>
+  <text class="t" x="1190" y="1511" text-anchor="middle">A reminder later invites them back</text>
+
+  <rect class="node member" x="1000" y="1560" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="1588" text-anchor="middle">Finishes the last step</text>
+  <text class="t" x="1190" y="1608" text-anchor="middle">The survey is complete and the</text>
+  <text class="t" x="1190" y="1625" text-anchor="middle">result screen opens</text>
+
+  <!-- ================= lane B · system · part 3 ================= -->
+  <rect class="node sys" x="500" y="1720" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="1748" text-anchor="middle">Scores the level test</text>
+  <text class="t" x="700" y="1768" text-anchor="middle">Each benchmark move earns 1, 2 or 3 points</text>
+  <text class="t" x="700" y="1785" text-anchor="middle">the points are added up</text>
+
+  <rect class="node sys" x="500" y="1834" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="1862" text-anchor="middle">Turns the score into a level</text>
+  <text class="t" x="700" y="1882" text-anchor="middle">Zero on one move → start at the bottom</text>
+  <text class="t" x="700" y="1899" text-anchor="middle">Unbalanced → step down one level</text>
+
+  <rect class="node sys" x="500" y="1948" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="1976" text-anchor="middle">Builds the recommended plan</text>
+  <text class="t" x="700" y="1996" text-anchor="middle">A template for that level and the number of</text>
+  <text class="t" x="700" y="2013" text-anchor="middle">days they want to train</text>
+
+  <rect class="node sys" x="500" y="2062" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="2090" text-anchor="middle">Fills in the member profile</text>
+  <text class="t" x="700" y="2110" text-anchor="middle">Gender, age, height, weight, goal, days</text>
+  <text class="t" x="700" y="2127" text-anchor="middle">plus the very first body measurement</text>
+
+  <rect class="node sys" x="500" y="2176" width="400" height="74" rx="12" />
+  <text class="tb" x="700" y="2204" text-anchor="middle">Saves the level and the rhythm</text>
+  <text class="t" x="700" y="2224" text-anchor="middle">One result per session, so a redo</text>
+  <text class="t" x="700" y="2241" text-anchor="middle">replaces the old score instead of stacking</text>
+
+  <!-- ================= lane C · member · part 3 ================= -->
+  <rect class="node member" x="1000" y="1720" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="1748" text-anchor="middle">Sees their level</text>
+  <text class="t" x="1190" y="1768" text-anchor="middle">The level, how they got there and</text>
+  <text class="t" x="1190" y="1785" text-anchor="middle">the score for every single move</text>
+
+  <rect class="node member" x="1000" y="1834" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="1862" text-anchor="middle">Sees the recommended plan</text>
+  <text class="t" x="1190" y="1882" text-anchor="middle">Weeks, sessions per week and the</text>
+  <text class="t" x="1190" y="1899" text-anchor="middle">shape of their week</text>
+
+  <rect class="node member" x="1000" y="1948" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="1976" text-anchor="middle">Previews the training plan</text>
+  <text class="t" x="1190" y="1996" text-anchor="middle">A month calendar with the training days</text>
+  <text class="t" x="1190" y="2013" text-anchor="middle">marked, and the exercises of the chosen day</text>
+
+  <rect class="node member" x="1000" y="2062" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="2090" text-anchor="middle">Starts their plan</text>
+  <text class="t" x="1190" y="2110" text-anchor="middle">Level and weekly rhythm are confirmed</text>
+  <text class="t" x="1190" y="2127" text-anchor="middle">and the dashboard opens ready to train</text>
+
+  <rect class="node member" x="1000" y="2176" width="380" height="74" rx="12" />
+  <text class="tb" x="1190" y="2204" text-anchor="middle">Changes their mind</text>
+  <text class="t" x="1190" y="2224" text-anchor="middle">Back to the level test to redo it,</text>
+  <text class="t" x="1190" y="2241" text-anchor="middle">or retake the whole survey</text>
+
+  <!-- ============ arrows ============ -->
+  <!-- lane A vertical -->
+  <path class="flow" d="M250,214 V254" marker-end="url(#arr)" />
+  <path class="flow" d="M250,328 V368" marker-end="url(#arr)" />
+  <path class="flow" d="M250,442 V482" marker-end="url(#arr)" />
+  <path class="flow" d="M250,556 V596" marker-end="url(#arr)" />
+  <path class="flow" d="M250,670 V710" marker-end="url(#arr)" />
+  <path class="flow" d="M250,784 V824" marker-end="url(#arr)" />
+
+  <!-- lane B vertical (part 1) -->
+  <path class="flow" d="M700,214 V254" marker-end="url(#arr)" />
+  <path class="flow" d="M700,328 V368" marker-end="url(#arr)" />
+  <path class="flow" d="M700,442 V482" marker-end="url(#arr)" />
+  <path class="flow" d="M700,556 V596" marker-end="url(#arr)" />
+  <path class="flow" d="M700,670 V710" marker-end="url(#arr)" />
+  <path class="flow" d="M700,784 V824" marker-end="url(#arr)" />
+
+  <!-- lane A ↔ lane B (part 1) -->
+  <path class="flow" d="M440,177 H498" marker-end="url(#arr)" />
+  <path class="flow" d="M440,291 H498" marker-end="url(#arr)" />
+  <path class="flow" d="M440,405 H498" marker-end="url(#arr)" />
+  <path class="flow" d="M440,519 H498" marker-end="url(#arr)" />
+  <path class="flow" d="M440,633 H498" marker-end="url(#arr)" />
+  <path class="flow" d="M440,747 H498" marker-end="url(#arr)" />
+  <path class="flow" d="M440,861 H498" marker-end="url(#arr)" />
+
+  <!-- part 1 → part 2 : the survey reaches the member -->
+  <path class="flow" d="M700,898 V940 H1190 V988" marker-end="url(#arr)" />
+
+  <!-- lane B vertical (part 2) -->
+  <path class="flow" d="M700,1064 V1104" marker-end="url(#arr)" />
+  <path class="flow" d="M700,1178 V1218" marker-end="url(#arr)" />
+  <path class="flow" d="M700,1292 V1332" marker-end="url(#arr)" />
+  <path class="flow" d="M700,1406 V1446" marker-end="url(#arr)" />
+  <path class="flow" d="M700,1520 V1560" marker-end="url(#arr)" />
+
+  <!-- lane C vertical (part 2) -->
+  <path class="flow" d="M1190,1064 V1104" marker-end="url(#arr)" />
+  <path class="flow" d="M1190,1178 V1218" marker-end="url(#arr)" />
+  <path class="flow" d="M1190,1292 V1332" marker-end="url(#arr)" />
+  <path class="flow" d="M1190,1406 V1446" marker-end="url(#arr)" />
+
+  <!-- lane C → system (asks) -->
+  <path class="flow" d="M1000,1008 H902" marker-end="url(#arr)" />
+  <path class="flow" d="M1000,1122 H902" marker-end="url(#arr)" />
+  <path class="flow" d="M1000,1236 H902" marker-end="url(#arr)" />
+  <path class="flow" d="M1000,1350 H902" marker-end="url(#arr)" />
+  <path class="flow" d="M1000,1464 H902" marker-end="url(#arr)" />
+
+  <!-- system → lane C (answer) -->
+  <path class="flow" d="M900,1046 H998" marker-end="url(#arr)" />
+  <path class="flow" d="M900,1160 H998" marker-end="url(#arr)" />
+  <path class="flow" d="M900,1274 H998" marker-end="url(#arr)" />
+  <path class="flow" d="M900,1388 H998" marker-end="url(#arr)" />
+  <path class="flow" d="M900,1502 H998" marker-end="url(#arr)" />
+  <path class="flow" d="M900,1598 H998" marker-end="url(#arr)" />
+
+  <!-- part 2 → part 3 : the level gets scored -->
+  <path class="flow" d="M1190,1634 V1670 H700 V1718" marker-end="url(#arr)" />
+
+  <!-- lane B vertical (part 3) -->
+  <path class="flow" d="M700,1794 V1834" marker-end="url(#arr)" />
+  <path class="flow" d="M700,1908 V1948" marker-end="url(#arr)" />
+  <path class="flow" d="M700,2022 V2062" marker-end="url(#arr)" />
+  <path class="flow" d="M700,2136 V2176" marker-end="url(#arr)" />
+
+  <!-- system → lane C (part 3) -->
+  <path class="flow" d="M900,1757 H998" marker-end="url(#arr)" />
+  <path class="flow" d="M900,1871 H998" marker-end="url(#arr)" />
+  <path class="flow" d="M900,2099 H998" marker-end="url(#arr)" />
+
+  <!-- lane C vertical (part 3) -->
+  <path class="flow" d="M1190,1794 V1834" marker-end="url(#arr)" />
+  <path class="flow" d="M1190,1908 V1948" marker-end="url(#arr)" />
+  <path class="flow" d="M1190,2022 V2062" marker-end="url(#arr)" />
+  <path class="flow" d="M1190,2136 V2176" marker-end="url(#arr)" />
+
+  <!-- detours -->
+  <!-- preview the plan: a modal on the result screen, closing it simply returns there -->
+  <path class="flow-soft" d="M1380,1968 H1412 V1900 H1382" marker-end="url(#arrS)" />
+  <text class="lbl" x="1404" y="1894" text-anchor="end">close the preview</text>
+
+  <!-- back to the level test -->
+  <path class="flow-soft" d="M1380,2196 H1432 V1350 H1382" marker-end="url(#arrS)" />
+  <text class="lbl" x="1424" y="1344" text-anchor="end">redo the level test</text>
+
+  <!-- retake the whole survey -->
+  <path class="flow-soft" d="M1380,2226 H1452 V1008 H1382" marker-end="url(#arrS)" />
+  <text class="lbl" x="1444" y="1002" text-anchor="end">retake the survey</text>
+
+  <!-- the reminder that brings a skipped member back -->
+  <path class="flow-soft" d="M1000,1512 H950 V1140 H998" marker-end="url(#arrS)" />
+  <text class="lbl" x="944" y="1132" text-anchor="end">a reminder invites them back</text>
+
+  <!-- labels -->
+  <text class="lbl" x="452" y="170" text-anchor="start">asks</text>
+  <text class="lbl" x="452" y="398" text-anchor="start">saves</text>
+  <text class="lbl" x="906" y="1694" text-anchor="middle">scored right away</text>
+</svg>
+</div>
+
+<div class="story">
+  <h2>How to read it</h2>
+  <p>
+    Three lanes, one story. The <strong>Content Manager</strong> lane is where the survey is designed,
+    the <strong>CalisHealth</strong> lane is the quiet machinery that keeps everything honest, and the
+    <strong>New Member</strong> lane is what a person actually experiences.
+  </p>
+
+  <h2>Part 1 — The survey gets built</h2>
+  <p>
+    The Content Manager opens Survey Management and works on the live survey version. Every new step is created
+    as a draft, so nothing reaches a member until it is deliberately switched on. While the step is being written,
+    CalisHealth quietly checks that every question type is understood, that a question is not used in two steps at once,
+    and that a "show this only if…" condition can only look backwards at questions the member has already answered.
+    If a change would break the survey, the whole save is rejected and the manager is told what to fix — the survey
+    is never left in a half-changed state.
+  </p>
+  <p>
+    A big part of the work is the preview: the manager sees the step exactly as a member will see it, and can
+    type in test answers to see how the validation reacts. Nothing is stored, no session is created — it is a rehearsal.
+    Finally the step is switched on, and the Result step is configured with the shape of the plan that will be
+    recommended later: how many weeks, how many sessions a week, how long each session lasts, whether to show the
+    score breakdown and the plan preview, and which level to fall back on if the member never finishes the level test.
+  </p>
+
+  <h2>Part 2 — The member answers</h2>
+  <p>
+    A member who signs in for the first time is guided straight into the onboarding survey. CalisHealth opens a
+    session for them and pins it to the survey version that is live right now, so the questions never shift under
+    their feet halfway through. If they leave and come back, they continue the same session with their earlier
+    answers intact.
+  </p>
+  <p>
+    Each step is saved all-or-nothing: the answers are checked against the real rules first — right type, inside the
+    allowed range, required questions filled in, follow-up questions matching the earlier choices — and if anything
+    is off, the member is told exactly what to correct and nothing is written. When they tap Continue on the final
+    step, the survey is marked complete and the level is scored in the same breath.
+  </p>
+  <p>
+    Members are never trapped. "Skip for now" keeps everything they have entered, drops them back on the dashboard,
+    and a reminder later invites them to finish it.
+  </p>
+
+  <h2>Part 3 — Result, plan and training</h2>
+  <p>
+    The result screen shows the level they landed on, the score of every move in the level test, and the plan that
+    goes with it. The plan comes from the training templates: the one built for their level and, when possible, for
+    the exact number of days a week they said they want to train — otherwise the closest match.
+  </p>
+  <p>
+    "Preview training plan" opens a month calendar with the training days marked and the exercises of the selected
+    day, so they can see the shape of the weeks before committing. "Start my training plan" confirms it, writes the
+    level and the weekly rhythm onto their profile, and returns them to the dashboard to begin training.
+    And if the level does not feel right, they can go back to the level test and redo it — the old score is cleared
+    and replaced, never stacked.
+  </p>
+</div>
+
+<div class="card">
+  <h2 style="font-size:16px;margin:0 0 10px;color:#4a2d86">Where each box lives in the code</h2>
+  <table>
+    <thead>
+      <tr><th>Part of the flow</th><th>Backend</th><th>Frontend</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Build, preview, activate and configure a step</td>
+        <td><code>ContentSurveyStepController</code>, <code>SurveyStepManagementService</code>, <code>SurveyConfigValidator</code></td>
+        <td><code>pages/content/SurveyManagement.jsx</code>, <code>components/content/PreviewStepModal.jsx</code>, <code>ConfigureResultModal.jsx</code></td>
+      </tr>
+      <tr>
+        <td>Session lifecycle, saving answers, completing</td>
+        <td><code>SurveySessionController</code>, <code>SurveySessionService</code></td>
+        <td><code>pages/survey/SurveyFlow.jsx</code>, <code>SurveyStepPage.jsx</code></td>
+      </tr>
+      <tr>
+        <td>Scoring the level test</td>
+        <td><code>LevelBenchmarkService</code>, <code>LevelAssessmentService</code></td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>Recommended plan</td>
+        <td><code>RecommendedPlanService</code> (daily plan templates)</td>
+        <td><code>pages/survey/SurveyResult.jsx</code></td>
+      </tr>
+      <tr>
+        <td>Preview the training plan</td>
+        <td>— (built from the plan payload)</td>
+        <td><code>components/survey/TrainingPlanPreviewModal.jsx</code>, <code>utils/planCalendar.js</code></td>
+      </tr>
+      <tr>
+        <td>Answers copied onto the profile</td>
+        <td><code>SurveyProfileSync</code>, <code>LevelAssessmentService.updateProfileFromSurvey</code></td>
+        <td>—</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

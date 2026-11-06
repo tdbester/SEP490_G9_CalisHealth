@@ -71,7 +71,6 @@ public final class MemberScheduleDtos {
             String templateCode,
             String templateName,
             String level,
-            int monthNumber,
             int daysPerWeek,
             int year,
             /**

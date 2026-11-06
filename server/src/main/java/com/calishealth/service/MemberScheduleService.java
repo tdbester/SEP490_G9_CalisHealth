@@ -57,6 +57,18 @@ public class MemberScheduleService {
     /** Số ngày tập tối đa mỗi tuần khi member chưa có template active. */
     private static final int DEFAULT_MAX_DAYS_PER_WEEK = 3;
 
+    /**
+     * Cùng level + cùng số buổi/tuần thì lấy plan cập nhật gần nhất.
+     *
+     * <p>Template không còn phân biệt "tháng training" nữa (mỗi level + số buổi/tuần
+     * chỉ nên có 1 plan active), nên không thể sắp theo tháng như trước.</p>
+     */
+    private static final Comparator<DailyPlanTemplate> MOST_RECENT_TEMPLATE =
+            Comparator.comparing(DailyPlanTemplate::getUpdatedAt,
+                            Comparator.nullsFirst(Comparator.naturalOrder()))
+                    .thenComparing(DailyPlanTemplate::getId)
+                    .reversed();
+
     /** Giây ước lượng cho 1 rep khi bài tập tính theo số lần. */
     private static final int SECONDS_PER_REP = 3;
     /** Thời lượng mặc định cho 1 hiệp khi bài tập không khai báo gì. */
@@ -104,12 +116,11 @@ public class MemberScheduleService {
                 .filter(DailyPlanTemplate::isActive)
                 .filter(template -> memberLevel.isEmpty()
                         || memberLevel.get().equalsIgnoreCase(template.getLevel()))
-                .min(Comparator.comparingInt(DailyPlanTemplate::getMonthNumber))
+                .min(MOST_RECENT_TEMPLATE)
                 .map(template -> new PlanInfoResponse(
                         template.getCode(),
                         template.getName(),
                         template.getLevel(),
-                        template.getMonthNumber(),
                         template.getDaysPerWeek(),
                         LocalDate.now().getYear(),
                         templateDays(template)));

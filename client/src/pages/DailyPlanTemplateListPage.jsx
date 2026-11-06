@@ -33,8 +33,8 @@ const BREADCRUMB = [
   { label: "Daily Training Plans" },
 ];
 
-// Fixed widths: Name, Level, Type, Month, Days/week, Status, Action.
-const COLUMN_WIDTHS = ["27%", "12%", "14%", "11%", "12%", "12%", "12%"];
+// Fixed widths: Name, Level, Type, Days/week, Status, Action.
+const COLUMN_WIDTHS = ["31%", "14%", "16%", "13%", "13%", "13%"];
 
 export function StatusDot({ active }) {
   return (
@@ -109,7 +109,7 @@ export default function DailyPlanTemplateListPage() {
       <ContentPageHeader
         breadcrumb={BREADCRUMB}
         title="Daily Training Plan Templates"
-        description="Schedule existing system workouts onto each training day by level, month, and days per week."
+        description="Schedule existing system workouts onto each training day by level and days per week."
         action={(
           <Button component={RouterLink} to={`${CONTENT_PATHS.templates}/new`} variant="contained" startIcon={<AddRoundedIcon />}>
             Create plan
@@ -183,7 +183,6 @@ export default function DailyPlanTemplateListPage() {
                     <TableCell>Name</TableCell>
                     <TableCell>Level</TableCell>
                     <TableCell>Type</TableCell>
-                    <TableCell>Month</TableCell>
                     <TableCell>Days / week</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Action</TableCell>
@@ -203,7 +202,6 @@ export default function DailyPlanTemplateListPage() {
                       </TableCell>
                       <TableCell><DarkPill tone={levelTone(item.level)}>{item.level || "—"}</DarkPill></TableCell>
                       <TableCell><DarkPill tone="primary">{planType(item.days)}</DarkPill></TableCell>
-                      <TableCell><Typography variant="body2" sx={{ color: "#fff", fontWeight: 600 }}>Month {item.monthNumber}</Typography></TableCell>
                       <TableCell><Typography sx={{ color: "#fff", fontSize: 18, fontWeight: 700, lineHeight: 1.2 }}>{item.daysPerWeek}</Typography></TableCell>
                       <TableCell><Box sx={{ display: "flex", justifyContent: "center" }}><StatusDot active={item.active} /></Box></TableCell>
                       <TableCell>
@@ -220,7 +218,7 @@ export default function DailyPlanTemplateListPage() {
                   ))}
                   {rows.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} sx={{ py: 6 }}>
+                      <TableCell colSpan={6} sx={{ py: 6 }}>
                         <Stack alignItems="center" spacing={1}>
                           <EventNoteRoundedIcon sx={{ fontSize: 44, color: CM.textDim, opacity: 0.4 }} />
                           <Typography variant="body2" color="text.secondary">
