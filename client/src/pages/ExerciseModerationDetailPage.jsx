@@ -10,6 +10,7 @@ import { contentManagerApi, mediaUrl } from "../api/contentManager";
 import { useApiMutation, useApiQuery } from "../hooks";
 import { CONTENT_PATHS, ContentPageHeader, DarkPill, formatDateTime } from "../components/ContentShared";
 import { CM } from "../theme-content";
+import MediaWithFallback from "../components/common/MediaWithFallback";
 import { GuideSteps } from "./SystemExerciseDetailPage";
 
 const rise = keyframes`
@@ -123,7 +124,7 @@ export default function ExerciseModerationDetailPage() {
         <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
           <Typography variant="subtitle2" fontWeight={700} sx={{ color: "#fff" }}>Demo video</Typography>
           {entry.demoVideoUrl ? (
-            <Box component="video" src={mediaUrl(entry.demoVideoUrl)} controls aria-label={`${entry.name} demo video`} sx={{ mt: 1.5, width: "100%", maxHeight: 420, borderRadius: 2, bgcolor: "#000", display: "block" }} />
+            <MediaWithFallback kind="video" src={mediaUrl(entry.demoVideoUrl)} alt={`${entry.name} demo video`} sx={{ mt: 1.5, width: "100%", maxHeight: 420, borderRadius: 2, bgcolor: "#000", display: "block" }} />
           ) : <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>No demo video uploaded.</Typography>}
 
           <Divider sx={{ my: 2.5 }} />
@@ -132,7 +133,7 @@ export default function ExerciseModerationDetailPage() {
               <Box sx={{ width: "100%", border: `1px solid ${CM.border}`, borderRadius: 1.5, p: { xs: 1.5, sm: 1.75 } }}>
                 <Typography variant="subtitle2" fontWeight={700} sx={{ color: "#fff" }}>Muscle anatomy</Typography>
                 {entry.anatomyImageUrl ? (
-                  <Box component="img" src={mediaUrl(entry.anatomyImageUrl)} alt={`${entry.name} muscle anatomy`} sx={{ mt: 1.5, width: "100%", height: { xs: 280, sm: 340, md: 380 }, objectFit: "contain", borderRadius: 1, bgcolor: "rgba(19,10,39,0.7)", display: "block" }} />
+                  <MediaWithFallback src={mediaUrl(entry.anatomyImageUrl)} alt={`${entry.name} muscle anatomy`} sx={{ mt: 1.5, width: "100%", height: { xs: 280, sm: 340, md: 380 }, objectFit: "contain", borderRadius: 1, bgcolor: "rgba(19,10,39,0.7)", display: "block" }} />
                 ) : <Box sx={{ minHeight: { xs: 280, sm: 340, md: 380 }, display: "grid", placeItems: "center" }}><Typography variant="body2" color="text.secondary">No anatomy image uploaded.</Typography></Box>}
               </Box>
             </Grid>

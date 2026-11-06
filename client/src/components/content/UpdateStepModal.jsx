@@ -1,22 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
-import LibraryAddOutlinedIcon from "@mui/icons-material/LibraryAddOutlined";
 import DragIndicatorRoundedIcon from "@mui/icons-material/DragIndicatorRounded";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import ModalShell from "../common/ModalShell";
 import QuestionEditor from "./QuestionEditor";
 import { contentSurveyApi } from "../../api/contentSurvey";
 import { surveyErrorMessage } from "../../api/survey";
-import { questionLabel } from "../../utils/survey";
 import {
   DESCRIPTION_MAX,
   STATUS_LABELS,
   blankRow,
   errorDetails,
   questionToRow,
-  rangeText,
   rowProblems,
   rowSummary,
   rowToInput,
@@ -28,7 +24,7 @@ const STATUSES = ["ACTIVE", "DRAFT", "INACTIVE"];
 
 /**
  * Popup Create / Update step (Figma: survey-update-step), câu hỏi soạn ngay trong popup kiểu Google Form:
- * "New question" tạo câu mới, "Add existing" lấy lại câu có sẵn trong ngân hàng; mỗi câu bấm để mở editor.
+ * "New question" tạo câu mới; mỗi câu bấm để mở editor.
  * stepId = null -> Create step: bước mới ở DRAFT, lưu cả câu hỏi trong 1 request rồi quay về trang Survey.
  * Save changes gửi toàn bộ popup trong 1 request (F4), kèm revision để không ghi đè người khác.
  */
@@ -40,11 +36,9 @@ export default function UpdateStepModal({ open, stepId, totalSteps, onClose, onS
   const [error, setError] = useState(null); // { text, details, stale }
   const [dragKey, setDragKey] = useState(null);
   const [expandedKey, setExpandedKey] = useState(null);
-  const [picker, setPicker] = useState(null); // { search, items, loading } khi đang Add existing
 
   const load = useCallback(() => {
     setError(null);
-    setPicker(null);
     setExpandedKey(null);
     if (isCreate) {
       setForm({ stepName: "", description: "", status: "DRAFT", questions: [] });
@@ -71,23 +65,6 @@ export default function UpdateStepModal({ open, stepId, totalSteps, onClose, onS
     if (open) load();
   }, [open, load]);
 
-  // Add existing: tải câu hỏi có thể thêm, lọc theo ô tìm kiếm (trễ 250ms)
-  const pickerSearch = picker?.search;
-  useEffect(() => {
-    if (pickerSearch === undefined) return undefined;
-    let active = true;
-    const timer = setTimeout(() => {
-      contentSurveyApi
-        .availableQuestions(stepId, pickerSearch.trim())
-        .then((items) => active && setPicker((p) => p && { ...p, items, loading: false }))
-        .catch((err) => active && setPicker((p) => p && { ...p, items: [], loading: false, error: surveyErrorMessage(err) }));
-    }, 250);
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [pickerSearch, stepId]);
-
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }));
   const setQuestions = (update) => setForm((f) => ({ ...f, questions: update(f.questions) }));
   const patchQuestion = (key, patch) => setQuestions((qs) => qs.map((q) => (q.key === key ? { ...q, ...patch } : q)));
@@ -96,7 +73,6 @@ export default function UpdateStepModal({ open, stepId, totalSteps, onClose, onS
     const row = blankRow();
     setQuestions((qs) => [...qs, row]);
     setExpandedKey(row.key);
-    setPicker(null);
   };
 
   const moveQuestion = (targetKey) => {
@@ -159,7 +135,6 @@ export default function UpdateStepModal({ open, stepId, totalSteps, onClose, onS
 
   const step = state.step;
   const published = step && step.status !== "DRAFT";
-  const inForm = new Set(form.questions.map((q) => q.questionCode).filter(Boolean));
 
   return (
     <ModalShell
@@ -255,14 +230,6 @@ export default function UpdateStepModal({ open, stepId, totalSteps, onClose, onS
             <div className="cs-questions-head">
               <span className="cs-label cs-label--lg">Questions ({form.questions.length})</span>
               <div className="cs-questions-actions">
-                <button
-                  type="button"
-                  className="cs-text-btn"
-                  onClick={() => setPicker(picker ? null : { search: "", items: [], loading: true })}
-                >
-                  <LibraryAddOutlinedIcon />
-                  {picker ? "Done adding" : "Add existing"}
-                </button>
                 <button type="button" className="cs-text-btn" onClick={addNewQuestion}>
                   <AddRoundedIcon />
                   New question
@@ -270,59 +237,9 @@ export default function UpdateStepModal({ open, stepId, totalSteps, onClose, onS
               </div>
             </div>
 
-            {picker && (
-              <div className="cs-picker">
-                <label className="cs-picker-search">
-                  <SearchRoundedIcon />
-                  <input
-                    type="search"
-                    placeholder="Search questions"
-                    maxLength={100}
-                    value={picker.search}
-                    onChange={(e) => setPicker({ ...picker, search: e.target.value, loading: true })}
-                    onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
-                    autoFocus
-                  />
-                </label>
-                {picker.loading ? (
-                  <p className="cs-muted cs-pad">Loading questions…</p>
-                ) : picker.error ? (
-                  <p className="cs-error">{picker.error}</p>
-                ) : picker.items.length === 0 ? (
-                  <p className="cs-muted cs-pad">No questions available. Questions used in other steps are hidden.</p>
-                ) : (
-                  <ul className="cs-picker-list">
-                    {picker.items.map((q) => {
-                      const added = inForm.has(q.questionCode);
-                      return (
-                        <li key={q.questionCode}>
-                          <span>
-                            <strong>{questionLabel(q)}</strong>
-                            <small>
-                              {[typeLabel(q.questionType), rangeText(q.validationRules, q.unit), q.optionCount ? `${q.optionCount} options` : null]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </small>
-                          </span>
-                          <button
-                            type="button"
-                            className="cs-text-btn"
-                            disabled={added}
-                            onClick={() => setQuestions((qs) => [...qs, questionToRow(q)])}
-                          >
-                            {added ? "Added" : "Add"}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            )}
-
             {form.questions.length === 0 ? (
               <p className="cs-muted cs-pad">
-                No questions yet. Create a new question or reuse an existing one. Active steps need at least one question.
+                No questions yet. Add a new question. Active steps need at least one question.
               </p>
             ) : (
               <ul className="cs-question-list">

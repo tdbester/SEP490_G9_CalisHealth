@@ -1,8 +1,8 @@
 spring:
   servlet:
     multipart:
-      max-file-size: 50MB
-      max-request-size: 61MB
+      max-file-size: 500MB # upper bound; the real limit is the admin setting (storage_settings)
+      max-request-size: 520MB
   datasource:
     url: jdbc:mysql://localhost:3306/calishealth?createDatabaseIfNotExist=true
     username: ${DB_USERNAME:root}
@@ -41,6 +41,12 @@ app:
     exercise-video-dir: ${EXERCISE_VIDEO_DIR:${user.home}/calishealth/uploads/exercise-videos}
     exercise-anatomy-dir: ${EXERCISE_ANATOMY_DIR:${user.home}/calishealth/uploads/exercise-anatomy}
     profile-avatar-dir: ${PROFILE_AVATAR_DIR:${user.home}/calishealth/uploads/profile-avatars}
+  cloudinary:
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:u9vojlr2}
+    api-key: ${CLOUDINARY_API_KEY:722157934773437}
+    api-secret: ${CLOUDINARY_API_SECRET:RCWUbVn9XT46SYBFmwN_f46vcl4}
+    secure: true
+    folder: ${CLOUDINARY_FOLDER:calishealth} # blank cloud-name = store uploads on the local disk instead
   jwt:
     secret: clh-demo-secret-key-please-change-this-32-chars-min
     expiration-ms: 86400000

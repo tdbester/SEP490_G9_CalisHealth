@@ -57,6 +57,13 @@
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
+        <!-- Cloudinary: lưu video demo và ảnh anatomy -->
+        <dependency>
+            <groupId>com.cloudinary</groupId>
+            <artifactId>cloudinary-http5</artifactId>
+            <version>2.6.0</version>
+        </dependency>
+
         <!-- Flyway: nguồn sự thật duy nhất cho schema (db/migration) -->
         <dependency>
             <groupId>org.flywaydb</groupId>

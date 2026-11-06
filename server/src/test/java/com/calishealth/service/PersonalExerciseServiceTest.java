@@ -4,11 +4,13 @@ import com.calishealth.dtos.CreatePersonalExerciseRequestDTO;
 import com.calishealth.dtos.ContentTextCheckRequestDTO;
 import com.calishealth.models.Exercise;
 import com.calishealth.models.ProfanityWord;
+import com.calishealth.models.StorageSettings;
 import com.calishealth.models.User;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.ExerciseModerationHistoryRepository;
 import com.calishealth.repository.ProfanityWordRepository;
 import com.calishealth.repository.UserRepository;
+import com.cloudinary.Cloudinary;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -46,15 +48,27 @@ class PersonalExerciseServiceTest {
         profanityWords = mock(ProfanityWordRepository.class);
         systemNotifications = mock(SystemNotificationService.class);
         when(profanityWords.findByActiveTrueOrderByIdAsc()).thenReturn(blockedWords());
+        StorageSettings settings = new StorageSettings();
+        settings.setMaxVideoMb(50);
+        settings.setVideoFormats("MP4,MOV,WEBM");
+        MediaRegistryService mediaRegistry = mock(MediaRegistryService.class);
+        when(mediaRegistry.settings()).thenReturn(settings);
+        when(mediaRegistry.findSameContent(any(), any())).thenReturn(Optional.empty());
+        // Blank cloud name: files are stored on the local disk.
         ExerciseVideoStorageService videoStorage = new ExerciseVideoStorageService(
                 temporaryDirectory.resolve("videos").toString(),
-                temporaryDirectory.resolve("anatomy").toString());
+                temporaryDirectory.resolve("anatomy").toString(),
+                "",
+                "calishealth",
+                mediaRegistry,
+                mock(Cloudinary.class));
         service = new PersonalExerciseService(
                 exercises,
                 moderationHistory,
                 users,
                 new ContentModerationService(profanityWords),
                 videoStorage,
+                mediaRegistry,
                 mock(ExerciseMuscleGroupCatalog.class),
                 systemNotifications);
         User member = new User();
