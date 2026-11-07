@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import i18n from "../i18n";
 
 /** Model heavy để đạt độ ổn định 30 FPS trên laptop tầm trung. */
 const MODEL_URL = "/models/pose_landmarker_heavy.task";
@@ -117,8 +118,8 @@ export default function usePoseDetection(videoRef, enabled, onFrame) {
         console.error("Failed to load pose model:", err);
         if (!cancelled) {
           setError(
-            err?.message ||
-              "Couldn't load the AI pose model. Check your connection and retry.",
+            err?.message
+              || i18n.t("member:videoScan.poseModelLoadFailed"),
           );
           setStatus("error");
         }

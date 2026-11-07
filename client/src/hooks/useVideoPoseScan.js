@@ -9,6 +9,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import i18n from "../i18n";
 
 /** Model heavy để đạt độ ổn định trên laptop tầm trung. */
 const MODEL_URL = "/models/pose_landmarker_heavy.task";
@@ -86,8 +87,8 @@ export default function useVideoPoseScan({ videoRef, onFrame }) {
         console.error("Failed to load pose model:", err);
         if (!cancelled) {
           setError(
-            err?.message ||
-              "Couldn't load the AI pose model. Check your connection and retry.",
+            err?.message
+              || i18n.t("member:videoScan.poseModelLoadFailed"),
           );
           setStatus("error");
         }
@@ -137,7 +138,7 @@ export default function useVideoPoseScan({ videoRef, onFrame }) {
 
     const duration = Number.isFinite(video.duration) ? video.duration : 0;
     if (duration <= 0) {
-      setError("This video has no readable duration.");
+      setError(i18n.t("member:videoScan.noReadableDuration"));
       setStatus("error");
       return;
     }

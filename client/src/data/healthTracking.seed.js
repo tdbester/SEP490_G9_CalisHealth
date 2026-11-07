@@ -16,7 +16,6 @@ export default {
     weightKg: 68.4,
     weightChangeKg: -0.8,
     heightCm: 172,
-    heightNote: "Healthy range",
   },
   bmiByMonth: [
     { month: "2026-05", bmi: 22.1 },

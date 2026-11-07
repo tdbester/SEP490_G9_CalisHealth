@@ -12,7 +12,11 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import i18n from "../i18n";
 import { POSE_LANDMARKS, angleBetween, midpoint } from "./usePoseDetection";
+
+/** Dịch chuỗi phản hồi / lỗi form theo ngôn ngữ hiện tại. */
+const t = (key) => i18n.t(key);
 
 /** Góc đầu gối (độ) khi đứng thẳng — trên ngưỡng này coi như đã lên hết. */
 const STANDING_ANGLE = 160;
@@ -64,9 +68,15 @@ const PHASE = {
 
 /** Nhãn lỗi form dùng ở màn kết quả (Figma 549:1175). */
 export const FORM_ISSUES = {
-  depth: "Hips not low enough",
-  torso: "Back rounded over",
-  knee: "Left knee caving inward",
+  get depth() {
+    return t("member:tracking.formIssues.depth");
+  },
+  get torso() {
+    return t("member:tracking.formIssues.torso");
+  },
+  get knee() {
+    return t("member:tracking.formIssues.knee");
+  },
 };
 
 /**
@@ -450,7 +460,7 @@ export default function useSquatTracker({
 
     if (!landmarks || landmarks.length < 29) {
       // Không thấy người trong khung -> báo "bước vào khung hình".
-      current.lastFeedback = "Step into the frame so I can track you.";
+      current.lastFeedback = t("member:tracking.feedback.stepIntoFrame");
       current.feedbackTone = "warn";
       setState((prev) => ({ ...prev, lastFeedback: current.lastFeedback, feedbackTone: "warn" }));
       return;
@@ -472,7 +482,7 @@ export default function useSquatTracker({
 
     // Không đủ tin cậy -> coi như không có người, không tính rep.
     if (!isVisible(knee) || !isVisible(hip) || !isVisible(ankle)) {
-      current.lastFeedback = "Step into the frame so I can track you.";
+      current.lastFeedback = t("member:tracking.feedback.stepIntoFrame");
       current.feedbackTone = "warn";
       setState((prev) => ({ ...prev, lastFeedback: current.lastFeedback, feedbackTone: "warn" }));
       return;
@@ -524,7 +534,7 @@ export default function useSquatTracker({
           // nhưng không sạch (độ sâu không đạt).
           current.reps += 1;
           current.setReps += 1;
-          feedback = "Rep counted, but go deeper and keep your chest up.";
+          feedback = t("member:tracking.feedback.shallowRep");
           tone = "warn";
           current.phase = PHASE.STANDING;
           current.deepFrames = 0;
@@ -541,10 +551,10 @@ export default function useSquatTracker({
           if (isClean) {
             current.cleanReps += 1;
             current.setCleanReps += 1;
-            feedback = "Nice rep. Keep that depth.";
+            feedback = t("member:tracking.feedback.goodRep");
             tone = "good";
           } else {
-            feedback = "Rep counted, but go deeper and keep your chest up.";
+            feedback = t("member:tracking.feedback.shallowRep");
             tone = "warn";
           }
           current.phase = PHASE.ASCENDING;

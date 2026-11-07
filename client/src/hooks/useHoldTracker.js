@@ -11,7 +11,11 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import i18n from "../i18n";
 import { POSE_LANDMARKS, angleBetween, midpoint } from "./usePoseDetection";
+
+/** Dịch chuỗi phản hồi / lỗi form theo ngôn ngữ hiện tại. */
+const t = (key) => i18n.t(key);
 
 /** Ngưỡng visibility tối thiểu để tin landmark. */
 const MIN_VISIBILITY = 0.5;
@@ -27,7 +31,9 @@ const MAX_FRAME_DELTA = 0.5;
 
 /** Nhãn lỗi form dùng ở màn kết quả (Figma 549:1175). */
 export const HOLD_FORM_ISSUES = {
-  alignment: "Body not in a straight line",
+  get alignment() {
+    return t("member:tracking.formIssues.alignment");
+  },
 };
 
 /** Góc thân tối thiểu để coi là giữ đúng tư thế (độ). */
@@ -244,7 +250,7 @@ export default function useHoldTracker({ targetSeconds = 30, maxSets = Infinity 
     if (!landmarks || landmarks.length < 29) {
       // Không thấy người -> đồng hồ dừng, yêu cầu bước vào khung hình.
       current.lastTimestamp = null;
-      current.lastFeedback = "Step into the frame so I can track you.";
+      current.lastFeedback = t("member:tracking.feedback.stepIntoFrame");
       current.feedbackTone = "warn";
       setState((prev) => ({
         ...prev,
@@ -272,7 +278,7 @@ export default function useHoldTracker({ targetSeconds = 30, maxSets = Infinity 
 
     if (!hasBody) {
       current.lastTimestamp = null;
-      current.lastFeedback = "Step into the frame so I can track you.";
+      current.lastFeedback = t("member:tracking.feedback.stepIntoFrame");
       current.feedbackTone = "warn";
       setState((prev) => ({
         ...prev,
@@ -309,13 +315,13 @@ export default function useHoldTracker({ targetSeconds = 30, maxSets = Infinity 
     let tone = current.feedbackTone;
 
     if (!isStraight) {
-      feedback = "Brace your core — keep your body in one straight line.";
+      feedback = t("member:tracking.feedback.braceCore");
       tone = "warn";
     } else if (current.holdSeconds < current.targetSeconds) {
-      feedback = "Hold it steady. Keep breathing.";
+      feedback = t("member:tracking.feedback.holdSteady");
       tone = "good";
     } else {
-      feedback = "Hold complete. Nice and steady!";
+      feedback = t("member:tracking.feedback.holdComplete");
       tone = "good";
     }
 
