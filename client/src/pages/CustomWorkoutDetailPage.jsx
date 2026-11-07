@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { getCommunityWorkout } from "../api/library";
+import { FAVORITE_ITEM_TYPES } from "../api/favorites";
+import FavoriteButton from "../components/favorites/FavoriteButton";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { getLevelLabel } from "../utils/levelLabel";
 import { startLibraryWorkout } from "../utils/libraryWorkout";
 
 export default function CustomWorkoutDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const [workout, setWorkout] = useState(null);
@@ -18,7 +23,7 @@ export default function CustomWorkoutDetailPage() {
       })
       .catch((error) => {
         if (active) {
-          setErrorMessage(error.response?.data?.message || "Could not load this workout.");
+          setErrorMessage(error.response?.data?.message || t("member.catalog.loadFailed"));
         }
       });
     return () => {
@@ -29,7 +34,7 @@ export default function CustomWorkoutDetailPage() {
   const openExercise = (exercise) => {
     const exerciseId = exercise.exerciseId ?? exercise.id;
     if (exerciseId == null) {
-      setErrorMessage("This workout exercise does not have a valid exercise ID.");
+      setErrorMessage(t("member.catalog.invalidExerciseId"));
       return;
     }
 
@@ -56,7 +61,7 @@ export default function CustomWorkoutDetailPage() {
   const startWorkout = () => {
     const started = startLibraryWorkout(navigate, workout?.exercises || []);
     if (!started) {
-      setErrorMessage("This workout has no exercise you can start yet.");
+      setErrorMessage(t("member.catalog.couldNotStart"));
     }
   };
 
@@ -67,7 +72,7 @@ export default function CustomWorkoutDetailPage() {
         onClick={() => navigate("/library/custom")}
         className="text-slate-300 hover:text-white bg-[#1f1a3a] border border-[#3b2d68] hover:bg-[#2c2452] px-3 py-1.5 rounded-lg text-sm transition-all flex items-center gap-2"
       >
-        &larr; Back to community workouts
+        &larr; {t("member.catalog.backToCommunityWorkouts")}
       </button>
 
       {errorMessage ? (
@@ -75,23 +80,29 @@ export default function CustomWorkoutDetailPage() {
           {errorMessage}
         </div>
       ) : !workout ? (
-        <p className="text-sm text-slate-400">Loading workout...</p>
+        <p className="text-sm text-slate-400">{t("member.catalog.loadingWorkout")}</p>
       ) : (
         <>
           <section className="space-y-4 rounded-2xl border border-[#302653] bg-[#120d29] p-6">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-bold">{workout.title}</h1>
               <span className={`rounded-full px-3 py-1 text-xs capitalize ${getLevelBadgeStyle(workout.level)}`}>
-                {workout.level}
+                {getLevelLabel(workout.level)}
               </span>
+              <FavoriteButton
+                itemType={FAVORITE_ITEM_TYPES.MEMBER_WORKOUT}
+                itemId={workout.id}
+                label={workout.title}
+                size="lg"
+              />
             </div>
             {workout.description && <p className="text-sm text-slate-300">{workout.description}</p>}
             <p className="text-xs text-slate-400">
-              By {workout.author.name} · {workout.postedTime} · {workout.savesCount} saved
+              {t("member.catalog.byAuthor", { name: workout.author.name, posted: workout.postedTime, saved: workout.savesCount })}
             </p>
             <div className="flex flex-wrap gap-2 text-xs text-slate-300">
-              <span className="rounded-full bg-[#201748] px-3 py-1">{workout.exercisesCount} exercises</span>
-              <span className="rounded-full bg-[#201748] px-3 py-1">{workout.setsCount} sets</span>
+              <span className="rounded-full bg-[#201748] px-3 py-1">{t("member.catalog.totalExercises", { count: workout.exercisesCount })}</span>
+              <span className="rounded-full bg-[#201748] px-3 py-1">{t("member.catalog.totalSets", { count: workout.setsCount })}</span>
               <span className="rounded-full bg-[#201748] px-3 py-1">{workout.duration}</span>
             </div>
             <button
@@ -102,12 +113,12 @@ export default function CustomWorkoutDetailPage() {
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M8 5v14l11-7z" />
               </svg>
-              Start workout
+              {t("member.catalog.startWorkout")}
             </button>
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-semibold">Exercises</h2>
+            <h2 className="text-lg font-semibold">{t("member.catalog.exercisesSection")}</h2>
             {workout.exercises?.length ? (
               workout.exercises.map((exercise, index) => (
                 <button
@@ -119,17 +130,17 @@ export default function CustomWorkoutDetailPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="font-semibold">{index + 1}. {exercise.title}</h3>
                     <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium capitalize ${getLevelBadgeStyle(exercise.level || exercise.difficultyLevel)}`}>
-                      {exercise.level || exercise.difficultyLevel || "Intermediate"}
+                      {getLevelLabel(exercise.level || exercise.difficultyLevel || "Intermediate")}
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-slate-400">{exercise.targetMuscle}</p>
                   <p className="mt-3 text-sm text-slate-200">
-                    {exercise.sets} sets · {exercise.countBy === "sec" ? `${exercise.reps} sec` : `${exercise.reps} reps`} · {exercise.restSec}s rest
+                    {t("member.catalog.setSummary", { sets: exercise.sets, dosage: `${exercise.reps} ${exercise.countBy === "sec" ? t("member.catalog.seconds") : t("member.catalog.reps")}`, rest: `${exercise.restSec}s` })}
                   </p>
                 </button>
               ))
             ) : (
-              <p className="text-sm text-slate-400">No exercises in this workout.</p>
+              <p className="text-sm text-slate-400">{t("member.catalog.noExercisesInWorkout")}</p>
             )}
           </section>
         </>

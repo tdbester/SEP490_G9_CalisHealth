@@ -2,22 +2,23 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BuildRoundedIcon from "@mui/icons-material/BuildRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
+import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import notificationToast from "../utils/notificationToast";
 
 const AREAS = [
-  { value: "MEMBER_APP_ACCESS", label: "Member App Access" },
-  { value: "MEMBER_VIDEO_UPLOADS", label: "Member Video Uploads" },
-  { value: "AI_POSE_ASSESSMENT", label: "AI Pose Assessment" },
-  { value: "SYSTEM_STORAGE_CDN", label: "System Storage & CDN" },
-  { value: "ADMIN_MANAGEMENT_PORTAL", label: "Admin Management Portal" },
+  { value: "MEMBER_APP_ACCESS", labelKey: "admin.maintenance.createForm.areaMemberApp" },
+  { value: "MEMBER_VIDEO_UPLOADS", labelKey: "admin.maintenance.createForm.areaVideoUploads" },
+  { value: "AI_POSE_ASSESSMENT", labelKey: "admin.maintenance.createForm.areaAiPose" },
+  { value: "SYSTEM_STORAGE_CDN", labelKey: "admin.maintenance.createForm.areaStorage" },
+  { value: "ADMIN_MANAGEMENT_PORTAL", labelKey: "admin.maintenance.createForm.areaAdminPortal" },
 ];
 const REMINDERS = [
-  { value: 1, label: "1 hour before" },
-  { value: 12, label: "12 hours before" },
-  { value: 24, label: "24 hours before" },
-  { value: 48, label: "48 hours before" },
+  { value: 1, labelKey: "admin.maintenance.createForm.reminderOne" },
+  { value: 12, labelKey: "admin.maintenance.createForm.reminderTwelve" },
+  { value: 24, labelKey: "admin.maintenance.createForm.reminderTwentyFour" },
+  { value: 48, labelKey: "admin.maintenance.createForm.reminderFortyEight" },
 ];
 const sectionClass = "rounded-2xl border border-[#29204d] bg-[#15112f] p-4 sm:p-5";
 const fieldClass =
@@ -41,11 +42,11 @@ function getDefaultWindow() {
   return { startsAt: toLocalDateTimeValue(start), endsAt: toLocalDateTimeValue(end) };
 }
 
-function formatPreviewDate(value) {
+function formatPreviewDate(value, locale) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString("en-US", {
+  return date.toLocaleString(locale || "en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -65,6 +66,7 @@ function formatDuration(start, end) {
 }
 
 export default function CreateMaintenanceSchedulePage() {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const defaultWindow = useMemo(getDefaultWindow, []);
   const [title, setTitle] = useState("");
@@ -89,20 +91,27 @@ export default function CreateMaintenanceSchedulePage() {
     ? new Date(new Date(startsAt).getTime() + 2 * 60 * 60 * 1000)
     : null;
   const startTimeError = startsAt && new Date(startsAt) < minimumStartTime
-    ? "Start time must be at least 3 hours from now."
+    ? t("admin.maintenance.createForm.errStartTime")
     : "";
   const endTimeError = startsAt && endsAt && minimumEndTime
     && new Date(endsAt) < minimumEndTime
-    ? "Maintenance duration must be at least 2 hours."
+    ? t("admin.maintenance.createForm.errDuration")
     : "";
   const isTimeInvalid = Boolean(startTimeError || endTimeError);
 
   const duration = formatDuration(startsAt, endsAt);
   const previewAreas = AREAS.filter((area) => affectedAreas.includes(area.value))
-    .map((area) => area.label);
+    .map((area) => t(area.labelKey));
   const availabilityText = previewAreas.length
-    ? `${previewAreas.join(", ")} will be unavailable from ${formatPreviewDate(startsAt)} to ${formatPreviewDate(endsAt)}.`
-    : `Services will be unavailable from ${formatPreviewDate(startsAt)} to ${formatPreviewDate(endsAt)}.`;
+    ? t("admin.maintenance.createForm.availabilityWithAreas", {
+      areas: previewAreas.join(", "),
+      start: formatPreviewDate(startsAt, i18n.language),
+      end: formatPreviewDate(endsAt, i18n.language),
+    })
+    : t("admin.maintenance.createForm.availabilityNoAreas", {
+      start: formatPreviewDate(startsAt, i18n.language),
+      end: formatPreviewDate(endsAt, i18n.language),
+    });
   const previewMessage = message.trim()
     ? `${message.trim()} ${availabilityText}`
     : availabilityText;
@@ -119,11 +128,11 @@ export default function CreateMaintenanceSchedulePage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     const nextErrors = {};
-    if (!title.trim()) nextErrors.title = "Title is required.";
+    if (!title.trim()) nextErrors.title = t("admin.maintenance.createForm.errTitleRequired");
     if (startTimeError) nextErrors.startsAt = startTimeError;
     if (endTimeError) nextErrors.endsAt = endTimeError;
-    if (!startsAt || !endsAt) nextErrors.endsAt = "Start and end times are required.";
-    if (affectedAreas.length === 0) nextErrors.affectedAreas = "Select at least one affected area.";
+    if (!startsAt || !endsAt) nextErrors.endsAt = t("admin.maintenance.createForm.errTimesRequired");
+    if (affectedAreas.length === 0) nextErrors.affectedAreas = t("admin.maintenance.createForm.errNoArea");
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
@@ -145,8 +154,8 @@ export default function CreateMaintenanceSchedulePage() {
       }
       await api.post("/admin/maintenance-schedules", payload);
       notificationToast.success(notifyMembers
-        ? "Maintenance schedule created and global notification published successfully!"
-        : "Maintenance schedule created successfully!");
+        ? t("admin.maintenance.createForm.createdWithNotification")
+        : t("admin.maintenance.createForm.created"));
       window.dispatchEvent(new Event("member-notifications-updated"));
       navigate("/admin/maintenance");
     } catch (error) {
@@ -164,7 +173,7 @@ export default function CreateMaintenanceSchedulePage() {
         startError || endError ||
         Object.values(validationErrors || {}).find((value) => typeof value === "string") ||
         error.response?.data?.message ||
-        "Could not create the maintenance schedule. Please try again.",
+        t("admin.maintenance.createForm.createFailed"),
       );
     } finally {
       setSaving(false);
@@ -180,18 +189,18 @@ export default function CreateMaintenanceSchedulePage() {
     <section className="mx-auto w-full max-w-[1080px] px-4 py-5 font-[Arial,sans-serif] text-slate-100 sm:px-7 sm:py-6">
       <header className="mb-5">
         <h1 className="text-[22px] font-bold tracking-tight text-white">
-          Create maintenance schedule
+          {t("admin.maintenance.createForm.title")}
         </h1>
         <p className="mt-1 text-xs leading-5 text-[#a89bd0] sm:text-sm">
-          Plan a maintenance window and tell users in advance. Affected areas are unavailable during the window.
+          {t("admin.maintenance.createForm.description")}
         </p>
       </header>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <section className={sectionClass}>
-          <h2 className="text-sm font-bold text-white">Details</h2>
+          <h2 className="text-sm font-bold text-white">{t("admin.maintenance.createForm.detailsSection")}</h2>
           <div className="mt-3">
-            <label htmlFor="maintenance-title" className="text-xs font-semibold text-[#e2ddef]">Title</label>
+            <label htmlFor="maintenance-title" className="text-xs font-semibold text-[#e2ddef]">{t("admin.maintenance.createForm.titleLabel")}</label>
             <input
               id="maintenance-title"
               value={title}
@@ -200,31 +209,31 @@ export default function CreateMaintenanceSchedulePage() {
                 setErrors((current) => ({ ...current, title: "" }));
               }}
               maxLength={255}
-              placeholder="Database upgrade"
+              placeholder={t("admin.maintenance.createForm.titlePlaceholder")}
               className={fieldClass}
               aria-invalid={Boolean(errors.title)}
             />
             {errors.title && <p className="mt-1 text-xs text-rose-300">{errors.title}</p>}
           </div>
           <div className="mt-2">
-            <label htmlFor="maintenance-message" className="text-xs font-semibold text-[#e2ddef]">Message to users</label>
+            <label htmlFor="maintenance-message" className="text-xs font-semibold text-[#e2ddef]">{t("admin.maintenance.createForm.messageLabel")}</label>
             <textarea
               id="maintenance-message"
               value={message}
               onChange={(event) => setMessage(event.target.value)}
               rows={2}
-              placeholder="We’re improving performance. Your data is safe and training history won’t be affected."
+              placeholder={t("admin.maintenance.createForm.messagePlaceholder")}
               className={`${fieldClass} min-h-[58px] resize-y`}
             />
-            <p className="mt-1 text-[11px] text-[#857ba3]">Shown in the notification. Optional.</p>
+            <p className="mt-1 text-[11px] text-[#857ba3]">{t("admin.maintenance.createForm.messageHint")}</p>
           </div>
         </section>
 
         <section className={sectionClass}>
-          <h2 className="text-sm font-bold text-white">Schedule</h2>
+          <h2 className="text-sm font-bold text-white">{t("admin.maintenance.createForm.scheduleSection")}</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div>
-              <label htmlFor="maintenance-start" className="text-xs font-semibold text-[#e2ddef]">Start</label>
+              <label htmlFor="maintenance-start" className="text-xs font-semibold text-[#e2ddef]">{t("admin.maintenance.createForm.startLabel")}</label>
               <input
                 id="maintenance-start"
                 type="datetime-local"
@@ -242,7 +251,7 @@ export default function CreateMaintenanceSchedulePage() {
               )}
             </div>
             <div>
-              <label htmlFor="maintenance-end" className="text-xs font-semibold text-[#e2ddef]">End</label>
+              <label htmlFor="maintenance-end" className="text-xs font-semibold text-[#e2ddef]">{t("admin.maintenance.createForm.endLabel")}</label>
               <input
                 id="maintenance-end"
                 type="datetime-local"
@@ -261,15 +270,18 @@ export default function CreateMaintenanceSchedulePage() {
             </div>
           </div>
           <span className="mt-2 inline-flex rounded-full border border-[#4c3888] bg-[#241950] px-3 py-1 text-[11px] font-semibold text-[#e2d6ff]">
-            {duration ? `Duration: ${duration}` : "Duration must be at least 2 hours"}
+            {duration
+              ? t("admin.maintenance.createForm.duration", { duration })
+              : t("admin.maintenance.createForm.durationTooShort")}
           </span>
         </section>
 
         <section className={sectionClass}>
-          <h2 className="text-sm font-bold text-white">Affected areas</h2>
+          <h2 className="text-sm font-bold text-white">{t("admin.maintenance.createForm.affectedSection")}</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {AREAS.map((area) => {
               const checked = affectedAreas.includes(area.value);
+              const areaLabel = t(area.labelKey);
               return (
                 <label
                   key={area.value}
@@ -289,12 +301,12 @@ export default function CreateMaintenanceSchedulePage() {
                   >
                     {checked && <CheckRoundedIcon sx={{ fontSize: 15 }} />}
                   </span>
-                  <span className={`min-w-0 text-sm font-semibold ${checked ? "text-white" : "text-[#eee9f7]"}`}>{area.label}</span>
+                  <span className={`min-w-0 text-sm font-semibold ${checked ? "text-white" : "text-[#eee9f7]"}`}>{areaLabel}</span>
                   <input
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggleArea(area.value)}
-                    aria-label={area.label}
+                    aria-label={areaLabel}
                     className="absolute inset-0 h-full w-full cursor-pointer opacity-0 focus-visible:rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
                   />
                 </label>
@@ -305,11 +317,11 @@ export default function CreateMaintenanceSchedulePage() {
         </section>
 
         <section className={sectionClass}>
-          <h2 className="text-sm font-bold text-white">Notify users</h2>
+          <h2 className="text-sm font-bold text-white">{t("admin.maintenance.createForm.notifySection")}</h2>
           <div className="mt-3">
             <div className="flex items-center justify-between gap-4">
               <span id="notify-members-label" className="text-xs font-semibold text-[#e2ddef]">
-                Send notification to members
+                {t("admin.maintenance.createForm.notifyLabel")}
               </span>
               <button
                 id="notify-members"
@@ -344,11 +356,11 @@ export default function CreateMaintenanceSchedulePage() {
               </button>
             </div>
             <p className="mt-1 max-w-[680px] text-[11px] leading-4 text-[#a89dbd]">
-              Appears in the notification bell and on the Notifications page. You can edit or delete it later in Notifications.
+              {t("admin.maintenance.createForm.notifyHint")}
             </p>
           </div>
           <div className="mt-3 max-w-[360px]">
-            <label htmlFor="reminder-hours" className="text-xs font-semibold text-[#e2ddef]">Remind users</label>
+            <label htmlFor="reminder-hours" className="text-xs font-semibold text-[#e2ddef]">{t("admin.maintenance.createForm.remindLabel")}</label>
             <select
               id="reminder-hours"
               value={reminderHours}
@@ -358,7 +370,7 @@ export default function CreateMaintenanceSchedulePage() {
             >
               {REMINDERS.map((reminder) => (
                 <option key={reminder.value} value={reminder.value} className="bg-[#17112d] text-white">
-                  {reminder.label}
+                  {t(reminder.labelKey)}
                 </option>
               ))}
             </select>
@@ -366,17 +378,17 @@ export default function CreateMaintenanceSchedulePage() {
         </section>
 
         <section className={sectionClass}>
-          <h2 className="text-sm font-bold text-white">Notification preview</h2>
+          <h2 className="text-sm font-bold text-white">{t("admin.maintenance.createForm.previewSection")}</h2>
           <div className="mt-3 rounded-xl border border-[#302650] bg-[#0f0b22] px-3.5 py-3">
             <div className="flex items-center gap-2">
               <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-400">
                 <BuildRoundedIcon sx={{ fontSize: 14 }} />
               </span>
-              <h3 className="text-xs font-bold leading-4 text-white">Scheduled maintenance</h3>
+              <h3 className="text-xs font-bold leading-4 text-white">{t("admin.maintenance.createForm.previewTitle")}</h3>
             </div>
             <div className="mt-1">
               <p className="mt-0.5 text-[11px] leading-4 text-[#a89dbd]">{previewMessage}</p>
-              <p className="text-[10px] font-medium text-[#d3c7ef]">Just now</p>
+              <p className="text-[10px] font-medium text-[#d3c7ef]">{t("admin.maintenance.createForm.justNow")}</p>
             </div>
           </div>
         </section>
@@ -389,7 +401,7 @@ export default function CreateMaintenanceSchedulePage() {
             className="mr-2 inline-flex h-10 items-center justify-center rounded-xl border border-[#51456f] bg-transparent px-4 text-sm font-medium transition hover:bg-[#231b40] disabled:opacity-50"
             style={{ backgroundColor: "transparent", color: "#d8d1e8" }}
           >
-            Cancel
+            {t("admin.maintenance.createForm.cancel")}
           </button>
           <button
             type="submit"
@@ -399,16 +411,16 @@ export default function CreateMaintenanceSchedulePage() {
             }
             className="inline-flex h-10 items-center justify-center rounded-xl bg-[#7c5dfa] px-5 text-sm font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:bg-[#6c4dce] disabled:cursor-wait disabled:opacity-60"
           >
-            {saving ? "Creating…" : "Create schedule"}
+            {saving ? t("admin.maintenance.createForm.submitting") : t("admin.maintenance.createForm.submit")}
           </button>
         </div>
       </form>
       <ConfirmDialog
         open={cancelDialogOpen}
-        title="Cancel schedule creation?"
-        message="Are you sure you want to leave? The maintenance schedule has not been created."
-        confirmLabel="Leave page"
-        cancelLabel="Continue creating"
+        title={t("admin.maintenance.createForm.cancelDialogTitle")}
+        message={t("admin.maintenance.createForm.cancelDialogMessage")}
+        confirmLabel={t("admin.maintenance.createForm.cancelDialogConfirm")}
+        cancelLabel={t("admin.maintenance.createForm.cancelDialogCancel")}
         onConfirm={leaveForm}
         onCancel={() => setCancelDialogOpen(false)}
       />

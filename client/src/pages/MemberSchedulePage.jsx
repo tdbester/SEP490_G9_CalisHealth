@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   buildMonthGrid,
   currentWeekRange,
@@ -18,15 +19,17 @@ const MAX_CHIPS_PER_CELL = 2;
 /** Số ngày tập tối đa mỗi tuần khi backend chưa trả về template. */
 const FALLBACK_MAX_DAYS_PER_WEEK = 3;
 
-const CATEGORY_LABEL = {
-  HEALTH: "Health",
-  SKILL: "Skill",
+/** Nhãn danh mục lấy từ i18n theo mã category của backend. */
+const CATEGORY_LABEL_KEY = {
+  HEALTH: "member.schedule.categoryHealth",
+  SKILL: "member.schedule.categorySkill",
 };
 
+/** Các bộ lọc danh mục — nhãn lấy từ i18n. */
 const FILTERS = [
-  { id: "ALL", label: "All" },
-  { id: "HEALTH", label: "Health" },
-  { id: "SKILL", label: "Skill" },
+  { id: "ALL", labelKey: "member.schedule.filterAll" },
+  { id: "HEALTH", labelKey: "member.schedule.filterHealth" },
+  { id: "SKILL", labelKey: "member.schedule.filterSkill" },
 ];
 
 function categoryClass(category) {
@@ -139,7 +142,7 @@ export function buildPlannedFromTemplate(planDays, weekDates, workouts, todayIso
 }
 
 /** Card workout kéo được ở sidebar trái. */
-function WorkoutCard({ workout, dragging, used, onDragStart, onDragEnd }) {
+function WorkoutCard({ workout, dragging, used, onDragStart, onDragEnd, t }) {
   return (
     <div
       className={`workout-chipcard${dragging ? " is-dragging" : ""}${
@@ -159,8 +162,11 @@ function WorkoutCard({ workout, dragging, used, onDragStart, onDragEnd }) {
       onDragEnd={onDragEnd}
       title={
         used
-          ? `${workout.name} · already planned this week`
-          : `${workout.name} · ${workout.durationMinutes} min`
+          ? t("member.schedule.alreadyPlannedTitle", { name: workout.name })
+          : t("member.schedule.workoutDuration", {
+              duration: workout.durationMinutes,
+              count: workout.exerciseCount,
+            })
       }
     >
       <span className="workout-chipcard__grip" aria-hidden="true">
@@ -173,16 +179,19 @@ function WorkoutCard({ workout, dragging, used, onDragStart, onDragEnd }) {
 
       <div className="workout-chipcard__meta">
         <span className={`workout-badge workout-badge--${categoryClass(workout.category)}`}>
-          {CATEGORY_LABEL[workout.category] ?? "Health"}
+          {t(CATEGORY_LABEL_KEY[workout.category] ?? "member.schedule.categoryHealth")}
         </span>
         <span className="workout-chipcard__level">{workout.level}</span>
-        {used && <span className="workout-chipcard__used">Planned</span>}
+        {used && <span className="workout-chipcard__used">{t("member.schedule.planned")}</span>}
       </div>
 
       <div className="workout-chipcard__foot">
         <ClockIcon />
         <span>
-          {workout.durationMinutes} min · {workout.exerciseCount} exercises
+          {t("member.schedule.workoutDuration", {
+            duration: workout.durationMinutes,
+            count: workout.exerciseCount,
+          })}
         </span>
       </div>
     </div>
@@ -190,7 +199,7 @@ function WorkoutCard({ workout, dragging, used, onDragStart, onDragEnd }) {
 }
 
 /** Chip workout đã xếp trong một ô ngày. */
-function EventChip({ entry, dragging, locked, onDragStart, onDragEnd, onRemove }) {
+function EventChip({ entry, dragging, locked, onDragStart, onDragEnd, onRemove, t }) {
   return (
     <div
       className={`event-chip event-chip--${categoryClass(entry.category)}${
@@ -227,7 +236,7 @@ function EventChip({ entry, dragging, locked, onDragStart, onDragEnd, onRemove }
         <button
           type="button"
           className="event-chip__remove"
-          aria-label={`Remove ${entry.workoutName}`}
+          aria-label={t("member.schedule.removeWorkout", { name: entry.workoutName })}
           onClick={(event) => {
             event.stopPropagation();
             onRemove();
@@ -243,6 +252,7 @@ function EventChip({ entry, dragging, locked, onDragStart, onDragEnd, onRemove }
 
 export default function MemberSchedulePage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [workouts, setWorkouts] = useState([]);
   /** { [isoDate]: [{ key, workoutCode, workoutName, category, durationMinutes, exerciseCount }] } */
@@ -327,7 +337,7 @@ export default function MemberSchedulePage() {
       } catch (loadError) {
         if (!cancelled) {
           setError(readApiError(loadError,
-            "Could not load your workouts. Check that the backend is running."));
+            t("member.schedule.loadFailed")));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -443,10 +453,10 @@ export default function MemberSchedulePage() {
    */
   function addToDay(iso, workout) {
     if (!isWeekCell(iso)) {
-      return "You can only plan workouts for the current week.";
+      return t("member.schedule.outOfRange");
     }
     if (isPastDay(iso)) {
-      return "You cannot plan workouts on a day that has already passed.";
+      return t("member.schedule.pastDayBlocked");
     }
     const snapshot = plannedRef.current;
 
@@ -455,13 +465,13 @@ export default function MemberSchedulePage() {
       (snapshot[day] || []).some((entry) => entry.workoutCode === workout.code),
     );
     if (alreadyInWeek) {
-      return `"${workout.name}" is already planned this week. Move it to another day instead.`;
+      return t("member.schedule.alreadyPlanned", { name: workout.name });
     }
 
     // Ngày đích đã có workout chưa → nếu rỗng thì đây là ngày tập mới.
     const targetIsEmpty = !(snapshot[iso] || []).length;
     if (targetIsEmpty && countUsedDays(snapshot) >= maxDaysPerWeek) {
-      return `You can train on at most ${maxDaysPerWeek} days per week.`;
+      return t("member.schedule.atMostDays", { max: maxDaysPerWeek });
     }
 
     setPlanned((previous) => {
@@ -516,15 +526,15 @@ export default function MemberSchedulePage() {
    */
   function moveEntry(fromIso, key, toIso) {
     if (!isWeekCell(toIso)) {
-      setError("You can only move workouts within the current week.");
+      setError(t("member.schedule.moveOutOfRange"));
       return;
     }
     if (isPastDay(toIso)) {
-      setError("You cannot move a workout to a day that has already passed.");
+      setError(t("member.schedule.moveToPastDay"));
       return;
     }
     if (isPastDay(fromIso)) {
-      setError("Workouts on a day that has already passed cannot be moved.");
+      setError(t("member.schedule.moveFromPastDay"));
       return;
     }
 
@@ -555,7 +565,7 @@ export default function MemberSchedulePage() {
       currentDays - 1 + (sourceStillActive ? 1 : 0) + (targetIsEmpty ? 1 : 0);
 
     if (resultingDays > maxDaysPerWeek) {
-      setError(`You can train on at most ${maxDaysPerWeek} days per week.`);
+      setError(t("member.schedule.atMostDays", { max: maxDaysPerWeek }));
       return;
     }
 
@@ -664,7 +674,7 @@ export default function MemberSchedulePage() {
     );
 
     if (weekEntries.length === 0) {
-      setError("Pick at least one workout for this week before saving.");
+      setError(t("member.schedule.pickAtLeastOne"));
       return;
     }
 
@@ -677,7 +687,7 @@ export default function MemberSchedulePage() {
       });
       navigate("/schedule/review");
     } catch (saveError) {
-      setError(readApiError(saveError, "Could not save the schedule. Please try again."));
+      setError(readApiError(saveError, t("member.schedule.saveFailed")));
       return;
     } finally {
       setSaving(false);
@@ -693,7 +703,7 @@ export default function MemberSchedulePage() {
   }
 
   if (loading) {
-    return <div className="schedule-loading">Loading your schedule…</div>;
+    return <div className="schedule-loading">{t("member.schedule.loading")}</div>;
   }
 
   return (
@@ -701,9 +711,9 @@ export default function MemberSchedulePage() {
       <header className="schedule-head">
         <div className="schedule-head__left">
           <button type="button" className="schedule-back" onClick={() => navigate("/")}>
-            ← Back
+            ← {t("common.back")}
           </button>
-          <h1 className="schedule-title">Workout schedule</h1>
+          <h1 className="schedule-title">{t("member.schedule.title")}</h1>
         </div>
         <button
           type="button"
@@ -711,7 +721,7 @@ export default function MemberSchedulePage() {
           onClick={handleSave}
           disabled={saving}
         >
-          {saving ? "Saving…" : "Save schedule"}
+          {saving ? t("member.schedule.savingSchedule") : t("member.schedule.saveSchedule")}
         </button>
       </header>
 
@@ -722,16 +732,21 @@ export default function MemberSchedulePage() {
       {planInfo?.days?.length > 0 && (
         <section className="schedule-plan">
           <div className="schedule-plan__head">
-            <span className="schedule-plan__label">Your training plan</span>
+            <span className="schedule-plan__label">{t("member.schedule.yourTrainingPlan")}</span>
             <span className="schedule-plan__name">{planInfo.templateName}</span>
             <span className="schedule-plan__meta">
-              {planInfo.level} · {planInfo.daysPerWeek} days/week
+              {t("member.schedule.planMeta", {
+                level: planInfo.level,
+                days: planInfo.daysPerWeek,
+              })}
             </span>
           </div>
           <ol className="schedule-plan__days">
             {planInfo.days.map((day) => (
               <li key={day.dayNumber} className="schedule-plan__day">
-                <span className="schedule-plan__daynum">Day {day.dayNumber}</span>
+                <span className="schedule-plan__daynum">
+                  {t("member.schedule.planDay", { number: day.dayNumber })}
+                </span>
                 <span className="schedule-plan__workout">{day.workoutName}</span>
               </li>
             ))}
@@ -740,7 +755,7 @@ export default function MemberSchedulePage() {
       )}
 
       <div className="schedule-week-banner">
-        <span className="schedule-week-banner__label">This week</span>
+        <span className="schedule-week-banner__label">{t("member.schedule.thisWeek")}</span>
         <span className="schedule-week-banner__range">
           {weekLabel(currentWeek.startIso)} – {weekLabel(currentWeek.endIso)}
         </span>
@@ -749,7 +764,10 @@ export default function MemberSchedulePage() {
             daysLimitReached ? " is-full" : ""
           }`}
         >
-          {weekUsedDays}/{maxDaysPerWeek} training days
+          {t("member.schedule.trainingDaysLeft", {
+            used: weekUsedDays,
+            max: maxDaysPerWeek,
+          })}
         </span>
         {!isViewingCurrentMonth && (
           <button
@@ -757,22 +775,21 @@ export default function MemberSchedulePage() {
             className="schedule-week-banner__jump"
             onClick={() => setViewMonth(firstOfMonth(new Date()))}
           >
-            Back to this month
+            {t("member.schedule.backToThisMonth")}
           </button>
         )}
       </div>
 
       {!isViewingCurrentMonth && (
         <div className="schedule-notice">
-          You can only plan workouts for the current week. Other weeks are locked.
+          {t("member.schedule.otherWeeksLocked")}
         </div>
       )}
 
       {/* Ngày đã trôi qua trong tuần hiện tại: xem được nhưng không sửa được. */}
       {isViewingCurrentMonth && hasPastDays && (
         <div className="schedule-notice">
-          Days that have already passed are locked. You can still rearrange the workouts
-          planned for the rest of the week.
+          {t("member.schedule.pastDaysLocked")}
         </div>
       )}
 
@@ -780,8 +797,10 @@ export default function MemberSchedulePage() {
           biết để họ tự bỏ bớt thay vì bất ngờ khi bấm Save. */}
       {weekUsedDays > maxDaysPerWeek && (
         <div className="schedule-notice is-warning">
-          This week has {weekUsedDays} training days, more than the {maxDaysPerWeek} allowed
-          by your plan. Remove a day to save.
+          {t("member.schedule.tooManyDays", {
+            used: weekUsedDays,
+            max: maxDaysPerWeek,
+          })}
         </div>
       )}
 
@@ -804,8 +823,8 @@ export default function MemberSchedulePage() {
           }}
           onDrop={handleDropOnLibrary}
         >
-          <h2 className="schedule-library__title">Workouts</h2>
-          <p className="schedule-library__subtitle">From your content manager</p>
+          <h2 className="schedule-library__title">{t("member.schedule.workoutLibrary")}</h2>
+          <p className="schedule-library__subtitle">{t("member.schedule.fromContentManager")}</p>
 
           <div className="schedule-search">
             <SearchIcon />
@@ -813,8 +832,8 @@ export default function MemberSchedulePage() {
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search workout"
-              aria-label="Search workout"
+              placeholder={t("member.schedule.searchWorkout")}
+              aria-label={t("member.schedule.searchWorkout")}
             />
           </div>
 
@@ -826,7 +845,7 @@ export default function MemberSchedulePage() {
                 className={`schedule-filter${filter === item.id ? " is-active" : ""}`}
                 onClick={() => setFilter(item.id)}
               >
-                {item.label}
+                {t(item.labelKey)}
               </button>
             ))}
           </div>
@@ -834,13 +853,14 @@ export default function MemberSchedulePage() {
           <div className="schedule-library__list">
             {visibleWorkouts.length === 0 ? (
               <p className="schedule-library__empty">
-                No workout matches this filter yet.
+                {t("member.schedule.libraryEmpty")}
               </p>
             ) : (
               visibleWorkouts.map((workout) => (
                 <WorkoutCard
                   key={workout.code}
                   workout={workout}
+                  t={t}
                   dragging={dragging?.type === "library" && dragging.code === workout.code}
                   used={weekUsedCodes.has(workout.code)}
                   onDragStart={() =>
@@ -860,11 +880,11 @@ export default function MemberSchedulePage() {
 
             <span className="calendar-legend">
               <i className="calendar-legend__dot calendar-legend__dot--health" />
-              Health
+              {t("member.schedule.categoryHealth")}
             </span>
             <span className="calendar-legend">
               <i className="calendar-legend__dot calendar-legend__dot--skill" />
-              Skill
+              {t("member.schedule.categorySkill")}
             </span>
 
             <div className="calendar-nav">
@@ -873,12 +893,12 @@ export default function MemberSchedulePage() {
                 className="calendar-nav__btn calendar-nav__btn--today"
                 onClick={() => setViewMonth(firstOfMonth(new Date()))}
               >
-                Today
+                {t("member.schedule.today")}
               </button>
               <button
                 type="button"
                 className="calendar-nav__btn calendar-nav__btn--arrow"
-                aria-label="Previous month"
+                aria-label={t("member.schedule.previousMonth")}
                 onClick={() => shiftMonth(-1)}
               >
                 ‹
@@ -886,7 +906,7 @@ export default function MemberSchedulePage() {
               <button
                 type="button"
                 className="calendar-nav__btn calendar-nav__btn--arrow"
-                aria-label="Next month"
+                aria-label={t("member.schedule.nextMonth")}
                 onClick={() => shiftMonth(1)}
               >
                 ›
@@ -982,8 +1002,8 @@ export default function MemberSchedulePage() {
                 >
                   <span className="calendar-cell__date">
                     {cell.dayOfMonth}
-                    {isToday && <span className="calendar-cell__today-tag">Today</span>}
-                    {isPast && <span className="calendar-cell__past-tag">Past</span>}
+                    {isToday && <span className="calendar-cell__today-tag">{t("member.schedule.today")}</span>}
+                    {isPast && <span className="calendar-cell__past-tag">{t("member.schedule.past")}</span>}
                   </span>
 
                   <div
@@ -995,6 +1015,7 @@ export default function MemberSchedulePage() {
                       <EventChip
                         key={entry.key}
                         entry={{ ...entry, iso: cell.iso }}
+                        t={t}
                         dragging={dragging?.type === "entry" && dragging.key === entry.key}
                         locked={!isEditable}
                         onDragStart={() =>
@@ -1012,11 +1033,13 @@ export default function MemberSchedulePage() {
                     ))}
 
                     {hidden > 0 && (
-                      <span className="calendar-cell__more">+{hidden} more</span>
+                      <span className="calendar-cell__more">
+                        {t("member.schedule.moreItems", { count: hidden })}
+                      </span>
                     )}
 
                     {isOver && !isNoopTarget && (
-                      <div className="calendar-dropzone">Drop here</div>
+                      <div className="calendar-dropzone">{t("member.schedule.dropHere")}</div>
                     )}
                   </div>
                 </div>
@@ -1027,10 +1050,13 @@ export default function MemberSchedulePage() {
       </div>
 
       <footer className="schedule-foot">
-        <p className="schedule-foot__tip">{tipText(dragging, overLibrary)}</p>
+        <p className="schedule-foot__tip">{tipText(dragging, overLibrary, t)}</p>
         <p className="schedule-foot__count">
-          {weekUsedDays} of {maxDaysPerWeek} training day
-          {maxDaysPerWeek === 1 ? "" : "s"} this week
+          {t("member.schedule.footCount", {
+            used: weekUsedDays,
+            max: maxDaysPerWeek,
+            plural: maxDaysPerWeek === 1 ? "" : "s",
+          })}
         </p>
       </footer>
     </div>
@@ -1074,16 +1100,16 @@ function groupEntries(entries) {
   }, {});
 }
 
-function tipText(dragging, overLibrary) {
+function tipText(dragging, overLibrary, t) {
   if (dragging?.type === "entry") {
     return overLibrary
-      ? "Drop here to remove the workout from your schedule."
-      : "Drag the workout to another day of this week to move it, or drop it on a day that already has a workout to swap them.";
+      ? t("member.schedule.tipMoveToLibrary")
+      : t("member.schedule.tipMoveToDay");
   }
   if (dragging) {
-    return "Drop the workout on a day of this week to schedule it.";
+    return t("member.schedule.tipDropToSchedule");
   }
-  return "Tip: drag a scheduled workout to move it, or drop it back on the list to remove it.";
+  return t("member.schedule.tipDefault");
 }
 
 /** "03 Nov" từ chuỗi YYYY-MM-DD. */

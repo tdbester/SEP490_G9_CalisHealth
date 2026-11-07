@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Avatar, Box, Button, CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import PhotoCameraRoundedIcon from "@mui/icons-material/PhotoCameraRounded";
 import { CM } from "../theme-content";
@@ -17,6 +18,7 @@ export function initialsOf(name) {
 }
 
 export default function ProfileAvatarCard({ profile, onChanged, delay = 0 }) {
+  const { t } = useTranslation();
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -32,11 +34,11 @@ export default function ProfileAvatarCard({ profile, onChanged, delay = 0 }) {
     setUploading(true);
     try {
       const updated = await profileApi.uploadAvatar(file);
-      onChanged?.(updated, "Your photo has been updated.");
+      onChanged?.(updated, t("member.profile.avatarUpdated"));
     } catch (requestError) {
       setError(
         requestError?.response?.data?.message ||
-          "Could not upload the photo. Choose a JPG, PNG or WebP image up to 5 MB.",
+          t("member.profile.avatarUploadFailed"),
       );
     } finally {
       setUploading(false);
@@ -52,7 +54,7 @@ export default function ProfileAvatarCard({ profile, onChanged, delay = 0 }) {
           <Box className="profile-avatar-ring" sx={{ p: "5px", borderRadius: "50%", backgroundImage: CM.gradient, display: "inline-flex" }}>
             <Avatar
               src={avatarUrl(profile?.avatarUrl) || undefined}
-              alt={profile?.fullName || "Profile photo"}
+              alt={profile?.fullName || t("member.profile.avatar")}
               sx={{
                 width: { xs: 128, sm: 156 },
                 height: { xs: 128, sm: 156 },
@@ -67,12 +69,12 @@ export default function ProfileAvatarCard({ profile, onChanged, delay = 0 }) {
             </Avatar>
           </Box>
 
-          <Tooltip title={hasPhoto ? "Change photo" : "Upload photo"}>
+          <Tooltip title={hasPhoto ? t("member.profile.changeAvatar") : t("member.profile.uploadAvatar")}>
             <span>
               <IconButton
                 onClick={pick}
                 disabled={uploading}
-                aria-label={hasPhoto ? "Change photo" : "Upload photo"}
+                aria-label={hasPhoto ? t("member.profile.changeAvatar") : t("member.profile.uploadAvatar")}
                 sx={{
                   position: "absolute",
                   bottom: 0,
@@ -104,7 +106,7 @@ export default function ProfileAvatarCard({ profile, onChanged, delay = 0 }) {
         </Box>
 
         <Typography className="profile-name" component="h2">
-          {profile?.fullName || "Your profile"}
+          {profile?.fullName || t("member.profile.yourProfile")}
         </Typography>
         <Stack spacing={1.25} alignItems="center" sx={{ minWidth: 0, width: "100%" }}>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
@@ -115,7 +117,7 @@ export default function ProfileAvatarCard({ profile, onChanged, delay = 0 }) {
               onClick={pick}
               disabled={uploading}
             >
-              {hasPhoto ? "Change photo" : "Upload photo"}
+              {hasPhoto ? t("member.profile.changeAvatar") : t("member.profile.uploadAvatar")}
             </Button>
           </Stack>
           {error && (

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { memberScheduleApi } from '../api/memberSchedule';
 import { startWorkoutSession, setWorkoutOrigin } from '../utils/workoutResults';
 import './DailyWorkoutPlan.css';
 
-function formatDate() {
+function formatDate(locale) {
   const today = new Date();
-  return today.toLocaleDateString('en-US', {
+  return today.toLocaleDateString(locale || 'en-US', {
     weekday: 'long',
     month: 'short',
     day: '2-digit',
@@ -14,21 +15,21 @@ function formatDate() {
 }
 
 /** "Wed" — nhãn ngắn cho thẻ "Scheduled" của workout. */
-function shortWeekday(iso) {
+function shortWeekday(iso, locale, todayFallback) {
   const date = new Date(`${iso}T00:00:00`);
   return Number.isNaN(date.getTime())
-    ? 'Today'
-    : date.toLocaleDateString('en-US', { weekday: 'short' });
+    ? todayFallback
+    : date.toLocaleDateString(locale || 'en-US', { weekday: 'short' });
 }
 
 /** "3 sets × 12 reps · Chest · Arms" — HOLD hiển thị giây thay vì số lần. */
-function exerciseSummary(exercise) {
+function exerciseSummary(exercise, t) {
   const count =
     exercise.category === 'HOLD'
-      ? `${exercise.durationSeconds ?? 0}s`
-      : `${exercise.reps ?? 0} reps`;
+      ? t('member.plan.secondsUnit', { count: exercise.durationSeconds ?? 0 })
+      : t('member.plan.repsUnit', { count: exercise.reps ?? 0 });
   const muscles = exercise.muscleGroup ? ` · ${exercise.muscleGroup}` : '';
-  return `${exercise.sets} sets × ${count}${muscles}`;
+  return `${t('member.plan.summarySets', { sets: exercise.sets, count })}${muscles}`;
 }
 
 /** Trăng khuyết: biểu tượng nghỉ ngơi / hồi phục. */
@@ -72,6 +73,8 @@ function ArrowIcon() {
 
 export default function DailyWorkoutPlan() {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage === 'vi' ? 'vi-VN' : 'en-US';
   const [workouts, setWorkouts] = useState([]);
   /** Có lịch tháng này không — phân biệt "Rest day" với "chưa xếp lịch". */
   const [hasSchedule, setHasSchedule] = useState(true);
@@ -93,7 +96,7 @@ export default function DailyWorkoutPlan() {
         setHasSchedule(Boolean(month));
       })
       .catch(() => {
-        if (!cancelled) setError("Couldn't load today's plan. Please try again.");
+        if (!cancelled) setError(t('member.plan.loadError'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -101,7 +104,7 @@ export default function DailyWorkoutPlan() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => load(), [load]);
 
@@ -149,8 +152,8 @@ export default function DailyWorkoutPlan() {
   };
   const header = (
     <div className="plan-header">
-      <div className="plan-date">{formatDate()}</div>
-      <h1 className="plan-title">Today&apos;s plan</h1>
+      <div className="plan-date">{formatDate(locale)}</div>
+      <h1 className="plan-title">{t('member.plan.title')}</h1>
     </div>
   );
 
@@ -160,7 +163,7 @@ export default function DailyWorkoutPlan() {
         <div className="daily-plan-container">
           {header}
           <div className="daily-plan-status" role="status">
-            Loading...
+            {t('member.plan.loading')}
           </div>
         </div>
       </div>
@@ -175,7 +178,7 @@ export default function DailyWorkoutPlan() {
           <div className="daily-plan-status" role="alert">
             {error}
             <button type="button" className="daily-plan-retry" onClick={load}>
-              Try again
+              {t('member.plan.tryAgain')}
             </button>
           </div>
         </div>
@@ -197,11 +200,10 @@ export default function DailyWorkoutPlan() {
             <div className="rest-card__icon">
               <RestIcon />
             </div>
-            <span className="rest-card__eyebrow">REST DAY</span>
-            <h2 className="rest-card__title">Take a breath today</h2>
+            <span className="rest-card__eyebrow">{t('member.plan.restDay')}</span>
+            <h2 className="rest-card__title">{t('member.plan.restTitle')}</h2>
             <p className="rest-card__text">
-              Nothing is scheduled for today. Recovery is part of the plan — your
-              muscles grow while you rest.
+              {t('member.plan.restText')}
             </p>
 
             <div className="rest-card__actions">
@@ -210,7 +212,7 @@ export default function DailyWorkoutPlan() {
                 className="rest-card__btn rest-card__btn--primary"
                 onClick={() => navigate('/library')}
               >
-                Explore the exercise library
+                {t('member.plan.exploreLibrary')}
                 <ArrowIcon />
               </button>
               <button
@@ -218,7 +220,7 @@ export default function DailyWorkoutPlan() {
                 className="rest-card__btn rest-card__btn--ghost"
                 onClick={() => navigate('/schedule')}
               >
-                Reschedule a workout
+                {t('member.plan.reschedule')}
               </button>
             </div>
           </div>
@@ -234,10 +236,9 @@ export default function DailyWorkoutPlan() {
                   />
                 </svg>
               </span>
-              <h3 className="rest-tip__title">Light movement</h3>
+              <h3 className="rest-tip__title">{t('member.plan.tipLightMovement')}</h3>
               <p className="rest-tip__text">
-                A short walk or gentle stretching keeps blood flowing without
-                adding fatigue.
+                {t('member.plan.tipLightMovementText')}
               </p>
             </article>
 
@@ -252,9 +253,9 @@ export default function DailyWorkoutPlan() {
                   <path d="M12 21v-4" strokeLinecap="round" />
                 </svg>
               </span>
-              <h3 className="rest-tip__title">Hydrate &amp; eat well</h3>
+              <h3 className="rest-tip__title">{t('member.plan.tipHydrate')}</h3>
               <p className="rest-tip__text">
-                Protein and water today set up a stronger session tomorrow.
+                {t('member.plan.tipHydrateText')}
               </p>
             </article>
 
@@ -265,9 +266,9 @@ export default function DailyWorkoutPlan() {
                   <path d="M12 7v5l3.5 2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </span>
-              <h3 className="rest-tip__title">Sleep it off</h3>
+              <h3 className="rest-tip__title">{t('member.plan.tipSleep')}</h3>
               <p className="rest-tip__text">
-                7–9 hours of sleep is where the real adaptation happens.
+                {t('member.plan.tipSleepText')}
               </p>
             </article>
           </div>
@@ -286,17 +287,16 @@ export default function DailyWorkoutPlan() {
             <div className="empty-state-icon">
               <EmptyPlanIcon />
             </div>
-            <h2 className="empty-state-title">No plan for this month yet</h2>
+            <h2 className="empty-state-title">{t('member.plan.emptyMonthTitle')}</h2>
             <p className="empty-state-text">
-              Pick which days you want to train and we&apos;ll build your daily
-              plan around them.
+              {t('member.plan.emptyMonthText')}
             </p>
             <button
               type="button"
               className="empty-state-cta"
               onClick={() => navigate('/schedule')}
             >
-              Pick your workout days
+              {t('member.plan.pickWorkoutDays')}
               <ArrowIcon />
             </button>
           </div>
@@ -324,7 +324,7 @@ export default function DailyWorkoutPlan() {
                   <svg className="badge-icon" viewBox="0 0 16 16" fill="none">
                     <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
                   </svg>
-                  {workout.category === 'SKILL' ? 'Skill' : 'Health'}
+                  {workout.category === 'SKILL' ? t('member.plan.categorySkill') : t('member.plan.categoryHealth')}
                 </div>
                 {workout.workoutLevel && (
                   <div className="badge badge-level">
@@ -349,7 +349,7 @@ export default function DailyWorkoutPlan() {
                     </svg>
                   </div>
                   <div className="stat-content">
-                    <div className="stat-label">Time estimated</div>
+                    <div className="stat-label">{t('member.plan.timeEstimated')}</div>
                     <div className="stat-value">{workout.durationMinutes} min</div>
                   </div>
                 </div>
@@ -361,7 +361,7 @@ export default function DailyWorkoutPlan() {
                     </svg>
                   </div>
                   <div className="stat-content">
-                    <div className="stat-label">Exercises</div>
+                    <div className="stat-label">{t('member.plan.exercisesStat')}</div>
                     <div className="stat-value">{workout.exerciseCount}</div>
                   </div>
                 </div>
@@ -374,15 +374,17 @@ export default function DailyWorkoutPlan() {
                     </svg>
                   </div>
                   <div className="stat-content">
-                    <div className="stat-label">Scheduled</div>
-                    <div className="stat-value">{shortWeekday(workout.date)}</div>
+                    <div className="stat-label">{t('member.plan.scheduled')}</div>
+                    <div className="stat-value">
+                      {shortWeekday(workout.date, locale, t('member.plan.todayFallback'))}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="exercises-section">
-              <h3 className="exercises-title">Exercises</h3>
+              <h3 className="exercises-title">{t('member.plan.exercises')}</h3>
               <div className="exercise-list">
                 {workout.exercises.map((exercise, index) => (
                   <button
@@ -398,7 +400,7 @@ export default function DailyWorkoutPlan() {
                     </span>
                     <span className="exercise-info">
                       <span className="exercise-name">{exercise.exerciseName}</span>
-                      <span className="exercise-details">{exerciseSummary(exercise)}</span>
+                      <span className="exercise-details">{exerciseSummary(exercise, t)}</span>
                     </span>
                     <span className="exercise-chevron" aria-hidden="true">
                       <svg viewBox="0 0 24 24" fill="none">
@@ -415,7 +417,7 @@ export default function DailyWorkoutPlan() {
                 onClick={() => startWorkout(workout)}
                 disabled={workout.exercises.length === 0}
               >
-                Start workout
+                {t('member.plan.startWorkout')}
               </button>
             </div>
           </section>

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import Modal from "../Modal";
 import "./ExerciseModals.css";
 
@@ -13,19 +14,20 @@ const PlayIcon = (
 );
 
 export default function VideoDemoModal({ exercise, videoSrc, onClose }) {
+  const { t } = useTranslation();
   const hints = FORM_HINTS[String(exercise.code || "").toLowerCase()];
 
   return (
-    <Modal title={`Video demo · ${exercise.name}`} titleIcon={PlayIcon} onClose={onClose} width={620}>
+    <Modal title={t("member.videoDemo.title", { name: exercise.name })} titleIcon={PlayIcon} onClose={onClose} width={620}>
       <div className="exm-video">
         {videoSrc ? (
-          <video src={videoSrc} controls autoPlay loop aria-label={`${exercise.name} demo video`} />
+          <video src={videoSrc} controls autoPlay loop aria-label={t("member.videoDemo.videoAria", { name: exercise.name })} />
         ) : (
           <div className="exm-video-empty">
             <div className="exm-play" aria-hidden="true">
               {PlayIcon}
             </div>
-            <p>No demo video yet</p>
+            <p>{t("member.videoDemo.noDemoVideo")}</p>
           </div>
         )}
         {hints?.angles.map((angle) => (
@@ -36,12 +38,12 @@ export default function VideoDemoModal({ exercise, videoSrc, onClose }) {
       </div>
 
       <p className="exm-notes">
-        <strong>Notes: </strong>
-        {exercise.description || "No notes yet."}
+        <strong>{t("member.videoDemo.notesPrefix")}</strong>
+        {exercise.description || t("member.videoDemo.noNotes")}
       </p>
 
       {hints && (
-        <ul className="exm-joints" aria-label="Tracked joints">
+        <ul className="exm-joints" aria-label={t("member.videoDemo.trackedJoints")}>
           {hints.joints.map((joint) => (
             <li key={joint} className="exm-joint">
               {joint}
@@ -51,7 +53,7 @@ export default function VideoDemoModal({ exercise, videoSrc, onClose }) {
       )}
 
       <button type="button" className="mdl-primary" onClick={onClose}>
-        Got it, continue
+        {t("member.videoDemo.gotIt")}
       </button>
     </Modal>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import {
   getApiErrorMessage,
@@ -11,10 +12,11 @@ import { getAvailableWorkoutExercises, getMyWorkout, updateMyWorkout } from "../
 import useUndoDelete from "../hooks/useUndoDelete";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { getLevelLabel } from "../utils/levelLabel";
+import { localizeSeed } from "../utils/seedText";
 
 const STORAGE_KEY = "my_custom_workouts";
 const LEVEL_PRIORITY = { Beginner: 1, Intermediate: 2, Advanced: 3 };
-
 const DEFAULT_EXERCISES = [
   { id: "pike-push-up", name: "Pike push-up", level: "Intermediate", sets: 3, reps: 8, restSec: 45, countBy: "reps" },
   { id: "diamond-push-up", name: "Diamond push-up", level: "Intermediate", sets: 3, reps: 10, restSec: 45, countBy: "reps" },
@@ -42,27 +44,6 @@ function createExerciseList(workout) {
   }));
 }
 
-function readWorkout(id) {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  const workouts = raw ? JSON.parse(raw) : [];
-  if (!Array.isArray(workouts)) {
-    throw new Error("Saved workouts are not in the expected format.");
-  }
-  const workout = workouts.find((item) => String(item.id) === id);
-  if (workout) return workout;
-  if (id === "1" || id === "sample-upper-body-push") {
-    return {
-      id,
-      title: "Upper body push day",
-      level: "Intermediate",
-      description: "Shoulder and tricep focus, finishing with a core hold.",
-      isShared: true,
-      exercises: DEFAULT_EXERCISES,
-    };
-  }
-  return null;
-}
-
 function DragHandle() {
   return (
     <svg viewBox="0 0 12 18" fill="currentColor" className="h-4 w-3 text-slate-500" aria-hidden="true">
@@ -86,12 +67,13 @@ function LevelBadge({ level }) {
   const displayLevel = level || "Beginner";
   return (
     <span className={`rounded-full px-3 py-1 text-[11px] capitalize ${getLevelBadgeStyle(displayLevel)}`}>
-      {displayLevel}
+      {getLevelLabel(displayLevel)}
     </span>
   );
 }
 
 export default function UpdateMyCustomWorkoutPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const submissionLock = useRef(false);
@@ -138,7 +120,7 @@ export default function UpdateMyCustomWorkoutPage() {
         setBaseline(JSON.stringify(initialForm));
       })
       .catch((error) => {
-        if (active) setErrorMessage(error.response?.data?.message || "Could not load workout.");
+        if (active) setErrorMessage(error.response?.data?.message || t("member.personal.couldNotLoadWorkout"));
       });
     return () => {
       active = false;
@@ -233,7 +215,7 @@ export default function UpdateMyCustomWorkoutPage() {
         });
       },
       onDelete: async () => {},
-      successMessage: "Exercise removed from workout.",
+      successMessage: t("member.personal.exerciseRemoved"),
     });
   };
 
@@ -265,7 +247,7 @@ export default function UpdateMyCustomWorkoutPage() {
     if (!workout || submissionLock.current) return;
     setHasSubmitted(true);
     if (Object.keys(validationErrors).length > 0) {
-      toast.warning("Please fill in all required fields correctly.");
+      toast.warning(t("member.personal.fillRequiredFields"));
       focusFirstInvalidField();
       return;
     }
@@ -287,10 +269,10 @@ export default function UpdateMyCustomWorkoutPage() {
           restSeconds: Number(exercise.restSec),
         })),
       });
-      toast.success("Workout updated successfully!");
+      toast.success(t("member.personal.workoutUpdated"));
       navigate("/library/workouts");
     } catch (error) {
-      const message = getApiErrorMessage(error, "Could not save workout.");
+      const message = getApiErrorMessage(error, t("member.personal.couldNotSaveWorkoutUpdate"));
       toast.error(message);
       setErrorMessage(message);
     } finally {
@@ -320,12 +302,12 @@ export default function UpdateMyCustomWorkoutPage() {
         onClick={() => navigate("/library/workouts")}
         className="mb-2 inline-flex appearance-none items-center gap-1 rounded-md border border-transparent bg-transparent p-0 text-xs font-medium text-[#bba7ff] transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8b6cff]"
       >
-        &lt; My custom workout list
+        {t("member.personal.backToMyWorkouts")}
       </button>
       <header className="mb-5">
-        <h1 className="text-2xl font-bold tracking-tight">Update my custom workout</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("member.personal.updateWorkoutTitle")}</h1>
         <p className="mt-1 text-xs text-slate-400">
-          Change the details or the exercises. Your saved version updates when you save.
+          {t("member.personal.updateWorkoutSubtitle")}
         </p>
       </header>
 
@@ -340,10 +322,10 @@ export default function UpdateMyCustomWorkoutPage() {
           <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
             <div className="space-y-3">
               <section className="rounded-2xl border border-[#33285f] bg-[#15102e] p-5 shadow-sm shadow-purple-950/20">
-                <h2 className="mb-4 text-sm font-semibold">Workout details</h2>
+                <h2 className="mb-4 text-sm font-semibold">{t("member.personal.workoutDetails")}</h2>
                 <div className="mb-1.5 flex items-center justify-between">
                   <label className="block text-xs text-slate-400" htmlFor="workout-title">
-                    Workout name
+                    {t("member.personal.workoutName")}
                   </label>
                   <span className="text-xs text-slate-400">{title.length} / 60</span>
                 </div>
@@ -363,7 +345,7 @@ export default function UpdateMyCustomWorkoutPage() {
                 {showFieldError("name") && nameError && <p className="mb-3 text-rose-400 text-[11px] mt-1">{nameError}</p>}
                 {!showFieldError("name") || !nameError ? <div className="mb-3" /> : null}
                 <label className="mb-1.5 block text-xs text-slate-400" htmlFor="workout-description">
-                  Description
+                  {t("member.personal.description")}
                 </label>
                 <textarea
                   id="workout-description"
@@ -399,24 +381,24 @@ export default function UpdateMyCustomWorkoutPage() {
                         style={{ transform: isShared ? "translateX(16px)" : "translateX(0)" }}
                       />
                     </span>
-                    Share with community
+                    {t("member.personal.shareWithCommunity")}
                   </label>
                   <span className="text-[10px] text-slate-400">
-                    Other members can view and save it
+                    {t("member.personal.shareHint")}
                   </span>
                 </div>
               </section>
 
               <section className="rounded-2xl border border-[#33285f] bg-[#15102e] p-5 shadow-sm shadow-purple-950/20">
                 <div className="mb-4 flex items-center justify-between gap-3">
-                  <h2 className="text-sm font-semibold">Exercises</h2>
+                  <h2 className="text-sm font-semibold">{t("member.personal.exercises")}</h2>
                   <div className="relative">
                     <button
                       type="button"
                       onClick={() => setAddMenuOpen((open) => !open)}
                       className="rounded-lg border border-[#8d76d6] bg-[#1c1640] px-3 py-2 text-xs font-semibold text-white hover:bg-[#292052]"
                     >
-                      + Add exercise
+                      {t("member.personal.addExerciseMenu")}
                     </button>
                     {addMenuOpen && (
                       <div className="absolute right-0 z-10 mt-2 w-52 rounded-xl border border-[#34285f] bg-[#120d29] p-1 shadow-xl">
@@ -427,7 +409,7 @@ export default function UpdateMyCustomWorkoutPage() {
                             onClick={() => addExercise(exercise)}
                             className="block w-full appearance-none rounded-lg border-0 bg-[#17112f] px-3 py-2 text-left text-xs text-slate-200 outline-none transition-colors hover:bg-[#30245b]"
                           >
-                            {exercise.name}
+                            {localizeSeed(exercise.name)}
                           </button>
                         ))}
                       </div>
@@ -436,7 +418,7 @@ export default function UpdateMyCustomWorkoutPage() {
                 </div>
 
                 <div className="mb-2 hidden grid-cols-[minmax(120px,1fr)_56px_70px_58px_28px] gap-2 px-3 text-[10px] text-slate-400 sm:grid">
-                  <span>Exercise</span><span>Sets</span><span>Reps / seconds</span><span>Rest</span><span />
+                  <span>{t("member.personal.colExercise")}</span><span>{t("member.personal.colSets")}</span><span>{t("member.personal.colRepsOrSeconds")}</span><span>{t("member.personal.colRest")}</span><span />
                 </div>
                 {hasSubmitted && exerciseErrors.list && (
                   <p id="workout-exercises" tabIndex={-1} className="text-rose-400 text-[11px] mt-1">{exerciseErrors.list}</p>
@@ -457,10 +439,10 @@ export default function UpdateMyCustomWorkoutPage() {
                         draggedIndex === index ? "opacity-50" : ""
                       }`}
                     >
-                      <span className="cursor-grab" aria-label="Drag to reorder">
+                      <span className="cursor-grab" aria-label={t("member.personal.dragToReorder")}>
                         <DragHandle />
                       </span>
-                      <span className="truncate text-xs font-semibold">{exercise.name}</span>
+                      <span className="truncate text-xs font-semibold">{localizeSeed(exercise.name)}</span>
                       <div>
                         <input
                           type="number"
@@ -468,7 +450,7 @@ export default function UpdateMyCustomWorkoutPage() {
                           max="100"
                           step="1"
                           id={`workout-sets-${index}`}
-                          aria-label={`${exercise.name} sets`}
+                          aria-label={t("member.personal.setsAria", { name: exercise.name })}
                           value={exercise.sets}
                           onChange={(event) => {
                             updateExercise(index, "sets", event.target.value);
@@ -486,7 +468,7 @@ export default function UpdateMyCustomWorkoutPage() {
                             max="2147483647"
                             step="1"
                             id={`workout-reps-${index}`}
-                            aria-label={`${exercise.name} reps or seconds`}
+                            aria-label={t("member.personal.repsAria", { name: exercise.name })}
                             value={exercise.reps}
                             onChange={(event) => {
                               updateExercise(index, "reps", event.target.value);
@@ -508,7 +490,7 @@ export default function UpdateMyCustomWorkoutPage() {
                             max="180"
                             step="5"
                             id={`workout-rest-${index}`}
-                            aria-label={`${exercise.name} rest seconds`}
+                            aria-label={t("member.personal.restAria", { name: exercise.name })}
                             value={exercise.restSec}
                             onChange={(event) => {
                               updateExercise(index, "restSec", event.target.value);
@@ -525,7 +507,7 @@ export default function UpdateMyCustomWorkoutPage() {
                       <button
                         type="button"
                         onClick={() => removeExercise(index)}
-                        aria-label={`Remove ${exercise.name}`}
+                        aria-label={t("member.personal.removeExerciseNamedAria", { name: exercise.name })}
                         className="flex h-8 w-8 appearance-none items-center justify-center rounded-lg border border-rose-700/80 bg-rose-950/60 p-0 text-[#ff9a83] transition-colors hover:border-rose-500 hover:bg-rose-900/80 hover:text-white"
                       >
                         <RemoveIcon />
@@ -533,14 +515,14 @@ export default function UpdateMyCustomWorkoutPage() {
                     </div>
                   ))}
                   {exercises.length === 0 && (
-                    <p className="py-6 text-center text-xs text-slate-400">Add an exercise to this workout.</p>
+                    <p className="py-6 text-center text-xs text-slate-400">{t("member.personal.addAnExercise")}</p>
                   )}
                   {confirmationModal}
                   <ConfirmDialog
                     open={confirmCancel}
-                    title="Discard your changes?"
-                    message="Are you sure you want to cancel? Any unsaved workout changes will be lost."
-                    confirmLabel="Discard"
+                    title={t("member.personal.discardChangesTitle")}
+                    message={t("member.personal.discardChangesMessage")}
+                    confirmLabel={t("member.personal.discard")}
                     onCancel={() => setConfirmCancel(false)}
                     onConfirm={() => navigate(-1)}
                   />
@@ -549,25 +531,25 @@ export default function UpdateMyCustomWorkoutPage() {
             </div>
 
             <aside className="rounded-2xl border border-[#33285f] bg-[#15102e] p-5 shadow-sm shadow-purple-950/20">
-              <h2 className="mb-5 text-sm font-semibold">Summary</h2>
+              <h2 className="mb-5 text-sm font-semibold">{t("member.personal.summary")}</h2>
               <div className="space-y-3 text-xs">
                 <div className="flex items-center justify-between border-b border-[#231b46] pb-3">
-                  <span className="text-[#8a81ad]">Level</span>
+                  <span className="text-[#8a81ad]">{t("member.personal.level")}</span>
                   <LevelBadge level={level} />
                 </div>
                 <div className="flex items-center justify-between border-b border-[#231b46] pb-3">
-                  <span className="text-[#8a81ad]">Exercises</span><strong className="font-bold text-white">{exercises.length}</strong>
+                  <span className="text-[#8a81ad]">{t("member.personal.exercises")}</span><strong className="font-bold text-white">{exercises.length}</strong>
                 </div>
                 <div className="flex items-center justify-between border-b border-[#231b46] pb-3">
-                  <span className="text-[#8a81ad]">Total sets</span><strong className="font-bold text-white">{totalSets}</strong>
+                  <span className="text-[#8a81ad]">{t("member.personal.totalSets")}</span><strong className="font-bold text-white">{totalSets}</strong>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[#8a81ad]">Total time</span>
+                  <span className="text-[#8a81ad]">{t("member.personal.totalTime")}</span>
                   <strong className="font-bold text-white">{totalTimeLabel}</strong>
                 </div>
               </div>
               <p className="mt-4 text-[10px] leading-relaxed text-slate-400">
-                Level and totals update automatically when you change the exercises.
+                {t("member.personal.summaryNote")}
               </p>
             </aside>
           </div>
@@ -575,7 +557,7 @@ export default function UpdateMyCustomWorkoutPage() {
           <footer className="fixed bottom-0 left-0 right-0 z-20 flex items-center justify-between border-t border-[#231b46] bg-[#0c0822] px-5 py-3 lg:pl-[calc(var(--sidebar-width)+32px)]">
             <span className={`flex items-center gap-2 text-xs ${isDirty ? "text-amber-300" : "text-slate-500"}`}>
               {isDirty && <span className="h-1.5 w-1.5 rounded-full bg-amber-300" />}
-              {isDirty ? "You have unsaved changes" : "All changes saved"}
+              {isDirty ? t("member.personal.unsavedChanges") : t("member.personal.allChangesSaved")}
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -583,7 +565,7 @@ export default function UpdateMyCustomWorkoutPage() {
                 onClick={() => setConfirmCancel(true)}
                 className="rounded-lg border border-[#514778] bg-[#120d29] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#201748]"
               >
-                Cancel
+                {t("member.personal.cancel")}
               </button>
               <button
                 type="button"
@@ -592,7 +574,7 @@ export default function UpdateMyCustomWorkoutPage() {
                 className="rounded-lg bg-[#643bf6] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#522cd9] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSaving && <span className="mr-2 inline-block h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent align-[-2px] animate-spin" />}
-                {isSaving ? "Saving..." : "Save changes"}
+                {isSaving ? t("member.personal.saving") : t("member.personal.saveChanges")}
               </button>
             </div>
           </footer>

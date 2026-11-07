@@ -1,7 +1,12 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { getExercises, getMuscleGroups, getExerciseCounts } from "../api/library";
+import { FAVORITE_ITEM_TYPES } from "../api/favorites";
+import FavoriteButton from "../components/favorites/FavoriteButton";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { getLevelLabel } from "../utils/levelLabel";
+import { localizeSeed } from "../utils/seedText";
 import "./ExerciseListPage.css";
 
 // SVG Icons matching Figma design
@@ -133,13 +138,16 @@ export const SKILL_FALLBACK_EXERCISES = [
 
 // SUB-COMPONENT 1: ExerciseCard (Dùng chung 1:1 cho cả Health và Skills)
 function ExerciseCard({ item, onClick }) {
+  const { t } = useTranslation();
   const level = item.level || item.difficultyLevel || "Beginner";
+  // Bài trong danh sách này đều thuộc hệ thống (Content Manager quản lý).
+  const favoriteType = FAVORITE_ITEM_TYPES.SYSTEM_EXERCISE;
 
   const detailText = item.details || [
-    item.muscleGroup || "Full body",
-    item.sets != null ? `${item.sets} sets` : null,
-    item.repsOrDuration,
-    item.equipment || item.exerciseType,
+    localizeSeed(item.muscleGroup || "Full body"),
+    item.sets != null ? t("member.catalog.totalSets", { count: item.sets }) : null,
+    localizeSeed(item.repsOrDuration),
+    localizeSeed(item.equipment || item.exerciseType),
   ].filter(Boolean).join(" • ");
 
   return (
@@ -154,7 +162,7 @@ function ExerciseCard({ item, onClick }) {
         </div>
         <div className="flex flex-col min-w-0">
           <h3 className="text-xs font-semibold text-white truncate group-hover:text-purple-300 transition-colors">
-            {item.name}
+            {localizeSeed(item.name)}
           </h3>
           <p className="text-[10px] text-slate-400 truncate mt-0.5">
             {detailText}
@@ -162,12 +170,18 @@ function ExerciseCard({ item, onClick }) {
         </div>
       </div>
 
-      {/* Cụm bên phải: Badge cấp độ phình to dạng viên thuốc lớn (min-w-[105px] px-5 py-1.5 text-xs) - KHÔNG CÓ MŨI TÊN */}
-      <div className="flex items-center flex-shrink-0">
+      {/* Cụm bên phải: Badge cấp độ + nút đánh dấu sao */}
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <FavoriteButton
+          itemType={favoriteType}
+          itemId={item.id}
+          label={item.name}
+          className="shrink-0"
+        />
         <span
           className={`min-w-[96px] text-center px-4 py-1.5 rounded-full text-xs font-bold tracking-wide capitalize ${getLevelBadgeStyle(level)}`}
         >
-          {level}
+          {getLevelLabel(level)}
         </span>
       </div>
     </div>
@@ -182,10 +196,11 @@ function FilterSidebar({
   isAllActive,
   getMuscleCount,
 }) {
+  const { t } = useTranslation();
   return (
     <aside className="w-full md:w-48 flex-shrink-0 rounded-2xl border border-[#22184c] bg-[#130d2e] p-3">
       <h2 className="text-[10.5px] font-bold tracking-wider text-[#8a82af] uppercase mb-2 px-1">
-        MUSCLE GROUP
+        {t("member.catalog.muscleGroup")}
       </h2>
 
       <div className="flex flex-col gap-1">
@@ -206,7 +221,7 @@ function FilterSidebar({
             >
               <span className="flex items-center gap-2 min-w-0">
                 <RadioIcon checked={active} />
-                <span className="text-xs truncate">{mg}</span>
+                <span className="text-xs truncate">{mg === "All" ? t("member.catalog.all") : localizeSeed(mg)}</span>
               </span>
 
               <span
@@ -229,6 +244,7 @@ function SearchFilterBar({
   selectedLevel,
   onLevelChange,
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-4 mb-4 w-full">
       {/* Ô tìm kiếm bung rộng chiếm toàn bộ khoảng trống bên trái (flex-1) */}
@@ -239,7 +255,7 @@ function SearchFilterBar({
         <input
           type="text"
           className="w-full rounded-xl bg-[#130d2e] border border-[#22184c] pl-10 pr-4 py-2.5 text-xs md:text-sm text-white placeholder-[#655c88] outline-none focus:border-[#6340f1] transition-all"
-          placeholder="Search exercises"
+          placeholder={t("member.catalog.searchExercises")}
           value={searchInput}
           onChange={onSearchChange}
         />
@@ -254,7 +270,7 @@ function SearchFilterBar({
         >
           {LEVEL_OPTIONS.map((lvl) => (
             <option key={lvl} value={lvl} className="bg-[#130d2e] text-white">
-              {lvl}
+              {lvl === "All levels" ? t("member.catalog.allLevels") : getLevelLabel(lvl)}
             </option>
           ))}
         </select>
@@ -268,6 +284,7 @@ function SearchFilterBar({
 
 // SUB-COMPONENT 4: PaginationBar (Phân trang căn giữa dùng chung)
 function PaginationBar({ currentPage, totalPages, onPageChange }) {
+  const { t } = useTranslation();
   const firstPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
   const visiblePages = Array.from(
     { length: Math.min(5, totalPages) },
@@ -281,7 +298,7 @@ function PaginationBar({ currentPage, totalPages, onPageChange }) {
         className="h-7 w-7 rounded-md border border-[#22184c] bg-[#130d2e] text-[#8a82af] hover:text-white flex items-center justify-center text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         disabled={currentPage <= 1}
         onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-        aria-label="Previous page"
+        aria-label={t("member.catalog.previous")}
       >
         <ChevronLeftIcon className="w-3.5 h-3.5" />
       </button>
@@ -309,7 +326,7 @@ function PaginationBar({ currentPage, totalPages, onPageChange }) {
         className="h-7 w-7 rounded-md border border-[#22184c] bg-[#130d2e] text-[#8a82af] hover:text-white flex items-center justify-center text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         disabled={currentPage >= totalPages}
         onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-        aria-label="Next page"
+        aria-label={t("member.catalog.next")}
       >
         <ChevronRightIcon className="w-3.5 h-3.5" />
       </button>
@@ -319,6 +336,7 @@ function PaginationBar({ currentPage, totalPages, onPageChange }) {
 
 // COMPONENT CHÍNH: ExerciseListPage (Hỗ trợ 100% template đồng bộ cho Health & Skills)
 export default function ExerciseListPage() {
+  const { t } = useTranslation();
   const { tab } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -519,8 +537,8 @@ export default function ExerciseListPage() {
   // Subtitle linh hoạt theo Tab
   const subtitle =
     activeTab === "skill"
-      ? "Browse calisthenics skills and the exercises that build up to them."
-      : "Browse exercises that support your health goals.";
+      ? t("member.catalog.exerciseListSubtitleSkill")
+      : t("member.catalog.exerciseListSubtitleHealth");
 
   const isAllActive = selectedMuscles.includes("All") || selectedMuscles.length === 0;
 
@@ -546,7 +564,7 @@ export default function ExerciseListPage() {
       {/* 1. HEADER TRANG GỌN GÀNG */}
       <header className="exercise-header mb-4">
         <h1 className="exercise-title text-xl md:text-2xl font-bold text-white tracking-tight mb-1">
-          Exercise for health &amp; skill list
+          {t("member.catalog.exerciseListTitle")}
         </h1>
         <p className="exercise-description text-xs md:text-sm text-[#8a82af]">{subtitle}</p>
       </header>
@@ -565,7 +583,7 @@ export default function ExerciseListPage() {
           onClick={() => handleTabSwitch("health")}
         >
           <HeartIcon className="h-3.5 w-3.5 text-white" />
-          <span>Health</span>
+          <span>{t("member.catalog.health")}</span>
         </button>
         <button
           type="button"
@@ -579,7 +597,7 @@ export default function ExerciseListPage() {
           onClick={() => handleTabSwitch("skill")}
         >
           <StarIcon className="h-3.5 w-3.5" />
-          <span>Skills</span>
+          <span>{t("member.catalog.skills")}</span>
         </button>
       </div>
 
@@ -604,7 +622,7 @@ export default function ExerciseListPage() {
         {/* CỘT PHẢI - DANH SÁCH BÀI TẬP */}
         <main className="flex-1 w-full min-w-0">
           <div className="text-xs font-medium text-[#8a82af] mb-1.5 px-1">
-            {displayedTotalCount} exercises
+            {t("member.catalog.totalExercises", { count: displayedTotalCount })}
           </div>
 
           <div className="space-y-1.5">
@@ -620,16 +638,16 @@ export default function ExerciseListPage() {
                 <div className="w-10 h-10 mx-auto mb-2 text-purple-400 flex items-center justify-center">
                   <DumbbellIcon className="h-6 w-6 text-[#9d7aff]" />
                 </div>
-                <h3 className="text-base font-bold text-white mb-1">No exercises found</h3>
+                <h3 className="text-base font-bold text-white mb-1">{t("member.catalog.noExercisesFound")}</h3>
                 <p className="text-xs text-[#8a82af] mb-3">
-                  Try adjusting your search keywords, filter, or difficulty level.
+                  {t("member.catalog.adjustFilters")}
                 </p>
                 <button
                   type="button"
                   className="bg-[#5b32e8] hover:bg-[#4d28d0] text-white text-xs font-semibold px-3.5 py-1.5 rounded-xl transition-all cursor-pointer"
                   onClick={handleClearFilters}
                 >
-                  Clear all filters
+                  {t("member.catalog.clearAllFilters")}
                 </button>
               </div>
             ) : (

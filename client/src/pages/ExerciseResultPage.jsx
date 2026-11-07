@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import SessionTopbar from "../components/session/SessionTopbar";
 import AiSupportModal from "../components/session/AiSupportModal";
@@ -38,6 +39,7 @@ function toRatio(value) {
 export default function ExerciseResultPage() {
   const navigate = useNavigate();
   const { state } = useLocation();
+  const { t } = useTranslation();
 
   /** Popup AI Support đang mở hay không. */
   const [aiOpen, setAiOpen] = useState(false);
@@ -122,8 +124,16 @@ export default function ExerciseResultPage() {
    */
   const labels =
     metrics.hasHoldExercises && !metrics.hasRepsExercises
-      ? { valid: "Clean seconds", invalid: "Unclean seconds", total: "Total seconds" }
-      : { valid: "Valid reps", invalid: "Inaccurate reps", total: "Total reps" };
+      ? {
+          valid: t("member.result.labelCleanSeconds"),
+          invalid: t("member.result.labelUncleanSeconds"),
+          total: t("member.result.labelTotalSeconds"),
+        }
+      : {
+          valid: t("member.result.labelValidReps"),
+          invalid: t("member.result.labelInaccurateReps"),
+          total: t("member.result.labelTotalReps"),
+        };
 
   /** Nhóm số liệu chính hiển thị (ưu tiên nhóm có dữ liệu thực). */
   const primary = metrics.hasReps
@@ -176,7 +186,7 @@ export default function ExerciseResultPage() {
    */
   const openFormCorrection = useCallback(() => {
     if (!focusExercise) {
-      toast.error("No exercise to correct yet — finish a workout first.");
+      toast.error(t("member.correction.noExerciseToCorrect"));
       return;
     }
     navigate("/session/correction", {
@@ -207,10 +217,13 @@ export default function ExerciseResultPage() {
               />
             </svg>
           </span>
-          <h1 className="rs-title">Workout result</h1>
+          <h1 className="rs-title">{t("member.result.titleLabel")}</h1>
           {metrics.exerciseCount > 0 && (
             <p className="rs-head-meta">
-              {metrics.exerciseCount} exercise{metrics.exerciseCount === 1 ? "" : "s"} completed
+              {t("member.result.exerciseCompleted", {
+                count: metrics.exerciseCount,
+                plural: metrics.exerciseCount === 1 ? "" : "s",
+              })}
             </p>
           )}
         </header>
@@ -250,20 +263,22 @@ export default function ExerciseResultPage() {
               </svg>
               <div className="rs-ring-center">
                 <p className="rs-ring-value">{metrics.accuracy}%</p>
-                <p className="rs-ring-label">Accuracy</p>
+                <p className="rs-ring-label">{t("member.result.accuracyLabel")}</p>
               </div>
             </div>
 
             <p className={`rs-verdict${passed ? " is-pass" : " is-fail"}`}>
-              {passed
-                ? `Passed! ${metrics.formIssues.length} form issue${
-                    metrics.formIssues.length === 1 ? "" : "s"
-                  } to improve`
-                : `Not passed yet — ${metrics.formIssues.length} form issue${
-                    metrics.formIssues.length === 1 ? "" : "s"
-                  } to improve`}
+              {t(
+                passed ? "member.result.verdictPassed" : "member.result.verdictFailed",
+                {
+                  count: metrics.formIssues.length,
+                  plural: metrics.formIssues.length === 1 ? "" : "s",
+                },
+              )}
             </p>
-            <p className="rs-threshold">Pass threshold: {PASS_THRESHOLD}% accuracy</p>
+            <p className="rs-threshold">
+              {t("member.result.passThreshold", { threshold: PASS_THRESHOLD })}
+            </p>
           </section>
 
           {/* --------------------------------------- cột phải: thống kê */}
@@ -303,7 +318,7 @@ export default function ExerciseResultPage() {
             {metrics.hasRepsExercises && metrics.hasHoldExercises && (
               <section className="rs-card rs-card--total">
                 <div className="rs-card-row">
-                  <p className="rs-card-label">Total seconds</p>
+                  <p className="rs-card-label">{labels.total}</p>
                   <p className="rs-total-value">{metrics.hold.total}</p>
                 </div>
                 <div className="rs-bar">
@@ -324,7 +339,7 @@ export default function ExerciseResultPage() {
             {/* Danh sách bài đã tập trong buổi này. */}
             {exerciseResults.length > 0 && (
               <section className="rs-card rs-card--exercises">
-                <p className="rs-card-title">Exercises completed</p>
+                <p className="rs-card-title">{t("member.result.exercisesCompleted")}</p>
                 <ul className="rs-exercise-list">
                   {exerciseResults.map((item) => (
                     <li key={item.exerciseCode} className="rs-exercise-item">
@@ -346,8 +361,10 @@ export default function ExerciseResultPage() {
               <div className="rs-card-row">
                 <span className="rs-issue-dot" aria-hidden="true" />
                 <p className="rs-card-title">
-                  {metrics.formIssues.length} form issue
-                  {metrics.formIssues.length === 1 ? "" : "s"} detected
+                  {t("member.result.formIssuesDetected", {
+                    count: metrics.formIssues.length,
+                    plural: metrics.formIssues.length === 1 ? "" : "s",
+                  })}
                 </p>
               </div>
               {metrics.formIssues.length > 0 ? (
@@ -359,7 +376,7 @@ export default function ExerciseResultPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="rs-issue-empty">No form issues — keep it up.</p>
+                <p className="rs-issue-empty">{t("member.result.noFormIssues")}</p>
               )}
             </section>
 
@@ -370,7 +387,7 @@ export default function ExerciseResultPage() {
                   fill="currentColor"
                 />
               </svg>
-              Ask AI Support
+              {t("member.result.aiSupportTitle")}
               <svg className="rs-btn-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                 <path
                   d="M7.5 4l5 6-5 6"
@@ -396,11 +413,11 @@ export default function ExerciseResultPage() {
                 />
                 <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.6" />
               </svg>
-              View form correction
+              {t("member.result.viewFormCorrection")}
             </button>
 
             <p className="rs-note">
-              You can review form correction even above {PASS_THRESHOLD}%
+              {t("member.result.correctionNote", { threshold: PASS_THRESHOLD })}
             </p>
           </div>
         </div>
@@ -408,7 +425,9 @@ export default function ExerciseResultPage() {
 
       <footer className="rs-footer">
         <button type="button" className="rs-back-btn" onClick={backToPlan}>
-          {origin === "/library" ? "← Back to library" : "← Back to today's plan"}
+          {origin === "/library"
+            ? t("member.result.backToLibrary")
+            : t("member.result.backToPlan")}
         </button>
       </footer>
 

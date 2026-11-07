@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import i18n from "../../i18n";
 import {
   Chip,
   Dialog,
@@ -9,15 +11,32 @@ import {
   Button,
 } from "@mui/material";
 
-const AUDIENCE_LABELS = {
-  MEMBER: "All Members",
-  ALL_MEMBERS: "All Members",
-  CONTENT_MANAGER: "Content Manager",
-  SYSTEM_WIDE: "System-wide",
-  ALL_USERS: "System-wide",
-  GLOBAL: "System-wide",
-  ALL_ROLES: "System-wide",
-  SPECIFIC_USER: "Direct User",
+/** Key i18n của nhãn đối tượng nhận, theo mã audience từ backend. */
+const AUDIENCE_LABEL_KEYS = {
+  MEMBER: "admin.notifications.audienceMembers",
+  ALL_MEMBERS: "admin.notifications.audienceMembers",
+  CONTENT_MANAGER: "admin.notifications.audienceContentManager",
+  SYSTEM_WIDE: "admin.notifications.audienceSystem",
+  ALL_USERS: "admin.notifications.audienceSystem",
+  GLOBAL: "admin.notifications.audienceSystem",
+  ALL_ROLES: "admin.notifications.audienceSystem",
+  SPECIFIC_USER: "admin.notifications.audienceDirect",
+};
+
+/** Key i18n của nhãn loại thông báo. */
+const TYPE_LABEL_KEYS = {
+  ANNOUNCEMENT: "admin.notifications.typeAnnouncement",
+  UPDATE: "admin.notifications.typeUpdate",
+  MAINTENANCE: "admin.notifications.typeMaintenance",
+  SYSTEM: "admin.notifications.typeSystem",
+};
+
+/** Key i18n của nhãn trạng thái. */
+const STATUS_LABEL_KEYS = {
+  PUBLISHED: "admin.notifications.statusPublished",
+  DRAFT: "admin.notifications.statusDraft",
+  READ: "admin.notifications.statusRead",
+  UNREAD: "admin.notifications.statusUnread",
 };
 
 const TYPE_COLORS = {
@@ -46,18 +65,19 @@ const TYPE_COLORS = {
 function formatCreatedAt(value) {
   if (!value) return "—";
   const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? "—"
-    : date.toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  if (Number.isNaN(date.getTime())) return "—";
+  const locale = i18n.language === "vi" ? "vi-VN" : "en-US";
+  return date.toLocaleString(locale, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function NotificationDetailModal({ notification, onClose }) {
+  const { t } = useTranslation();
   if (!notification) return null;
 
   const type = String(notification.type || "ANNOUNCEMENT").toUpperCase();
@@ -68,8 +88,8 @@ export default function NotificationDetailModal({ notification, onClose }) {
       ?? (notification.userId ? "SPECIFIC_USER" : "MEMBER"),
   ).toUpperCase();
   const status = String(notification.status || (notification.read ? "READ" : "PUBLISHED")).toUpperCase();
-  const typeLabel = type.charAt(0) + type.slice(1).toLowerCase();
-  const statusLabel = status.charAt(0) + status.slice(1).toLowerCase();
+  const typeLabel = TYPE_LABEL_KEYS[type] ? t(TYPE_LABEL_KEYS[type]) : type.charAt(0) + type.slice(1).toLowerCase();
+  const statusLabel = STATUS_LABEL_KEYS[status] ? t(STATUS_LABEL_KEYS[status]) : status.charAt(0) + status.slice(1).toLowerCase();
   const typeStyle = TYPE_COLORS[type] || {
     color: "#c4b5fd",
     borderColor: "rgba(196, 181, 253, 0.3)",
@@ -119,7 +139,7 @@ export default function NotificationDetailModal({ notification, onClose }) {
           />
           <Chip
             size="small"
-            label={AUDIENCE_LABELS[audience] || audience}
+            label={AUDIENCE_LABEL_KEYS[audience] ? t(AUDIENCE_LABEL_KEYS[audience]) : audience}
             sx={{
               color: "#c4b5fd",
               border: "1px solid rgba(196, 181, 253, 0.28)",
@@ -165,7 +185,7 @@ export default function NotificationDetailModal({ notification, onClose }) {
             "&:hover": { bgcolor: "#7c5dfa" },
           }}
         >
-          Close
+          {t("common.ui.close")}
         </Button>
       </DialogActions>
     </Dialog>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import SessionTopbar from "../components/session/SessionTopbar";
 import useSquatTracker from "../hooks/useSquatTracker";
@@ -22,11 +23,12 @@ const ACCEPTED_EXT = /\.(mp4|mov|webm)$/i;
  * Sau khi quét xong -> màn kết quả tổng hợp của buổi tập.
  */
 export default function VideoScanPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { state } = useLocation();
 
   const exerciseCode = state?.exerciseCode || "";
-  const exerciseName = state?.exerciseName || "Exercise";
+  const exerciseName = state?.exerciseName || t("member.videoScanPage.defaultExerciseName");
   const isHold = state?.category === "HOLD";
   const targetReps = state?.reps ?? 12;
   const targetSeconds = state?.durationSeconds ?? 30;
@@ -95,11 +97,11 @@ export default function VideoScanPage() {
     (picked) => {
       if (!picked) return;
       if (!ACCEPTED_EXT.test(picked.name)) {
-        toast.error("Only MP4, MOV or WebM videos are supported.");
+        toast.error(t("member.videoScanPage.unsupportedFormat"));
         return;
       }
       if (picked.size > MAX_BYTES) {
-        toast.error("Video must be 500 MB or smaller.");
+        toast.error(t("member.videoScanPage.tooLarge"));
         return;
       }
       if (objectUrl) URL.revokeObjectURL(objectUrl);
@@ -108,7 +110,7 @@ export default function VideoScanPage() {
       setDuration(0);
       setPhase("pick");
     },
-    [objectUrl],
+    [objectUrl, t],
   );
 
   const onDrop = useCallback(
@@ -177,7 +179,7 @@ export default function VideoScanPage() {
         serverAccuracy = response?.cleanRate != null ? Number(response.cleanRate) : null;
       } catch (err) {
         console.error("Failed to submit scanned result:", err);
-        toast.error("Couldn't save this scan. Please try again.");
+        toast.error(t("member.videoScanPage.saveFailed"));
       }
     }
 
@@ -238,6 +240,7 @@ export default function VideoScanPage() {
     nextExercises,
     navigate,
     state,
+    t,
   ]);
 
   // Khi quét xong -> tự lưu kết quả rồi mở màn kết quả.
@@ -256,9 +259,9 @@ export default function VideoScanPage() {
 
       <main className="vs-body">
         <header className="vs-head">
-          <h1 className="vs-title">Scan video · {exerciseName}</h1>
+          <h1 className="vs-title">{t("member.videoScanPage.title", { name: exerciseName })}</h1>
           <p className="vs-subtitle">
-            Upload a video of your set — the AI pose scanner will grade your form.
+            {t("member.videoScanPage.subtitle")}
           </p>
         </header>
 
@@ -292,8 +295,8 @@ export default function VideoScanPage() {
                   <path d="M10 22a7 7 0 0 1-.5-13.98A10 10 0 0 1 29 7a8 8 0 0 1 1 15" />
                   <path d="M20 26V14M15 18l5-5 5 5" />
                 </svg>
-                <p className="vs-dropzone-title">Drop your video here</p>
-                <p className="vs-dropzone-hint">MP4, MOV, WebM · max 500 MB</p>
+                <p className="vs-dropzone-title">{t("member.videoScanPage.dropTitle")}</p>
+                <p className="vs-dropzone-hint">{t("member.videoScanPage.dropHint")}</p>
               </div>
             )}
 
@@ -319,7 +322,9 @@ export default function VideoScanPage() {
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z" />
                 </svg>
-                {file ? "Choose another file" : "Browse file"}
+                {file
+                  ? t("member.videoScanPage.chooseAnother")
+                  : t("member.videoScanPage.browseFile")}
               </button>
 
               {phase !== "done" && (
@@ -330,10 +335,10 @@ export default function VideoScanPage() {
                   onClick={startScan}
                 >
                   {isScanning
-                    ? `Scanning… ${scanProgress}%`
+                    ? t("member.videoScanPage.scanning", { count: scanProgress })
                     : modelStatus === "loading"
-                      ? "Loading AI model…"
-                      : "Start scanning"}
+                      ? t("member.videoScanPage.loadingModel")
+                      : t("member.videoScanPage.startScanning")}
                 </button>
               )}
             </div>
@@ -345,8 +350,11 @@ export default function VideoScanPage() {
                 </div>
                 <p className="vs-progress-text">
                   {modelStatus === "loading"
-                    ? "Loading the AI pose model…"
-                    : `Scanning frame ${framesScanned}… ${scanProgress}%`}
+                    ? t("member.videoScanPage.loadingModelProgress")
+                    : t("member.videoScanPage.scanningFrame", {
+                        frame: framesScanned,
+                        count: scanProgress,
+                      })}
                 </p>
               </div>
             )}
@@ -355,10 +363,10 @@ export default function VideoScanPage() {
               <div className="vs-progress" role="status">
                 <p className="vs-progress-text">
                   {nextExercises.length > 0
-                    ? `Scan complete — moving to ${
-                        nextExercises[0].exerciseName
-                      }…`
-                    : "Scan complete — opening your workout result…"}
+                    ? t("member.videoScanPage.scanCompleteNext", {
+                        name: nextExercises[0].exerciseName,
+                      })
+                    : t("member.videoScanPage.scanCompleteResult")}
                 </p>
               </div>
             )}
@@ -373,12 +381,12 @@ export default function VideoScanPage() {
           {/* ------------------------------------------- cột phải: hướng dẫn */}
           <aside className="vs-side">
             <section className="vs-card vs-tip-card">
-              <p className="vs-tip-title">How the scan works</p>
+              <p className="vs-tip-title">{t("member.videoScanPage.howScanWorks")}</p>
               <ul className="vs-tip-list">
-                <li>Film your set from the side so your whole body is visible.</li>
-                <li>Keep the camera still and make sure you are in frame.</li>
-                <li>The AI grades every rep — clean reps count towards your progress.</li>
-                <li>When the scan finishes you'll see your workout result.</li>
+                <li>{t("member.videoScanPage.tipFilmSide")}</li>
+                <li>{t("member.videoScanPage.tipKeepStill")}</li>
+                <li>{t("member.videoScanPage.tipGradeReps")}</li>
+                <li>{t("member.videoScanPage.tipSeeResult")}</li>
               </ul>
             </section>
           </aside>

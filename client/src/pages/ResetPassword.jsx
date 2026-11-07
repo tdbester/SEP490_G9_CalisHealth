@@ -1,17 +1,20 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import "./Login.css";
 import AuthLogo from "../components/AuthLogo";
 import ImeNotice from "../components/ImeNotice";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import PasswordToggle from "../components/PasswordToggle";
-import { PASSWORD_RULE_MESSAGE, fieldErrors, hasNonAscii, isStrongPassword } from "../utils/authInput";
+import { fieldErrors, hasNonAscii, isStrongPassword } from "../utils/authInput";
 
 const REDIRECT_SECONDS = 8;
 
 export default function ResetPassword() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const token = params.get("token") || "";
   const [status, setStatus] = useState("verifying");
   const [form, setForm] = useState({ newPassword: "", confirmNewPassword: "" });
@@ -25,16 +28,16 @@ export default function ResetPassword() {
   useEffect(() => {
     if (!token) {
       setStatus("error");
-      setError("The token has expired, please sign up again");
+      setError(t("auth.resetPassword.missingTokenMessage"));
       return;
     }
     api.get(`/auth/verify-reset-token?token=${encodeURIComponent(token)}`)
       .then(() => setStatus("ready"))
       .catch(() => {
         setStatus("error");
-        setError("The token has expired, please sign up again");
+        setError(t("auth.resetPassword.missingTokenMessage"));
       });
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     if (status !== "error" && !success) return undefined;
@@ -52,9 +55,9 @@ export default function ResetPassword() {
   };
 
   const validateField = (key, value) => {
-    if (key === "newPassword") return isStrongPassword(value) ? "" : PASSWORD_RULE_MESSAGE;
+    if (key === "newPassword") return isStrongPassword(value) ? "" : t("common.passwordRule");
     if (key === "confirmNewPassword") {
-      return value === form.newPassword ? "" : "The confirmation password does not match";
+      return value === form.newPassword ? "" : t("auth.resetPassword.mismatchError");
     }
     return "";
   };
@@ -92,8 +95,8 @@ export default function ResetPassword() {
       const msg =
         (data && typeof data === "object"
           ? Object.values(data).flat().join(" • ")
-          : data) || "Unable to reset password. Please try again.";
-      setError(typeof msg === "string" ? msg : "Unable to reset password. Please try again.");
+          : data) || t("auth.resetPassword.fallbackError");
+      setError(typeof msg === "string" ? msg : t("auth.resetPassword.fallbackError"));
       setStatus("error");
       setSeconds(REDIRECT_SECONDS);
     } finally {
@@ -104,29 +107,40 @@ export default function ResetPassword() {
   return (
     <div className="login">
       <div className="login-card">
-        <AuthLogo />
+        <div className="login-header">
+          <AuthLogo />
+          <LanguageSwitcher variant="select" className="login-lang" />
+        </div>
         <h1 className="login-title">
-          {status === "verifying" ? "Verifying..." : status === "error" ? "Verification failed" : "Reset Password"}
+          {status === "verifying"
+            ? t("auth.verifyEmail.verifying")
+            : status === "error"
+            ? t("auth.resetPassword.missingTokenTitle")
+            : t("auth.resetPassword.title")}
         </h1>
 
-        {status === "verifying" && <div className="login-form"><div className="login-success">Checking token, please wait...</div></div>}
+        {status === "verifying" && (
+          <div className="login-form">
+            <div className="login-success">{t("auth.resetPassword.checkingToken")}</div>
+          </div>
+        )}
         {status === "error" && (
           <div className="login-form">
             <div className="login-error">{error}</div>
-            <div className="login-redirect">Redirecting to the login page in {seconds} seconds.</div>
+            <div className="login-redirect">{t("common.redirectIn", { seconds })}</div>
           </div>
         )}
         {status === "ready" && !success && (
           <form className="login-form" onSubmit={handleSubmit}>
             {error && <div className="login-error">{error}</div>}
             <div className="login-field">
-              <label className="login-label" htmlFor="reset-password">New Password</label>
+              <label className="login-label" htmlFor="reset-password">{t("auth.resetPassword.newPassword")}</label>
               <div className={`login-input-wrap${errors.newPassword ? " login-input-wrap--error" : ""}`}>
                 <input
                   id="reset-password"
                   className="login-input"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Min 8 chars, upper, lower, digit, special"
+                  placeholder={t("auth.resetPassword.passwordHint")}
                   value={form.newPassword}
                   onChange={set("newPassword")}
                   aria-invalid={Boolean(errors.newPassword)}
@@ -141,13 +155,13 @@ export default function ResetPassword() {
               )}
             </div>
             <div className="login-field">
-              <label className="login-label" htmlFor="reset-confirm">Confirm New Password</label>
+              <label className="login-label" htmlFor="reset-confirm">{t("auth.resetPassword.confirmPassword")}</label>
               <div className={`login-input-wrap${errors.confirmNewPassword ? " login-input-wrap--error" : ""}`}>
                 <input
                   id="reset-confirm"
                   className="login-input"
                   type="password"
-                  placeholder="Re-enter new password"
+                  placeholder={t("auth.resetPassword.confirmPassword")}
                   value={form.confirmNewPassword}
                   onChange={set("confirmNewPassword")}
                   aria-invalid={Boolean(errors.confirmNewPassword)}
@@ -161,19 +175,25 @@ export default function ResetPassword() {
               )}
             </div>
             <button type="submit" className="login-submit" disabled={loading}>
-              <span className="login-submit-text">{loading ? "Processing..." : "Reset Password"}</span>
+              <span className="login-submit-text">
+                {loading ? t("auth.resetPassword.submitting") : t("auth.resetPassword.submit")}
+              </span>
             </button>
           </form>
         )}
         {success && (
           <div className="login-form">
-            <div className="login-success">Password reset successfully! Please log in again.</div>
-            <div className="login-redirect">Redirecting to the login page in {seconds} seconds.</div>
+            <div className="login-success">
+              {t("auth.resetPassword.successTitle")} {t("auth.resetPassword.successMessage")}
+            </div>
+            <div className="login-redirect">{t("common.redirectIn", { seconds })}</div>
           </div>
         )}
 
         <div className="login-links">
-          <button className="login-link" onClick={() => navigate("/login")}>Back to login</button>
+          <button className="login-link" onClick={() => navigate("/login")}>
+            {t("auth.resetPassword.backToLogin")}
+          </button>
         </div>
       </div>
     </div>

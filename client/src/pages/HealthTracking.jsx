@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
+import { useTranslation } from "react-i18next";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import AccessibilityNewRoundedIcon from "@mui/icons-material/AccessibilityNewRounded";
@@ -28,15 +29,16 @@ const TRACKING_ROUTES = {
 
 const GAUGE_SEGMENTS = 20;
 
-function formatUpdatedAt(value) {
+function formatUpdatedAt(value, t) {
   const date = dayjs(value);
   return date.isSame(dayjs(), "day")
-    ? `today at ${date.format("HH:mm")}`
+    ? t("member.healthTracking.todayAt", { time: date.format("HH:mm") })
     : date.format("DD MMM YYYY, HH:mm");
 }
 
 /** Vòng điểm sức khỏe dạng phân đoạn: phần đã đạt là cung gradient, phần còn lại là vạch mảnh. */
 function ScoreGauge({ score }) {
+  const { t } = useTranslation();
   const filled = Math.round(((score ?? 0) / 100) * GAUGE_SEGMENTS);
   const step = 360 / GAUGE_SEGMENTS;
 
@@ -68,13 +70,14 @@ function ScoreGauge({ score }) {
       </svg>
       <div className="ht-gauge-center">
         <span className="ht-gauge-value">{score ?? "—"}</span>
-        <span className="ht-gauge-label">Health score</span>
+        <span className="ht-gauge-label">{t("member.healthTracking.healthScore")}</span>
       </div>
     </div>
   );
 }
 
 function MetricCard({ icon: Icon, label, value, unit, note, onEdit }) {
+  const { t } = useTranslation();
   return (
     <article className="ht-card ht-metric">
       <span className="ht-icon-box">
@@ -91,7 +94,7 @@ function MetricCard({ icon: Icon, label, value, unit, note, onEdit }) {
       <button
         type="button"
         className="ht-icon-btn"
-        aria-label={`Update ${label.toLowerCase()}`}
+        aria-label={t("member.healthTracking.updateMetric", { label })}
         onClick={onEdit}
       >
         <EditOutlinedIcon />
@@ -101,6 +104,7 @@ function MetricCard({ icon: Icon, label, value, unit, note, onEdit }) {
 }
 
 function BmiChart({ records }) {
+  const { t } = useTranslation();
   const baseline = records.length > 0
     ? Math.floor(Math.min(...records.map((r) => Number(r.bmi)))) - 1
     : 18;
@@ -108,7 +112,7 @@ function BmiChart({ records }) {
   return (
     <div className="ht-chart">
       <BarChart
-        ariaLabel="Monthly BMI bar chart"
+        ariaLabel={t("member.healthTracking.bmiChartAria")}
         baseline={baseline}
         data={records.map((record) => ({
           key: record.month,
@@ -123,6 +127,7 @@ function BmiChart({ records }) {
 }
 
 export default function HealthTracking() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [healthScore, setHealthScore] = useState(SEED?.healthScore ?? null);
   const [metrics, setMetrics] = useState(SEED?.bodyMetrics ?? null);
@@ -183,7 +188,9 @@ export default function HealthTracking() {
   const weightChange = metrics?.weightChangeKg;
   const weightNote =
     weightChange != null
-      ? `${weightChange > 0 ? "+" : ""}${weightChange} kg this month`
+      ? t("member.healthTracking.kgThisMonth", {
+          value: `${weightChange > 0 ? "+" : ""}${weightChange}`,
+        })
       : null;
 
   const hasScore = healthScore?.score != null && healthScore.score > 0;
@@ -196,9 +203,9 @@ export default function HealthTracking() {
       {/* ── Header ─────────────────────────────────────────────── */}
       <header className="ht-header">
         <span className="ht-date">{dayjs().format("dddd, DD MMMM YYYY")}</span>
-        <h1 className="ht-title">Your health, in motion.</h1>
+        <h1 className="ht-title">{t("member.healthTracking.title")}</h1>
         <p className="ht-subtitle">
-          A clear view of your body, activity, and progress this week.
+          {t("member.healthTracking.subtitle")}
         </p>
       </header>
 
@@ -209,25 +216,26 @@ export default function HealthTracking() {
           {hasScore && healthScore.changePercent != null && (
             <span className="ht-pill">
               <TrendingUpRoundedIcon />
-              {healthScore.changePercent}% this month
+              {t("member.healthTracking.thisMonth", { count: healthScore.changePercent })}
             </span>
           )}
           <h2 className="ht-hero-title">
             {hasScore
-              ? (healthScore.statusHeadline || "Great momentum")
-              : (healthScore?.statusHeadline || "No health score yet")}
+              ? (healthScore.statusHeadline || t("member.healthTracking.greatMomentum"))
+              : (healthScore?.statusHeadline || t("member.healthTracking.noScoreYet"))}
           </h2>
           <p className="ht-hero-text">
             {hasScore
-              ? (healthScore.statusDescription || `You are ahead of ${healthScore.peerPercentile}% of people with similar goals.`)
-              : (healthScore?.statusDescription || "Log your body metrics and workouts to get your weekly score.")}
+              ? (healthScore.statusDescription
+                || t("member.healthTracking.aheadOfPeers", { count: healthScore.peerPercentile }))
+              : (healthScore?.statusDescription || t("member.healthTracking.logMetrics"))}
           </p>
           <button
             type="button"
             className="ht-link ht-link-lg"
             onClick={() => navigate(TRACKING_ROUTES.assessment)}
           >
-            View performance analytics
+            {t("member.healthTracking.viewAnalytics")}
             <ArrowForwardRoundedIcon />
           </button>
         </div>
@@ -237,11 +245,11 @@ export default function HealthTracking() {
       <section>
         <header className="ht-section-head">
           <div>
-            <h2 className="ht-section-title">Body metrics</h2>
+            <h2 className="ht-section-title">{t("member.healthTracking.bodyMetrics")}</h2>
             <p className="ht-section-subtitle">
               {metrics?.updatedAt
-                ? `Last updated ${formatUpdatedAt(metrics.updatedAt)}`
-                : "No measurements logged yet"}
+                ? t("member.healthTracking.lastUpdated", { value: formatUpdatedAt(metrics.updatedAt, t) })
+                : t("member.healthTracking.noMeasurements")}
             </p>
           </div>
           <button
@@ -249,14 +257,14 @@ export default function HealthTracking() {
             className="ht-link"
             onClick={openUpdate}
           >
-            Update
+            {t("member.healthTracking.update")}
           </button>
         </header>
 
         <div className="ht-metric-grid">
           <MetricCard
             icon={AccessibilityNewRoundedIcon}
-            label="Weight"
+            label={t("member.healthTracking.weight")}
             value={metrics?.weightKg}
             unit="kg"
             note={weightNote}
@@ -264,10 +272,10 @@ export default function HealthTracking() {
           />
           <MetricCard
             icon={MonitorHeartOutlinedIcon}
-            label="Height"
+            label={t("member.healthTracking.height")}
             value={metrics?.heightCm}
             unit="cm"
-            note={metrics?.heightNote}
+            note={metrics?.heightNote || t("member.healthTracking.healthyRange")}
             onEdit={openUpdate}
           />
         </div>
@@ -277,13 +285,13 @@ export default function HealthTracking() {
       <section className="ht-card ht-bmi">
         <header className="ht-bmi-head">
           <div>
-            <h2 className="ht-section-title">BMI by month</h2>
+            <h2 className="ht-section-title">{t("member.healthTracking.bmiByMonth")}</h2>
             <p className="ht-section-subtitle">
-              Final recorded value at 23:59 on each month&apos;s last day
+              {t("member.healthTracking.bmiSubtitle")}
             </p>
           </div>
           <div className="ht-bmi-current">
-            <span className="ht-bmi-current-label">Current BMI</span>
+            <span className="ht-bmi-current-label">{t("member.healthTracking.currentBmi")}</span>
             <span className="ht-bmi-current-value">
               {currentBmi != null ? currentBmi.toFixed(1) : "—"}
             </span>
@@ -296,13 +304,13 @@ export default function HealthTracking() {
         {bmiRecords.length > 0 ? (
           <BmiChart records={bmiRecords} />
         ) : (
-          <p className="ht-empty">No monthly BMI records yet.</p>
+          <p className="ht-empty">{t("member.healthTracking.noBmiRecords")}</p>
         )}
 
         {latestRecord && (
           <p className="ht-bmi-foot">
             <AccessTimeRoundedIcon />
-            Latest monthly reading:{" "}
+            {t("member.healthTracking.latestReading")}{" "}
             {dayjs(latestRecord.month).endOf("month").format("DD MMM YYYY, HH:mm")}
           </p>
         )}
@@ -314,9 +322,9 @@ export default function HealthTracking() {
           <HistoryRoundedIcon />
         </span>
         <div className="ht-history-info">
-          <h2 className="ht-history-title">Workout history</h2>
+          <h2 className="ht-history-title">{t("member.healthTracking.workoutHistory")}</h2>
           <p className="ht-section-subtitle">
-            Review completed sessions and open detailed workout logs.
+            {t("member.healthTracking.workoutHistorySubtitle")}
           </p>
         </div>
         <button
@@ -324,7 +332,7 @@ export default function HealthTracking() {
           className="ht-link"
           onClick={() => navigate(TRACKING_ROUTES.workoutHistory)}
         >
-          Open history
+          {t("member.healthTracking.openHistory")}
           <ArrowForwardRoundedIcon />
         </button>
       </section>

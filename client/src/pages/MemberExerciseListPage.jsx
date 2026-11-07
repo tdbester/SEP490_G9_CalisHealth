@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import { getMemberExercises, createMemberExercise } from "../api/library";
+import { FAVORITE_ITEM_TYPES } from "../api/favorites";
+import FavoriteButton from "../components/favorites/FavoriteButton";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { getLevelLabel } from "../utils/levelLabel";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import "./MemberExerciseListPage.css";
 
@@ -72,20 +76,26 @@ function PlusIcon() {
 }
 
 const MUSCLE_GROUPS = [
-  "All",
-  "Chest",
-  "Back",
-  "Legs",
-  "Core",
-  "Arms",
-  "Shoulders",
-  "Glutes",
-  "Full body",
+  { value: "All", labelKey: "member.customExercise.muscleAll" },
+  { value: "Chest", labelKey: "member.customExercise.muscleChest" },
+  { value: "Back", labelKey: "member.customExercise.muscleBack" },
+  { value: "Legs", labelKey: "member.customExercise.muscleLegs" },
+  { value: "Core", labelKey: "member.customExercise.muscleCore" },
+  { value: "Arms", labelKey: "member.customExercise.muscleArms" },
+  { value: "Shoulders", labelKey: "member.customExercise.muscleShoulders" },
+  { value: "Glutes", labelKey: "member.customExercise.muscleGlutes" },
+  { value: "Full body", labelKey: "member.customExercise.muscleFullBody" },
 ];
 
-const LEVEL_OPTIONS = ["All levels", "Beginner", "Intermediate", "Advanced"];
+const LEVEL_OPTIONS = [
+  { value: "All levels", labelKey: "member.customExercise.levelAll" },
+  { value: "Beginner", labelKey: "member.customExercise.levelBeginner" },
+  { value: "Intermediate", labelKey: "member.customExercise.levelIntermediate" },
+  { value: "Advanced", labelKey: "member.customExercise.levelAdvanced" },
+];
 
 export default function MemberExerciseListPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   // Search & Filter States
@@ -192,7 +202,7 @@ export default function MemberExerciseListPage() {
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     if (!createForm.name.trim()) {
-      toast.warning("Please fill in all required fields correctly.");
+        toast.warning(t("member.customExercise.requiredFields"));
       return;
     }
 
@@ -210,10 +220,10 @@ export default function MemberExerciseListPage() {
         description: "",
       });
       fetchList();
-      toast.success("Exercise created successfully!");
+      toast.success(t("member.customExercise.createdSuccess"));
     } catch (err) {
       console.error("Failed to create exercise:", err);
-      toast.error("Failed to create. Please try again.");
+      toast.error(t("member.customExercise.createFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -230,15 +240,15 @@ export default function MemberExerciseListPage() {
         onClick={() => navigate("/library")}
       >
         <ChevronLeftIcon />
-        <span>Back to Library</span>
+        <span>{t("member.customExercise.backToLibrary")}</span>
       </button>
 
       {/* Header Trang với Action Button tạo bài tập */}
       <header className="member-page-header">
         <div className="header-meta">
-          <h1 className="member-page-title">Member Provided Exercises</h1>
+          <h1 className="member-page-title">{t("member.customExercise.pageTitle")}</h1>
           <p className="member-page-description">
-            Browse and manage exercises you added yourself.
+            {t("member.customExercise.pageDescription")}
           </p>
         </div>
 
@@ -248,7 +258,7 @@ export default function MemberExerciseListPage() {
           onClick={() => setShowCreateModal(true)}
         >
           <PlusIcon />
-          <span>Add Custom Exercise</span>
+          <span>{t("member.customExercise.addCustom")}</span>
         </button>
       </header>
 
@@ -261,7 +271,7 @@ export default function MemberExerciseListPage() {
             <input
               type="text"
               className="search-input"
-              placeholder="Search by exercise name or muscle group..."
+              placeholder={t("member.customExercise.searchPlaceholder")}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
             />
@@ -277,8 +287,8 @@ export default function MemberExerciseListPage() {
               }}
             >
               {LEVEL_OPTIONS.map((lvl) => (
-                <option key={lvl} value={lvl}>
-                  {lvl}
+                <option key={lvl.value} value={lvl.value}>
+                  {t(lvl.labelKey)}
                 </option>
               ))}
             </select>
@@ -290,15 +300,15 @@ export default function MemberExerciseListPage() {
         <div className="filters-row-chips">
           <div className="muscle-chips-wrap">
             {MUSCLE_GROUPS.map((mg) => {
-              const active = mg === "All" ? isAllActive : !isAllActive && selectedMuscles.includes(mg);
+              const active = mg.value === "All" ? isAllActive : !isAllActive && selectedMuscles.includes(mg.value);
               return (
                 <button
-                  key={mg}
+                  key={mg.value}
                   type="button"
                   className={`muscle-chip ${active ? "active" : ""}`}
-                  onClick={() => handleMuscleToggle(mg)}
+                  onClick={() => handleMuscleToggle(mg.value)}
                 >
-                  {mg}
+                  {t(mg.labelKey)}
                 </button>
               );
             })}
@@ -317,9 +327,9 @@ export default function MemberExerciseListPage() {
             <div className="empty-state-icon">
               <DumbbellIcon />
             </div>
-            <h3 className="empty-title">No custom exercises found</h3>
+            <h3 className="empty-title">{t("member.customExercise.emptyTitle")}</h3>
             <p className="empty-desc">
-              You haven't added any custom exercises matching these filters. Click below to add one!
+              {t("member.customExercise.emptyDesc")}
             </p>
             <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
               <button
@@ -327,7 +337,7 @@ export default function MemberExerciseListPage() {
                 className="empty-clear-btn"
                 onClick={handleClearFilters}
               >
-                Clear all filters
+                {t("member.customExercise.clearFilters")}
               </button>
               <button
                 type="button"
@@ -336,7 +346,7 @@ export default function MemberExerciseListPage() {
                 onClick={() => setShowCreateModal(true)}
               >
                 <PlusIcon />
-                <span>Create Exercise</span>
+                <span>{t("member.customExercise.createExercise")}</span>
               </button>
             </div>
           </div>
@@ -346,9 +356,12 @@ export default function MemberExerciseListPage() {
 
             const detailText =
               item.details ||
-              `${item.muscleGroup || "Full body"} • ${item.sets || 3} sets • ${
-                item.repsOrDuration || "10 reps"
-              } • ${item.equipment || "Bodyweight"}`;
+              t("member.customExercise.detailSummary", {
+                muscle: item.muscleGroup || t("member.customExercise.defaultFullBody"),
+                sets: item.sets || t("member.customExercise.defaultSets"),
+                reps: item.repsOrDuration || t("member.customExercise.defaultReps"),
+                equipment: item.equipment || t("member.customExercise.defaultEquipment"),
+              });
 
             return (
               <div
@@ -370,16 +383,21 @@ export default function MemberExerciseListPage() {
                   <div className="exercise-meta">
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <h3 className="exercise-row-name">{item.name}</h3>
-                      <span className="member-badge-pill">Custom</span>
+                      <span className="member-badge-pill">{t("member.customExercise.customPill")}</span>
                     </div>
                     <p className="exercise-row-details">{detailText}</p>
                   </div>
                 </div>
 
-                {/* Right: Chip Level đồng đều 110px + Arrow */}
+                {/* Right: Star + Level chip đồng đều 110px + Arrow */}
                 <div className="row-right">
+                  <FavoriteButton
+                    itemType={FAVORITE_ITEM_TYPES.MEMBER_EXERCISE}
+                    itemId={item.id || item.code}
+                    label={item.name}
+                  />
                   <span className={`level-badge ${getLevelBadgeStyle(level)}`}>
-                    {level}
+                    {getLevelLabel(level)}
                   </span>
                   <div className="row-arrow-icon">
                     <ChevronRightIcon />
@@ -399,7 +417,7 @@ export default function MemberExerciseListPage() {
             className="page-btn"
             disabled={currentPage <= 1}
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            aria-label="Previous page"
+            aria-label={t("member.customExercise.previousPage")}
           >
             <ChevronLeftIcon />
           </button>
@@ -420,7 +438,7 @@ export default function MemberExerciseListPage() {
             className="page-btn"
             disabled={currentPage >= totalPages}
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            aria-label="Next page"
+            aria-label={t("member.customExercise.nextPage")}
           >
             <ChevronRightIcon />
           </button>
@@ -435,24 +453,24 @@ export default function MemberExerciseListPage() {
               type="button"
               className="modal-close-btn"
               onClick={() => setConfirmCancel(true)}
-              aria-label="Close"
+              aria-label={t("common.ui.closeAria")}
             >
               &times;
             </button>
 
-            <h2 className="modal-title">Add Custom Exercise</h2>
+            <h2 className="modal-title">{t("member.customExercise.modalTitle")}</h2>
             <p className="modal-subtitle">
-              Add your personalized bodyweight or calisthenics movement to your library.
+              {t("member.customExercise.modalSubtitle")}
             </p>
 
             <form onSubmit={handleCreateSubmit} className="create-form">
               <div className="form-group">
-                <label className="form-label">Exercise Name *</label>
+                <label className="form-label">{t("member.customExercise.fieldName")}</label>
                 <input
                   type="text"
                   required
                   className="form-input"
-                  placeholder="e.g. Ring Archer Push-ups"
+                  placeholder={t("member.customExercise.namePlaceholder")}
                   value={createForm.name}
                   onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
                 />
@@ -460,52 +478,54 @@ export default function MemberExerciseListPage() {
 
               <div className="form-row">
                 <div className="form-group flex-1">
-                  <label className="form-label">Primary Muscle Group</label>
+                  <label className="form-label">{t("member.customExercise.fieldMuscleGroup")}</label>
                   <select
                     className="form-input"
                     value={createForm.muscleGroup}
                     onChange={(e) => setCreateForm({ ...createForm, muscleGroup: e.target.value })}
                   >
-                    {MUSCLE_GROUPS.filter((m) => m !== "All").map((m) => (
-                      <option key={m} value={m}>
-                        {m}
+                    {MUSCLE_GROUPS.filter((m) => m.value !== "All").map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {t(m.labelKey)}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div className="form-group flex-1">
-                  <label className="form-label">Difficulty Level</label>
+                  <label className="form-label">{t("member.customExercise.fieldLevel")}</label>
                   <select
                     className="form-input"
                     value={createForm.level}
                     onChange={(e) => setCreateForm({ ...createForm, level: e.target.value })}
                   >
-                    <option value="Beginner">Beginner</option>
-                    <option value="Intermediate">Intermediate</option>
-                    <option value="Advanced">Advanced</option>
+                    {LEVEL_OPTIONS.filter((l) => l.value !== "All levels").map((l) => (
+                      <option key={l.value} value={l.value}>
+                        {t(l.labelKey)}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
 
               <div className="form-row">
                 <div className="form-group flex-1">
-                  <label className="form-label">Equipment</label>
+                  <label className="form-label">{t("member.customExercise.fieldEquipment")}</label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="e.g. Bodyweight, Rings, Pull-up bar"
+                    placeholder={t("member.customExercise.equipmentPlaceholder")}
                     value={createForm.equipment}
                     onChange={(e) => setCreateForm({ ...createForm, equipment: e.target.value })}
                   />
                 </div>
 
                 <div className="form-group flex-1">
-                  <label className="form-label">Target Reps / Time</label>
+                  <label className="form-label">{t("member.customExercise.fieldTarget")}</label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="e.g. 10 reps or 30 sec"
+                    placeholder={t("member.customExercise.targetPlaceholder")}
                     value={createForm.repsOrDuration}
                     onChange={(e) => setCreateForm({ ...createForm, repsOrDuration: e.target.value })}
                   />
@@ -513,11 +533,11 @@ export default function MemberExerciseListPage() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Instructions &amp; Form Notes</label>
+                <label className="form-label">{t("member.customExercise.fieldInstructions")}</label>
                 <textarea
                   rows={3}
                   className="form-input form-textarea"
-                  placeholder="Describe the execution cues, tempo, or progression notes..."
+                  placeholder={t("member.customExercise.instructionsPlaceholder")}
                   value={createForm.description}
                   onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
                 />
@@ -529,14 +549,16 @@ export default function MemberExerciseListPage() {
                   className="btn-cancel"
                   onClick={() => setConfirmCancel(true)}
                 >
-                  Cancel
+                  {t("member.customExercise.cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={submitting || !createForm.name.trim()}
                   className="create-exercise-btn"
                 >
-                  {submitting ? "Saving..." : "Save Exercise"}
+                  {submitting
+                    ? t("member.customExercise.saving")
+                    : t("member.customExercise.saveExercise")}
                 </button>
               </div>
             </form>
@@ -545,9 +567,9 @@ export default function MemberExerciseListPage() {
       )}
       <ConfirmDialog
         open={confirmCancel}
-        title="Discard this exercise?"
-        message="Are you sure you want to close the form? Your unsaved exercise details will be lost."
-        confirmLabel="Discard"
+        title={t("member.customExercise.discardTitle")}
+        message={t("member.customExercise.discardMessage")}
+        confirmLabel={t("member.customExercise.discardConfirm")}
         onCancel={() => setConfirmCancel(false)}
         onConfirm={() => {
           setConfirmCancel(false);
@@ -563,7 +585,7 @@ export default function MemberExerciseListPage() {
               type="button"
               className="modal-close-btn"
               onClick={() => setSelectedExercise(null)}
-              aria-label="Close"
+              aria-label={t("member.customExercise.closeAria")}
             >
               &times;
             </button>
@@ -580,28 +602,37 @@ export default function MemberExerciseListPage() {
                   <span
                     className={`level-badge ${getLevelBadgeStyle(selectedExercise.level || selectedExercise.difficultyLevel)}`}
                   >
-                    {selectedExercise.level || selectedExercise.difficultyLevel || "Intermediate"}
+                    {getLevelLabel(selectedExercise.level || selectedExercise.difficultyLevel || "Intermediate")}
                   </span>
-                  <span className="member-badge-pill">Custom Added</span>
+                  <span className="member-badge-pill">{t("member.customExercise.customAddedPill")}</span>
                 </div>
               </div>
             </div>
 
             <div style={{ background: "#17102b", padding: 16, borderRadius: 10, marginBottom: 16 }}>
-              <div style={{ fontSize: 13, color: "#a89bd0", marginBottom: 6 }}>Parameters:</div>
+              <div style={{ fontSize: 13, color: "#a89bd0", marginBottom: 6 }}>
+                {t("member.customExercise.parameters")}
+              </div>
               <div style={{ fontSize: 14, fontWeight: 600, color: "#c084fc" }}>
                 {selectedExercise.details ||
-                  `${selectedExercise.muscleGroup || "Full body"} • ${
-                    selectedExercise.sets || 3
-                  } sets • ${selectedExercise.repsOrDuration || "10 reps"} • ${
-                    selectedExercise.equipment || "Bodyweight"
-                  }`}
+                  t("member.customExercise.detailSummary", {
+                    muscle:
+                      selectedExercise.muscleGroup
+                      || t("member.customExercise.defaultFullBody"),
+                    sets: selectedExercise.sets || t("member.customExercise.defaultSets"),
+                    reps:
+                      selectedExercise.repsOrDuration
+                      || t("member.customExercise.defaultReps"),
+                    equipment:
+                      selectedExercise.equipment
+                      || t("member.customExercise.defaultEquipment"),
+                  })}
               </div>
             </div>
 
             <p style={{ color: "#a89bd0", fontSize: 14, lineHeight: 1.6, margin: "0 0 20px 0" }}>
-              {selectedExercise.description ||
-                "Member customized calisthenics exercise stored in your personal exercise catalog."}
+              {selectedExercise.description
+                || t("member.customExercise.defaultDescription")}
             </p>
 
             <button
@@ -610,7 +641,7 @@ export default function MemberExerciseListPage() {
               style={{ width: "100%", padding: "11px 0" }}
               onClick={() => setSelectedExercise(null)}
             >
-              Close
+              {t("member.customExercise.close")}
             </button>
           </div>
         </div>

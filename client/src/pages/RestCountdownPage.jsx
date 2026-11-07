@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import SessionTopbar from "../components/session/SessionTopbar";
 import VoiceToggleButton from "../components/session/VoiceToggleButton";
 import "./RestCountdownPage.css";
@@ -49,12 +50,14 @@ function formTone(score) {
  * "Skip rest" để quay lại màn tracking và bắt đầu set tiếp theo.
  */
 export default function RestCountdownPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { state } = useLocation();
 
   const config = useMemo(() => readSessionConfig(), []);
   const restSeconds = state?.restSeconds ?? config.restSeconds ?? 60;
-  const exerciseName = state?.exerciseName ?? config.exerciseName ?? "Exercise";
+  const exerciseName =
+    state?.exerciseName ?? config.exerciseName ?? t("member.rest.defaultExerciseName");
   const totalSets = state?.totalSets ?? config.sets ?? 1;
   /**
    * Số thứ tự set tiếp theo (raw) — màn tracking gửi `currentSetNumber + 1`.
@@ -139,14 +142,14 @@ export default function RestCountdownPage() {
   const metricValue = isHold
     ? `${lastSet?.totalSeconds ?? 0}s`
     : `${lastSet?.cleanReps ?? 0} / ${config.reps ?? 12}`;
-  const metricLabel = isHold ? "Hold" : "Reps";
+  const metricLabel = isHold ? t("member.rest.holdMetric") : t("member.rest.repsMetric");
 
   /** Cấu hình bài kế tiếp trong buổi tập (nếu có). */
   const nextExerciseName = state?.nextExerciseName ?? config.exerciseName ?? exerciseName;
   const nextTarget = isHold
-    ? `${config.durationSeconds ?? 30}s`
-    : `${config.reps ?? 12} reps`;
-  const nextVolume = `${totalSets} sets × ${nextTarget}`;
+    ? t("member.rest.nextTargetSeconds", { count: config.durationSeconds ?? 30 })
+    : t("member.rest.nextTargetReps", { count: config.reps ?? 12 });
+  const nextVolume = t("member.rest.nextVolume", { sets: totalSets, target: nextTarget });
 
   /**
    * "End workout" -> quay lại màn tracking với cờ kết thúc buổi tập.
@@ -196,16 +199,16 @@ export default function RestCountdownPage() {
           <div className="rc-stage-head">
             <span className="rc-rest-badge">
               <span className="rc-rest-dot" aria-hidden="true" />
-              REST
+              {t("member.rest.badge")}
             </span>
             <span className="rc-stage-meta">
-              {exerciseName} · Set {doneSetNumber} of {totalSets} done
+              {t("member.rest.setProgress", { exercise: exerciseName, done: doneSetNumber, total: totalSets })}
             </span>
           </div>
 
           <div className="rc-stage-main">
-            <h1 className="rc-title">Take a breather</h1>
-            <p className="rc-subtitle">Great work — set {doneSetNumber} complete</p>
+            <h1 className="rc-title">{t("member.rest.title")}</h1>
+            <p className="rc-subtitle">{t("member.rest.subtitle", { count: doneSetNumber })}</p>
 
             <div className="rc-timer-wrap">
               <svg
@@ -240,7 +243,7 @@ export default function RestCountdownPage() {
               </svg>
               <div className="rc-timer">
                 <span className="rc-timer-value">{finished ? "GO" : remaining}</span>
-                <span className="rc-timer-label">seconds left</span>
+                <span className="rc-timer-label">{t("member.rest.secondsLeft")}</span>
               </div>
             </div>
 
@@ -251,7 +254,7 @@ export default function RestCountdownPage() {
                 onClick={() => setRemaining((prev) => Math.max(0, prev - 15))}
                 disabled={finished}
               >
-                −15s
+                {t("member.rest.minusSeconds")}
               </button>
               <button
                 type="button"
@@ -259,19 +262,19 @@ export default function RestCountdownPage() {
                 onClick={() => setRemaining((prev) => prev + 15)}
                 disabled={finished}
               >
-                +15s
+                {t("member.rest.plusSeconds")}
               </button>
             </div>
 
             <p className="rc-tip">
-              Rest resets automatically · next set starts at 0s
+              {t("member.rest.tip")}
             </p>
           </div>
         </section>
 
         {/* ------------------------------------------------ cột phải: tổng kết */}
         <aside className="rc-panel">
-          <p className="rc-panel-label">Last set summary</p>
+          <p className="rc-panel-label">{t("member.rest.lastSetSummary")}</p>
           <section className="rc-summary">
             <div className="rc-summary-item">
               <p className="rc-summary-value">{metricValue}</p>
@@ -282,7 +285,7 @@ export default function RestCountdownPage() {
               <p className={`rc-summary-value ${formTone(lastSet?.formScore)}`}>
                 {lastSet?.formScore != null ? `${lastSet.formScore}%` : "--"}
               </p>
-              <p className="rc-summary-label">Form</p>
+              <p className="rc-summary-label">{t("member.rest.form")}</p>
             </div>
             <span className="rc-summary-divider" aria-hidden="true" />
             <div className="rc-summary-item">
@@ -290,7 +293,7 @@ export default function RestCountdownPage() {
                 {lastSet?.angle != null ? `${lastSet.angle}°` : "--"}
               </p>
               <p className="rc-summary-label">
-                {isHold ? "Body angle" : "Avg knee"}
+                {isHold ? t("member.rest.bodyAngle") : t("member.rest.avgKnee")}
               </p>
             </div>
           </section>
@@ -303,8 +306,7 @@ export default function RestCountdownPage() {
               </svg>
             </span>
             <p className="rc-tip-text">
-              {lastSet?.feedback ||
-                "AI tip: keep your knees tracking over your toes and push outward on the next set."}
+              {lastSet?.feedback || t("member.rest.defaultAiTip")}
             </p>
           </section>
 
@@ -320,24 +322,28 @@ export default function RestCountdownPage() {
               </svg>
             </span>
             <div>
-              <p className="rc-next-label">UP NEXT</p>
+              <p className="rc-next-label">{t("member.rest.upNext")}</p>
               {isLastSet ? (
                 <>
                   <p className="rc-next-title">
                     {nextExercises.length > 0
                       ? nextExercises[0].exerciseName
-                      : "Finish workout"}
+                      : t("member.rest.finishWorkout")}
                   </p>
                   <p className="rc-next-sub">
                     {nextExercises.length > 0
-                      ? "Next exercise in your plan"
-                      : "Last exercise of this workout"}
+                      ? t("member.rest.nextExerciseInPlan")
+                      : t("member.rest.lastExerciseOfWorkout")}
                   </p>
                 </>
               ) : (
                 <>
                   <p className="rc-next-title">
-                    {nextExerciseName} · Set {nextSetNumber} of {totalSets}
+                    {t("member.rest.nextSetTitle", {
+                      exercise: nextExerciseName,
+                      done: nextSetNumber,
+                      total: totalSets,
+                    })}
                   </p>
                   <p className="rc-next-sub">{nextVolume}</p>
                 </>
@@ -352,13 +358,14 @@ export default function RestCountdownPage() {
             </svg>
             {isLastSet
               ? nextExercises.length > 0
-                ? `Next exercise · ${nextExercises[0].exerciseName}`
-                : "Finish workout"
-              : `Skip rest · Start set ${nextSetNumber}`}          </button>
+                ? t("member.rest.nextExerciseAction", { name: nextExercises[0].exerciseName })
+                : t("member.rest.finishWorkout")
+              : t("member.rest.skipRestAction", { count: nextSetNumber })}
+          </button>
 
           <button type="button" className="rc-end-btn" onClick={handleEndWorkout}>
             <span className="rc-end-dot" aria-hidden="true" />
-            End workout
+            {t("member.rest.endWorkout")}
           </button>
         </aside>
       </main>

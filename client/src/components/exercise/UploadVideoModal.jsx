@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Modal from "../Modal";
 import "./ExerciseModals.css";
 
@@ -39,11 +40,11 @@ function readDuration(file) {
   });
 }
 
-function validate(file) {
+function validate(file, t) {
   if (!ACCEPTED_TYPES.includes(file.type) && !ACCEPTED_EXT.test(file.name)) {
-    return `${file.name}: only MP4 or MOV files are supported.`;
+    return t("member.uploadVideo.unsupportedType", { name: file.name });
   }
-  if (file.size > MAX_BYTES) return `${file.name}: larger than 500 MB.`;
+  if (file.size > MAX_BYTES) return t("member.uploadVideo.tooLarge", { name: file.name });
   return null;
 }
 
@@ -56,6 +57,7 @@ function validate(file) {
  * `onAnalyze(files)` nhận mảng File; việc chạy MediaPipe do component cha xử lý.
  */
 export default function UploadVideoModal({ initialFiles = [], onAnalyze, onClose }) {
+  const { t } = useTranslation();
   const inputRef = useRef(null);
   const nextId = useRef(0);
   const [items, setItems] = useState([]);
@@ -74,7 +76,7 @@ export default function UploadVideoModal({ initialFiles = [], onAnalyze, onClose
     const errors = [];
     const accepted = [];
     [...fileList].forEach((file) => {
-      const problem = validate(file);
+      const problem = validate(file, t);
       if (problem) errors.push(problem);
       else accepted.push({ id: nextId.current++, file, duration: null });
     });
@@ -108,7 +110,7 @@ export default function UploadVideoModal({ initialFiles = [], onAnalyze, onClose
   const count = items.length;
 
   return (
-    <Modal title="Upload video" titleIcon={UploadIcon} onClose={onClose} width={560}>
+    <Modal title={t("member.uploadVideo.title")} titleIcon={UploadIcon} onClose={onClose} width={560}>
       <input
         ref={inputRef}
         type="file"
@@ -133,15 +135,15 @@ export default function UploadVideoModal({ initialFiles = [], onAnalyze, onClose
           <path d="M10 22a7 7 0 0 1-.5-13.98A10 10 0 0 1 29 7a8 8 0 0 1 1 15" />
           <path d="M20 26V14M15 18l5-5 5 5" />
         </svg>
-        <p className="exm-dropzone-title">Select video to analyze</p>
-        <p className="exm-dropzone-hint">MP4, MOV · max 500 MB</p>
+        <p className="exm-dropzone-title">{t("member.uploadVideo.selectToAnalyze")}</p>
+        <p className="exm-dropzone-hint">{t("member.uploadVideo.formatHint")}</p>
       </div>
 
       <button type="button" className="mdl-secondary exm-browse-btn" onClick={() => inputRef.current?.click()}>
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z" />
         </svg>
-        Browse file
+        {t("member.uploadVideo.browseFile")}
       </button>
 
       {error && (
@@ -152,7 +154,7 @@ export default function UploadVideoModal({ initialFiles = [], onAnalyze, onClose
 
       {count > 0 && (
         <>
-          <p className="exm-files-label">Selected ({count})</p>
+          <p className="exm-files-label">{t("member.uploadVideo.selected", { count })}</p>
           <ul className="exm-files">
             {items.map((item) => (
               <li key={item.id} className="exm-file">
@@ -173,7 +175,7 @@ export default function UploadVideoModal({ initialFiles = [], onAnalyze, onClose
                 <button
                   type="button"
                   className="exm-file-remove"
-                  aria-label={`Remove ${item.file.name}`}
+                  aria-label={t("member.uploadVideo.removeFileAria", { name: item.file.name })}
                   onClick={() => remove(item.id)}
                 >
                   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -192,7 +194,7 @@ export default function UploadVideoModal({ initialFiles = [], onAnalyze, onClose
         disabled={count === 0}
         onClick={() => onAnalyze?.(items.map((item) => item.file))}
       >
-        {count > 0 ? "Analyze video" : "Analyze videos"}
+        {count > 0 ? t("member.uploadVideo.analyzeVideo") : t("member.uploadVideo.analyzeVideos")}
       </button>
     </Modal>
   );

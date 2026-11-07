@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Modal from "../Modal";
 import "./ExerciseModals.css";
 
-const CHECKLIST = [
-  "Prop the phone at hip height",
-  "Good lighting, uncluttered background",
-  "Head to feet fit inside the frame",
+const CHECKLIST_KEYS = [
+  "member.cameraCheck.checklist1",
+  "member.cameraCheck.checklist2",
+  "member.cameraCheck.checklist3",
 ];
 
 const CameraIcon = (
@@ -15,11 +16,11 @@ const CameraIcon = (
   </svg>
 );
 
-const CAMERA_MESSAGES = {
-  loading: "Starting camera...",
-  denied: "Camera access was blocked. Allow it in your browser settings.",
-  unsupported: "This browser can't access a camera.",
-  error: "Couldn't start the camera.",
+const CAMERA_MESSAGE_KEYS = {
+  loading: "member.cameraCheck.msgLoading",
+  denied: "member.cameraCheck.msgDenied",
+  unsupported: "member.cameraCheck.msgUnsupported",
+  error: "member.cameraCheck.msgError",
 };
 
 /**
@@ -27,6 +28,7 @@ const CAMERA_MESSAGES = {
  * `bodyDetected` sẽ do MediaPipe Pose cung cấp; hiện chưa nối nên mặc định false.
  */
 export default function CameraCheckModal({ bodyDetected = false, onReady, onUpload, onClose }) {
+  const { t } = useTranslation();
   const videoRef = useRef(null);
   const [camera, setCamera] = useState("loading");
 
@@ -58,12 +60,12 @@ export default function CameraCheckModal({ bodyDetected = false, onReady, onUplo
   }, []);
 
   return (
-    <Modal title="Align your camera" titleIcon={CameraIcon} onClose={onClose} width={600}>
+    <Modal title={t("member.cameraCheck.title")} titleIcon={CameraIcon} onClose={onClose} width={600}>
       <div className="exm-camera">
         <video ref={videoRef} autoPlay muted playsInline hidden={camera !== "on"} />
         {camera !== "on" && (
           <p className="exm-camera-msg" role={camera === "loading" ? "status" : "alert"}>
-            {CAMERA_MESSAGES[camera]}
+            {t(CAMERA_MESSAGE_KEYS[camera] || CAMERA_MESSAGE_KEYS.error)}
           </p>
         )}
 
@@ -75,44 +77,44 @@ export default function CameraCheckModal({ bodyDetected = false, onReady, onUplo
           <div className="exm-distance">
             <span className="exm-distance-dot" />
             <span className="exm-distance-line" />
-            <span className="exm-distance-label">1.5–2m</span>
+            <span className="exm-distance-label">{t("member.cameraCheck.distanceLabel")}</span>
             <span className="exm-distance-line" />
             <span className="exm-distance-dot" />
           </div>
         </div>
 
-        <span className="exm-badge exm-badge--info">Place phone 1.5 – 2 m away</span>
+        <span className="exm-badge exm-badge--info">{t("member.cameraCheck.distanceHint")}</span>
         <span
           className={`exm-badge exm-badge--bottom ${bodyDetected ? "exm-badge--ok" : "exm-badge--warn"}`}
           role="status"
         >
           <span className="exm-badge-dot" aria-hidden="true" />
-          {bodyDetected ? "Full body detected" : "Full body not detected"}
+          {bodyDetected ? t("member.cameraCheck.fullBodyDetected") : t("member.cameraCheck.fullBodyNotDetected")}
         </span>
       </div>
 
       <ul className="exm-checklist">
-        {CHECKLIST.map((item) => (
-          <li key={item}>
+        {CHECKLIST_KEYS.map((key) => (
+          <li key={key}>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M5 12.5l4.5 4.5L19 7.5" />
             </svg>
-            {item}
+            {t(key)}
           </li>
         ))}
       </ul>
 
       <button type="button" className="mdl-primary" onClick={onReady}>
-        Ready · Start counting
+        {t("member.cameraCheck.readyStartCounting")}
       </button>
 
       <p className="exm-alt">
-        or{" "}
+        {t("member.cameraCheck.or")}{" "}
         <button type="button" className="exm-link" onClick={onUpload}>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 19V5M6 11l6-6 6 6" />
           </svg>
-          Upload video from device
+          {t("member.cameraCheck.uploadFromDevice")}
         </button>
       </p>
     </Modal>

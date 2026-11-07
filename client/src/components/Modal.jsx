@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import "./Modal.css";
 
 const FOCUSABLE =
@@ -9,6 +10,7 @@ const FOCUSABLE =
  * và trả focus về nút đã mở khi đóng.
  */
 export default function Modal({ title, titleIcon, onClose, width = 560, children }) {
+  const { t } = useTranslation();
   const titleId = useId();
   const panelRef = useRef(null);
   const closeRef = useRef(null);
@@ -75,7 +77,7 @@ export default function Modal({ title, titleIcon, onClose, width = 560, children
             ref={closeRef}
             type="button"
             className="mdl-close"
-            aria-label="Close"
+            aria-label={t("common.ui.closeAria")}
             onClick={onClose}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">

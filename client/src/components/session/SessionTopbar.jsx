@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import BrandLogo from "../BrandLogo";
 import "./SessionTopbar.css";
 
@@ -22,6 +23,7 @@ export default function SessionTopbar({
   onBrand = null,
 }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleBack = () => {
     if (onBack) {
@@ -46,7 +48,7 @@ export default function SessionTopbar({
         <button
           type="button"
           className="sb-back"
-          aria-label="Go back"
+          aria-label={t("common.ui.goBack")}
           onClick={handleBack}
         >
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -64,8 +66,8 @@ export default function SessionTopbar({
       <button
         type="button"
         className="sb-brand"
-        aria-label="Go to dashboard"
-        title="Go to dashboard"
+        aria-label={t("common.ui.goToDashboard")}
+        title={t("common.ui.goToDashboard")}
         onClick={handleBrandClick}
       >
         <span className="sb-brand-icon">

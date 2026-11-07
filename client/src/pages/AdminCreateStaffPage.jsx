@@ -1,5 +1,6 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Box,
@@ -14,20 +15,20 @@ import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import { adminUsersApi, apiErrorMessage } from "../api/adminUsers";
 import { CM } from "../theme-content";
-import { hasNonAscii, IME_WARNING_MESSAGE } from "../utils/authInput";
+import { hasNonAscii } from "../utils/authInput";
 
 const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 const ROLE_OPTIONS = [
   {
     value: "ADMIN",
-    label: "Admin",
-    description: "Full access to the whole system, including staff accounts and system settings.",
+    labelKey: "admin.users.roleAdmin",
+    descriptionKey: "admin.users.roleAdminDesc",
   },
   {
     value: "CONTENT_MANAGER",
-    label: "Content manager",
-    description: "Manages exercises, skills and notifications only.",
+    labelKey: "admin.users.roleContentManager",
+    descriptionKey: "admin.users.roleContentManagerDesc",
   },
 ];
 
@@ -55,6 +56,7 @@ function Section({ title, children }) {
 }
 
 function RoleCard({ option, selected, onSelect }) {
+  const { t } = useTranslation();
   return (
     <Box
       component="button"
@@ -97,9 +99,9 @@ function RoleCard({ option, selected, onSelect }) {
         {selected && <CheckRoundedIcon sx={{ fontSize: 13, color: "#fff" }} />}
       </Box>
       <Box>
-        <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{option.label}</Typography>
+        <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{t(option.labelKey)}</Typography>
         <Typography sx={{ mt: 0.5, fontSize: 12.5, color: CM.textMuted, lineHeight: 1.5 }}>
-          {option.description}
+          {t(option.descriptionKey)}
         </Typography>
       </Box>
     </Box>
@@ -113,6 +115,7 @@ function RoleCard({ option, selected, onSelect }) {
  * cần hỏi lại trước.
  */
 function DiscardDialog({ open, busy, onCancel, onConfirm }) {
+  const { t } = useTranslation();
   return (
     <Dialog
       open={open}
@@ -149,18 +152,17 @@ function DiscardDialog({ open, busy, onCancel, onConfirm }) {
           </Box>
           <Box>
             <Typography id="discard-title" component="h2" sx={{ fontSize: 17, fontWeight: 700 }}>
-              Discard this account?
+              {t("admin.users.discardTitle")}
             </Typography>
           </Box>
         </Box>
         <Typography id="discard-desc" sx={{ fontSize: 13, lineHeight: 1.7, color: CM.textMuted }}>
-          You have unsaved changes. If you go back now, everything you have typed in
-          this form will be lost.
+          {t("admin.users.discardMessage")}
         </Typography>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5 }}>
         <Button color="inherit" onClick={onCancel} disabled={busy} sx={{ borderRadius: "10px" }}>
-          Keep editing
+          {t("admin.users.keepEditing")}
         </Button>
         <Button
           variant="contained"
@@ -168,7 +170,7 @@ function DiscardDialog({ open, busy, onCancel, onConfirm }) {
           disabled={busy}
           sx={{ borderRadius: "10px", bgcolor: CM.pink, color: "#2A0A14", "&:hover": { bgcolor: "#FF5C85" } }}
         >
-          {busy ? "Leaving…" : "Back and discard"}
+          {busy ? t("admin.users.leaving") : t("admin.users.backAndDiscard")}
         </Button>
       </DialogActions>
     </Dialog>
@@ -177,6 +179,7 @@ function DiscardDialog({ open, busy, onCancel, onConfirm }) {
 
 /** Admin creates an Admin or Content Manager account (Figma create_staff_account_ui 1, node 146:1395). */
 export default function AdminCreateStaffPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     fullName: "",
@@ -197,13 +200,13 @@ export default function AdminCreateStaffPage() {
   };
 
   const errors = {
-    fullName: form.fullName.trim() ? "" : "Please enter the full name",
+    fullName: form.fullName.trim() ? "" : t("admin.users.nameRequired"),
     email: !form.email.trim()
-      ? "Please enter an email"
+      ? t("admin.users.emailRequired")
       : !EMAIL_RE.test(form.email.trim())
-        ? "Invalid email format"
+        ? t("admin.users.emailInvalid")
         : emailTaken
-          ? "Email is already registered"
+          ? t("admin.users.emailTaken")
           : "",
   };
   const hasErrors = Object.values(errors).some(Boolean);
@@ -214,7 +217,7 @@ export default function AdminCreateStaffPage() {
     setTouched(true);
     setServerError("");
     if (asciiWarning) {
-      setServerError(IME_WARNING_MESSAGE);
+      setServerError(t("common.imeWarning"));
       return;
     }
     if (hasErrors) return;
@@ -227,7 +230,16 @@ export default function AdminCreateStaffPage() {
       });
       navigate("/admin/users", {
         replace: true,
-        state: { toast: `${created.fullName} was created as ${ROLE_OPTIONS.find((o) => o.value === created.role)?.label ?? created.role}.` },
+        state: {
+          toast: t("admin.users.createdAs", {
+            name: created.fullName,
+            role: t(
+              ROLE_OPTIONS.find((o) => o.value === created.role)?.labelKey
+                ?? `role.${created.role?.toLowerCase()}`,
+              created.role,
+            ),
+          }),
+        },
       });
     } catch (err) {
       if (err?.response?.status === 409) setEmailTaken(true);
@@ -265,14 +277,14 @@ export default function AdminCreateStaffPage() {
 
   return (
     <Box component="form" onSubmit={submit} noValidate sx={{ p: { xs: 2, md: 3.5 }, maxWidth: 760 }}>
-      <Typography sx={{ fontSize: 13, color: CM.textMuted }}>Admin / Users / Create</Typography>
+      <Typography sx={{ fontSize: 13, color: CM.textMuted }}>{t("admin.users.createBreadcrumb")}</Typography>
 
       <Box sx={{ mt: 1, mb: 3 }}>
         <Typography component="h1" sx={{ fontSize: 28, fontWeight: 700, lineHeight: 1.2 }}>
-          Create staff account
+          {t("admin.users.createTitle")}
         </Typography>
         <Typography sx={{ mt: 0.75, fontSize: 13.5, color: CM.textMuted }}>
-          Create an admin or content manager account. Any admin can create these accounts.
+          {t("admin.users.createDescription")}
         </Typography>
       </Box>
 
@@ -283,13 +295,13 @@ export default function AdminCreateStaffPage() {
       )}
 
       <Box sx={{ display: "grid", gap: 2 }}>
-        <Section title="Account details">
+        <Section title={t("admin.users.accountDetails")}>
           <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
             <TextField
-              label="Full name"
+              label={t("admin.users.fullName")}
               value={form.fullName}
               onChange={set("fullName")}
-              placeholder="e.g. Nguyen Van A"
+              placeholder={t("admin.users.fullNamePlaceholder")}
               error={Boolean(show("fullName"))}
               helperText={show("fullName") || " "}
               inputProps={{ maxLength: 255 }}
@@ -298,11 +310,11 @@ export default function AdminCreateStaffPage() {
               sx={fieldSx}
             />
             <TextField
-              label="Email"
+              label={t("admin.users.email")}
               type="email"
               value={form.email}
               onChange={set("email")}
-              placeholder="name@calishealth.com"
+              placeholder={t("admin.users.emailPlaceholder")}
               error={Boolean(show("email"))}
               helperText={show("email") || " "}
               autoComplete="off"
@@ -311,12 +323,12 @@ export default function AdminCreateStaffPage() {
             />
           </Box>
           <Typography sx={{ mt: -0.5, fontSize: 12, color: CM.textDim }}>
-            Email is the login name and cannot be changed after creation.
+            {t("admin.users.emailHint")}
           </Typography>
         </Section>
 
-        <Section title="Role">
-          <Box role="radiogroup" aria-label="Role" sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+        <Section title={t("admin.users.role")}>
+          <Box role="radiogroup" aria-label={t("admin.users.roleAria")} sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
             {ROLE_OPTIONS.map((o) => (
               <RoleCard
                 key={o.value}
@@ -328,15 +340,15 @@ export default function AdminCreateStaffPage() {
           </Box>
         </Section>
 
-        <Section title="Initial password">
+        <Section title={t("admin.users.initialPassword")}>
           <Typography sx={{ fontSize: 13.5, color: CM.textMuted, lineHeight: 1.6 }}>
-            The account is created with the default password{" "}
+            {t("admin.users.initialPasswordPrefix")}{" "}
             <Box component="code" sx={{ px: 0.75, py: 0.25, borderRadius: "6px", bgcolor: CM.surfaceSoft, color: CM.text }}>
               Test@123
             </Box>
             . {form.role === "CONTENT_MANAGER"
-              ? "A content manager must change it on first login."
-              : "An admin can keep using it, but should change it from their profile."}
+              ? t("admin.users.initialPasswordContentManager")
+              : t("admin.users.initialPasswordAdmin")}
           </Typography>
         </Section>
       </Box>
@@ -362,7 +374,7 @@ export default function AdminCreateStaffPage() {
           disabled={busy}
           sx={{ borderRadius: "10px", borderColor: CM.borderStrong }}
         >
-          Back
+          {t("admin.users.back")}
         </Button>
         <Button
           type="submit"
@@ -370,7 +382,7 @@ export default function AdminCreateStaffPage() {
           disabled={busy}
           sx={{ borderRadius: "10px", px: 3, background: CM.buttonGradient, ml: "auto" }}
         >
-          {busy ? "Creating..." : "Create"}
+          {busy ? t("admin.users.creating") : t("common.create")}
         </Button>
       </Box>
 

@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { memberScheduleApi } from "../api/memberSchedule";
 import "./ReviewTrainingPlanPage.css";
 
 const WEEK_DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-const CATEGORY_LABEL = { HEALTH: "Health", SKILL: "Skill" };
+/** Nhãn danh mục lấy từ i18n theo mã category của backend. */
+const CATEGORY_LABEL_KEY = {
+  HEALTH: "member.schedule.categoryHealth",
+  SKILL: "member.schedule.categorySkill",
+};
 
 function parseIso(value) {
   const [year, month, day] = value.split("-").map(Number);
@@ -19,13 +24,13 @@ function exerciseList(entry) {
 }
 
 /** "3 sets × 12 reps" — bài HOLD hiển thị giây thay vì số lần. */
-function exerciseSummary(exercise) {
+function exerciseSummary(exercise, t) {
   const count =
     exercise.category === "HOLD"
-      ? `${exercise.durationSeconds ?? 0}s`
-      : `${exercise.reps ?? 0} reps`;
+      ? t("member.plan.secondsUnit", { count: exercise.durationSeconds ?? 0 })
+      : t("member.plan.repsUnit", { count: exercise.reps ?? 0 });
   const muscles = exercise.muscleGroup ? ` · ${exercise.muscleGroup}` : "";
-  return `${exercise.sets} × ${count}${muscles}`;
+  return `${t("member.plan.reviewSummarySets", { sets: exercise.sets, count })}${muscles}`;
 }
 
 function mondayOf(date) {
@@ -37,6 +42,8 @@ function mondayOf(date) {
 
 export default function ReviewTrainingPlanPage() {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage === "vi" ? "vi-VN" : "en-GB";
   const [weekRule, setWeekRule] = useState(null);
   const [planInfo, setPlanInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +66,7 @@ export default function ReviewTrainingPlanPage() {
         if (!cancelled) {
           setError(
             loadError?.response?.data?.message ||
-              "Could not load this week's workout plan.",
+              t("member.plan.reviewLoadError"),
           );
         }
       } finally {
@@ -71,7 +78,7 @@ export default function ReviewTrainingPlanPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   // Tuần hiện tại, Thứ 2 -> Chủ nhật
   const week = useMemo(() => {
@@ -86,11 +93,11 @@ export default function ReviewTrainingPlanPage() {
         key: WEEK_DAYS[index],
         label: DAY_LABELS[index],
         iso,
-        dateLabel: date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }),
+        dateLabel: date.toLocaleDateString(locale, { day: "2-digit", month: "short" }),
         isToday: iso === todayIso(),
       };
     });
-  }, []);
+  }, [locale]);
 
   /** Buổi tập của tuần hiện tại (backend đã gộp cả 2 tháng nếu tuần qua ranh giới). */
   const byDate = useMemo(() => {
@@ -107,15 +114,19 @@ export default function ReviewTrainingPlanPage() {
   const plannedDays = week.filter((day) => (byDate[day.iso]?.length || 0) > 0).length;
 
   if (loading) {
-    return <div className="review-loading">Loading…</div>;
+    return <div className="review-loading">{t("member.plan.reviewLoading")}</div>;
   }
 
   return (
     <div className="review-page">
       <header className="review-head">
-        <h1 className="review-title">Review workout plan</h1>
+        <h1 className="review-title">{t("member.plan.reviewPlan")}</h1>
         <p className="review-subtitle">
-          {formatMonth(new Date())} · week of {week[0].dateLabel} – {week[6].dateLabel}
+          {t("member.plan.reviewPlanSubtitle", {
+            month: formatMonth(new Date(), locale),
+            start: week[0].dateLabel,
+            end: week[6].dateLabel,
+          })}
         </p>
       </header>
 
@@ -124,12 +135,12 @@ export default function ReviewTrainingPlanPage() {
       {/* Plan info: ẩn khi member chưa có template phù hợp */}
       {planInfo && (
         <section className="review-card">
-          <h2 className="review-card__title">Plan info</h2>
+          <h2 className="review-card__title">{t("member.plan.reviewPlanInfo")}</h2>
           <div className="review-plan-grid">
             {[
-              ["Name", planInfo.templateName],
-              ["Year", planInfo.year],
-              ["Level", planInfo.level],
+              [t("member.plan.planName"), planInfo.templateName],
+              [t("member.plan.planYear"), planInfo.year],
+              [t("member.plan.planLevel"), planInfo.level],
             ].map(([label, value]) => (
               <div key={label}>
                 <div className="review-plan-grid__label">{label}</div>
@@ -174,11 +185,16 @@ export default function ReviewTrainingPlanPage() {
                           entry.category === "SKILL" ? "skill" : "health"
                         }`}
                       >
-                        {CATEGORY_LABEL[entry.category] ?? "Health"}
+                        {t(
+                          CATEGORY_LABEL_KEY[entry.category] ?? "member.schedule.categoryHealth",
+                        )}
                       </span>
                       <h3 className="review-workout__name">{entry.workoutName}</h3>
                       <p className="review-workout__meta">
-                        {entry.workoutLevel} · {entry.exerciseCount} exercises
+                        {t("member.plan.reviewWorkoutMeta", {
+                          level: entry.workoutLevel,
+                          count: entry.exerciseCount,
+                        })}
                       </p>
                       <p className="review-workout__meta review-workout__meta--dim">
                         {entry.durationMinutes} min
@@ -193,7 +209,7 @@ export default function ReviewTrainingPlanPage() {
                                 {exercise.exerciseName}
                               </span>
                               <span className="review-exercise__detail">
-                                {exerciseSummary(exercise)}
+                                {exerciseSummary(exercise, t)}
                               </span>
                             </li>
                           ))}
@@ -202,7 +218,9 @@ export default function ReviewTrainingPlanPage() {
                     </article>
                   ))
                 ) : (
-                  <div className="review-workout review-workout--empty">Rest day</div>
+                  <div className="review-workout review-workout--empty">
+                    {t("member.plan.reviewRestDay")}
+                  </div>
                 )}
               </div>
             );
@@ -212,15 +230,17 @@ export default function ReviewTrainingPlanPage() {
 
       <p className="review-summary">
         {plannedCount > 0
-          ? `${plannedCount} workout${plannedCount === 1 ? "" : "s"} planned · ${plannedDays} day${
-              plannedDays === 1 ? "" : "s"
-            } this week.`
-          : "No workout planned for this week yet. Go back and pick your days."}
+          ? t("member.plan.reviewSummary", {
+              count: plannedCount,
+              plural: plannedCount === 1 ? "" : "s",
+              days: plannedDays,
+            })
+          : t("member.plan.reviewSummaryEmpty")}
       </p>
 
       <div className="review-actions">
         <button type="button" className="review-back" onClick={() => navigate("/schedule")}>
-          ← Back
+          ← {t("common.back")}
         </button>
         <button
           type="button"
@@ -228,7 +248,7 @@ export default function ReviewTrainingPlanPage() {
           onClick={() => navigate("/plan")}
           disabled={plannedCount === 0}
         >
-          Let&apos;s go →
+          {t("member.plan.reviewLetsGo")}
         </button>
       </div>
     </div>
@@ -242,7 +262,7 @@ function todayIso() {
   ).padStart(2, "0")}`;
 }
 
-function formatMonth(value) {
+function formatMonth(value, locale) {
   const date = typeof value === "string" ? parseIso(value) : value;
-  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  return date.toLocaleDateString(locale || "en-US", { month: "long", year: "numeric" });
 }

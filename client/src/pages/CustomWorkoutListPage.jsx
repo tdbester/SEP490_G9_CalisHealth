@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { getCommunityWorkouts } from "../api/library";
+import { FAVORITE_ITEM_TYPES } from "../api/favorites";
+import FavoriteButton from "../components/favorites/FavoriteButton";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { getLevelLabel } from "../utils/levelLabel";
+import { localizeSeed } from "../utils/seedText";
 
 const STORAGE_KEY = "custom_workouts";
 const PERSONAL_STORAGE_KEY = "my_custom_workouts";
@@ -178,10 +183,11 @@ function ChevronDownIcon({ className = "w-4 h-4" }) {
 }
 
 function LevelBadge({ level }) {
+  const { t } = useTranslation();
   const displayLevel = level || "Intermediate";
   return (
     <span className={`rounded-full px-3 py-0.5 text-[11px] font-medium capitalize ${getLevelBadgeStyle(displayLevel)}`}>
-      {displayLevel}
+      {t(`member.catalog.${levelKey(displayLevel)}`)}
     </span>
   );
 }
@@ -192,6 +198,21 @@ function parseMinutes(duration) {
 }
 
 function FilterDropdown({ value, onChange, options, widthClass }) {
+  const { t } = useTranslation();
+  const labelFor = (option) => {
+    if (option.label === "All levels") return t("member.catalog.allLevels");
+    if (option.label === "Beginner") return t("member.catalog.beginner");
+    if (option.label === "Intermediate") return t("member.catalog.intermediate");
+    if (option.label === "Advanced") return t("member.catalog.advanced");
+    if (option.label === "Any length") return t("member.catalog.anyLength");
+    if (option.label === "Under 10 min") return t("member.catalog.under10");
+    if (option.label === "10–15 min") return t("member.catalog.between10and15");
+    if (option.label === "Over 15 min") return t("member.catalog.over15");
+    if (option.label === "Newest") return t("member.catalog.sortNewest");
+    if (option.label === "Oldest") return t("member.catalog.sortOldest");
+    if (option.label === "Most saved") return t("member.catalog.sortMostSaved");
+    return option.label;
+  };
   return (
     <div className={`relative h-7 ${widthClass} min-w-0`}>
       <select
@@ -201,7 +222,7 @@ function FilterDropdown({ value, onChange, options, widthClass }) {
       >
         {options.map((option) => (
           <option key={option.value} value={option.value} className="bg-[#120d29] text-slate-300">
-            {option.label}
+            {labelFor(option)}
           </option>
         ))}
       </select>
@@ -209,6 +230,14 @@ function FilterDropdown({ value, onChange, options, widthClass }) {
     </div>
   );
 }
+
+const levelKey = (level) => {
+  const normalized = String(level || "").toLowerCase();
+  if (normalized === "beginner") return "beginner";
+  if (normalized === "intermediate") return "intermediate";
+  if (normalized === "advanced") return "advanced";
+  return "intermediate";
+};
 
 const LEVEL_OPTIONS = [
   { value: "all", label: "All levels" },
@@ -231,6 +260,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function CustomWorkoutListPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [workouts, setWorkouts] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
@@ -308,9 +338,9 @@ export default function CustomWorkoutListPage() {
     <div className="max-w-6xl mx-auto space-y-5 pb-12">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Custom workout list</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{t("member.catalog.communityWorkoutTitle")}</h1>
           <p className="text-xs text-slate-400 mt-1">
-            Workouts other members built from accepted exercises. Browse them for ideas.
+            {t("member.catalog.communityWorkoutSubtitle")}
           </p>
         </div>
         {errorMessage && <p role="alert" className="text-xs text-rose-400">{errorMessage}</p>}
@@ -321,20 +351,20 @@ export default function CustomWorkoutListPage() {
             className="rounded-xl border border-[#2b2257] bg-[#14102e] hover:bg-[#1f1945] text-slate-200 text-xs font-semibold px-4 py-2.5 flex items-center gap-2 transition-all"
           >
             <ListIcon />
-            My custom workouts
+            {t("member.catalog.myCustomWorkouts")}
           </button>
           <button
             type="button"
             onClick={() => navigate("/library/workouts/new")}
             className="rounded-xl bg-[#643bf6] hover:bg-[#522cd9] text-white text-xs font-semibold px-5 py-2.5 shadow-md active:scale-95 transition-all"
           >
-            + Create workout
+            {t("member.catalog.createWorkout")}
           </button>
         </div>
       </div>
 
       <div className="w-full rounded-2xl border border-[#231b46] bg-[#120d29]/90 px-5 py-3.5 text-xs text-slate-300 flex items-center">
-        Every exercise inside these workouts has passed the automatic checks.
+        {t("member.catalog.communityNotice")}
       </div>
 
       <div className="mt-4 grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_7rem_7rem_5.25rem]">
@@ -347,7 +377,7 @@ export default function CustomWorkoutListPage() {
               setQuery(event.target.value);
               setCurrentPage(1);
             }}
-            placeholder="Search by workout or member"
+            placeholder={t("member.catalog.searchByWorkoutOrMember")}
             className="h-7 w-full rounded-lg border border-[#302653] bg-[#1b1538] pl-[26px] pr-2 text-[10px] leading-none text-slate-200 placeholder-slate-400 focus:outline-none focus:border-[#6340f1]"
           />
         </div>
@@ -357,7 +387,7 @@ export default function CustomWorkoutListPage() {
       </div>
 
       <p className="text-xs font-medium text-slate-400 my-3">
-        {filteredWorkouts.length} workout{filteredWorkouts.length === 1 ? "" : "s"}
+        {t("member.catalog.totalWorkouts", { count: filteredWorkouts.length })}
       </p>
 
       <div className="space-y-3">
@@ -379,28 +409,35 @@ export default function CustomWorkoutListPage() {
               <BarbellIcon />
             </div>
             <div className="flex-1">
-              <div>
-                <h3 className="text-base font-semibold text-white mr-3 inline-block">{workout.title}</h3>
-                <LevelBadge level={workout.level} />
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-semibold text-white mr-3 inline-block">{localizeSeed(workout.title)}</h3>
+                  <LevelBadge level={workout.level} />
+                </div>
+                <FavoriteButton
+                  itemType={FAVORITE_ITEM_TYPES.MEMBER_WORKOUT}
+                  itemId={workout.id}
+                  label={workout.title}
+                />
               </div>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">{workout.description}</p>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">{localizeSeed(workout.description)}</p>
               <div className="text-[11px] text-slate-400 mt-2.5 flex items-center">
                 <span className="h-5 w-5 rounded-full bg-[#3b2d75] text-[#b89eff] text-[10px] font-bold flex items-center justify-center mr-2 inline-flex">
                   {workout.author.avatarText}
                 </span>
                 <span>
-                  {workout.author.name} · {workout.postedTime} · {workout.savesCount} saved
+                  {workout.author.name} · {localizeSeed(workout.postedTime)} · {t("member.catalog.savedCount", { count: workout.savesCount })}
                 </span>
               </div>
               <div className="flex items-center gap-2 mt-3">
                 <span className="bg-[#181236] border border-[#281f52] text-slate-300 text-[11px] font-medium px-3 py-1 rounded-full">
-                  {workout.exercisesCount} exercises
+                  {t("member.catalog.totalExercises", { count: workout.exercisesCount })}
                 </span>
                 <span className="bg-[#181236] border border-[#281f52] text-slate-300 text-[11px] font-medium px-3 py-1 rounded-full">
-                  {workout.setsCount} sets
+                  {t("member.catalog.totalSets", { count: workout.setsCount })}
                 </span>
                 <span className="bg-[#181236] border border-[#281f52] text-slate-300 text-[11px] font-medium px-3 py-1 rounded-full">
-                  {workout.duration}
+                  {localizeSeed(workout.duration)}
                 </span>
               </div>
             </div>
@@ -410,7 +447,7 @@ export default function CustomWorkoutListPage() {
       {filteredWorkouts.length > 0 && (
         <div className="mt-5 flex items-center justify-between border-t border-[#1f193f] pt-4">
           <p className="text-xs text-slate-400">
-            Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, filteredWorkouts.length)} of {filteredWorkouts.length} workouts
+            {t("member.catalog.showingRows", { from: ((currentPage - 1) * pageSize) + 1, to: Math.min(currentPage * pageSize, filteredWorkouts.length), count: filteredWorkouts.length, unit: t("member.catalog.workouts") })}
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -419,7 +456,7 @@ export default function CustomWorkoutListPage() {
               disabled={currentPage <= 1}
               className="rounded-md border border-[#22184c] bg-[#130d2e] px-3 py-1.5 text-xs font-medium text-[#8a82af] hover:border-[#382672] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 transition-all"
             >
-              Previous
+              {t("member.catalog.previous")}
             </button>
             {Array.from({ length: Math.max(totalPages, 1) }, (_, index) => index + 1).map((page) => (
               <button
@@ -442,7 +479,7 @@ export default function CustomWorkoutListPage() {
               disabled={currentPage >= totalPages}
               className="rounded-md border border-[#22184c] bg-[#130d2e] px-3 py-1.5 text-xs font-medium text-[#8a82af] hover:border-[#382672] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 transition-all"
             >
-              Next
+              {t("member.catalog.next")}
             </button>
           </div>
         </div>

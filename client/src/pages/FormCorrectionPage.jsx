@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import SessionTopbar from "../components/session/SessionTopbar";
 import formCorrectionApi from "../api/formCorrection";
 import { libraryApi } from "../api/client";
@@ -30,14 +31,14 @@ const DEFAULT_HOLD_SECONDS = 30;
  * @param {object} stat
  * @returns {string}
  */
-function metricLabel(stat) {
+function metricLabel(stat, t) {
   switch (stat.key) {
     case "depth":
-      return "Hip";
+      return t("member.correction.jointHip");
     case "torso":
-      return "Torso";
+      return t("member.correction.jointTorso");
     case "knee":
-      return "Knee";
+      return t("member.correction.jointKnee");
     default: {
       const joint = (stat.joint || "").toUpperCase();
       return joint.charAt(0) + joint.slice(1).toLowerCase();
@@ -51,13 +52,18 @@ function metricLabel(stat) {
  * @param {object} stat - số liệu đo từ tracker
  * @returns {string} ví dụ "Hip 112° · target ≤ 95°"
  */
-function formatMetric(stat) {
-  const label = metricLabel(stat);
+function formatMetric(stat, t) {
+  const label = metricLabel(stat, t);
   if (stat.key === "knee") {
-    return `${label} ${stat.measured}° inward`;
+    return t("member.correction.metricInward", { label, value: stat.measured });
   }
   const sign = stat.direction === "min" ? "≥" : "≤";
-  return `${label} ${stat.measured}° · target ${sign} ${stat.target}°`;
+  return t("member.correction.metricTarget", {
+    label,
+    value: stat.measured,
+    sign,
+    target: stat.target,
+  });
 }
 
 /**
@@ -83,17 +89,24 @@ function measuredAngleName(stat) {
  * @param {object} stat
  * @returns {string}
  */
-function formatDetail(stat) {
+function formatDetail(stat, t) {
   if (stat.key === "knee") {
     const deviation = Math.max(0, stat.measured - stat.target);
-    const seen =
-      stat.occurrences > 0
-        ? `seen in ${stat.occurrences}/${stat.totalReps} reps`
-        : "seen in this set";
-    return `${deviation}° deviation · ${seen}`;
+    return stat.occurrences > 0
+      ? t("member.correction.detailDeviation", {
+          value: deviation,
+          count: stat.occurrences,
+          total: stat.totalReps,
+        })
+      : t("member.correction.detailSeenThisSet", { value: deviation });
   }
   const sign = stat.direction === "min" ? "≥" : "≤";
-  return `Avg ${measuredAngleName(stat)} angle ${stat.measured}° (target ${sign} ${stat.target}°)`;
+  return t("member.correction.detailAvg", {
+    angle: measuredAngleName(stat),
+    value: stat.measured,
+    sign,
+    target: stat.target,
+  });
 }
 
 /**
@@ -127,7 +140,7 @@ function metricPositionClass(item) {
  *
  * @param {string[]} activeJoints - các khớp đang bị lỗi (để tô đỏ)
  */
-function PoseFigure({ activeJoints = [] }) {
+function PoseFigure({ activeJoints = [], ariaLabel }) {
   const isActive = (joint) => activeJoints.includes(joint);
 
   return (
@@ -135,7 +148,7 @@ function PoseFigure({ activeJoints = [] }) {
       className="fc-figure"
       viewBox="0 0 168 443"
       role="img"
-      aria-label="Pose illustration with the joints that need correction"
+      aria-label={ariaLabel}
     >
       {/* Đường nét cơ thể (tư thế squat, nhìn chính diện). */}
       <g
@@ -190,12 +203,13 @@ function PoseFigure({ activeJoints = [] }) {
 }
 
 export default function FormCorrectionPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { state } = useLocation();
 
   /** Bài tập member vừa tập. */
   const exerciseCode = state?.exerciseCode || "";
-  const exerciseName = state?.exerciseName || "Exercise";
+  const exerciseName = state?.exerciseName || t("member.correction.defaultExerciseName");
 
   /** Số liệu đo chi tiết của các lỗi form (từ tracker). */
   const issueStats = useMemo(
@@ -253,7 +267,7 @@ export default function FormCorrectionPage() {
       return issueStats.map((stat) => ({
         key: stat.key,
         title: stat.label,
-        detail: formatDetail(stat),
+        detail: formatDetail(stat, t),
         joint: stat.joint,
         measured: stat.measured,
         target: stat.target,
@@ -263,12 +277,12 @@ export default function FormCorrectionPage() {
     return formIssues.map((label, index) => ({
       key: `issue-${index}`,
       title: label,
-      detail: "Detected by the AI pose tracker during your last set.",
+      detail: t("member.correction.detectedFallback"),
       joint: "",
       measured: null,
       target: null,
     }));
-  }, [issueStats, formIssues]);
+  }, [issueStats, formIssues, t]);
 
   /** Các khớp đang bị lỗi -> dùng tô đỏ trên hình minh hoạ. */
   const activeJoints = useMemo(
@@ -328,15 +342,15 @@ export default function FormCorrectionPage() {
         {/* ---------------------------------------------------------- tiêu đề */}
         <header className="fc-head">
           <button type="button" className="fc-back" onClick={() => navigate(-1)}>
-            ← Back
+            ← {t("member.correction.back")}
           </button>
-          <h1 className="fc-title">Form correction</h1>
+          <h1 className="fc-title">{t("member.correction.title")}</h1>
           <button
             type="button"
             className="fc-help"
-            aria-label="What is form correction?"
+            aria-label={t("member.correction.helpAria")}
             aria-expanded={showHelp}
-            title="Form correction shows the joints the AI tracker flagged and how to fix them"
+            title={t("member.correction.helpTitle")}
             onClick={() => setShowHelp((value) => !value)}
           >
             ?
@@ -345,10 +359,7 @@ export default function FormCorrectionPage() {
 
         {showHelp ? (
           <p className="fc-help-text">
-            The AI pose tracker watched your last set and flagged the joints that
-            drifted outside the target range. The numbers next to each joint are
-            what it measured — the highlighted points on the illustration are the
-            joints to fix first.
+            {t("member.correction.helpText")}
           </p>
         ) : null}
 
@@ -356,11 +367,14 @@ export default function FormCorrectionPage() {
           {/* ------------------------------------------- cột trái: hình dạng */}
           <section className="fc-card fc-card--figure">
             <div className="fc-figure-wrap">
-              <PoseFigure activeJoints={activeJoints} />
+              <PoseFigure
+                activeJoints={activeJoints}
+                ariaLabel={t("member.correction.figureAria")}
+              />
             </div>
 
             <p className="fc-issues-count">
-              {issues.length} issue{issues.length === 1 ? "" : "s"} found
+              {t("member.correction.issuesFound", { count: issues.length })}
             </p>
 
             <div className="fc-metrics">
@@ -376,7 +390,7 @@ export default function FormCorrectionPage() {
                         measured: item.measured,
                         target: item.target,
                         direction: item.direction,
-                      })
+                      }, t)
                     : item.title}
                 </span>
               ))}
@@ -402,14 +416,14 @@ export default function FormCorrectionPage() {
                 ))
               ) : (
                 <p className="fc-empty">
-                  No form issues recorded for this exercise — nice work!
+                  {t("member.correction.emptyIssues")}
                 </p>
               )}
             </section>
 
             {/* Bước sửa. */}
             <section className="fc-card fc-card--fix">
-              <h2 className="fc-fix-title">How to fix</h2>
+              <h2 className="fc-fix-title">{t("member.correction.howToFixSteps")}</h2>
               {howToFix.length > 0 ? (
                 <ol className="fc-steps">
                   {howToFix.map((tip, index) => (
@@ -428,8 +442,7 @@ export default function FormCorrectionPage() {
                 </ol>
               ) : (
                 <p className="fc-empty">
-                  Keep the tempo slow and hold the correct position at the bottom
-                  of each rep.
+                  {t("member.correction.emptyFix")}
                 </p>
               )}
             </section>
@@ -445,10 +458,10 @@ export default function FormCorrectionPage() {
                   strokeLinejoin="round"
                 />
               </svg>
-              Retry exercise
+              {t("member.correction.retryExercise")}
             </button>
             <button type="button" className="fc-btn fc-btn--skip" onClick={skipAndContinue}>
-              Skip &amp; continue
+              {t("member.correction.skipContinue")}
             </button>
           </div>
         </div>

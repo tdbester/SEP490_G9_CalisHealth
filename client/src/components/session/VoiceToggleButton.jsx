@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useVoiceMuted } from "../../utils/voiceCoach";
 import "./VoiceToggleButton.css";
 
@@ -9,15 +10,16 @@ import "./VoiceToggleButton.css";
  * giữ nguyên khi chuyển màn — chỉ mở lại khi member bấm nút.
  */
 export default function VoiceToggleButton({ className = "vt-icon-btn" }) {
+  const { t } = useTranslation();
   const [muted, toggle] = useVoiceMuted();
 
   return (
     <button
       type="button"
       className={`${className}${muted ? " is-muted" : ""}`}
-      aria-label={muted ? "Enable voice coach" : "Mute voice coach"}
+      aria-label={muted ? t("member.tracking.unmuteVoice") : t("member.tracking.muteVoice")}
       aria-pressed={!muted}
-      title={muted ? "Voice coach off" : "Voice coach on"}
+      title={muted ? t("member.tracking.voiceOff") : t("member.tracking.voiceOn")}
       onClick={() => {
         const next = toggle();
         if (next) {

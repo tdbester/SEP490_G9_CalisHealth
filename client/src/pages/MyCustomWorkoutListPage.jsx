@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useTranslation } from "react-i18next";
 import LibraryDetailPlaceholder from "./LibraryDetailPlaceholder";
 import { deleteMyWorkout, getMyWorkout, getMyWorkouts } from "../api/library";
+import { FAVORITE_ITEM_TYPES } from "../api/favorites";
+import FavoriteButton from "../components/favorites/FavoriteButton";
 import useUndoDelete from "../hooks/useUndoDelete";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { getLevelLabel } from "../utils/levelLabel";
+import { localizeSeed } from "../utils/seedText";
 import { startLibraryWorkout } from "../utils/libraryWorkout";
 
 const STORAGE_KEY = "my_custom_workouts";
@@ -87,15 +92,39 @@ function DumbbellIcon() {
 }
 
 function LevelBadge({ level }) {
+  const { t } = useTranslation();
   const displayLevel = level || "Intermediate";
   return (
     <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold capitalize ${getLevelBadgeStyle(displayLevel)}`}>
-      {displayLevel}
+      {t(`member.catalog.${levelKey(displayLevel)}`)}
     </span>
   );
 }
 
+const levelKey = (level) => {
+  const normalized = String(level || "").toLowerCase();
+  if (normalized === "beginner") return "beginner";
+  if (normalized === "intermediate") return "intermediate";
+  if (normalized === "advanced") return "advanced";
+  return "intermediate";
+};
+
 function FilterDropdown({ value, onChange, options, label }) {
+  const { t } = useTranslation();
+  const labelFor = (option) => {
+    if (option.label === "All levels") return t("member.catalog.allLevels");
+    if (option.label === "Beginner") return t("member.catalog.beginner");
+    if (option.label === "Intermediate") return t("member.catalog.intermediate");
+    if (option.label === "Advanced") return t("member.catalog.advanced");
+    if (option.label === "Any length") return t("member.catalog.anyLength");
+    if (option.label === "Under 10 min") return t("member.catalog.under10");
+    if (option.label === "10–15 min") return t("member.catalog.between10and15");
+    if (option.label === "Over 15 min") return t("member.catalog.over15");
+    if (option.label === "Newest") return t("member.catalog.sortNewest");
+    if (option.label === "Oldest") return t("member.catalog.sortOldest");
+    if (option.label === "Most saved") return t("member.catalog.sortMostSaved");
+    return option.label;
+  };
   return (
     <select
       aria-label={label}
@@ -105,7 +134,7 @@ function FilterDropdown({ value, onChange, options, label }) {
     >
       {options.map((option) => (
         <option key={option.value} value={option.value} className="bg-[#120d29]">
-          {option.label}
+          {labelFor(option)}
         </option>
       ))}
     </select>
@@ -149,6 +178,7 @@ function loadWorkouts() {
 }
 
 export default function MyCustomWorkoutListPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { requestDelete, confirmationModal } = useUndoDelete();
   const [searchParams] = useSearchParams();
@@ -177,7 +207,7 @@ export default function MyCustomWorkoutListPage() {
     };
     loadWorkouts()
       .catch((error) => {
-        if (active) setErrorMessage(error.response?.data?.message || "Could not load workouts.");
+        if (active) setErrorMessage(error.response?.data?.message || t("member.catalog.loadWorkoutsFailed"));
       });
     return () => {
       active = false;
@@ -235,7 +265,7 @@ export default function MyCustomWorkoutListPage() {
         await deleteMyWorkout(workout.id);
         setErrorMessage("");
       },
-      successMessage: "Deleted successfully",
+      successMessage: t("member.catalog.deletedSuccessfully"),
     });
   };
 
@@ -249,26 +279,26 @@ export default function MyCustomWorkoutListPage() {
       const detail = await getMyWorkout(workout.id);
       const started = startLibraryWorkout(navigate, detail.exercises || []);
       if (!started) {
-        setErrorMessage("This workout has no exercise you can start yet.");
+        setErrorMessage(t("member.catalog.couldNotStart"));
       }
     } catch (error) {
-      setErrorMessage(error.response?.data?.message || "Could not start this workout.");
+      setErrorMessage(error.response?.data?.message || t("member.catalog.loadFailed"));
     } finally {
       setStartingWorkoutId(null);
     }
   };
 
   if (searchParams.get("source") === "system") {
-    return <LibraryDetailPlaceholder title="Workouts" type="workouts" />;
+    return <LibraryDetailPlaceholder title={t("member.library.placeholder.workoutType")} type="workouts" />;
   }
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 pb-12 text-white">
       <header className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">My custom workout list</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("member.catalog.myWorkoutTitle")}</h1>
           <p className="mt-1 text-xs text-slate-400">
-            Workouts you created. Edit or delete them, or build a new one.
+            {t("member.catalog.myWorkoutSubtitle")}
           </p>
         </div>
         <button
@@ -276,7 +306,7 @@ export default function MyCustomWorkoutListPage() {
           onClick={() => navigate("/library/workouts/new")}
           className="shrink-0 rounded-xl border border-[#8065ff] bg-[#643bf6] px-5 py-2.5 text-xs font-semibold text-white shadow-md shadow-purple-950/40 transition-colors hover:bg-[#7554ff]"
         >
-          + Create workout
+          {t("member.catalog.createWorkout")}
         </button>
       </header>
 
@@ -287,8 +317,8 @@ export default function MyCustomWorkoutListPage() {
           </span>
           <input
             type="search"
-            aria-label="Search by workout name"
-            placeholder="Search by workout name"
+            aria-label={t("member.catalog.searchByWorkoutName")}
+            placeholder={t("member.catalog.searchByWorkoutName")}
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
@@ -298,7 +328,7 @@ export default function MyCustomWorkoutListPage() {
           />
         </div>
         <FilterDropdown
-          label="Filter by level"
+          label={t("member.catalog.filterByLevel")}
           value={level}
           onChange={(value) => {
             setLevel(value);
@@ -312,7 +342,7 @@ export default function MyCustomWorkoutListPage() {
           ]}
         />
         <FilterDropdown
-          label="Filter by length"
+          label={t("member.catalog.filterByLength")}
           value={length}
           onChange={(value) => {
             setLength(value);
@@ -326,7 +356,7 @@ export default function MyCustomWorkoutListPage() {
           ]}
         />
         <FilterDropdown
-          label="Sort workouts"
+          label={t("member.catalog.sortWorkouts")}
           value={sort}
           onChange={(value) => {
             setSort(value);
@@ -341,7 +371,7 @@ export default function MyCustomWorkoutListPage() {
       </div>
 
       <p className="text-xs text-slate-400" aria-live="polite">
-        {filteredWorkouts.length} {filteredWorkouts.length === 1 ? "workout" : "workouts"}
+        {t("member.catalog.totalWorkouts", { count: filteredWorkouts.length })}
       </p>
 
       {errorMessage && (
@@ -362,16 +392,16 @@ export default function MyCustomWorkoutListPage() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-base font-semibold text-white">{workout.title}</h2>
+                  <h2 className="text-base font-semibold text-white">{localizeSeed(workout.title)}</h2>
                   <LevelBadge level={workout.level} />
                 </div>
-                <p className="mt-1 text-[13px] text-slate-300">{workout.description}</p>
+                <p className="mt-1 text-[13px] text-slate-300">{localizeSeed(workout.description)}</p>
                 <div className="mt-1 text-xs text-slate-300">
-                  {workout.createdLabel || "Created just now"}
-                  {workout.savesCount > 0 && ` · ${workout.savesCount} saved`}
+                  {workout.createdLabel ? localizeSeed(workout.createdLabel) : t("member.catalog.createdJustNow")}
+                  {workout.savesCount > 0 && ` · ${t("member.catalog.savedCount", { count: workout.savesCount })}`}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {[`${workout.exercisesCount} exercises`, `${workout.setsCount} sets`, workout.duration].map((pill) => (
+                  {[t("member.catalog.totalExercises", { count: workout.exercisesCount }), t("member.catalog.totalSets", { count: workout.setsCount }), localizeSeed(workout.duration)].map((pill) => (
                     <span key={pill} className="rounded-full border border-[#493b79] bg-[#0d0922] px-3 py-1 text-[11px] font-medium text-slate-200">
                       {pill}
                     </span>
@@ -388,22 +418,27 @@ export default function MyCustomWorkoutListPage() {
                     : "border-[#59477f] bg-[#211844] text-violet-200"
                 }`}
               >
-                {workout.isShared ? "Shared with community" : "Private"}
+                {workout.isShared ? t("member.catalog.sharedWithCommunity") : t("member.catalog.private")}
               </span>
               <div className="flex gap-2">
+                <FavoriteButton
+                  itemType={FAVORITE_ITEM_TYPES.MEMBER_WORKOUT}
+                  itemId={workout.id}
+                  label={workout.title}
+                />
                 <button
                   type="button"
                   onClick={() => handleDelete(workout)}
                   className="rounded-lg border border-rose-700/80 bg-rose-950/50 px-4 py-2 text-xs font-semibold text-rose-200 transition-colors hover:bg-rose-900/70"
                 >
-                  Delete
+                  {t("member.catalog.delete")}
                 </button>
                 <button
                   type="button"
                   onClick={() => navigate(`/library/workouts/${workout.id}/edit`)}
                   className="rounded-lg border border-[#8065ff] bg-[#643bf6] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#7554ff]"
                 >
-                  Edit
+                  {t("member.catalog.edit")}
                 </button>
                 <button
                   type="button"
@@ -411,7 +446,7 @@ export default function MyCustomWorkoutListPage() {
                   disabled={startingWorkoutId === workout.id}
                   className="rounded-lg border border-emerald-600/80 bg-emerald-700 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {startingWorkoutId === workout.id ? "Starting..." : "Start"}
+                  {startingWorkoutId === workout.id ? t("member.catalog.starting") : t("member.catalog.start")}
                 </button>
               </div>
             </div>
@@ -419,7 +454,7 @@ export default function MyCustomWorkoutListPage() {
         ))}
         {filteredWorkouts.length === 0 && (
           <p className="rounded-2xl border border-[#231b46] bg-[#120d29]/90 py-12 text-center text-xs text-slate-400">
-            No workouts match your filters.
+            {t("member.catalog.noWorkoutsMatch")}
           </p>
         )}
       </div>
@@ -427,7 +462,7 @@ export default function MyCustomWorkoutListPage() {
       {totalPages > 1 && (
         <div className="mt-5 flex items-center justify-between border-t border-[#1f193f] pt-4">
           <p className="text-xs text-slate-400">
-            Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, filteredWorkouts.length)} of {filteredWorkouts.length} workouts
+            {t("member.catalog.showingRows", { from: ((currentPage - 1) * pageSize) + 1, to: Math.min(currentPage * pageSize, filteredWorkouts.length), count: filteredWorkouts.length, unit: t("member.catalog.workouts") })}
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -436,7 +471,7 @@ export default function MyCustomWorkoutListPage() {
               disabled={currentPage <= 1}
               className="rounded-md border border-[#22184c] bg-[#130d2e] px-3 py-1.5 text-xs font-medium text-[#8a82af] transition-all hover:border-[#382672] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Previous
+              {t("member.catalog.previous")}
             </button>
             {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
               <button
@@ -459,7 +494,7 @@ export default function MyCustomWorkoutListPage() {
               disabled={currentPage >= totalPages}
               className="rounded-md border border-[#22184c] bg-[#130d2e] px-3 py-1.5 text-xs font-medium text-[#8a82af] transition-all hover:border-[#382672] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Next
+              {t("member.catalog.next")}
             </button>
           </div>
         </div>

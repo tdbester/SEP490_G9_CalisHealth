@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link as RouterLink, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Alert, Box, Button, Card, CircularProgress, Stack, Typography } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import EventNoteRoundedIcon from "@mui/icons-material/EventNoteRounded";
@@ -26,6 +27,7 @@ function InfoCard({ icon: Icon, label, children }) {
 }
 
 export default function DailyPlanTemplateDetailPage() {
+  const { t } = useTranslation();
   const { code } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -40,9 +42,9 @@ export default function DailyPlanTemplateDetailPage() {
   }, [routedSuccess, navigate, location.pathname]);
 
   const crumb = [
-    { label: "Content manager", to: CONTENT_PATHS.dashboard },
-    { label: "Daily Training Plans", to: CONTENT_PATHS.templates },
-    { label: "Plan details" },
+    { labelKey: "nav.contentManagerRole", to: CONTENT_PATHS.dashboard },
+    { labelKey: "nav.dailyTrainingPlans", to: CONTENT_PATHS.templates },
+    { labelKey: "nav.planDetails" },
   ];
 
   if (isLoading) {
@@ -51,11 +53,11 @@ export default function DailyPlanTemplateDetailPage() {
   if (error || !plan) {
     return (
       <Box sx={{ maxWidth: 1080, mx: "auto", px: { xs: 2, sm: 3 }, py: 3 }}>
-        <ContentPageHeader breadcrumb={crumb} title="Plan not found" />
-        <Alert severity="warning" sx={{ mt: 2 }} action={<Button color="inherit" size="small" onClick={() => refetch()}>Try again</Button>}>
-          {error?.message || "This plan may have been deleted or the link is invalid."}
+        <ContentPageHeader breadcrumb={crumb} title={t("contentManager.templates.notFound")} />
+        <Alert severity="warning" sx={{ mt: 2 }} action={<Button color="inherit" size="small" onClick={() => refetch()}>{t("contentManager.templates.tryAgain")}</Button>}>
+          {error?.message || t("contentManager.templates.notFoundMessage")}
         </Alert>
-        <Button component={RouterLink} to={CONTENT_PATHS.templates} sx={{ mt: 2 }} startIcon={<ArrowBackRoundedIcon />}>Back to plan list</Button>
+        <Button component={RouterLink} to={CONTENT_PATHS.templates} sx={{ mt: 2 }} startIcon={<ArrowBackRoundedIcon />}>{t("contentManager.templates.backToPlanList")}</Button>
       </Box>
     );
   }
@@ -69,35 +71,37 @@ export default function DailyPlanTemplateDetailPage() {
       <ContentPageHeader
         breadcrumb={crumb}
         title={plan.name}
-        description={plan.description || `${plan.code} · Updated ${formatDateTime(plan.updatedAt)}${plan.createdByName ? ` · by ${plan.createdByName}` : ""}`}
+        description={plan.description
+          || t("contentManager.templates.updatedMeta", { code: plan.code, date: formatDateTime(plan.updatedAt) })
+          + (plan.createdByName ? t("contentManager.templates.updatedBy", { name: plan.createdByName }) : "")}
         action={(
           <Stack direction="row" spacing={1} alignItems="center">
             <Button component={RouterLink} to={`${CONTENT_PATHS.templates}/${encodeURIComponent(plan.code)}/edit`} variant="contained" startIcon={<EditRoundedIcon />}>
-              Edit plan
+              {t("contentManager.templates.editPlan")}
             </Button>
             <Button component={RouterLink} to={CONTENT_PATHS.templates} variant="outlined" startIcon={<ArrowBackRoundedIcon />}>
-              Back
+              {t("contentManager.templates.back")}
             </Button>
           </Stack>
         )}
       />
 
       <Box sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", md: "repeat(2, minmax(0, 1fr))" } }}>
-        <InfoCard icon={SignalCellularAltRoundedIcon} label="Level"><DarkPill tone={levelTone(plan.level)}>{plan.level}</DarkPill></InfoCard>
-        <InfoCard icon={EventNoteRoundedIcon} label="Days per week"><Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>{plan.daysPerWeek}</Typography></InfoCard>
+        <InfoCard icon={SignalCellularAltRoundedIcon} label={t("contentManager.templates.infoLevel")}><DarkPill tone={levelTone(plan.level)}>{plan.level}</DarkPill></InfoCard>
+        <InfoCard icon={EventNoteRoundedIcon} label={t("contentManager.templates.infoDaysPerWeek")}><Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>{plan.daysPerWeek}</Typography></InfoCard>
       </Box>
 
       <Card sx={{ mt: 2.5, overflow: "hidden" }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 2.5, py: 1.75, borderBottom: `1px solid ${CM.border}` }}>
           <Box>
-            <Typography sx={{ color: "#fff", fontWeight: 700 }}>Weekly schedule</Typography>
-            <Typography variant="caption" sx={{ color: CM.textMuted }}>{days.length} training days · {totalExercises} exercises in total</Typography>
+            <Typography sx={{ color: "#fff", fontWeight: 700 }}>{t("contentManager.templates.weeklySchedule")}</Typography>
+            <Typography variant="caption" sx={{ color: CM.textMuted }}>{t("contentManager.templates.weeklyScheduleMeta", { days: days.length, exercises: totalExercises })}</Typography>
           </Box>
         </Stack>
         <Stack divider={<Box sx={{ borderTop: `1px solid ${CM.border}` }} />}>
           {days.map((day) => (
             <Box key={day.dayNumber} sx={{ display: "grid", gridTemplateColumns: { xs: "72px 1fr", sm: "88px minmax(0, 1fr) minmax(150px, 1fr) 120px 110px 90px" }, alignItems: "center", columnGap: 2, rowGap: 1, px: 2.5, py: 1.5 }}>
-              <Typography sx={{ color: CM.violetBright, fontWeight: 800, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>Day {day.dayNumber}</Typography>
+              <Typography sx={{ color: CM.violetBright, fontWeight: 800, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>{t("contentManager.templates.dayLabel", { count: day.dayNumber })}</Typography>
               <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
                 <Box className="workout-row-mark" aria-hidden="true" sx={{ width: 32, height: 32, borderRadius: "9px", display: "grid", placeItems: "center", flexShrink: 0, color: "#c4b5fd", bgcolor: "rgba(139,92,246,0.2)", border: "1px solid rgba(167,139,250,0.3)" }}>
                   <FitnessCenterRoundedIcon sx={{ fontSize: 16 }} />
@@ -110,29 +114,29 @@ export default function DailyPlanTemplateDetailPage() {
               <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ display: "flex", minWidth: 0, gridColumn: { xs: "2", sm: "auto" }, mt: { xs: 0.5, sm: 0 } }}>
                 {(day.targetMuscles || []).length
                   ? day.targetMuscles.map((muscle) => <DarkPill key={muscle} tone="primary">{muscle}</DarkPill>)
-                  : <Typography variant="caption" sx={{ color: CM.textDim }}>No target muscle</Typography>}
+                  : <Typography variant="caption" sx={{ color: CM.textDim }}>{t("contentManager.templates.noTargetMuscle")}</Typography>}
               </Stack>
-              <Typography variant="body2" sx={{ color: CM.textMuted, textAlign: { sm: "center" }, display: { xs: "none", sm: "block" } }}>{day.exerciseCount} exercises</Typography>
+              <Typography variant="body2" sx={{ color: CM.textMuted, textAlign: { sm: "center" }, display: { xs: "none", sm: "block" } }}>{t("contentManager.templates.exercisesCount", { count: day.exerciseCount })}</Typography>
               <Box sx={{ display: { xs: "none", sm: "flex" }, justifyContent: "center" }}><StatusDot active={day.workoutActive} /></Box>
               <Box sx={{ display: { xs: "none", sm: "flex" }, justifyContent: "flex-end" }}>
                 <Button
                   component={RouterLink}
                   to={`${CONTENT_PATHS.workouts}/${encodeURIComponent(day.workoutCode)}`}
-                  state={{ returnTo: `${CONTENT_PATHS.templates}/${encodeURIComponent(plan.code)}`, returnLabel: "Back to plan details" }}
+                  state={{ returnTo: `${CONTENT_PATHS.templates}/${encodeURIComponent(plan.code)}`, returnLabel: t("contentManager.templates.backToDetailsLabel") }}
                   size="small"
                   variant="outlined"
                   sx={{ py: 0.25, px: 1.25, fontSize: 11.5, minWidth: 0, borderRadius: "8px" }}
                 >
-                  View
+                  {t("contentManager.templates.view")}
                 </Button>
               </Box>
             </Box>
           ))}
-          {days.length === 0 && <Typography variant="body2" color="text.secondary" sx={{ py: 5, textAlign: "center" }}>No workouts scheduled.</Typography>}
+          {days.length === 0 && <Typography variant="body2" color="text.secondary" sx={{ py: 5, textAlign: "center" }}>{t("contentManager.templates.noWorkoutsScheduled")}</Typography>}
         </Stack>
       </Card>
 
-      <Button component={RouterLink} to={CONTENT_PATHS.templates} sx={{ mt: 2 }} startIcon={<ArrowBackRoundedIcon />}>Back to plan list</Button>
+      <Button component={RouterLink} to={CONTENT_PATHS.templates} sx={{ mt: 2 }} startIcon={<ArrowBackRoundedIcon />}>{t("contentManager.templates.backToPlanList")}</Button>
     </Box>
   );
 }

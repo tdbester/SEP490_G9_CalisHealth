@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { aiSupportApi } from "../../api/aiSupport";
+import { useTranslation } from "react-i18next";
 import "./AiSupportModal.css";
 
 /** Hạn mức câu hỏi trong một phiên chat (badge "n/5" ở header). */
@@ -15,9 +16,9 @@ const SESSION_LIMIT = 5;
 const SESSION_KEY = "calishealth.aiSupport.sessionId";
 
 /** Nhãn nguồn buổi tập hiển thị trong chip ngữ cảnh. */
-const SOURCE_LABELS = {
-  camera: "AI camera session",
-  video: "AI video scan session",
+const SOURCE_KEYS = {
+  camera: "sourceCamera",
+  video: "sourceVideo",
 };
 
 /**
@@ -67,7 +68,7 @@ function writeSessionId(value) {
  * @param {string} json
  * @returns {{causes: {title: string, detail: string}[], tip: string, followUps: string[]}|null}
  */
-function parseAnswer(json) {
+function parseAnswer(json, t) {
   if (!json) return null;
   try {
     const parsed = JSON.parse(json);
@@ -78,7 +79,7 @@ function parseAnswer(json) {
     };
   } catch {
     // Câu trả lời cũ lưu dạng text -> hiển thị luôn là một nguyên nhân.
-    return { causes: [{ title: "AI coach feedback", detail: json }], tip: "", followUps: [] };
+    return { causes: [{ title: t("member:aiSupport.aiCoachFeedback"), detail: json }], tip: "", followUps: [] };
   }
 }
 
@@ -110,6 +111,7 @@ export default function AiSupportModal({
   const [sessionId, setSessionId] = useState("");
   const listRef = useRef(null);
   const inputRef = useRef(null);
+  const { t } = useTranslation(["member", "common"]);
 
   /** Số câu đã hỏi trong phiên chat hiện tại. */
   const sessionIndex = quota?.sessionUsed ?? messages.filter((item) => item.role === "user").length;
@@ -130,9 +132,10 @@ export default function AiSupportModal({
           new Date(sessionDate),
         )
       : new Intl.DateTimeFormat("en", { day: "2-digit", month: "short" }).format(new Date());
-    const sourceLabel = SOURCE_LABELS[source] ?? SOURCE_LABELS.camera;
+    const sourceLabel = t(`member:aiSupport.${SOURCE_KEYS[source] ?? SOURCE_KEYS.camera}`);
     return [exerciseName, sourceLabel, date].filter(Boolean).join(" · ");
-  }, [exerciseName, sessionDate, source]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exerciseName, sessionDate, source, t]);
 
   // Mở popup -> dùng lại phiên chat đang lưu (đóng rồi mở lại vẫn giữ hội
   // thoại và lượt/phiên), rồi lấy quota + lịch sử của phiên đó.
@@ -161,7 +164,7 @@ export default function AiSupportModal({
         // API trả về cũ nhất trước -> giữ nguyên thứ tự hội thoại.
         for (const item of items) {
           restored.push({ role: "user", text: item.question });
-          const parsed = parseAnswer(item.answerJson);
+          const parsed = parseAnswer(item.answerJson, t);
           if (parsed) {
             restored.push({ role: "ai", ...parsed });
           }
@@ -218,15 +221,15 @@ export default function AiSupportModal({
       const text = (rawQuestion ?? question).trim();
       if (!text || loading) return;
       if (exhausted) {
-        toast.error("You've used all your AI questions for today.");
+        toast.error(t("member:aiSupport.toastDailyExhausted"));
         return;
       }
       if (sessionExhausted) {
-        toast.error("This chat is limited to 5 questions. Close it and open a new chat.");
+        toast.error(t("member:aiSupport.toastSessionLimit", { count: SESSION_LIMIT }));
         return;
       }
       if (!exerciseCode) {
-        toast.error("No exercise selected for AI support.");
+        toast.error(t("member:aiSupport.toastNoExercise"));
         return;
       }
 
@@ -262,16 +265,16 @@ export default function AiSupportModal({
         const serverMessage = error?.response?.data?.message;
         if (status === 429) {
           // Server trả 429 cho cả hết quota ngày lẫn hết lượt phiên chat.
-          toast.error(serverMessage || "You've used all your AI questions for today.");
+          toast.error(serverMessage || t("member:aiSupport.toastDailyExhausted"));
           if (serverMessage?.includes("chat")) {
             setQuota((current) => ({ ...(current || {}), sessionUsed: SESSION_LIMIT }));
           } else {
             setQuota((current) => ({ ...(current || {}), remaining: 0 }));
           }
         } else if (status === 400) {
-          toast.error(serverMessage || "Please rephrase your question.");
+          toast.error(serverMessage || t("member:aiSupport.toastRephrase"));
         } else {
-          toast.error("AI support is unavailable right now. Please try again.");
+          toast.error(t("member:aiSupport.toastUnavailable"));
         }
         // Bỏ tin nhắn của user để không mất câu hỏi.
         setMessages((current) => current.slice(0, -1));
@@ -304,19 +307,23 @@ export default function AiSupportModal({
         className="ais-panel"
         role="dialog"
         aria-modal="true"
-        aria-label="AI Support"
+        aria-label={t("member:aiSupport.title")}
       >
         {/* ------------------------------------------------------- header */}
         <header className="ais-head">
           <div className="ais-head-text">
-            <h2 className="ais-title">AI Support</h2>
-            <p className="ais-subtitle">
-              AI suggests likely causes of your form errors.
-            </p>
+            <h2 className="ais-title">{t("member:aiSupport.title")}</h2>
+            <p className="ais-subtitle">{t("member:aiSupport.subtitle")}</p>
           </div>
 
           <div className="ais-head-right">
-            <span className="ais-steps" aria-label={`Question ${sessionIndex} of ${SESSION_LIMIT}`}>
+            <span
+              className="ais-steps"
+              aria-label={t("member:aiSupport.questionOf", {
+                current: sessionIndex,
+                total: SESSION_LIMIT,
+              })}
+            >
               <span className="ais-step-dots" aria-hidden="true">
                 {Array.from({ length: SESSION_LIMIT }, (_, index) => (
                   <span
@@ -333,14 +340,14 @@ export default function AiSupportModal({
             {/* Hết lượt phiên -> cho member mở phiên chat mới (quota ngày vẫn còn). */}
             {sessionExhausted && !exhausted ? (
               <button type="button" className="ais-newchat" onClick={startNewChat}>
-                New chat
+                {t("member:aiSupport.newChat")}
               </button>
             ) : null}
 
             <button
               type="button"
               className="ais-close"
-              aria-label="Close AI support"
+              aria-label={t("member:aiSupport.closeAria")}
               onClick={() => onClose?.()}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -373,11 +380,8 @@ export default function AiSupportModal({
                   />
                 </svg>
               </span>
-              <p className="ais-empty-title">Ask about any form error</p>
-              <p className="ais-empty-text">
-                AI reads the form rules and the issues detected in your session, then
-                explains the likely causes.
-              </p>
+              <p className="ais-empty-title">{t("member:aiSupport.emptyTitle")}</p>
+              <p className="ais-empty-text">{t("member:aiSupport.emptyText")}</p>
             </div>
           )}
 
@@ -399,7 +403,7 @@ export default function AiSupportModal({
                       </svg>
                     </span>
                     <p className="ais-answer-title">
-                      {item.causes.length} likely causes
+                      {t("member:aiSupport.likelyCauses", { count: item.causes.length })}
                     </p>
                   </header>
 
@@ -440,8 +444,8 @@ export default function AiSupportModal({
           {!loading && sessionIndex === 0 && exerciseName && !sessionExhausted ? (
             <div className="ais-suggestions">
               {[
-                `Why do my form errors happen in ${exerciseName}?`,
-                "How do I fix the form issue detected in my last set?",
+                t("member:aiSupport.suggestionWhy", { name: exerciseName }),
+                t("member:aiSupport.suggestionFix"),
               ].map((suggestion) => (
                 <button
                   key={suggestion}
@@ -485,12 +489,12 @@ export default function AiSupportModal({
             disabled={loading || exhausted || sessionExhausted}
             placeholder={
               exhausted
-                ? "Daily AI limit reached"
+                ? t("member:aiSupport.placeholderDailyLimit")
                 : sessionExhausted
-                  ? "Chat limit reached — reopen to continue"
+                  ? t("member:aiSupport.placeholderSessionLimit")
                   : remaining !== null
-                    ? `Ask about your form (${remaining} left)`
-                    : "Ask about your form"
+                    ? t("member:aiSupport.placeholderRemaining", { remaining })
+                    : t("member:aiSupport.placeholderDefault")
             }
             onChange={(event) => setQuestion(event.target.value)}
             onKeyDown={(event) => {
@@ -503,7 +507,7 @@ export default function AiSupportModal({
           <button
             type="button"
             className="ais-send"
-            aria-label="Send question"
+            aria-label={t("member:aiSupport.sendQuestionAria")}
             disabled={loading || exhausted || sessionExhausted || !question.trim()}
             onClick={() => sendQuestion()}
           >
@@ -523,10 +527,10 @@ export default function AiSupportModal({
         {sessionExhausted && !exhausted ? (
           <div className="ais-sessionhint">
             <p className="ais-sessionhint-text">
-              You&apos;ve used all {SESSION_LIMIT} questions in this chat.
+              {t("member:aiSupport.sessionHint", { count: SESSION_LIMIT })}
             </p>
             <button type="button" className="ais-sessionhint-btn" onClick={startNewChat}>
-              Start a new chat
+              {t("member:aiSupport.startNewChat")}
             </button>
           </div>
         ) : null}

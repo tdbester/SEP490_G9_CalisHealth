@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { libraryApi } from "../api/client";
 import { mediaUrl } from "../api/contentManager";
 import VideoDemoModal from "../components/exercise/VideoDemoModal";
@@ -26,6 +27,7 @@ function splitMuscles(muscleGroup) {
 }
 
 export default function ExerciseDetailPreview() {
+  const { t } = useTranslation();
   const { code = "" } = useParams();
   const navigate = useNavigate();
   const { state } = useLocation();
@@ -57,8 +59,8 @@ export default function ExerciseDetailPreview() {
         setExercise(null);
         setError(
           err.response?.status === 404
-            ? "This exercise is not available."
-            : "Couldn't load this exercise. Please try again.",
+            ? t("member.preview.notAvailable")
+            : t("member.preview.loadFailed"),
         );
       })
       .finally(() => !cancelled && setLoading(false));
@@ -75,11 +77,11 @@ export default function ExerciseDetailPreview() {
         <div className="exd-container">
           <div className="exd-header">
             <button type="button" className="exd-back" onClick={goBack}>
-              ← Back
+              {t("member.preview.back")}
             </button>
           </div>
           <div className="exd-status" role={error ? "alert" : "status"}>
-            {loading ? "Loading..." : error}
+            {loading ? t("member.preview.loading") : error}
           </div>
         </div>
       </div>
@@ -99,11 +101,11 @@ export default function ExerciseDetailPreview() {
   const reps = state?.reps ?? exercise.defaultReps;
   const hold = state?.durationSeconds ?? exercise.duration;
   const stats = [
-    { label: "Sets", value: sets ?? "—" },
+    { label: t("member.preview.sets"), value: sets ?? "—" },
     isHold
-      ? { label: "Hold", value: hold != null ? `${hold}s` : "—" }
-      : { label: "Reps / set", value: reps ?? "—" },
-    { label: "Rest", value: `${rest}s` },
+      ? { label: t("member.preview.hold"), value: hold != null ? `${hold}s` : "—" }
+      : { label: t("member.preview.repsPerSet"), value: reps ?? "—" },
+    { label: t("member.preview.rest"), value: `${rest}s` },
   ];
   const videoSrc = mediaUrl(exercise.demoVideoUrl);
 
@@ -117,7 +119,7 @@ export default function ExerciseDetailPreview() {
           <h1 className="exd-title">{exercise.name}</h1>
           {state?.index && state?.total && (
             <span className="exd-step">
-              Exercise {state.index} of {state.total}
+              {t("member.preview.exerciseOf", { index: state.index, total: state.total })}
             </span>
           )}
         </div>
@@ -125,7 +127,7 @@ export default function ExerciseDetailPreview() {
         <div className="exd-grid">
           <div className="exd-main">
             <div className="exd-video">
-              <span className="exd-video-tag">Demo video</span>
+              <span className="exd-video-tag">{t("member.preview.demoVideo")}</span>
               {videoSrc ? (
                 <video src={videoSrc} muted preload="metadata" aria-hidden="true" />
               ) : (
@@ -135,26 +137,26 @@ export default function ExerciseDetailPreview() {
                       <path d="M8 5v14l11-7z" />
                     </svg>
                   </div>
-                  <p>No demo video yet</p>
+                  <p>{t("member.preview.noDemoVideoYet")}</p>
                 </div>
               )}
               <button
                 type="button"
                 className="exd-video-open"
-                aria-label={`Open ${exercise.name} demo video`}
+                aria-label={t("member.preview.openVideoAria", { name: exercise.name })}
                 onClick={() => setActiveModal("video")}
               />
             </div>
 
             <section className="exd-card" aria-labelledby="exd-description">
               <h2 id="exd-description" className="exd-card-title">
-                Description
+                {t("member.preview.description")}
               </h2>
               <p className="exd-description">
-                {exercise.description || "No description yet."}
+                {exercise.description || t("member.preview.noDescriptionYet")}
               </p>
               {muscles.length > 0 && (
-                <ul className="exd-chips" aria-label="Target muscles">
+                <ul className="exd-chips" aria-label={t("member.preview.targetMuscles")}>
                   {muscles.map((muscle) => (
                     <li key={muscle} className="exd-chip">
                       {muscle}
@@ -177,7 +179,7 @@ export default function ExerciseDetailPreview() {
 
             <section className="exd-card" aria-labelledby="exd-guide">
               <h2 id="exd-guide" className="exd-card-title">
-                Guide
+                {t("member.preview.guide")}
               </h2>
               {steps.length > 0 ? (
                 <ol className="exd-steps">
@@ -191,7 +193,7 @@ export default function ExerciseDetailPreview() {
                   ))}
                 </ol>
               ) : (
-                <p className="exd-description">No guide steps yet.</p>
+                <p className="exd-description">{t("member.preview.noGuideSteps")}</p>
               )}
             </section>
 
@@ -200,10 +202,10 @@ export default function ExerciseDetailPreview() {
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z" />
                 </svg>
-                <span className="exd-browse-label">Browse file</span>
+                <span className="exd-browse-label">{t("member.preview.browseFile")}</span>
               </button>
               <button type="button" className="exd-start" onClick={() => setActiveModal("camera")}>
-                Start workout
+                {t("member.preview.startWorkout")}
               </button>
             </div>
           </aside>

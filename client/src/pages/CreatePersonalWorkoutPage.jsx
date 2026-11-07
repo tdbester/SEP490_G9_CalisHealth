@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import {
   getApiErrorMessage,
@@ -11,6 +12,7 @@ import { createMyWorkout, getAvailableWorkoutExercises } from "../api/library";
 import useUndoDelete from "../hooks/useUndoDelete";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { getLevelLabel } from "../utils/levelLabel";
 
 function DumbbellIcon({ size = "h-4 w-4" }) {
   return (
@@ -61,7 +63,7 @@ function LevelBadge({ level }) {
   const displayLevel = level || "Intermediate";
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold capitalize ${getLevelBadgeStyle(displayLevel)}`}>
-      {displayLevel}
+      {getLevelLabel(displayLevel)}
     </span>
   );
 }
@@ -85,6 +87,7 @@ function getPaginationItems(currentPage, pageCount) {
 }
 
 export default function CreatePersonalWorkoutPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const submissionLock = useRef(false);
   const { requestDelete, confirmationModal } = useUndoDelete();
@@ -125,8 +128,8 @@ export default function CreatePersonalWorkoutPage() {
       })
       .catch((error) => {
         if (active) {
-          setErrorMessage(error.response?.data?.message || "Could not load accepted exercises.");
-          toast.error("Could not load accepted exercises.");
+          setErrorMessage(error.response?.data?.message || t("member.personal.couldNotLoadAccepted"));
+          toast.error(t("member.personal.couldNotLoadAccepted"));
         }
       });
     return () => {
@@ -220,7 +223,7 @@ export default function CreatePersonalWorkoutPage() {
         });
       },
       onDelete: async () => {},
-      successMessage: "Exercise removed from workout.",
+      successMessage: t("member.personal.exerciseRemoved"),
     });
   };
 
@@ -250,7 +253,7 @@ export default function CreatePersonalWorkoutPage() {
     setHasSubmitted(true);
     if (Object.keys(validationErrors).length > 0) {
       setErrorMessage("");
-      toast.warning("Please fill in all required fields correctly.");
+      toast.warning(t("member.personal.fillRequiredFields"));
       focusFirstInvalidField();
       return;
     }
@@ -276,7 +279,7 @@ export default function CreatePersonalWorkoutPage() {
         })),
       });
     } catch (error) {
-      const message = getApiErrorMessage(error, "Could not save this workout.");
+      const message = getApiErrorMessage(error, t("member.personal.couldNotSaveWorkout"));
       setErrorMessage(message);
       toast.error(message);
       return;
@@ -286,7 +289,7 @@ export default function CreatePersonalWorkoutPage() {
     }
 
     setErrorMessage("");
-    toast.success("Workout created successfully!");
+    toast.success(t("member.personal.workoutCreated"));
     navigate("/library/workouts");
   };
 
@@ -294,16 +297,16 @@ export default function CreatePersonalWorkoutPage() {
     <div className="max-w-6xl mx-auto space-y-6 pb-28 text-white">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">Create personal workout</h1>
-        <p className="mt-1 text-xs text-slate-400">Build your own workout from exercises that have been accepted.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-white">{t("member.personal.createWorkoutTitle")}</h1>
+        <p className="mt-1 text-xs text-slate-400">{t("member.personal.createWorkoutSubtitle")}</p>
       </div>
 
       {/* Workout Details */}
       <div className="rounded-2xl border border-[#231b46] bg-[#120d29]/90 p-6 space-y-5">
-        <p className="text-sm font-semibold text-white">Workout details</p>
+        <p className="text-sm font-semibold text-white">{t("member.personal.workoutDetails")}</p>
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs text-slate-400">Workout name</label>
+            <label className="text-xs text-slate-400">{t("member.personal.workoutName")}</label>
             <span className="text-xs text-slate-500">{workoutName.length}/60</span>
           </div>
           <input
@@ -316,14 +319,14 @@ export default function CreatePersonalWorkoutPage() {
               markFieldTouched("name");
               setWorkoutName((value) => value.trim());
             }}
-            placeholder="Upper body push day"
+            placeholder={t("member.personal.workoutNamePlaceholder")}
             className={`w-full rounded-xl border ${showFieldError("name") && nameError ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#0c0820] px-4 py-2.5 font-[inherit] text-xs text-white placeholder-slate-500 focus:outline-none transition-colors`}
           />
           {showFieldError("name") && nameError && <p className="text-rose-400 text-[11px] mt-1">{nameError}</p>}
         </div>
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs text-slate-400">Note (optional)</label>
+            <label className="text-xs text-slate-400">{t("member.personal.noteOptional")}</label>
             <span className="text-xs text-slate-500">{note.length}/200</span>
           </div>
           <textarea
@@ -335,36 +338,36 @@ export default function CreatePersonalWorkoutPage() {
               markFieldTouched("description");
               setNote((value) => value.trim());
             }}
-            placeholder="Anything you want to remember about this workout"
+            placeholder={t("member.personal.notePlaceholder")}
             className="w-full resize-none rounded-xl border border-[#231b46] bg-[#0c0820] px-4 py-2.5 font-[inherit] text-xs text-white placeholder-slate-500 focus:border-[#7c3aed] focus:outline-none transition-colors"
           />
           {showFieldError("description") && descriptionError && <p className="text-rose-400 text-[11px] mt-1">{descriptionError}</p>}
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="workout-level" className="mb-1.5 block text-xs text-slate-400">Level</label>
+            <label htmlFor="workout-level" className="mb-1.5 block text-xs text-slate-400">{t("member.personal.level")}</label>
             <select
               id="workout-level"
               value={workoutLevel}
               onChange={(event) => setWorkoutLevel(event.target.value)}
               className="w-full cursor-pointer rounded-xl border border-[#231b46] bg-[#0c0820] px-4 py-2.5 text-xs text-white focus:border-[#7c3aed] focus:outline-none transition-colors"
             >
-              <option value="BEGINNER">Beginner</option>
-              <option value="INTERMEDIATE">Intermediate</option>
-              <option value="ADVANCED">Advanced</option>
+              <option value="BEGINNER">{t("member.catalog.beginner")}</option>
+              <option value="INTERMEDIATE">{t("member.catalog.intermediate")}</option>
+              <option value="ADVANCED">{t("member.catalog.advanced")}</option>
             </select>
           </div>
           <div>
-            <label htmlFor="workout-type" className="mb-1.5 block text-xs text-slate-400">Type</label>
+            <label htmlFor="workout-type" className="mb-1.5 block text-xs text-slate-400">{t("member.personal.type")}</label>
             <select
               id="workout-type"
               value={workoutType}
               onChange={(event) => setWorkoutType(event.target.value)}
               className="w-full cursor-pointer rounded-xl border border-[#231b46] bg-[#0c0820] px-4 py-2.5 text-xs text-white focus:border-[#7c3aed] focus:outline-none transition-colors"
             >
-              <option value="HEALTH">Health</option>
-              <option value="SKILL">Skill</option>
-              <option value="FLEX">Flex</option>
+              <option value="HEALTH">{t("member.catalog.health")}</option>
+              <option value="SKILL">{t("member.catalog.skills")}</option>
+              <option value="FLEX">{t("contentManager.form.typeFlex")}</option>
             </select>
           </div>
         </div>
@@ -381,11 +384,11 @@ export default function CreatePersonalWorkoutPage() {
         {/* LEFT: Accepted exercises */}
         <div className="rounded-2xl border border-[#231b46] bg-[#120d29]/90 p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-white">Accepted exercises</p>
-            <span className="text-xs text-slate-400">{availableExercises.length} available</span>
+            <p className="text-sm font-semibold text-white">{t("member.personal.acceptedExercises")}</p>
+            <span className="text-xs text-slate-400">{t("member.personal.availableCount", { count: availableExercises.length })}</span>
           </div>
           <div className="rounded-xl border border-[#231b46] bg-[#0d0922] p-3.5 text-xs text-slate-400 leading-relaxed">
-            Only exercises accepted by the system can be added. Pending and rejected ones are not available until they pass the checks.
+            {t("member.personal.acceptedNotice")}
           </div>
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
@@ -393,7 +396,7 @@ export default function CreatePersonalWorkoutPage() {
                 <SearchIcon />
               </span>
               <input
-                type="text" placeholder="Search by title" value={search}
+                type="text" placeholder={t("member.personal.searchByTitle")} value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   setExercisePage(1);
@@ -408,10 +411,10 @@ export default function CreatePersonalWorkoutPage() {
               }}
               className="rounded-xl border border-[#231b46] bg-[#0d0922] py-2.5 px-3 text-xs text-slate-300 focus:outline-none cursor-pointer"
             >
-              <option>All levels</option>
-              <option>Beginner</option>
-              <option>Intermediate</option>
-              <option>Advanced</option>
+              <option>{t("member.personal.allLevels")}</option>
+              <option>{t("member.catalog.beginner")}</option>
+              <option>{t("member.catalog.intermediate")}</option>
+              <option>{t("member.catalog.advanced")}</option>
             </select>
           </div>
           <div className="space-y-2.5">
@@ -431,32 +434,31 @@ export default function CreatePersonalWorkoutPage() {
                   </div>
                   <button type="button" onClick={() => handleAdd(ex)}
                     className="shrink-0 rounded-xl border border-[#2b2257] bg-[#161133] px-4 py-1.5 text-xs font-medium text-slate-200 hover:bg-[#20174a] transition-colors">
-                    + Add
+                    {t("member.personal.addExercise")}
                   </button>
                 </div>
             ))}
             {filteredExercises.length === 0 && (
-              <p className="py-8 text-center text-xs text-slate-500">No exercises found.</p>
+              <p className="py-8 text-center text-xs text-slate-500">{t("member.personal.noExercisesFound")}</p>
             )}
           </div>
           {filteredExercises.length > 0 && (
             <div className="flex flex-col gap-3 border-t border-[#231b46] pt-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-center text-[11px] text-slate-400 sm:text-left">
-                Showing <span className="font-semibold text-slate-200">{firstVisibleExercise}–{lastVisibleExercise}</span>
-                {" "}of <span className="font-semibold text-slate-200">{filteredExercises.length}</span> accepted exercises
+                {t("member.personal.showingAccepted", { from: firstVisibleExercise, to: lastVisibleExercise, count: filteredExercises.length })}
               </p>
-              <nav aria-label="Accepted exercises pages" className="flex items-center justify-center gap-1">
+              <nav aria-label={t("member.personal.acceptedPagesAria")} className="flex items-center justify-center gap-1">
                 <button
                   type="button"
                   onClick={() => setExercisePage((page) => Math.max(1, page - 1))}
                   disabled={exercisePage === 1}
-                  aria-label="Previous page"
+                  aria-label={t("member.personal.previous")}
                   className="inline-flex h-9 items-center gap-1 rounded-lg border border-[#2b2257] bg-[#0d0922] px-2.5 text-xs font-medium text-slate-300 transition-colors hover:border-violet-500/60 hover:bg-[#181238] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M12.78 4.22a.75.75 0 010 1.06L8.06 10l4.72 4.72a.75.75 0 11-1.06 1.06l-5.25-5.25a.75.75 0 010-1.06l5.25-5.25a.75.75 0 011.06 0z" clipRule="evenodd" />
                   </svg>
-                  <span className="hidden sm:inline">Previous</span>
+                  <span className="hidden sm:inline">{t("member.personal.previous")}</span>
                 </button>
                 <div className="flex items-center gap-1">
                   {paginationItems.map((item) => typeof item === "number" ? (
@@ -465,7 +467,7 @@ export default function CreatePersonalWorkoutPage() {
                       type="button"
                       onClick={() => setExercisePage(item)}
                       aria-current={item === exercisePage ? "page" : undefined}
-                      aria-label={`Page ${item}`}
+                      aria-label={t("member.personal.pageAria", { page: item })}
                       className={`h-9 min-w-9 rounded-lg border px-2 text-xs font-semibold transition-colors ${
                         item === exercisePage
                           ? "border-violet-400 bg-[#643bf6] text-white shadow-sm shadow-violet-950/50"
@@ -482,10 +484,10 @@ export default function CreatePersonalWorkoutPage() {
                   type="button"
                   onClick={() => setExercisePage((page) => Math.min(exercisePageCount, page + 1))}
                   disabled={exercisePage === exercisePageCount}
-                  aria-label="Next page"
+                  aria-label={t("member.personal.next")}
                   className="inline-flex h-9 items-center gap-1 rounded-lg border border-[#2b2257] bg-[#0d0922] px-2.5 text-xs font-medium text-slate-300 transition-colors hover:border-violet-500/60 hover:bg-[#181238] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <span className="hidden sm:inline">Next</span>
+                  <span className="hidden sm:inline">{t("member.personal.next")}</span>
                   <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M7.22 15.78a.75.75 0 010-1.06L11.94 10 7.22 5.28a.75.75 0 011.06-1.06l5.25 5.25a.75.75 0 010 1.06l-5.25 5.25a.75.75 0 01-1.06 0z" clipRule="evenodd" />
                   </svg>
@@ -498,8 +500,8 @@ export default function CreatePersonalWorkoutPage() {
         {/* RIGHT: Workout exercises */}
         <div className="flex flex-col rounded-2xl border border-[#231b46] bg-[#120d29]/90 p-6 gap-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-white">Workout exercises</p>
-            <span className="text-xs text-slate-400">{totalExercises} added</span>
+            <p className="text-sm font-semibold text-white">{t("member.personal.workoutExercises")}</p>
+            <span className="text-xs text-slate-400">{t("member.personal.addedCount", { count: totalExercises })}</span>
           </div>
 
           {selected.length === 0 && (
@@ -507,8 +509,8 @@ export default function CreatePersonalWorkoutPage() {
               <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#181238]">
                 <DumbbellIcon size="h-6 w-6" />
               </div>
-              <p className="text-xs font-medium text-slate-400">No exercises added yet</p>
-              <p className="mt-1 text-[11px] text-slate-500">Click "+ Add" on the left to build your workout.</p>
+              <p className="text-xs font-medium text-slate-400">{t("member.personal.noExercisesAdded")}</p>
+              <p className="mt-1 text-[11px] text-slate-500">{t("member.personal.noExercisesAddedHint")}</p>
             </div>
           )}
           {hasSubmitted && exerciseErrors.list && (
@@ -524,48 +526,50 @@ export default function CreatePersonalWorkoutPage() {
                   </div>
                   <span className="flex-1 ml-1 text-xs font-semibold text-white truncate">{ex.title}</span>
                   <button type="button" onClick={() => moveUp(idx)} disabled={idx === 0}
-                    aria-label="Move up"
+                    aria-label={t("member.personal.moveUpAria")}
                     className="h-8 w-8 shrink-0 rounded-lg border border-[#2b2257] bg-[#181238] flex items-center justify-center text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                     <ChevronUpIcon />
                   </button>
                   <button type="button" onClick={() => moveDown(idx)} disabled={idx === selected.length - 1}
-                    aria-label="Move down"
+                    aria-label={t("member.personal.moveDownAria")}
                     className="h-8 w-8 shrink-0 rounded-lg border border-[#2b2257] bg-[#1a113b] flex items-center justify-center text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                     <ChevronDownIcon />
                   </button>
                   <button type="button" onClick={() => handleRemove(ex)}
-                    aria-label="Remove exercise"
+                    aria-label={t("member.personal.removeExerciseAria")}
                     className="h-8 w-8 shrink-0 rounded-lg border border-rose-900/50 bg-rose-950/40 flex items-center justify-center text-rose-400 hover:bg-rose-900/60 transition-colors">
                     <XIcon />
                   </button>
                 </div>
                 <div className="grid grid-cols-3 gap-2.5">
                   <div className="col-span-full">
-                    <label className="block text-[10px] text-slate-400 mb-1">Count by</label>
+                    <label className="block text-[10px] text-slate-400 mb-1">{t("member.personal.countBy")}</label>
                     <p className="rounded-lg border border-[#231b46] bg-[#080518] p-2 text-center text-xs text-white">
-                      {ex.countBy === "Duration" ? `Duration (${ex.reps} seconds)` : "Sets & Reps"}
+                      {ex.countBy === "Duration"
+                        ? t("member.personal.countByDuration", { seconds: ex.reps })
+                        : t("member.personal.countBySetsReps")}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">Sets</label>
+                    <label className="block text-[10px] text-slate-400 mb-1">{t("member.personal.sets")}</label>
                     <input id={`workout-sets-${idx}`} type="number" value={ex.sets} readOnly
                       className="w-full cursor-not-allowed rounded-lg border border-[#231b46] bg-[#080518] p-2 text-center text-xs text-slate-300 focus:outline-none" />
                   </div>
                   {ex.countBy === "Reps" ? (
                     <div>
-                      <label className="block text-[10px] text-slate-400 mb-1">Reps</label>
+                      <label className="block text-[10px] text-slate-400 mb-1">{t("member.personal.reps")}</label>
                       <input id={`workout-reps-${idx}`} type="number" value={ex.reps} readOnly
                         className="w-full cursor-not-allowed rounded-lg border border-[#231b46] bg-[#080518] p-2 text-center text-xs text-slate-300 focus:outline-none" />
                     </div>
                   ) : (
                     <div>
-                      <label className="block text-[10px] text-slate-400 mb-1">Duration (seconds)</label>
+                      <label className="block text-[10px] text-slate-400 mb-1">{t("member.personal.durationSeconds")}</label>
                       <input id={`workout-reps-${idx}`} type="number" value={ex.reps} readOnly
                         className="w-full cursor-not-allowed rounded-lg border border-[#231b46] bg-[#080518] p-2 text-center text-xs text-slate-300 focus:outline-none" />
                     </div>
                   )}
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">Rest (sec)</label>
+                    <label className="block text-[10px] text-slate-400 mb-1">{t("member.personal.restSec")}</label>
                     <input id={`workout-rest-${idx}`} type="number" min="10" max="180" step="5" value={ex.restSec}
                       onChange={(e) => {
                         updateField(idx, "restSec", e.target.value);
@@ -581,11 +585,13 @@ export default function CreatePersonalWorkoutPage() {
 
           {totalExercises > 0 && (
             <p className="pt-1 text-xs text-slate-400">
-              <span className="font-medium text-slate-300">{totalExercises}</span>{" "}
-              {totalExercises === 1 ? "exercise" : "exercises"}{" "}
-              <span className="font-medium text-slate-300">{totalSets}</span>{" "}
-              {totalSets === 1 ? "set" : "sets"} · About{" "}
-              <span className="font-medium text-slate-300">{estimatedMin}</span> min
+              {t("member.personal.totalsLine", {
+                count: totalExercises,
+                exerciseNoun: t("member.personal.exerciseNoun", { count: totalExercises }),
+                sets: totalSets,
+                setNoun: t("member.personal.setNoun", { count: totalSets }),
+                minutes: estimatedMin,
+              })}
             </p>
           )}
         </div>
@@ -594,26 +600,29 @@ export default function CreatePersonalWorkoutPage() {
       {/* Footer */}
       <div className="flex items-center justify-between border-t border-[#1c163a] pt-6">
         <span className="text-xs text-slate-400">
-          {totalExercises} {totalExercises === 1 ? "exercise" : "exercises"} in this workout
+          {t("member.personal.exercisesInThisWorkout", {
+            count: totalExercises,
+            noun: t("member.personal.exerciseNoun", { count: totalExercises }),
+          })}
         </span>
         <div className="flex items-center gap-3">
           <button type="button" onClick={() => setConfirmCancel(true)}
             className="rounded-xl border border-[#2b2257] bg-[#141030] px-6 py-2.5 text-xs font-semibold text-slate-300 hover:bg-[#1f1847] transition-colors">
-            Cancel
+            {t("member.personal.cancel")}
           </button>
           <button type="button" onClick={handleCreate} disabled={!isDirty || isCreating || Object.keys(validationErrors).length > 0}
             className="rounded-xl bg-[#643bf6] px-7 py-2.5 text-xs font-semibold text-white shadow-md hover:bg-[#522cd9] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
             {isCreating && <span className="mr-2 inline-block h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent align-[-2px] animate-spin" />}
-            {isCreating ? "Creating..." : "Create workout"}
+            {isCreating ? t("member.personal.creating") : t("member.personal.createWorkout")}
           </button>
         </div>
       </div>
       {confirmationModal}
       <ConfirmDialog
         open={confirmCancel}
-        title="Discard this workout?"
-        message="Are you sure you want to cancel? Your unsaved workout will be lost."
-        confirmLabel="Discard"
+        title={t("member.personal.discardWorkoutTitle")}
+        message={t("member.personal.discardWorkoutMessage")}
+        confirmLabel={t("member.personal.discard")}
         onCancel={() => setConfirmCancel(false)}
         onConfirm={() => navigate(-1)}
       />

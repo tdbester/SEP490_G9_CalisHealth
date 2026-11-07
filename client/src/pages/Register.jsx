@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import "./Login.css";
 import AuthLogo from "../components/AuthLogo";
 import ImeNotice from "../components/ImeNotice";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import PasswordToggle from "../components/PasswordToggle";
-import { PASSWORD_RULE_MESSAGE, fieldErrors, hasNonAscii, isStrongPassword } from "../utils/authInput";
+import { fieldErrors, hasNonAscii, isStrongPassword } from "../utils/authInput";
 
 export default function Register() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [form, setForm] = useState({ fullName: "", email: "", password: "", confirmPassword: "" });
   const [error, setError] = useState("");
   // Inline messages under each field, keyed by form field name.
@@ -44,8 +47,8 @@ export default function Register() {
   };
 
   const validateField = (k, value) => {
-    if (k === "password") return isStrongPassword(value) ? "" : PASSWORD_RULE_MESSAGE;
-    if (k === "confirmPassword") return value === form.password ? "" : "The confirmation password does not match";
+    if (k === "password") return isStrongPassword(value) ? "" : t("common.passwordRule");
+    if (k === "confirmPassword") return value === form.password ? "" : t("common.security.mismatch");
     return "";
   };
 
@@ -62,7 +65,7 @@ export default function Register() {
     setLoading(true);
     try {
       await api.post("/auth/register", form);
-      setResult({ success: true, message: "Verification email sent successfully. Please check your inbox to verify your account." });
+      setResult({ success: true, message: t("common.auth.register.verificationSent") });
     } catch (err) {
       // Validation errors (400 with per-field messages) stay on the form.
       const byField = fieldErrors(err);
@@ -80,8 +83,8 @@ export default function Register() {
         : data?.message || data?.error || data?.detail || (data && typeof data === "object"
           ? Object.values(data).flat().filter((value) => typeof value === "string").join(" • ")
           : "");
-      const message = msg || "Registration failed. Please check your information and try again.";
-      if (message.toLowerCase().includes("email is already registered")) {
+      const message = msg || t("common.auth.register.failedMessage");
+      if (message.toLowerCase().includes(t("common.auth.register.emailTaken").toLowerCase())) {
         setError(message);
       } else {
         setResult({ success: false, message });
@@ -94,21 +97,24 @@ export default function Register() {
   return (
     <div className="login">
       <div className="login-card">
-        <AuthLogo />
-        <h1 className="login-title">Create Account</h1>
+        <div className="login-header">
+          <AuthLogo />
+          <LanguageSwitcher variant="select" className="login-lang" />
+        </div>
+        <h1 className="login-title">{t("auth.register.title")}</h1>
 
         {result ? (
           <div className="login-form">
-            {result.success && <h2 className="login-title">Verification email sent</h2>}
+            {result.success && <h2 className="login-title">{t("auth.register.successTitle")}</h2>}
             <div className={result.success ? "login-success" : "login-error"}>{result.message}</div>
-            {result.success && <div className="login-redirect">Please verify your email before logging in.</div>}
-            {!result.success && <div className="login-redirect">You will be redirected to the login page in {seconds} seconds.</div>}
+            {result.success && <div className="login-redirect">{t("auth.register.successMessage")}</div>}
+            {!result.success && <div className="login-redirect">{t("common.redirectIn", { seconds })}</div>}
             <button type="button" className="login-submit" onClick={() => navigate("/login", { replace: true })}>
-              <span className="login-submit-text">Go to login now</span>
+              <span className="login-submit-text">{t("auth.register.goToLogin")}</span>
             </button>
             {!result.success && (
               <button type="button" className="login-link" onClick={() => { setResult(null); setSeconds(8); }}>
-                Back to sign up
+                {t("auth.register.backToSignUp")}
               </button>
             )}
           </div>
@@ -117,30 +123,30 @@ export default function Register() {
             {error && <div className="login-error">{error}</div>}
 
             <div className="login-field">
-              <label className="login-label">Full Name</label>
+              <label className="login-label">{t("auth.register.fullName")}</label>
               <div className="login-input-wrap">
-                <input className="login-input" placeholder="Full Name" value={form.fullName} onChange={set("fullName")} required />
+                <input className="login-input" placeholder={t("auth.register.fullName")} value={form.fullName} onChange={set("fullName")} required />
               </div>
               {errors.fullName && <div className="login-field-error" role="alert">{errors.fullName}</div>}
             </div>
 
             <div className="login-field">
-              <label className="login-label">Email</label>
+              <label className="login-label">{t("auth.register.email")}</label>
               <div className="login-input-wrap">
-                <input className="login-input" type="email" placeholder="Email" value={form.email} onChange={set("email")} required />
+                <input className="login-input" type="email" placeholder={t("auth.register.email")} value={form.email} onChange={set("email")} required />
               </div>
               <ImeNotice warn={imeWarn.email} />
               {errors.email && <div className="login-field-error" role="alert">{errors.email}</div>}
             </div>
 
             <div className="login-field">
-              <label className="login-label" htmlFor="register-password">Password</label>
+              <label className="login-label" htmlFor="register-password">{t("auth.register.password")}</label>
               <div className={`login-input-wrap${errors.password ? " login-input-wrap--error" : ""}`}>
                 <input
                   id="register-password"
                   className="login-input"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Min 8 chars, upper, lower, digit, special"
+                  placeholder={t("auth.register.passwordHint")}
                   value={form.password}
                   onChange={set("password")}
                   aria-invalid={Boolean(errors.password)}
@@ -156,13 +162,13 @@ export default function Register() {
             </div>
 
             <div className="login-field">
-              <label className="login-label" htmlFor="register-confirm">Confirm Password</label>
+              <label className="login-label" htmlFor="register-confirm">{t("auth.register.confirmPassword")}</label>
               <div className={`login-input-wrap${errors.confirmPassword ? " login-input-wrap--error" : ""}`}>
                 <input
                   id="register-confirm"
                   className="login-input"
                   type="password"
-                  placeholder="Re-enter password"
+                  placeholder={t("auth.register.confirmPassword")}
                   value={form.confirmPassword}
                   onChange={set("confirmPassword")}
                   aria-invalid={Boolean(errors.confirmPassword)}
@@ -177,13 +183,13 @@ export default function Register() {
             </div>
 
             <button type="submit" className="login-submit" disabled={loading}>
-              <span className="login-submit-text">{loading ? "Creating..." : "Sign Up"}</span>
+              <span className="login-submit-text">{loading ? t("auth.register.submitting") : t("auth.register.submit")}</span>
             </button>
           </form>
         )}
 
         <div className="login-links">
-          <button className="login-link" onClick={() => navigate("/login")}>Already have account? Login</button>
+          <button className="login-link" onClick={() => navigate("/login")}>{t("auth.register.hasAccount")}</button>
         </div>
       </div>
     </div>

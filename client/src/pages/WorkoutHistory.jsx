@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dayjs from "dayjs";
+import { useTranslation } from "react-i18next";
 import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
 import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
 import TrackChangesRoundedIcon from "@mui/icons-material/TrackChangesRounded";
@@ -37,6 +38,7 @@ function formatHold(totalSeconds) {
 }
 
 export default function WorkoutHistory() {
+  const { t } = useTranslation();
   const dateInputRef = useRef(null);
   // Ngày đang xem; không chọn ngày thì luôn là hôm nay
   const [date, setDate] = useState(todayStr);
@@ -86,21 +88,21 @@ export default function WorkoutHistory() {
     : workouts.filter((w) => dayjs(w.completedAt).format("YYYY-MM-DD") === date);
 
   const stats = [
-    { label: "Workouts", value: summary.totalWorkouts, icon: FitnessCenterRoundedIcon, tone: "purple" },
+    { label: t("member.history.statWorkouts"), value: summary.totalWorkouts, icon: FitnessCenterRoundedIcon, tone: "purple" },
     {
-      label: "Total workout time",
+      label: t("member.history.statTotalTime"),
       value: `${Math.round((summary.totalMinutes / 60) * 10) / 10}h`,
       icon: AccessTimeRoundedIcon,
       tone: "blue",
     },
     {
-      label: "Clean rep ratio",
+      label: t("member.history.statCleanRatio"),
       value: summary.cleanRepRatio != null ? `${summary.cleanRepRatio}%` : "—",
       icon: TrackChangesRoundedIcon,
       tone: "pink",
     },
     {
-      label: "Total hold time",
+      label: t("member.history.statHoldTime"),
       value: summary.totalHoldSeconds != null ? formatHold(summary.totalHoldSeconds) : "—",
       icon: TimerRoundedIcon,
       tone: "violet",
@@ -116,13 +118,13 @@ export default function WorkoutHistory() {
 
   return (
     <div className="workout-history">
-      <BackButton to="/tracking">Back to health overview</BackButton>
+      <BackButton to="/tracking">{t("member.history.backToOverview")}</BackButton>
 
       {/* ── Header ─────────────────────────────────────────────── */}
       <header className="wh-header">
-        <span className="wh-eyebrow">Training archive</span>
-        <h1 className="wh-title">Workout history</h1>
-        <p className="wh-subtitle">Every completed session, achievement, and personal best.</p>
+        <span className="wh-eyebrow">{t("member.history.eyebrow")}</span>
+        <h1 className="wh-title">{t("member.history.title")}</h1>
+        <p className="wh-subtitle">{t("member.history.subtitle")}</p>
       </header>
 
       {/* ── Summary ────────────────────────────────────────────── */}
@@ -141,7 +143,7 @@ export default function WorkoutHistory() {
       {/* ── Date filter ────────────────────────────────────────── */}
       <div className="wh-toolbar">
         <h2 className="wh-day-title">
-          {isToday ? "Today" : dayjs(date).format("dddd")}
+          {isToday ? t("member.history.today") : dayjs(date).format("dddd")}
           <span>{dayjs(date).format("DD MMM YYYY")}</span>
         </h2>
 
@@ -149,7 +151,7 @@ export default function WorkoutHistory() {
           {!isToday && (
             <span className="wh-date-chip">
               {dayjs(date).format("DD MMM YYYY")}
-              <button type="button" aria-label="Back to today" onClick={() => setDate(todayStr())}>
+              <button type="button" aria-label={t("member.history.backToToday")} onClick={() => setDate(todayStr())}>
                 <CloseRoundedIcon />
               </button>
             </span>
@@ -158,7 +160,7 @@ export default function WorkoutHistory() {
             <button
               type="button"
               className={`wh-icon-btn ${!isToday ? "active" : ""}`}
-              aria-label="Search by date"
+              aria-label={t("member.history.searchByDate")}
               onClick={openDatePicker}
             >
               <CalendarTodayOutlinedIcon />
@@ -181,10 +183,10 @@ export default function WorkoutHistory() {
       {visible.length === 0 ? (
         <p className="wh-card wh-empty">
           {loadError
-            ? "We could not load your workout history. Please try again later."
+            ? t("member.history.loadFailed")
             : isToday
-              ? "No workouts today yet. Completed sessions will show up here."
-              : "No workouts on this day."}
+              ? t("member.history.emptyToday")
+              : t("member.history.emptyDay")}
         </p>
       ) : (
         <section className="wh-group">
@@ -208,14 +210,14 @@ export default function WorkoutHistory() {
                           {dayjs(workout.completedAt).format("DD MMM YYYY · HH:mm")}
                         </span>
                         <span className="wh-row-name">{workout.name}</span>
-                        <span className="wh-row-duration">{workout.durationMin} min</span>
+                        <span className="wh-row-duration">{t("member.history.durationMinutes", { count: workout.durationMin })}</span>
                       </span>
                       <span className="wh-row-accuracy">
                         <strong>{workout.accuracy != null ? `${workout.accuracy}%` : "—"}</strong>
-                        <span>accuracy</span>
+                        <span>{t("member.history.accuracy")}</span>
                       </span>
                       <span className="wh-row-link">
-                        View details
+                        {t("member.history.viewDetails")}
                         <ChevronRightRoundedIcon />
                       </span>
                     </button>

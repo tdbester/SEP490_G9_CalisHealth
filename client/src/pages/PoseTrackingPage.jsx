@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import usePoseDetection, { POSE_CONNECTIONS, POSE_LANDMARKS } from "../hooks/usePoseDetection";
 import useSquatTracker, { findKneeRule } from "../hooks/useSquatTracker";
 import useHoldTracker from "../hooks/useHoldTracker";
@@ -140,6 +141,7 @@ function drawPose(canvas, landmarks, width, height) {
 export default function PoseTrackingPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const config = useSessionConfig();
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -456,18 +458,18 @@ export default function PoseTrackingPage() {
           sets,
         });
         accuracy = response?.cleanRate != null ? Number(response.cleanRate) : null;
-        toast.success("Session saved. Nice work!");
+        toast.success(t("member.tracking.sessionSaved"));
       } catch (err) {
         console.error("Failed to submit exercise result:", err);
-        toast.error("Couldn't save this session. Please try again.");
+        toast.error(t("member.tracking.sessionSaveFailed"));
       }
     } else {
       // Member chưa tập được lần nào — không chặn, chỉ báo nhẹ để họ biết
       // dữ liệu chưa có gì để lưu (vẫn skip sang set/bài tiếp theo được).
       toast(
         isHold
-          ? "No hold time recorded — skipping to the next step."
-          : "No reps recorded — skipping to the next step.",
+          ? t("member.tracking.noHoldRecorded")
+          : t("member.tracking.noRepsRecorded"),
       );
     }
 
@@ -614,7 +616,7 @@ export default function PoseTrackingPage() {
     }
 
     setRunning(false);
-    speak(`Rest for ${config.restSeconds} seconds.`);
+    speak(t("member.tracking.restFor", { seconds: config.restSeconds }));
 
     navigate("/session/rest", {
       state: {
@@ -702,7 +704,7 @@ export default function PoseTrackingPage() {
         label: `${config.exerciseName} · Hold`,
         value: formatClock(hold.holdSeconds),
         sub: `/ ${targetHoldSeconds}s · Set ${currentSetNumber} · ${formatClock(elapsed)}`,
-        secondaryLabel: "Seconds left",
+        secondaryLabel: t("member.tracking.secondsLeft"),
         secondaryValue: `${remaining}s`,
       };
     }
@@ -710,7 +712,7 @@ export default function PoseTrackingPage() {
       label: `${config.exerciseName} · Reps`,
       value: String(squat.setCleanReps).padStart(2, "0"),
       sub: `/ ${config.reps} reps · Set ${currentSetNumber} · ${formatClock(elapsed)}`,
-      secondaryLabel: "Reps left",
+      secondaryLabel: t("member.tracking.repsLeft"),
       secondaryValue: String(squat.repsLeft),
     };
   }, [isHold, config.exerciseName, config.reps, hold.holdSeconds, targetHoldSeconds, currentSetNumber, elapsed, squat.setCleanReps, squat.repsLeft]);
@@ -754,17 +756,17 @@ export default function PoseTrackingPage() {
               <div className="pt-overlay">
                 <p>
                   {cameraState === "loading"
-                    ? "Starting camera…"
+                    ? t("member.tracking.startingCamera")
                     : cameraState === "denied"
-                      ? "Camera access was blocked. Allow it in your browser settings."
-                      : "Couldn't start the camera."}
+                      ? t("member.tracking.cameraBlocked")
+                      : t("member.tracking.cameraStartError")}
                 </p>
               </div>
             )}
 
             {modelStatus === "loading" && cameraState === "on" && (
               <div className="pt-overlay pt-overlay--soft">
-                <p>Loading AI pose model…</p>
+                <p>{t("member.tracking.modelLoading")}</p>
               </div>
             )}
 
@@ -786,7 +788,7 @@ export default function PoseTrackingPage() {
 
           <section className="pt-card">
             <div className="pt-card-row">
-              <p className="pt-card-label">Form</p>
+              <p className="pt-card-label">{t("member.tracking.form")}</p>
               <p className={`pt-form-score is-${formTone}`}>{formScore}%</p>
             </div>
             <div className="pt-progress">
@@ -796,7 +798,7 @@ export default function PoseTrackingPage() {
               />
             </div>
             <p className="pt-tip">
-              {activeFeedback || kneeRule?.feedbackMessage || "Keep your knees aligned with your toes"}
+              {activeFeedback || kneeRule?.feedbackMessage || t("member.tracking.formTipDefault")}
             </p>
           </section>
 
@@ -808,19 +810,19 @@ export default function PoseTrackingPage() {
                   <path d="M5 11a7 7 0 0 0 14 0M12 18v3" fill="none" stroke="currentColor" strokeWidth="1.6" />
                 </svg>
               </span>
-              <p className="pt-card-label">Voice coach</p>
+              <p className="pt-card-label">{t("member.tracking.voiceCoach")}</p>
             </div>
             <p className="pt-voice-text">
               {activeFeedback
                 ? activeFeedback
-                : kneeRule?.feedbackMessage || "Your left knee is caving in — push it outward."}
+                : kneeRule?.feedbackMessage || t("member.tracking.voiceDefault")}
             </p>
           </section>
 
           <div className="pt-metrics">
             <section className="pt-metric">
               <p className="pt-metric-label">
-                {isHold ? "Body angle" : "Knee angle"}
+                {isHold ? t("member.tracking.bodyAngle") : t("member.tracking.kneeAngle")}
               </p>
               <p className="pt-metric-value">
                 {isHold ? (hold.bodyAngle ?? "--") : (squat.kneeAngle ?? "--")}°
@@ -838,23 +840,26 @@ export default function PoseTrackingPage() {
                 <rect x="6" y="5" width="4" height="14" rx="1" />
                 <rect x="14" y="5" width="4" height="14" rx="1" />
               </svg>
-              {running ? "Pause" : "Resume"}
+              {running ? t("member.tracking.pause") : t("member.tracking.resume")}
             </button>
             <button type="button" className="pt-btn pt-btn--stop" onClick={stopSession}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <rect x="6" y="6" width="12" height="12" rx="1.5" />
               </svg>
-              Stop
+              {t("member.tracking.stop")}
             </button>
           </div>
 
           {/* Nút "Continue" -> màn đếm ngược nghỉ ngơi, xong quay lại set sau. */}
           <button type="button" className="pt-continue-btn" onClick={startRest}>
-            Continue
+            {t("member.tracking.continue")}
             <span className="pt-continue-btn__hint">
               {currentSetNumber >= config.sets
-                ? `Rest ${config.restSeconds}s, then continue`
-                : `Rest ${config.restSeconds}s, then start set ${currentSetNumber + 1}`}
+                ? t("member.tracking.restHintContinue", { seconds: config.restSeconds })
+                : t("member.tracking.restHintNextSet", {
+                    seconds: config.restSeconds,
+                    set: currentSetNumber + 1,
+                  })}
             </span>
             <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path
@@ -874,7 +879,9 @@ export default function PoseTrackingPage() {
               <path d="M6 4l8 6-8 6V4z" fill="currentColor" />
               <path d="M15 4v12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
-            {config.nextExercises?.length > 0 ? "Finish exercise" : "Finish workout"}
+            {config.nextExercises?.length > 0
+              ? t("member.tracking.finishExercise")
+              : t("member.tracking.finishWorkout")}
           </button>
         </aside>
       </div>

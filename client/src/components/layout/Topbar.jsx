@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import LocalFireDepartmentRoundedIcon from "@mui/icons-material/LocalFireDepartmentRounded";
 import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
@@ -8,6 +9,8 @@ import api from "../../api/client";
 import NotificationBell from "../notifications/NotificationBell";
 import { avatarUrl, profileApi } from "../../api/profile";
 import BrandLogo from "../BrandLogo";
+import { changeLanguage, currentLanguage } from "../../i18n";
+import { notifyAuthSessionChanged } from "../../utils/authSession";
 import "./Topbar.css";
 
 function Logo() {
@@ -17,12 +20,10 @@ function Logo() {
 export default function Topbar() {
   const navigate = useNavigate();
   const topbarRef = useRef(null);
+  const { t } = useTranslation();
   const [user, setUser] = useState(null);
   const [currentStreak, setCurrentStreak] = useState(null);
   const [openPanel, setOpenPanel] = useState(null);
-  const [language, setLanguage] = useState(
-    () => localStorage.getItem("language") || "en",
-  );
 
   useEffect(() => {
     const cached = localStorage.getItem("token")
@@ -125,15 +126,10 @@ export default function Topbar() {
     };
   }, []);
 
-  const changeLanguage = (event) => {
-    const nextLanguage = event.target.value;
-    setLanguage(nextLanguage);
-    localStorage.setItem("language", nextLanguage);
-  };
-
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    notifyAuthSessionChanged();
     navigate("/login");
   };
 
@@ -155,7 +151,7 @@ export default function Topbar() {
       <button
         type="button"
         className="topbar-logo"
-        aria-label="Go to dashboard"
+        aria-label={t("common.ui.goToDashboard")}
         onClick={() => navigateFromPanel("/")}
       >
         <div className="topbar-logo-icon">
@@ -167,7 +163,7 @@ export default function Topbar() {
 
       {user && openPanel === "settings" && (
         <div className="topbar-popover topbar-settings-popover" role="menu">
-          <div className="topbar-popover-heading">Account &amp; settings</div>
+          <div className="topbar-popover-heading">{t("common.ui.accountAndSettings")}</div>
           <button
             type="button"
             className="topbar-menu-item"
@@ -175,11 +171,15 @@ export default function Topbar() {
             onClick={() => navigateFromPanel("/profile")}
           >
             <PersonOutlineRoundedIcon />
-            <span>Profile</span>
+            <span>{t("nav.profile")}</span>
           </button>
           <label className="topbar-language">
-            <span>Change language</span>
-            <select value={language} onChange={changeLanguage} aria-label="Change language">
+            <span>{t("common.changeLanguage")}</span>
+            <select
+              value={currentLanguage()}
+              onChange={(event) => changeLanguage(event.target.value)}
+              aria-label={t("common.changeLanguage")}
+            >
               <option value="en">English</option>
               <option value="vi">Tiếng Việt</option>
             </select>
@@ -191,7 +191,7 @@ export default function Topbar() {
             onClick={() => navigateFromPanel("/settings")}
           >
             <SettingsOutlinedIcon />
-            <span>Settings</span>
+            <span>{t("nav.settings")}</span>
           </button>
         </div>
       )}
@@ -225,7 +225,7 @@ export default function Topbar() {
               type="button"
               className="topbar-avatar"
               title={user.fullName || "Profile"}
-              aria-label="Open account menu"
+              aria-label={t("common.ui.openAccountMenu")}
               aria-expanded={openPanel === "settings"}
               onClick={() => {
                 setOpenPanel(openPanel === "settings" ? null : "settings");
@@ -251,7 +251,7 @@ export default function Topbar() {
             </button>
             <button type="button" className="topbar-logout-btn" onClick={handleLogout}>
               <LogoutRoundedIcon />
-              <span>Logout</span>
+              <span>{t("nav.logout")}</span>
             </button>
           </>
         ) : (
@@ -260,7 +260,7 @@ export default function Topbar() {
             className="topbar-login-btn"
             onClick={() => navigate("/login")}
           >
-            <span>Login</span>
+            <span>{t("nav.login")}</span>
           </button>
         )}
       </div>

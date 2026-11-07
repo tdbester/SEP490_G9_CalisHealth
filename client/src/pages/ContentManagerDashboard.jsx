@@ -1,6 +1,7 @@
 import { Link as RouterLink } from "react-router-dom";
 import { Box, Button, Card, CardContent, LinearProgress, Stack, Typography } from "@mui/material";
 import { keyframes } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
 import GroupRoundedIcon from "@mui/icons-material/GroupRounded";
@@ -22,7 +23,10 @@ const enter = (delay = 0) => ({
   "@media (prefers-reduced-motion: reduce)": { animation: "none" },
 });
 
-const BREADCRUMB = [{ label: "Content manager" }, { label: "Dashboard" }];
+const BREADCRUMB = [
+  { labelKey: "nav.role.contentManager" },
+  { labelKey: "nav.dashboard" },
+];
 
 const CARD_TONES = [
   { accent: CM.violetBright, wash: "rgba(167,139,250,0.12)" },
@@ -157,6 +161,7 @@ function PreviewList({ items, tone }) {
 }
 
 export default function ContentManagerDashboard() {
+  const { t } = useTranslation();
   const memberLevelsQuery = useApiQuery(() => contentManagerApi.memberLevels());
   const memberLevels = Array.isArray(memberLevelsQuery.data) ? memberLevelsQuery.data : [];
   const totalMembers = memberLevels.reduce((total, item) => total + Number(item.memberCount || 0), 0);
@@ -167,13 +172,13 @@ export default function ContentManagerDashboard() {
     <Box sx={{ maxWidth: 1240, mx: "auto", px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 2.5 } }}>
       <ContentPageHeader
         breadcrumb={BREADCRUMB}
-        title="Content Manager Dashboard"
-        description="Manage your content and member progression."
+        title={t("contentManager.dashboard.pageTitle")}
+        description={t("contentManager.dashboard.description")}
       />
 
       <Box
         component="section"
-        aria-label="Management areas"
+        aria-label={t("contentManager.dashboard.managementAreas")}
         sx={{
           mt: 2,
           display: "grid",
@@ -183,32 +188,32 @@ export default function ContentManagerDashboard() {
       >
         <Box sx={enter(0)}>
           <ManagementCard
-            title="Exercise & workout"
-            description="Manage exercises and workouts available to members."
+            title={t("contentManager.dashboard.exerciseWorkout")}
+            description={t("contentManager.dashboard.exerciseWorkoutDesc")}
             to={CONTENT_PATHS.exercises}
-            action="Manage exercises"
+            action={t("contentManager.dashboard.manageExercises")}
             icon={SelfImprovementRoundedIcon}
-            preview={<PreviewList items={[{ label: "Push-up", detail: "Exercise" }, { label: "Pull-up", detail: "Exercise" }, { label: "Upper body A", detail: "Workout" }]} tone={CARD_TONES[0]} />}
+            preview={<PreviewList items={[{ label: "Push-up", detail: t("contentManager.dashboard.previewExercise") }, { label: "Pull-up", detail: t("contentManager.dashboard.previewExercise") }, { label: t("contentManager.dashboard.previewUpperBodyA"), detail: t("contentManager.dashboard.previewWorkout") }]} tone={CARD_TONES[0]} />}
             tone={CARD_TONES[0]}
           />
         </Box>
         <Box sx={enter(80)}>
           <ManagementCard
-            title="Daily training plans"
-            description="Schedule existing workouts onto training days by level and days per week."
+            title={t("contentManager.dashboard.dailyPlans")}
+            description={t("contentManager.dashboard.dailyPlansDesc")}
             to={CONTENT_PATHS.templates}
-            action="Manage plans"
+            action={t("contentManager.dashboard.managePlans")}
             icon={EventNoteRoundedIcon}
-            preview={<PreviewList items={[{ label: "Full Body A", detail: "Day 1" }, { label: "Full Body B", detail: "Day 2" }, { label: "Full Body C", detail: "Day 3" }]} tone={CARD_TONES[1]} />}
+            preview={<PreviewList items={[{ label: t("contentManager.dashboard.previewFullBodyA"), detail: t("contentManager.dashboard.previewDay", { number: 1 }) }, { label: t("contentManager.dashboard.previewFullBodyB"), detail: t("contentManager.dashboard.previewDay", { number: 2 }) }, { label: t("contentManager.dashboard.previewFullBodyC"), detail: t("contentManager.dashboard.previewDay", { number: 3 }) }]} tone={CARD_TONES[1]} />}
             tone={CARD_TONES[1]}
           />
         </Box>
         <Box sx={enter(160)}>
           <ManagementCard
-            title="Progression rules"
-            description="Define how members advance through training milestones."
+            title={t("contentManager.dashboard.progressionRules")}
+            description={t("contentManager.dashboard.progressionRulesDesc")}
             to={CONTENT_PATHS.progressionRules}
-            action="Manage rules"
+            action={t("contentManager.dashboard.manageRules")}
             icon={FitnessCenterRoundedIcon}
             preview={<PreviewList items={[{ label: "Strength", detail: "Repetitions" }, { label: "Endurance", detail: "Duration" }, { label: "Mobility", detail: "Range" }]} tone={CARD_TONES[2]} />}
             tone={CARD_TONES[2]}
@@ -216,10 +221,10 @@ export default function ContentManagerDashboard() {
         </Box>
         <Box sx={enter(240)}>
           <ManagementCard
-            title="Level benchmark criteria"
-            description="Set measurable requirements for Beginner, Intermediate, and Advanced."
+            title={t("contentManager.dashboard.levelCriteria")}
+            description={t("contentManager.dashboard.levelCriteriaDesc")}
             to={CONTENT_PATHS.levelCriteria}
-            action="Manage criteria"
+            action={t("contentManager.dashboard.manageCriteria")}
             icon={RuleRoundedIcon}
             preview={<PreviewList items={[{ label: "Beginner", detail: "Foundation" }, { label: "Intermediate", detail: "Building" }, { label: "Advanced", detail: "Performance" }]} tone={CARD_TONES[3]} />}
             tone={CARD_TONES[3]}
@@ -234,28 +239,37 @@ export default function ContentManagerDashboard() {
               <GroupRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
             </Box>
             <Typography id="members-by-level-title" variant="subtitle1" fontWeight={700} sx={{ color: "#fff", fontSize: 15.5 }}>
-              Members by level
+              {t("contentManager.dashboard.membersByLevel")}
             </Typography>
           </Stack>
           <Typography variant="caption" sx={{ color: CM.textMuted, bgcolor: "rgba(139,92,246,0.1)", px: 1.5, py: 0.5, borderRadius: 99, border: `1px solid ${CM.border}` }}>
-            {memberLevelsQuery.isLoading ? "Loading…" : `${totalMembers.toLocaleString()} members`}
+            {memberLevelsQuery.isLoading
+              ? t("common.loading")
+              : t("contentManager.dashboard.membersCount", { count: totalMembers.toLocaleString() })}
           </Typography>
         </Stack>
         {memberLevelsQuery.error ? (
           <Typography variant="body2" sx={{ color: CM.textMuted }}>
-            Member level statistics are unavailable.
+            {t("contentManager.dashboard.statsUnavailable")}
           </Typography>
         ) : memberLevelsQuery.isLoading ? (
           <LinearProgress sx={{ maxWidth: 360, my: 2 }} />
         ) : memberLevels.length === 0 ? (
           <Typography variant="body2" sx={{ color: CM.textMuted }}>
-            No member level data available.
+            {t("contentManager.dashboard.noLevelData")}
           </Typography>
         ) : (
           <Box>
             <Box
               role="img"
-              aria-label={`Member distribution by level: ${memberLevels.map((item) => `${item.level} ${totalMembers ? Math.round((Number(item.memberCount || 0) / totalMembers) * 100) : 0}%`).join(", ")}`}
+              aria-label={t("contentManager.dashboard.distributionAria", {
+                levels: memberLevels
+                  .map(
+                    (item) =>
+                      `${item.level} ${totalMembers ? Math.round((Number(item.memberCount || 0) / totalMembers) * 100) : 0}%`,
+                  )
+                  .join(", "),
+              })}
               sx={{
                 display: "flex",
                 width: "100%",
@@ -272,7 +286,11 @@ export default function ContentManagerDashboard() {
                 return (
                   <Box
                     key={item.level}
-                    title={`${item.level}: ${percent.toFixed(1)}% (${count.toLocaleString()} members)`}
+                    title={t("contentManager.dashboard.levelSegmentTitle", {
+                      level: item.level,
+                      percent: percent.toFixed(1),
+                      count: count.toLocaleString(),
+                    })}
                     sx={{
                       width: `${percent}%`,
                       minWidth: count > 0 ? 3 : 0,
@@ -295,7 +313,11 @@ export default function ContentManagerDashboard() {
                     direction="row"
                     spacing={0.75}
                     alignItems="center"
-                    title={`${item.level}: ${count.toLocaleString()} members (${percent}%)`}
+                    title={t("contentManager.dashboard.levelSegmentTitleShort", {
+                      level: item.level,
+                      count: count.toLocaleString(),
+                      percent,
+                    })}
                     sx={{
                       minWidth: 0,
                       px: 1.5,

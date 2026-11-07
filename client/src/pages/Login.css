@@ -34,6 +34,34 @@
   margin-bottom: 40px;
 }
 
+/*
+ * Hàng header: logo căn giữa + nút đổi ngôn ngữ canh phải.
+ *
+ * Dùng grid 3 cột (logo | khoảng trống | nút) để logo luôn nằm chính giữa
+ * theo trục ngang của thẻ, độc lập với độ rộng của nút đổi ngôn ngữ.
+ */
+.login-header {
+  width: 100%;
+  max-width: 440px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.login-header .login-logo {
+  grid-column: 2;
+  justify-self: center;
+  margin-bottom: 0;
+}
+
+/* Nút đổi ngôn ngữ đẩy sang cột cuối để luôn bám mép phải của form. */
+.login-header .login-lang {
+  grid-column: 3;
+  justify-self: end;
+}
+
 .login-logo-icon {
   object-fit: contain;
   display: block;
@@ -101,6 +129,11 @@
 
 .login-back:hover {
   color: #FFFFFF;
+}
+
+/* Nút đổi ngôn ngữ — nằm trong .login-header, canh phải với form. */
+.login-lang {
+  flex-shrink: 0;
 }
 
 .login-title {
@@ -350,7 +383,7 @@
   .login-back {
     margin-bottom: 18px;
   }
-  .login-logo {
+  .login-header {
     margin-bottom: 24px;
   }
   .login-title {
@@ -377,6 +410,10 @@
   }
   .login-back {
     max-width: 440px;
+  }
+  /* Logo vẫn căn giữa; nút đổi ngôn ngữ bám mép phải của form. */
+  .login-header {
+    gap: 10px;
   }
   .login-title {
     font-size: 24px;
