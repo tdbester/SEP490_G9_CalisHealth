@@ -60,6 +60,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/content/**").hasRole("CONTENT_MANAGER")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/library/exercises/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/favorites/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/feedback/**").hasRole("MEMBER")
                         .requestMatchers("/api/v1/library/muscle-groups").hasRole("MEMBER")
                         .requestMatchers("/api/v1/library/exercise-tree/**").hasAnyRole("MEMBER", "CONTENT_MANAGER")
                         .requestMatchers("/api/v1/library/member-exercises/**").hasRole("MEMBER")
@@ -70,6 +72,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/library/overview").hasRole("MEMBER")
                         .requestMatchers("/api/library/**").permitAll()
                         .requestMatchers("/api/exercises/**").permitAll()
+                        .requestMatchers("/api/member/form-rules/**").hasAnyRole("MEMBER", "CONTENT_MANAGER", "ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

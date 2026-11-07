@@ -24,6 +24,7 @@ import {
 } from "@mui/material";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import { useTranslation } from "react-i18next";
 import { adminUsersApi, apiErrorMessage } from "../api/adminUsers";
 import { CM } from "../theme-content";
 
@@ -39,46 +40,46 @@ const TONES = {
   muted: tone(CM.textMuted),
 };
 
-const ROLE_LABEL = { MEMBER: "Member", CONTENT_MANAGER: "Content Manager", ADMIN: "Admin" };
+const ROLE_LABEL = { MEMBER: "admin.userDetail.roleMember", CONTENT_MANAGER: "admin.userDetail.roleContentManager", ADMIN: "admin.userDetail.roleAdmin" };
 const ROLE_TONE = { MEMBER: TONES.violet, CONTENT_MANAGER: TONES.amber, ADMIN: TONES.pink };
 const SUBTITLE = {
-  MEMBER: "View member profile, workout activity history and system logs.",
-  CONTENT_MANAGER: "View content manager profile, content activity and system logs.",
-  ADMIN: "View admin profile, management actions and system logs.",
+  MEMBER: "admin.userDetail.subtitleMember",
+  CONTENT_MANAGER: "admin.userDetail.subtitleContentManager",
+  ADMIN: "admin.userDetail.subtitleAdmin",
 };
 
 // value -> [label, tone] for every status/type chip shown in the tables
-const KIND = { WORKOUT: ["Workout", TONES.violet], EXERCISE: ["Exercise", TONES.blue] };
+const KIND = { WORKOUT: ["admin.userDetail.kindWorkout", TONES.violet], EXERCISE: ["admin.userDetail.kindExercise", TONES.blue] };
 const ACTIVITY_STATUS = {
-  COMPLETED: ["Completed", TONES.green],
-  CANCELLED: ["Cancelled", TONES.pink],
-  IN_PROGRESS: ["In progress", TONES.amber],
+  COMPLETED: ["admin.userDetail.statusCompleted", TONES.green],
+  CANCELLED: ["admin.userDetail.statusCancelled", TONES.pink],
+  IN_PROGRESS: ["admin.userDetail.statusInProgress", TONES.amber],
 };
 const LOG_TYPE = {
-  SKILL: ["Skill", TONES.green],
-  LEVEL_CHANGE: ["Level Change", TONES.blue],
-  ASSESSMENT: ["Assessment", TONES.violet],
-  ACCOUNT: ["Account", TONES.muted],
-  LOGIN: ["Login", TONES.violet],
-  MODERATION: ["Moderation", TONES.amber],
-  NOTIFICATION: ["Notification", TONES.blue],
-  MAINTENANCE: ["Maintenance", TONES.amber],
-  STORAGE: ["Storage", TONES.green],
+  SKILL: ["admin.userDetail.logTypeSkill", TONES.green],
+  LEVEL_CHANGE: ["admin.userDetail.logTypeLevelChange", TONES.blue],
+  ASSESSMENT: ["admin.userDetail.logTypeAssessment", TONES.violet],
+  ACCOUNT: ["admin.userDetail.logTypeAccount", TONES.muted],
+  LOGIN: ["admin.userDetail.logTypeLogin", TONES.violet],
+  MODERATION: ["admin.userDetail.logTypeModeration", TONES.amber],
+  NOTIFICATION: ["admin.userDetail.logTypeNotification", TONES.blue],
+  MAINTENANCE: ["admin.userDetail.logTypeMaintenance", TONES.amber],
+  STORAGE: ["admin.userDetail.logTypeStorage", TONES.green],
 };
 const LOG_STATUS = {
-  SUCCESS: ["Success", TONES.green],
-  FAILED: ["Failed", TONES.pink],
-  WARNING: ["Warning", TONES.amber],
-  INFO: ["Info", TONES.blue],
-  SCHEDULED: ["Scheduled", TONES.blue],
+  SUCCESS: ["admin.userDetail.logStatusSuccess", TONES.green],
+  FAILED: ["admin.userDetail.logStatusFailed", TONES.pink],
+  WARNING: ["admin.userDetail.logStatusWarning", TONES.amber],
+  INFO: ["admin.userDetail.logStatusInfo", TONES.blue],
+  SCHEDULED: ["admin.userDetail.logStatusScheduled", TONES.blue],
 };
 const ADMIN_ACTION = {
-  CREATE_ACCOUNT: ["Create account", TONES.violet],
-  ACTIVATE: ["Activate", TONES.green],
-  DEACTIVATE: ["Deactivate", TONES.pink],
+  CREATE_ACCOUNT: ["admin.userDetail.adminActionCreateAccount", TONES.violet],
+  ACTIVATE: ["admin.userDetail.adminActionActivate", TONES.green],
+  DEACTIVATE: ["admin.userDetail.adminActionDeactivate", TONES.pink],
 };
-const CONTENT_TYPE = { SKILL: ["Skill", TONES.blue], EXERCISE: ["Exercise", TONES.violet], WORKOUT: ["Workout", TONES.amber] };
-const CONTENT_ACTION = { UPDATED: "Updated", DEACTIVATED: "Deactivated" };
+const CONTENT_TYPE = { SKILL: ["admin.userDetail.contentTypeSkill", TONES.blue], EXERCISE: ["admin.userDetail.contentTypeExercise", TONES.violet], WORKOUT: ["admin.userDetail.contentTypeWorkout", TONES.amber] };
+const CONTENT_ACTION = { UPDATED: "admin.userDetail.contentActionUpdated", DEACTIVATED: "admin.userDetail.contentActionDeactivated" };
 
 // Event types offered per role (the design lists different ones for each screen).
 const LOG_FILTERS = {
@@ -87,11 +88,11 @@ const LOG_FILTERS = {
   ADMIN: ["NOTIFICATION", "MAINTENANCE", "STORAGE", "LOGIN", "ACCOUNT"],
 };
 
-const fmtDate = (iso) =>
-  iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "-";
-const fmtDateTime = (iso) =>
+const fmtDate = (iso, locale) =>
+  iso ? new Date(iso).toLocaleDateString(locale || "en-US", { month: "short", day: "2-digit", year: "numeric" }) : "-";
+const fmtDateTime = (iso, locale) =>
   iso
-    ? new Date(iso).toLocaleString("en-US", {
+    ? new Date(iso).toLocaleString(locale || "en-US", {
         month: "short",
         day: "2-digit",
         year: "numeric",
@@ -181,20 +182,21 @@ function StatGrid({ children }) {
   return <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 1.5 }}>{children}</Box>;
 }
 
-function SelectFilter({ label, value, onChange, options, width = 170 }) {
+function SelectFilter({ label, value, onChange, options, width = 170, allLabel }) {
+  const { t } = useTranslation();
   return (
     <TextField
       select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      inputProps={{ "aria-label": `Filter by ${label.toLowerCase()}` }}
+      inputProps={{ "aria-label": t("admin.userDetail.filterAria", { label }) }}
       SelectProps={{
         displayEmpty: true,
-        renderValue: (v) => `${label}: ${v ? options.find((o) => o.value === v)?.label ?? v : "All"}`,
+        renderValue: (v) => `${label}: ${v ? options.find((o) => o.value === v)?.label ?? v : allLabel || t("admin.userDetail.filterAll")}`,
       }}
       sx={{ ...fieldSx, width }}
     >
-      <MenuItem value="">All</MenuItem>
+      <MenuItem value="">{allLabel}</MenuItem>
       {options.map((o) => (
         <MenuItem key={o.value} value={o.value}>
           {o.label}
@@ -204,22 +206,25 @@ function SelectFilter({ label, value, onChange, options, width = 170 }) {
   );
 }
 
-function DateFilter({ value, onChange, label = "Date" }) {
+function DateFilter({ value, onChange, label }) {
+  const { t } = useTranslation();
+  const text = label || t("admin.userDetail.dateLabel");
   return (
     <TextField
       type="date"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       InputLabelProps={{ shrink: true }}
-      label={label}
-      inputProps={{ "aria-label": `Filter by ${label.toLowerCase()}` }}
+      label={text}
+      inputProps={{ "aria-label": t("admin.userDetail.filterByDate") }}
       sx={dateFieldSx}
     />
   );
 }
 
 /** Fetches one page of a table and refetches when filters change. Stale responses are dropped. */
-function usePagedTable(fetchPage, deps) {
+function usePagedTable(fetchPage, deps, loadFailed = "admin.userDetail.tableLoadFailed") {
+  const { t } = useTranslation();
   const [state, setState] = useState({ loading: true, error: "", data: null });
   const [page, setPage] = useState(0);
   const depKey = JSON.stringify(deps);
@@ -234,7 +239,7 @@ function usePagedTable(fetchPage, deps) {
     setState((s) => ({ ...s, loading: true, error: "" }));
     fetchPage(page)
       .then((data) => !cancelled && setState({ loading: false, error: "", data }))
-      .catch((err) => !cancelled && setState((s) => ({ ...s, loading: false, error: apiErrorMessage(err, "Could not load this table.") })));
+      .catch((err) => !cancelled && setState((s) => ({ ...s, loading: false, error: apiErrorMessage(err, t(loadFailed)) })));
     return () => {
       cancelled = true;
     };
@@ -244,7 +249,8 @@ function usePagedTable(fetchPage, deps) {
   return { ...state, page, setPage };
 }
 
-function DataTable({ label, columns, rows, renderRow, table, emptyText, noun, filteredDate }) {
+function DataTable({ label, columns, rows, renderRow, table, emptyText, noun, filteredDate, dateLocale }) {
+  const { t } = useTranslation();
   const { loading, error, data, page, setPage } = table;
   const total = data?.totalElements ?? 0;
   const from = total > 0 ? page * PAGE_SIZE + 1 : 0;
@@ -298,8 +304,9 @@ function DataTable({ label, columns, rows, renderRow, table, emptyText, noun, fi
       {total > 0 && (
         <Box sx={{ mt: 1.5, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 1.5 }}>
           <Typography sx={{ fontSize: 12, color: CM.textMuted }}>
-            Showing {from}-{to} of {total.toLocaleString("en-US")} {noun}
-            {filteredDate ? ` on ${fmtDate(filteredDate)}` : ""}
+            {filteredDate
+              ? `Showing ${from}-${to} of ${total.toLocaleString("en-US")} ${noun} on ${fmtDate(filteredDate, dateLocale)}`
+              : `Showing ${from}-${to} of ${total.toLocaleString("en-US")} ${noun}`}
           </Typography>
           <Pagination
             count={data.totalPages}
@@ -309,7 +316,7 @@ function DataTable({ label, columns, rows, renderRow, table, emptyText, noun, fi
             color="primary"
             size="small"
             renderItem={(item) => (
-              <PaginationItem {...item} slots={{ previous: () => <span>Previous</span>, next: () => <span>Next</span> }} />
+              <PaginationItem {...item} slots={{ previous: () => <span>{t("admin.userDetail.previous")}</span>, next: () => <span>{t("admin.userDetail.next")}</span> }} />
             )}
           />
         </Box>
@@ -322,7 +329,7 @@ function Toolbar({ children }) {
   return <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap", alignItems: "center", mb: 2 }}>{children}</Box>;
 }
 
-const TimeCell = ({ iso }) => <span style={{ whiteSpace: "nowrap" }}>{fmtDateTime(iso)}</span>;
+const TimeCell = ({ iso, locale }) => <span style={{ whiteSpace: "nowrap" }}>{fmtDateTime(iso, locale)}</span>;
 
 function NameWithSub({ name, sub, subTone }) {
   return (
@@ -346,6 +353,7 @@ const initials = (name) =>
 // ---------------------------------------------------------------------------------
 
 function WorkoutHistory({ userId, levelOptions }) {
+  const { t, i18n } = useTranslation();
   const [searchInput, setSearchInput] = useState("");
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
@@ -368,13 +376,13 @@ function WorkoutHistory({ userId, levelOptions }) {
   }));
 
   return (
-    <Card title="Workout Activity History">
+    <Card title={t("admin.userDetail.workoutHistory")}>
       <Toolbar>
         <TextField
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Search workout / exercise"
-          inputProps={{ "aria-label": "Search workout or exercise" }}
+          placeholder={t("admin.userDetail.workoutSearchPlaceholder")}
+          inputProps={{ "aria-label": t("admin.userDetail.workoutSearchAria") }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -384,28 +392,29 @@ function WorkoutHistory({ userId, levelOptions }) {
           }}
           sx={{ ...fieldSx, flex: "1 1 240px", maxWidth: 320 }}
         />
-        <SelectFilter label="Type" value={type} onChange={setType} width={150}
-          options={[{ value: "WORKOUT", label: "Workout" }, { value: "EXERCISE", label: "Exercise" }]} />
-        <SelectFilter label="Level" value={level} onChange={setLevel} options={levels} width={190} />
-        <SelectFilter label="Status" value={status} onChange={setStatus} width={170}
-          options={[{ value: "COMPLETED", label: "Completed" }, { value: "CANCELLED", label: "Cancelled" }]} />
+        <SelectFilter label={t("admin.userDetail.filterType")} value={type} onChange={setType} width={150}
+          options={[{ value: "WORKOUT", label: t("admin.userDetail.kindWorkout") }, { value: "EXERCISE", label: t("admin.userDetail.kindExercise") }]} />
+        <SelectFilter label={t("admin.userDetail.filterLevel")} value={level} onChange={setLevel} options={levels} width={190} />
+        <SelectFilter label={t("admin.userDetail.filterStatus")} value={status} onChange={setStatus} width={170}
+          options={[{ value: "COMPLETED", label: t("admin.userDetail.statusCompleted") }, { value: "CANCELLED", label: t("admin.userDetail.statusCancelled") }]} />
         <Box sx={{ flex: 1 }} />
-        <DateFilter value={date} onChange={setDate} />
+        <DateFilter value={date} onChange={setDate} label={t("admin.userDetail.dateLabel")} />
       </Toolbar>
       <DataTable
-        label="Workout activity history"
-        columns={["DATE", "WORKOUT / EXERCISE", "TYPE", "LEVEL", "STATUS"]}
+        label={t("admin.userDetail.workoutHistory")}
+        columns={[t("admin.userDetail.colDate"), t("admin.userDetail.colWorkoutExercise"), t("admin.userDetail.colType"), t("admin.userDetail.colLevel"), t("admin.userDetail.colStatus")]}
         rows={table.data?.items ?? []}
         table={table}
-        noun="activities"
+        noun={t("admin.userDetail.nounActivities")}
         filteredDate={date}
-        emptyText="No workout activity matches your filters."
+        dateLocale={i18n.language}
+        emptyText={t("admin.userDetail.emptyWorkout")}
         renderRow={(r) => [
-          fmtDate(r.occurredAt),
+          fmtDate(r.occurredAt, i18n.language),
           <NameWithSub key="n" name={r.name} sub={r.detail} />,
-          <Chip key="t" label={KIND[r.kind][0]} toneDef={KIND[r.kind][1]} />,
+          <Chip key="t" label={t(KIND[r.kind][0])} toneDef={KIND[r.kind][1]} />,
           r.level ?? "-",
-          <Chip key="s" label={ACTIVITY_STATUS[r.status][0]} toneDef={ACTIVITY_STATUS[r.status][1]} />,
+          <Chip key="s" label={t(ACTIVITY_STATUS[r.status][0])} toneDef={ACTIVITY_STATUS[r.status][1]} />,
         ]}
       />
     </Card>
@@ -413,6 +422,7 @@ function WorkoutHistory({ userId, levelOptions }) {
 }
 
 function ContentHistory({ userId }) {
+  const { t, i18n } = useTranslation();
   const [type, setType] = useState("");
   const [action, setAction] = useState("");
   const table = usePagedTable(
@@ -420,25 +430,26 @@ function ContentHistory({ userId }) {
     [userId, type, action],
   );
   return (
-    <Card title="Content Activity">
+    <Card title={t("admin.userDetail.contentActivity")}>
       <Toolbar>
-        <SelectFilter label="Type" value={type} onChange={setType} width={160}
-          options={Object.entries(CONTENT_TYPE).map(([value, [label]]) => ({ value, label }))} />
-        <SelectFilter label="Action" value={action} onChange={setAction} width={180}
-          options={Object.entries(CONTENT_ACTION).map(([value, label]) => ({ value, label }))} />
+        <SelectFilter label={t("admin.userDetail.filterType")} value={type} onChange={setType} width={160}
+          options={Object.entries(CONTENT_TYPE).map(([value, [label]]) => ({ value, label: t(label) }))} />
+        <SelectFilter label={t("admin.userDetail.filterAction")} value={action} onChange={setAction} width={180}
+          options={Object.entries(CONTENT_ACTION).map(([value, label]) => ({ value, label: t(label) }))} />
       </Toolbar>
       <DataTable
-        label="Content activity"
-        columns={["DATE & TIME", "ITEM", "TYPE", "ACTION", "STATUS"]}
+        label={t("admin.userDetail.contentActivity")}
+        columns={[t("admin.userDetail.colDateTime"), t("admin.userDetail.colItem"), t("admin.userDetail.colType"), t("admin.userDetail.colAction"), t("admin.userDetail.colStatus")]}
         rows={table.data?.items ?? []}
         table={table}
-        noun="content items"
-        emptyText="This content manager has not created any content yet."
+        noun={t("admin.userDetail.nounContentItems")}
+        dateLocale={i18n.language}
+        emptyText={t("admin.userDetail.emptyContent")}
         renderRow={(r) => [
-          <TimeCell key="d" iso={r.occurredAt} />,
+          <TimeCell key="d" iso={r.occurredAt} locale={i18n.language} />,
           <NameWithSub key="n" name={r.name} sub={r.code} />,
-          <Chip key="t" label={CONTENT_TYPE[r.itemType][0]} toneDef={CONTENT_TYPE[r.itemType][1]} />,
-          CONTENT_ACTION[r.action],
+          <Chip key="t" label={t(CONTENT_TYPE[r.itemType][0])} toneDef={CONTENT_TYPE[r.itemType][1]} />,
+          t(CONTENT_ACTION[r.action]),
           <Chip key="s" label={r.status} toneDef={r.status === "Active" ? TONES.green : TONES.muted} />,
         ]}
       />
@@ -447,6 +458,7 @@ function ContentHistory({ userId }) {
 }
 
 function AdminActions({ userId }) {
+  const { t, i18n } = useTranslation();
   const [action, setAction] = useState("");
   const [date, setDate] = useState("");
   const table = usePagedTable(
@@ -454,26 +466,27 @@ function AdminActions({ userId }) {
     [userId, action, date],
   );
   return (
-    <Card title="Admin Actions">
+    <Card title={t("admin.userDetail.adminActions")}>
       <Toolbar>
-        <SelectFilter label="Action" value={action} onChange={setAction} width={210}
-          options={Object.entries(ADMIN_ACTION).map(([value, [label]]) => ({ value, label }))} />
+        <SelectFilter label={t("admin.userDetail.filterAction")} value={action} onChange={setAction} width={210}
+          options={Object.entries(ADMIN_ACTION).map(([value, [label]]) => ({ value, label: t(label) }))} />
         <Box sx={{ flex: 1 }} />
-        <DateFilter value={date} onChange={setDate} />
+        <DateFilter value={date} onChange={setDate} label={t("admin.userDetail.dateLabel")} />
       </Toolbar>
       <DataTable
-        label="Admin actions"
-        columns={["DATE & TIME", "ACTION", "TARGET", "STATUS"]}
+        label={t("admin.userDetail.adminActions")}
+        columns={[t("admin.userDetail.colDateTime"), t("admin.userDetail.colAction"), t("admin.userDetail.colTarget"), t("admin.userDetail.colStatus")]}
         rows={table.data?.items ?? []}
         table={table}
-        noun="admin actions"
+        noun={t("admin.userDetail.nounAdminActions")}
         filteredDate={date}
-        emptyText="No admin actions match your filters."
+        dateLocale={i18n.language}
+        emptyText={t("admin.userDetail.emptyAdminActions")}
         renderRow={(r) => [
-          <TimeCell key="d" iso={r.occurredAt} />,
-          <Chip key="a" label={ADMIN_ACTION[r.action][0]} toneDef={ADMIN_ACTION[r.action][1]} />,
-          <NameWithSub key="t" name={r.targetName} sub={`${r.targetCode} \u00b7 ${ROLE_LABEL[r.targetRole] ?? r.targetRole}`} />,
-          <Chip key="s" label={LOG_STATUS[r.status]?.[0] ?? r.status} toneDef={LOG_STATUS[r.status]?.[1]} />,
+          <TimeCell key="d" iso={r.occurredAt} locale={i18n.language} />,
+          <Chip key="a" label={t(ADMIN_ACTION[r.action][0])} toneDef={ADMIN_ACTION[r.action][1]} />,
+          <NameWithSub key="t" name={r.targetName} sub={`${r.targetCode} \u00b7 ${ROLE_LABEL[r.targetRole] ? t(ROLE_LABEL[r.targetRole]) : r.targetRole}`} />,
+          <Chip key="s" label={LOG_STATUS[r.status] ? t(LOG_STATUS[r.status][0]) : r.status} toneDef={LOG_STATUS[r.status]?.[1]} />,
         ]}
       />
     </Card>
@@ -481,6 +494,7 @@ function AdminActions({ userId }) {
 }
 
 function SystemLogs({ userId, role }) {
+  const { t, i18n } = useTranslation();
   const [type, setType] = useState("");
   const [date, setDate] = useState("");
   const table = usePagedTable(
@@ -488,26 +502,27 @@ function SystemLogs({ userId, role }) {
     [userId, type, date],
   );
   return (
-    <Card title="System Logs">
+    <Card title={t("admin.userDetail.systemLogs")}>
       <Toolbar>
-        <SelectFilter label="Event type" value={type} onChange={setType} width={220}
-          options={(LOG_FILTERS[role] ?? []).map((value) => ({ value, label: LOG_TYPE[value][0] }))} />
+        <SelectFilter label={t("admin.userDetail.filterEventType")} value={type} onChange={setType} width={220}
+          options={(LOG_FILTERS[role] ?? []).map((value) => ({ value, label: t(LOG_TYPE[value][0]) }))} />
         <Box sx={{ flex: 1 }} />
-        <DateFilter value={date} onChange={setDate} />
+        <DateFilter value={date} onChange={setDate} label={t("admin.userDetail.dateLabel")} />
       </Toolbar>
       <DataTable
-        label="System logs"
-        columns={["DATE & TIME", "EVENT TYPE", "DESCRIPTION", "STATUS"]}
+        label={t("admin.userDetail.systemLogs")}
+        columns={[t("admin.userDetail.colDateTime"), t("admin.userDetail.colEventType"), t("admin.userDetail.colDescription"), t("admin.userDetail.colStatus")]}
         rows={table.data?.items ?? []}
         table={table}
-        noun="system events"
+        noun={t("admin.userDetail.nounSystemEvents")}
         filteredDate={date}
-        emptyText="No system events match your filters."
+        dateLocale={i18n.language}
+        emptyText={t("admin.userDetail.emptySystemEvents")}
         renderRow={(r) => [
-          <TimeCell key="d" iso={r.occurredAt} />,
-          <Chip key="e" label={LOG_TYPE[r.eventType]?.[0] ?? r.eventType} toneDef={LOG_TYPE[r.eventType]?.[1]} />,
+          <TimeCell key="d" iso={r.occurredAt} locale={i18n.language} />,
+          <Chip key="e" label={LOG_TYPE[r.eventType] ? t(LOG_TYPE[r.eventType][0]) : r.eventType} toneDef={LOG_TYPE[r.eventType]?.[1]} />,
           r.description,
-          <Chip key="s" label={LOG_STATUS[r.status]?.[0] ?? r.status} toneDef={LOG_STATUS[r.status]?.[1]} />,
+          <Chip key="s" label={LOG_STATUS[r.status] ? t(LOG_STATUS[r.status][0]) : r.status} toneDef={LOG_STATUS[r.status]?.[1]} />,
         ]}
       />
     </Card>
@@ -515,39 +530,41 @@ function SystemLogs({ userId, role }) {
 }
 
 function ProfileCard({ d }) {
+  const { t, i18n } = useTranslation();
   const m = d.member;
   const staff = d.role !== "MEMBER";
-  const status = d.active ? <Chip label="Active" toneDef={TONES.green} /> : <Chip label="Inactive" toneDef={TONES.muted} />;
-  const role = <Chip label={ROLE_LABEL[d.role] ?? d.role} toneDef={ROLE_TONE[d.role]} />;
+  const status = d.active
+    ? <Chip label={t("admin.users.active")} toneDef={TONES.green} />
+    : <Chip label={t("admin.users.inactive")} toneDef={TONES.muted} />;
+  const role = <Chip label={ROLE_LABEL[d.role] ? t(ROLE_LABEL[d.role]) : d.role} toneDef={ROLE_TONE[d.role]} />;
   const password = d.passwordState === "DEFAULT"
-    ? <Chip label="Default" toneDef={TONES.amber} />
-    : <Chip label="Changed" toneDef={TONES.green} />;
+    ? <Chip label={t("admin.userDetail.defaultPassword")} toneDef={TONES.amber} />
+    : <Chip label={t("admin.userDetail.changedPassword")} toneDef={TONES.green} />;
 
   return (
-    <Card title="User Profile">
+    <Card title={t("admin.userDetail.profileTitle")}>
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, columnGap: 3 }}>
         <Box>
-          <Field label="Full Name">{d.fullName}</Field>
-          <Field label="User ID">{d.userCode}</Field>
-          <Field label="Email">{d.email}</Field>
-          {!staff && <Field label="Age">{m?.age ?? "-"}</Field>}
-          {!staff && <Field label="Gender">{m?.gender ?? "-"}</Field>}
-          {!staff && <Field label="Goal">{m?.goal ?? "-"}</Field>}
-          {staff && <Field label="Role">{role}</Field>}
+          <Field label={t("admin.userDetail.fullName")}>{d.fullName}</Field>
+          <Field label={t("admin.userDetail.userId")}>{d.userCode}</Field>
+          <Field label={t("admin.userDetail.email")}>{d.email}</Field>
+          {!staff && <Field label={t("admin.userDetail.age")}>{m?.age ?? "-"}</Field>}
+          {!staff && <Field label={t("admin.userDetail.gender")}>{m?.gender ?? "-"}</Field>}
+          {!staff && <Field label={t("admin.userDetail.goal")}>{m?.goal ?? "-"}</Field>}
+          {staff && <Field label={t("admin.userDetail.role")}>{role}</Field>}
         </Box>
         <Box>
-          {!staff && <Field label="Height">{m?.heightCm != null ? `${Number(m.heightCm)} cm` : "-"}</Field>}
-          {!staff && <Field label="Weight">{m?.weightKg != null ? `${Number(m.weightKg)} kg` : "-"}</Field>}
-          <Field label="Account Status">{status}</Field>
-          {staff ? <Field label="Password">{password}</Field> : <Field label="Role">{role}</Field>}
-          <Field label="Joined Date">{fmtDate(d.createdAt)}</Field>
-          <Field label="Last Active">{d.lastActiveAt ? fmtDateTime(d.lastActiveAt) : "Never"}</Field>
+          {!staff && <Field label={t("admin.userDetail.height")}>{m?.heightCm != null ? `${Number(m.heightCm)} cm` : "-"}</Field>}
+          {!staff && <Field label={t("admin.userDetail.weight")}>{m?.weightKg != null ? `${Number(m.weightKg)} kg` : "-"}</Field>}
+          <Field label={t("admin.userDetail.accountStatus")}>{status}</Field>
+          {staff ? <Field label={t("admin.userDetail.password")}>{password}</Field> : <Field label={t("admin.userDetail.role")}>{role}</Field>}
+          <Field label={t("admin.userDetail.joinedDate")}>{fmtDate(d.createdAt, i18n.language)}</Field>
+          <Field label={t("admin.userDetail.lastActive")}>{d.lastActiveAt ? fmtDateTime(d.lastActiveAt, i18n.language) : t("admin.userDetail.never")}</Field>
         </Box>
       </Box>
       {d.role === "ADMIN" && d.passwordState === "DEFAULT" && (
         <Alert severity="warning" sx={{ mt: 2 }}>
-          <strong>Default password still in use.</strong> Admin accounts are not forced to change it. Consider changing it
-          from Profile &gt; Change password.
+          <strong>{t("admin.userDetail.defaultPasswordWarning")}</strong>
         </Alert>
       )}
     </Card>
@@ -555,14 +572,15 @@ function ProfileCard({ d }) {
 }
 
 function StatsCard({ d }) {
+  const { t } = useTranslation();
   if (d.member) {
     const m = d.member;
     return (
-      <Card title="Progress Statistics">
+      <Card title={t("admin.userDetail.progressStats")}>
         <StatGrid>
-          <Stat label="Current Level" value={m.levelRank ? `Level ${m.levelRank}` : "-"} hint={m.levelName ?? "Not assessed yet"} />
-          <Stat label="Total Workouts" value={m.totalWorkouts.toLocaleString("en-US")} hint="Completed sessions" />
-          <Stat label="Workout Streak" value={`${m.streakDays} ${m.streakDays === 1 ? "Day" : "Days"}`} hint={`Personal best: ${m.longestStreak}`} />
+          <Stat label={t("admin.userDetail.currentLevel")} value={m.levelRank ? t("admin.userDetail.levelLabel", { rank: m.levelRank }) : "-"} hint={m.levelName ?? t("admin.userDetail.notAssessed")} />
+          <Stat label={t("admin.userDetail.totalWorkouts")} value={m.totalWorkouts.toLocaleString("en-US")} hint={t("admin.userDetail.completedSessions")} />
+          <Stat label={t("admin.userDetail.workoutStreak")} value={t("admin.userDetail.day", { count: m.streakDays })} hint={t("admin.userDetail.personalBest", { count: m.longestStreak })} />
         </StatGrid>
       </Card>
     );
@@ -570,32 +588,33 @@ function StatsCard({ d }) {
   if (d.content) {
     const c = d.content;
     return (
-      <Card title="Content Statistics">
+      <Card title={t("admin.userDetail.contentStats")}>
         <StatGrid>
-          <Stat label="Exercises" value={c.exercises} hint="Created" />
-          <Stat label="Skills" value={c.skills} hint="Created" />
-          <Stat label="Workouts" value={c.workouts} hint="Created" />
-          <Stat label="Reviewed" value={c.reviewed ?? "-"} hint={c.reviewed == null ? "Not tracked yet" : "Member submissions"} />
+          <Stat label={t("admin.userDetail.exercises")} value={c.exercises} hint={t("admin.userDetail.created")} />
+          <Stat label={t("admin.userDetail.skills")} value={c.skills} hint={t("admin.userDetail.created")} />
+          <Stat label={t("admin.userDetail.workouts")} value={c.workouts} hint={t("admin.userDetail.created")} />
+          <Stat label={t("admin.userDetail.reviewed")} value={c.reviewed ?? "-"} hint={c.reviewed == null ? t("admin.userDetail.notTracked") : t("admin.userDetail.memberSubmissions")} />
         </StatGrid>
       </Card>
     );
   }
   const a = d.admin;
   return (
-    <Card title="Admin Activity">
+    <Card title={t("admin.userDetail.adminActivity")}>
       <StatGrid>
-        <Stat label="Accounts created" value={a.accountsCreated} hint="Admin + content manager" />
-        <Stat label="Users deactivated" value={a.usersDeactivated} hint="All time" />
-        <Stat label="Users activated" value={a.usersActivated} hint="All time" />
-        <Stat label="Notifications sent" value={a.notificationsSent} hint="System notifications" />
-        <Stat label="Maintenance" value={a.maintenanceSchedules} hint="Schedules created" />
-        <Stat label="Storage actions" value={a.storageActions} hint="Cleanups and limit changes" />
+        <Stat label={t("admin.userDetail.accountsCreated")} value={a.accountsCreated} hint={t("admin.userDetail.adminAndCM")} />
+        <Stat label={t("admin.userDetail.usersDeactivated")} value={a.usersDeactivated} hint={t("admin.userDetail.allTime")} />
+        <Stat label={t("admin.userDetail.usersActivated")} value={a.usersActivated} hint={t("admin.userDetail.allTime")} />
+        <Stat label={t("admin.userDetail.notificationsSent")} value={a.notificationsSent} hint={t("admin.userDetail.systemNotifications")} />
+        <Stat label={t("admin.userDetail.maintenance")} value={a.maintenanceSchedules} hint={t("admin.userDetail.schedulesCreated")} />
+        <Stat label={t("admin.userDetail.storageActions")} value={a.storageActions} hint={t("admin.userDetail.cleanups")} />
       </StatGrid>
     </Card>
   );
 }
 
 function DeactivateDialog({ user, busy, onCancel, onConfirm }) {
+  const { t } = useTranslation();
   return (
     <Dialog
       open={Boolean(user)}
@@ -613,9 +632,9 @@ function DeactivateDialog({ user, busy, onCancel, onConfirm }) {
               </Box>
               <Box>
                 <Typography id="deactivate-title" component="h2" sx={{ fontSize: 17, fontWeight: 700 }}>
-                  Deactivate this account?
+                  {t("admin.userDetail.deactivateTitle")}
                 </Typography>
-                <Typography sx={{ fontSize: 13, color: CM.textMuted }}>This takes effect immediately.</Typography>
+                <Typography sx={{ fontSize: 13, color: CM.textMuted }}>{t("admin.userDetail.deactivateHint")}</Typography>
               </Box>
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.5, mb: 2, borderRadius: "12px", bgcolor: CM.surfaceSoft, border: `1px solid ${CM.border}` }}>
@@ -625,18 +644,17 @@ function DeactivateDialog({ user, busy, onCancel, onConfirm }) {
               <Box sx={{ minWidth: 0 }}>
                 <Typography sx={{ fontSize: 14, fontWeight: 600 }} noWrap>{user.fullName}</Typography>
                 <Typography sx={{ fontSize: 12, color: CM.textMuted }}>
-                  {user.userCode} {"\u00b7"} {ROLE_LABEL[user.role] ?? user.role}
+                  {user.userCode} {"\u00b7"} {ROLE_LABEL[user.role] ? t(ROLE_LABEL[user.role]) : user.role}
                 </Typography>
               </Box>
             </Box>
             <Typography id="deactivate-desc" sx={{ fontSize: 13, lineHeight: 1.7, color: CM.textMuted }}>
-              They will be blocked right away and can&apos;t sign in. Sign-in will show &quot;Your account has been blocked&quot;.
-              Their data and history are kept. You can activate the account again at any time.
+              {t("admin.userDetail.deactivateMessage")}
             </Typography>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
             <Button color="inherit" onClick={onCancel} disabled={busy} sx={{ borderRadius: "10px" }}>
-              Cancel
+              {t("admin.userDetail.cancel")}
             </Button>
             <Button
               variant="contained"
@@ -644,7 +662,7 @@ function DeactivateDialog({ user, busy, onCancel, onConfirm }) {
               disabled={busy}
               sx={{ borderRadius: "10px", bgcolor: CM.pink, color: "#2A0A14", "&:hover": { bgcolor: "#FF5C85" } }}
             >
-              {busy ? "Deactivating..." : "Deactivate"}
+              {busy ? t("admin.userDetail.deactivating") : t("admin.userDetail.deactivateConfirm")}
             </Button>
           </DialogActions>
         </>
@@ -655,6 +673,7 @@ function DeactivateDialog({ user, busy, onCancel, onConfirm }) {
 
 /** Admin user detail & activity log (design: user-detail-member / content-manager / admin / deactivate-warning). */
 export default function AdminUserDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const [detail, setDetail] = useState(null);
@@ -665,8 +684,8 @@ export default function AdminUserDetailPage() {
   const [toast, setToast] = useState("");
 
   useEffect(() => {
-    document.title = "User Detail | CalisHealth";
-  }, []);
+    document.title = `${t("admin.userDetail.pageTitle")} | CalisHealth`;
+  }, [t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -678,7 +697,7 @@ export default function AdminUserDetailPage() {
       .then((d) => !cancelled && setDetail(d))
       .catch((err) =>
         !cancelled &&
-        setError(err?.response?.status === 404 ? "This user does not exist." : apiErrorMessage(err, "Could not load this user.")),
+        setError(err?.response?.status === 404 ? t("admin.userDetail.notFound") : apiErrorMessage(err, t("admin.userDetail.loadFailed"))),
       )
       .finally(() => !cancelled && setLoading(false));
     return () => {
@@ -691,7 +710,7 @@ export default function AdminUserDetailPage() {
     try {
       await adminUsersApi.setActive([detail.id], active);
       setDetail(await adminUsersApi.detail(detail.id));
-      setToast(`${detail.fullName} ${active ? "activated" : "deactivated"}.`);
+      setToast(t(active ? "admin.userDetail.activated" : "admin.userDetail.deactivated", { name: detail.fullName }));
       setConfirmOpen(false);
     } catch (err) {
       setConfirmOpen(false);
@@ -705,15 +724,15 @@ export default function AdminUserDetailPage() {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3.5 } }}>
-      <Typography sx={{ fontSize: 13, color: CM.textMuted }}>Admin / Users / User Detail</Typography>
+      <Typography sx={{ fontSize: 13, color: CM.textMuted }}>{t("admin.userDetail.breadcrumb")}</Typography>
 
       <Box sx={{ mt: 1, mb: 3, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
         <Box sx={{ maxWidth: 640 }}>
           <Typography component="h1" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.2 }}>
-            User Detail &amp; Activity Log
+            {t("admin.userDetail.pageTitle")}
           </Typography>
           <Typography sx={{ mt: 0.75, fontSize: 14, color: CM.textMuted }}>
-            {SUBTITLE[role] ?? "View the profile, activity history and system logs of this account."}
+            {SUBTITLE[role] ? t(SUBTITLE[role]) : t("admin.userDetail.subtitleFallback")}
           </Typography>
         </Box>
         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 0.75 }}>
@@ -727,11 +746,11 @@ export default function AdminUserDetailPage() {
                   onClick={() => setConfirmOpen(true)}
                   sx={{ borderRadius: "10px" }}
                 >
-                  Deactivate
+                  {t("admin.userDetail.deactivate")}
                 </Button>
               ) : (
                 <Button variant="outlined" color="success" disabled={busy} onClick={() => changeStatus(true)} sx={{ borderRadius: "10px" }}>
-                  Activate
+                  {t("admin.userDetail.activate")}
                 </Button>
               ))}
             <Button
@@ -741,11 +760,11 @@ export default function AdminUserDetailPage() {
               onClick={() => navigate("/admin/users")}
               sx={{ borderRadius: "10px", borderColor: CM.borderStrong }}
             >
-              Back to User List
+              {t("admin.userDetail.backToList")}
             </Button>
           </Box>
           {detail?.self && (
-            <Typography sx={{ fontSize: 12, color: CM.textDim }}>You can&apos;t deactivate your own account</Typography>
+            <Typography sx={{ fontSize: 12, color: CM.textDim }}>{t("admin.userDetail.selfNote")}</Typography>
           )}
         </Box>
       </Box>

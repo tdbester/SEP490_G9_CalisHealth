@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 function EyeOpenIcon() {
   return (
     <svg viewBox="0 0 33 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -18,12 +20,13 @@ function EyeOffIcon() {
 
 // Eye button placed inside .login-input-wrap, after the password input.
 export default function PasswordToggle({ visible, onToggle }) {
+  const { t } = useTranslation();
   return (
     <button
       type="button"
       className="login-toggle-pw"
       onClick={onToggle}
-      aria-label={visible ? "Hide password" : "Show password"}
+      aria-label={visible ? t("common.auth.login.hidePassword") : t("common.auth.login.showPassword")}
       aria-pressed={visible}
     >
       {visible ? <EyeOffIcon /> : <EyeOpenIcon />}

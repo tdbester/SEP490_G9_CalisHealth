@@ -1,11 +1,6 @@
-// Mock data for the Admin Dashboard, matching the Figma frame.
-// TODO: replace with real data once the backend exposes /api/admin/dashboard.
-
-export const ADMIN_STATS = {
-  totalUsers: 12482,
-  totalSkillExercises: 86,
-  totalHealthExercises: 100,
-};
+// Mock data cho biểu đồ xu hướng hoạt động của Admin Dashboard, khớp với Figma.
+// Số liệu tổng quan (total users / skill / health) đã chuyển sang API thật:
+// GET /admin/dashboard/overview -> client/src/api/adminDashboard.js
 
 // subtitle: text under the card title. Figma: 30 days = per week, 6 months = per month, 1 year = per quarter.
 export const TREND_RANGES = [

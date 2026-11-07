@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import AuthLogo from "../components/AuthLogo";
 import "./Login.css";
@@ -7,6 +8,7 @@ import "./Login.css";
 const REDIRECT_SECONDS = 8;
 
 export default function VerifyEmail() {
+  const { t } = useTranslation();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const token = params.get("token") || "";
@@ -21,7 +23,7 @@ export default function VerifyEmail() {
   useEffect(() => {
     if (!token) {
       setStatus("error");
-      setMessage("The verification link is invalid or missing a verification code.");
+      setMessage(t("common.auth.verifyEmailFlow.invalidLink"));
       return;
     }
     if (startedRef.current) return;
@@ -30,15 +32,15 @@ export default function VerifyEmail() {
     api.post(`/auth/verify?token=${encodeURIComponent(token)}`)
       .then((res) => {
         setStatus("success");
-        setMessage(res.data?.message || "Email verified successfully!");
+        setMessage(res.data?.message || t("common.auth.verifyEmailFlow.successTitle"));
         setSeconds(REDIRECT_SECONDS);
       })
       .catch((err) => {
         setStatus("error");
-        setMessage(err.response?.data?.message || "Unable to verify email. Please try again.");
+        setMessage(err.response?.data?.message || t("common.auth.verifyEmailFlow.fallbackError"));
         setSeconds(REDIRECT_SECONDS);
       });
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     if (status === "verifying") return undefined;
@@ -55,14 +57,18 @@ export default function VerifyEmail() {
       <div className="login-card">
         <AuthLogo />
         <h1 className="login-title">
-          {status === "verifying" ? "Verifying..." : status === "success" ? "Verification successful" : "Verification failed"}
+          {status === "verifying"
+            ? t("common.auth.verifyEmail.verifying")
+            : status === "success"
+              ? t("common.auth.verifyEmailFlow.successTitle")
+              : t("common.auth.verifyEmailFlow.errorTitle")}
         </h1>
         <div className="login-form">
-          {status === "verifying" && <div className="login-success">Verifying your email, please wait...</div>}
+          {status === "verifying" && <div className="login-success">{t("common.auth.verifyEmail.verifyingMessage")}</div>}
           {status === "success" && <div className="login-success">{message}</div>}
           {status === "error" && <div className="login-error">{message}</div>}
           {(status === "success" || status === "error") && (
-            <div className="login-redirect">Redirecting to the login page in {seconds} seconds.</div>
+            <div className="login-redirect">{t("common.auth.verifyEmailFlow.redirecting", { seconds })}</div>
           )}
         </div>
       </div>

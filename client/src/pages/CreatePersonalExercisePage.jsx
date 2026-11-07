@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import {
   checkPersonalExerciseText,
@@ -7,6 +8,7 @@ import {
   getMaintenanceServiceStatus,
 } from "../api/library";
 import ConfirmDialog from "../components/common/ConfirmDialog";
+import useVideoSafetyScan from "../hooks/useVideoSafetyScan";
 import {
   getApiErrorMessage,
   validatePersonalExercise,
@@ -15,17 +17,18 @@ import {
 
 export default function CreatePersonalExercisePage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const fileInputRef = useRef(null);
   const anatomyInputRef = useRef(null);
   const submissionLock = useRef(false);
 
   // Sync document title to match mockup window header: CalisHealth - Library
   useEffect(() => {
-    document.title = "CalisHealth - Library";
+    document.title = t("member.library.documentTitle");
     return () => {
       document.title = "CalisHealth";
     };
-  }, []);
+  }, [t]);
 
   // Form states
   const [title, setTitle] = useState("");
@@ -40,13 +43,23 @@ export default function CreatePersonalExercisePage() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [level, setLevel] = useState("Beginner");
   const [guideSteps, setGuideSteps] = useState([
-    "Start in a plank with hands under shoulders",
+    t("member.personal.defaultFirstStep"),
     "",
   ]);
   const [videoFile, setVideoFile] = useState(null);
   const [videoUploadsUnderMaintenance, setVideoUploadsUnderMaintenance] = useState(false);
   const [maintenanceStatusLoading, setMaintenanceStatusLoading] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
+
+  /** Quét MediaPipe: video phải có người + chuyển động rõ ràng mới được gửi. */
+  const videoScan = useVideoSafetyScan({ file: videoFile });
+  const {
+    status: videoScanStatus,
+    progress: videoScanProgress,
+    reason: videoScanReason,
+    scan: runVideoScan,
+    reset: resetVideoScan,
+  } = videoScan;
   useEffect(() => {
     let cancelled = false;
     getMaintenanceServiceStatus("MEMBER_VIDEO_UPLOADS")
@@ -58,7 +71,7 @@ export default function CreatePersonalExercisePage() {
       .catch(() => {
         if (!cancelled) {
           setVideoUploadsUnderMaintenance(false);
-          toast.warning("Could not check video upload maintenance status. The server will verify availability when you submit.");
+          toast.warning(t("member.personal.maintenanceStatusUnknown"));
         }
       })
       .finally(() => {
@@ -113,18 +126,18 @@ export default function CreatePersonalExercisePage() {
   const getTextCheckErrorMessage = (error) => {
     const status = error?.response?.status;
     if (!error?.response) {
-      return "Cannot reach the text-check API. Make sure the backend is running, then try again.";
+      return t("member.personal.textCheckApiUnreachable");
     }
     if (status === 404) {
-      return "The text-check API is not available. Restart the backend so it loads the latest endpoint and database migration.";
+      return t("member.personal.textCheckApiMissing");
     }
     const responseData = error.response.data;
     const detail = typeof responseData === "string"
       ? responseData
       : responseData?.message;
     return detail
-      ? `Text check failed (HTTP ${status}): ${detail}`
-      : `Text check failed (HTTP ${status}). Please check the backend and try again.`;
+      ? t("member.personal.textCheckFailedHttp", { status, detail })
+      : t("member.personal.textCheckFailedHttpGeneric", { status });
   };
   const focusFirstInvalidField = (errors) => {
     if (targetMuscles.length === 0) {
@@ -171,9 +184,15 @@ export default function CreatePersonalExercisePage() {
     const file = e.target.files?.[0];
     if (file) {
       setErrorMessage("");
-      setVideoFile(file);
       const fileError = validateVideoFile(file);
-      if (fileError) toast.error(fileError);
+      if (fileError) {
+        toast.error(fileError);
+        e.target.value = "";
+        return;
+      }
+      setVideoFile(file);
+      // Đổi file thì kết quả quét cũ không còn giá trị.
+      resetVideoScan();
     }
   };
 
@@ -195,9 +214,13 @@ export default function CreatePersonalExercisePage() {
     const file = e.dataTransfer.files?.[0];
     if (file) {
       setErrorMessage("");
-      setVideoFile(file);
       const fileError = validateVideoFile(file);
-      if (fileError) toast.error(fileError);
+      if (fileError) {
+        toast.error(fileError);
+        return;
+      }
+      setVideoFile(file);
+      resetVideoScan();
     }
   };
 
@@ -205,7 +228,7 @@ export default function CreatePersonalExercisePage() {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 10 * 1024 * 1024) {
-      toast.error("Choose a JPG, PNG, or WebP image up to 10 MB.");
+      toast.error(t("member.personal.imageTypeError"));
       event.target.value = "";
       return;
     }
@@ -230,19 +253,19 @@ export default function CreatePersonalExercisePage() {
     }
     setHasSubmitted(true);
     if (videoUploadsUnderMaintenance) {
-      const message = "Dịch vụ tải lên video bài tập đang trong thời gian bảo trì. Vui lòng thử lại sau!";
+      const message = t("member.personal.maintenanceWarning");
       setErrorMessage(message);
       toast.warning(message);
       return;
     }
     if (maintenanceStatusLoading) {
-      toast.info("Checking video upload availability. Please wait a moment.");
+      toast.info(t("member.personal.checkingAvailability"));
       return;
     }
     if (submissionLock.current) return;
     if (Object.keys(validationErrors).length > 0 || targetMuscles.length === 0) {
       setErrorMessage("");
-      toast.warning("Please fill in all required fields correctly.");
+      toast.warning(t("member.personal.fillRequiredFields"));
       focusFirstInvalidField(validationErrors);
       return;
     }
@@ -254,6 +277,23 @@ export default function CreatePersonalExercisePage() {
 
     let textScanComplete = false;
     try {
+      // Bước 1: quét video bằng MediaPipe — bắt buộc có người + chuyển động.
+      if (videoFile && videoScanStatus !== "passed") {
+        setVideoCheckStatus("checking");
+        const scanResult = await runVideoScan();
+        if (!scanResult.passed) {
+          setVideoCheckStatus("failed");
+          const message = videoScanMessage(scanResult.reason);
+          setErrorMessage(message);
+          toast.error(message);
+          setIsCreating(false);
+          submissionLock.current = false;
+          return;
+        }
+        setVideoCheckStatus("passed");
+      }
+
+      // Bước 2: quét nội dung chữ.
       const textCheck = await checkPersonalExerciseText({
         title,
         description,
@@ -285,14 +325,14 @@ export default function CreatePersonalExercisePage() {
       if (created.status === "REJECTED") {
         setTextCheckStatus("failed");
         setVideoCheckStatus("failed");
-        setErrorMessage(created.rejectionReason || "The exercise did not pass the automatic checks.");
-        toast.error("Exercise rejected. Review the reason and update your submission.");
+        setErrorMessage(created.rejectionReason || t("member.personal.exerciseDidNotPass"));
+        toast.error(t("member.personal.exerciseRejected"));
         return;
       }
       setTextCheckStatus("passed");
       setVideoCheckStatus("passed");
-      toast.success("Exercise created successfully!");
-      setSuccessMessage("Automatic checks passed. Sent to the Content Manager review queue.");
+      toast.success(t("member.personal.exerciseCreated"));
+      setSuccessMessage(t("member.personal.autoChecksPassed"));
       setTimeout(() => {
         navigate("/library/personal?status=pending");
       }, 1000);
@@ -305,7 +345,7 @@ export default function CreatePersonalExercisePage() {
       const responseData = err?.response?.data;
       const errorMsg = typeof responseData === "string"
         ? responseData
-        : responseData?.message || getApiErrorMessage(err, "Could not save the exercise.");
+        : responseData?.message || getApiErrorMessage(err, t("member.personal.couldNotSaveExercise"));
       if (err?.response?.status === 503) {
         setVideoCheckStatus("failed");
         setErrorMessage(errorMsg);
@@ -329,6 +369,24 @@ export default function CreatePersonalExercisePage() {
     }
   };
 
+  /** Dịch mã lý do của bước quét MediaPipe sang thông báo hiển thị. */
+  const videoScanMessage = (reason) => {
+    switch (reason) {
+      case "no-person":
+        return t("member.videoScan.noPerson");
+      case "no-motion":
+        return t("member.videoScan.noMotion");
+      case "too-short":
+        return t("member.videoScan.tooShort", { seconds: 2 });
+      case "too-long":
+        return t("member.videoScan.tooLong", { seconds: 180 });
+      case "unreadable":
+        return t("member.videoScan.unreadable");
+      default:
+        return t("member.videoScan.failed");
+    }
+  };
+
   return (
     <div className="create-personal-exercise-page w-full max-w-5xl mx-auto space-y-6 pb-16 text-white">
       <style>{`
@@ -341,11 +399,10 @@ export default function CreatePersonalExercisePage() {
       {/* A. HEADER TRANG */}
       <header className="mb-2">
         <h1 className="text-2xl font-bold text-white tracking-tight">
-          Create personal exercise
+          {t("member.personal.createExerciseTitle")}
         </h1>
         <p className="text-xs text-slate-400 mt-1">
-          Add your own exercise. It is checked automatically before it is saved
-          to your library.
+          {t("member.personal.createExerciseSubtitle")}
         </p>
       </header>
 
@@ -356,7 +413,7 @@ export default function CreatePersonalExercisePage() {
           <button
             type="button"
             onClick={() => setErrorMessage("")}
-            aria-label="Dismiss error message"
+            aria-label={t("member.personal.dismissError")}
             className="ml-2 inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-rose-200 shadow-none transition-colors hover:bg-rose-900/40 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
           >
             ✕
@@ -372,13 +429,13 @@ export default function CreatePersonalExercisePage() {
 
       {/* B. KHỐI 1: EXERCISE DETAILS */}
       <section className="rounded-2xl border border-[#231b46] bg-[#120d29]/90 p-6 space-y-5 shadow-xl">
-        <h2 className="text-sm font-semibold text-white">Exercise details</h2>
+        <h2 className="text-sm font-semibold text-white">{t("member.personal.exerciseDetails")}</h2>
 
         {/* Title */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-xs font-semibold text-slate-300">
-              Title
+              {t("member.personal.title")}
             </label>
             <span className="text-xs text-slate-500 font-mono">
               {title.length}/50
@@ -397,7 +454,7 @@ export default function CreatePersonalExercisePage() {
               markFieldTouched("title");
               setTitle((value) => value.trim());
             }}
-            placeholder="e.g. Diamond push-up"
+            placeholder={t("member.personal.exerciseTitlePlaceholder")}
             className={`w-full rounded-xl border ${showFieldError("title") && validationErrors.title ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#0c0820] px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors`}
           />
           {showFieldError("title") && validationErrors.title && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.title}</p>}
@@ -407,7 +464,7 @@ export default function CreatePersonalExercisePage() {
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-xs font-semibold text-slate-300">
-              Description
+              {t("member.personal.descriptionField")}
             </label>
             <span className="text-xs text-slate-500 font-mono">
               {description.length}/300
@@ -425,7 +482,7 @@ export default function CreatePersonalExercisePage() {
               markFieldTouched("description");
               setDescription((value) => value.trim());
             }}
-            placeholder="What does this exercise train, and who is it for?"
+            placeholder={t("member.personal.exerciseDescPlaceholder")}
             className={`w-full rounded-xl border ${showFieldError("description") && validationErrors.description ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#0c0820] p-4 text-xs text-white placeholder-slate-500 h-28 resize-none focus:outline-none transition-colors leading-relaxed`}
           />
           {showFieldError("description") && validationErrors.description && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.description}</p>}
@@ -443,12 +500,12 @@ export default function CreatePersonalExercisePage() {
             }`}
           >
             <legend className="mb-1 flex w-full flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-200">
-              Primary &amp; secondary muscle groups
+              {t("member.personal.muscleGroups")}
               <span className="rounded-full border border-[#3b2c70] bg-[#17102f] px-2.5 py-1 text-[10px] font-semibold text-violet-200">
-                {targetMuscles.length} selected
+                {t("member.personal.selectedCount", { count: targetMuscles.length })}
               </span>
             </legend>
-            <p className="mb-3 text-[11px] leading-relaxed text-slate-500">Choose all muscle groups this exercise targets.</p>
+            <p className="mb-3 text-[11px] leading-relaxed text-slate-500">{t("member.personal.chooseMuscleGroups")}</p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
               {["Chest", "Back", "Shoulders", "Arms", "Core", "Legs", "Full Body"].map((muscleGroup) => (
                 <label key={muscleGroup} className="group cursor-pointer">
@@ -480,13 +537,13 @@ export default function CreatePersonalExercisePage() {
                 </label>
               ))}
             </div>
-            {hasSubmitted && targetMuscles.length === 0 && <p className="mt-3 text-[11px] text-rose-400">Choose at least one muscle group.</p>}
+            {hasSubmitted && targetMuscles.length === 0 && <p className="mt-3 text-[11px] text-rose-400">{t("member.personal.chooseAtLeastOneMuscle")}</p>}
           </fieldset>
         </div>
 
         <div>
           <label className="mb-1.5 block text-xs font-semibold text-slate-300" htmlFor="exercise-anatomy-image">
-            Anatomy image <span className="font-normal text-slate-500">(optional)</span>
+            {t("member.personal.anatomyImageOptional")}
           </label>
           <input
             ref={anatomyInputRef}
@@ -498,7 +555,7 @@ export default function CreatePersonalExercisePage() {
           />
           {anatomyImageFile && (
             <div className="mt-3 flex items-center gap-3">
-              <img src={anatomyPreview} alt="Anatomy preview" className="h-20 w-20 rounded-lg border border-[#44366f] object-cover" />
+              <img src={anatomyPreview} alt={t("member.personal.anatomyPreviewAlt")} className="h-20 w-20 rounded-lg border border-[#44366f] object-cover" />
               <div className="min-w-0">
                 <p className="truncate text-xs text-slate-200">{anatomyImageFile.name}</p>
                 <button
@@ -507,23 +564,23 @@ export default function CreatePersonalExercisePage() {
                   className="mt-2 inline-flex items-center gap-1 rounded-full border border-rose-500/40 bg-rose-950/60 px-2.5 py-1 text-[11px] font-semibold text-rose-200 transition-colors hover:border-rose-400 hover:bg-rose-900/70 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
                 >
                   <span aria-hidden="true">×</span>
-                  Remove image
+                  {t("member.personal.removeImage")}
                 </button>
               </div>
             </div>
           )}
-          <p className="mt-1 text-[11px] text-slate-500">JPG, PNG, or WebP · up to 10 MB</p>
+          <p className="mt-1 text-[11px] text-slate-500">{t("member.personal.anatomyHint")}</p>
         </div>
 
         {/* Count type and exercise dosage */}
         <div className="space-y-3">
           <span className="block text-xs font-medium text-slate-300 mb-1.5">
-            Count type
+            {t("member.personal.countType")}
           </span>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { value: "reps_sets", label: "Set & Rep" },
-              { value: "duration", label: "Duration" },
+              { value: "reps_sets", label: t("member.personal.setAndRep") },
+              { value: "duration", label: t("member.personal.duration") },
             ].map((option) => {
               const isSelected = countType === option.value;
               return (
@@ -546,7 +603,7 @@ export default function CreatePersonalExercisePage() {
           {countType === "reps_sets" ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="block text-xs font-medium text-slate-300">
-                <span className="mb-1.5 block">Sets</span>
+                <span className="mb-1.5 block">{t("member.personal.sets")}</span>
                 <input
                   type="number"
                   min="1"
@@ -557,7 +614,7 @@ export default function CreatePersonalExercisePage() {
                 />
               </label>
               <label className="block text-xs font-medium text-slate-300">
-                <span className="mb-1.5 block">Reps</span>
+                <span className="mb-1.5 block">{t("member.personal.reps")}</span>
                 <input
                   type="number"
                   min="1"
@@ -570,7 +627,7 @@ export default function CreatePersonalExercisePage() {
             </div>
           ) : (
             <label className="block text-xs font-medium text-slate-300">
-              <span className="mb-1.5 block">Duration (seconds)</span>
+              <span className="mb-1.5 block">{t("member.personal.durationSeconds")}</span>
               <input
                 type="number"
                 min="1"
@@ -585,7 +642,7 @@ export default function CreatePersonalExercisePage() {
 
         {/* Level */}
         <div>
-          <label className="block text-xs text-slate-400 mb-2">Level</label>
+          <label className="block text-xs text-slate-400 mb-2">{t("member.personal.level")}</label>
           <div id="exercise-level" tabIndex={-1} className={`grid grid-cols-1 md:grid-cols-3 gap-4 rounded-xl ${showFieldError("level") && validationErrors.level ? "ring-1 ring-rose-500" : ""}`}>
             {/* Beginner */}
             <div
@@ -601,9 +658,9 @@ export default function CreatePersonalExercisePage() {
               }`}
             >
               <div>
-                <h3 className="text-xs font-semibold text-white">Beginner</h3>
+                <h3 className="text-xs font-semibold text-white">{t("member.catalog.beginner")}</h3>
                 <p className="text-[11px] text-slate-400 mt-1">
-                  New to this movement
+                  {t("member.personal.levelBeginnerDesc")}
                 </p>
               </div>
               <div
@@ -634,10 +691,10 @@ export default function CreatePersonalExercisePage() {
             >
               <div>
                 <h3 className="text-xs font-semibold text-white">
-                  Intermediate
+                  {t("member.catalog.intermediate")}
                 </h3>
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Comfortable with the basics
+                  {t("member.personal.levelIntermediateDesc")}
                 </p>
               </div>
               <div
@@ -667,9 +724,9 @@ export default function CreatePersonalExercisePage() {
               }`}
             >
               <div>
-                <h3 className="text-xs font-semibold text-white">Advanced</h3>
+                <h3 className="text-xs font-semibold text-white">{t("member.catalog.advanced")}</h3>
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Strong and experienced
+                  {t("member.personal.levelAdvancedDesc")}
                 </p>
               </div>
               {showFieldError("level") && validationErrors.level && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.level}</p>}
@@ -691,7 +748,7 @@ export default function CreatePersonalExercisePage() {
 
       {/* C. KHỐI 2: GUIDE */}
       <section className="rounded-2xl border border-[#231b46] bg-[#120d29]/90 p-6 space-y-4 shadow-xl">
-        <h2 className="text-sm font-semibold text-white">Guide</h2>
+        <h2 className="text-sm font-semibold text-white">{t("member.personal.guide")}</h2>
 
         {/* Steps inputs list */}
         <div id="guide-step-list" className="space-y-3">
@@ -715,8 +772,8 @@ export default function CreatePersonalExercisePage() {
                   maxLength={250}
                   placeholder={
                     index === 0
-                      ? "e.g. Start in a plank with hands under shoulders"
-                      : "Next step"
+                      ? t("member.personal.stepPlaceholderFirst")
+                      : t("member.personal.stepPlaceholderNext")
                   }
                   className={`w-full rounded-xl border ${showFieldError(`step-${index}`) && validationErrors[`step-${index}`] ? "border-rose-500 focus:border-rose-500" : "border-[#231b46] focus:border-[#7c3aed]"} bg-[#0c0820] px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors`}
                 />
@@ -729,7 +786,7 @@ export default function CreatePersonalExercisePage() {
                   type="button"
                   onClick={() => handleRemoveStep(index)}
                   className="h-10 w-10 rounded-xl bg-rose-950/30 border border-rose-900/40 text-rose-400 hover:bg-rose-900/50 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0"
-                  aria-label="Remove step"
+                  aria-label={t("member.personal.removeStepAria")}
                 >
                   <svg
                     className="w-4 h-4"
@@ -756,19 +813,19 @@ export default function CreatePersonalExercisePage() {
             onClick={handleAddStep}
             className="inline-flex items-center gap-1.5 rounded-xl border border-[#2b2257] bg-[#181238] px-4 py-2 text-xs font-medium text-white hover:bg-[#231b4d] transition-colors cursor-pointer"
           >
-            <span>+ Add step</span>
+            <span>{t("member.personal.addStep")}</span>
           </button>
         </div>
 
         {/* Chú thích */}
         <p className="text-[11px] text-slate-500 mt-2">
-          Write the steps in order, one action per step.
+          {t("member.personal.guideNote")}
         </p>
       </section>
 
       {/* D. KHỐI 3: DEMO VIDEO */}
       <section className="rounded-2xl border border-[#231b46] bg-[#120d29]/90 p-6 space-y-3 shadow-xl">
-        <h2 className="text-sm font-semibold text-white">Demo video</h2>
+        <h2 className="text-sm font-semibold text-white">{t("member.personal.demoVideo")}</h2>
 
         {/* Dropzone container */}
         <input
@@ -785,7 +842,7 @@ export default function CreatePersonalExercisePage() {
             role="alert"
             className="rounded-xl border border-amber-400/50 bg-amber-500/15 px-4 py-3 text-xs font-medium text-amber-200"
           >
-            ⚠️ Dịch vụ tải lên video bài tập đang bảo trì. Vui lòng thử lại sau!
+            {t("member.personal.videoMaintenanceNotice")}
           </div>
         )}
 
@@ -828,27 +885,80 @@ export default function CreatePersonalExercisePage() {
           {showFieldError("video") && validationErrors.video && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.video}</p>}
 
           <h3 className="text-xs font-semibold text-white">
-            {videoFile ? videoFile.name : "Click to upload a demo video"}
+            {videoFile ? videoFile.name : t("member.personal.clickToUploadVideo")}
           </h3>
           <p className="text-[11px] text-slate-400 mt-1 text-center">
             {videoFile
-              ? `${(videoFile.size / (1024 * 1024)).toFixed(
-                  1
-                )} MB · Click to choose a different video`
-              : "MP4, MOV or WebM · up to 50 MB · keep your whole body in frame"}
+              ? t("member.personal.changeVideoHint", {
+                  size: (videoFile.size / (1024 * 1024)).toFixed(1),
+                })
+              : t("member.personal.videoHint")}
           </p>
+
+          {/* Trạng thái quét MediaPipe */}
+          {videoFile && videoScanStatus !== "idle" && (
+            <div className="mt-4 w-full max-w-md space-y-2">
+              <div className="flex items-center gap-2 text-[11px]">
+                {videoScanStatus === "scanning" && (
+                  <>
+                    <div className="w-3 h-3 rounded-full border-2 border-purple-400 border-t-transparent animate-spin" />
+                    <span className="text-purple-300">
+                      {t("member.videoScan.scanning")}
+                    </span>
+                    <span className="text-slate-400 ml-auto">{videoScanProgress}%</span>
+                  </>
+                )}
+                {videoScanStatus === "passed" && (
+                  <>
+                    <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                    <span className="text-emerald-300">
+                      {t("member.videoScan.passed")}
+                    </span>
+                  </>
+                )}
+                {videoScanStatus === "failed" && (
+                  <>
+                    <div className="w-3 h-3 rounded-full bg-rose-500" />
+                    <span className="text-rose-300">
+                      {t("member.videoScan.failed")}
+                    </span>
+                  </>
+                )}
+              </div>
+
+              {videoScanStatus === "scanning" && (
+                <div className="h-1 w-full rounded-full bg-[#241b4d] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-purple-500 transition-all"
+                    style={{ width: `${videoScanProgress}%` }}
+                  />
+                </div>
+              )}
+
+              {videoScanStatus === "failed" && videoScanReason && (
+                <p className="text-[11px] text-rose-300/90">
+                  {videoScanMessage(videoScanReason)}
+                </p>
+              )}
+
+              {videoScanStatus === "passed" && (
+                <p className="text-[11px] text-slate-400">
+                  {t("member.videoScan.passedHint")}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Chú thích */}
         <p className="text-[11px] text-slate-500">
-          Video format and file integrity are checked automatically. Approved
-          files are sent to the review queue; keep your whole body in frame.
+          {t("member.personal.contentCheckNote")}
         </p>
       </section>
 
       {/* E. KHỐI 4: CONTENT CHECK (HỆ THỐNG TỰ ĐỘNG QUÉT - KHÔNG THỂ TỰ TÍCH CHỌN THỦ CÔNG) */}
       <section className="rounded-2xl border border-[#231b46] bg-[#120d29]/90 p-6 space-y-4 shadow-xl">
-        <h2 className="text-sm font-semibold text-white">Content check</h2>
+        <h2 className="text-sm font-semibold text-white">{t("member.personal.contentCheck")}</h2>
 
         <div className="space-y-3 select-none">
           {/* 1. Text check */}
@@ -882,30 +992,29 @@ export default function CreatePersonalExercisePage() {
 
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-xs font-medium text-white">Text check</h3>
+                <h3 className="text-xs font-medium text-white">{t("member.personal.textCheck")}</h3>
                 {textCheckStatus === "checking" && (
                   <span className="text-[10px] text-purple-400 font-semibold animate-pulse">
-                    Scanning text...
+                    {t("member.personal.scanningText")}
                   </span>
                 )}
                 {textCheckStatus === "passed" && (
                   <span className="text-[10px] text-emerald-400 font-semibold">
-                    Passed
+                    {t("member.personal.passed")}
                   </span>
                 )}
                 {textCheckStatus === "failed" && (
                   <span className="text-[10px] text-rose-300 font-semibold">
-                    {textCheckError ? "Check unavailable" : "Needs revision"}
+                    {textCheckError ? t("member.personal.checkUnavailable") : t("member.personal.needsRevision")}
                   </span>
                 )}
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                Title, description and guide are scanned for inappropriate
-                words.
+                {t("member.personal.textCheckDesc")}
               </p>
               {flaggedWords.length > 0 && (
                 <div role="alert" className="mt-2 rounded-lg border border-rose-800/70 bg-rose-950/40 p-2.5 text-[11px] text-rose-200">
-                  <p className="font-semibold">Banned words found — remove or replace these words:</p>
+                  <p className="font-semibold">{t("member.personal.bannedWords")}</p>
                   <ul className="mt-1.5 flex flex-wrap gap-1.5">
                     {flaggedWords.map((word) => (
                       <li
@@ -954,29 +1063,30 @@ export default function CreatePersonalExercisePage() {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-medium text-white">
-                  Video file check
+                  {t("member.videoScan.title")}
                 </h3>
-                {videoCheckStatus === "checking" && (
+                {videoScanStatus === "scanning" && (
                   <span className="text-[10px] text-purple-400 font-semibold animate-pulse">
-                    Checking video format...
+                    {t("member.videoScan.scanning")}
                   </span>
                 )}
-                {videoCheckStatus === "passed" && (
+                {videoScanStatus === "passed" && (
                   <span className="text-[10px] text-emerald-400 font-semibold">
-                    Passed
+                    {t("member.videoScan.passed")}
                   </span>
                 )}
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                The video file is checked for an accepted format and readable container.
+                {videoScanStatus === "failed" && videoScanReason
+                  ? videoScanMessage(videoScanReason)
+                  : t("member.videoScan.passedHint")}
               </p>
             </div>
           </div>
         </div>
 
         <p className="text-[11px] text-slate-500">
-          Text and video checks run when you press Create. Passing submissions
-          are sent to the review queue.
+          {t("member.personal.contentCheckNote")}
         </p>
       </section>
 
@@ -988,7 +1098,7 @@ export default function CreatePersonalExercisePage() {
           onClick={() => setConfirmCancel(true)}
           className="rounded-xl border border-[#2b2257] bg-[#141030] hover:bg-[#1f1847] text-slate-300 hover:text-white text-xs font-semibold px-6 py-2.5 transition-colors cursor-pointer"
         >
-          Cancel
+          {t("member.personal.cancel")}
         </button>
 
         {/* Nút Create */}
@@ -1001,14 +1111,14 @@ export default function CreatePersonalExercisePage() {
           {isCreating && (
             <div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
           )}
-          <span>{isCreating ? "Scanning & Creating..." : "Create"}</span>
+          <span>{isCreating ? t("member.personal.scanningCreating") : t("member.personal.create")}</span>
         </button>
       </div>
       <ConfirmDialog
         open={confirmCancel}
-        title="Discard this exercise?"
-        message="Are you sure you want to cancel? Your unsaved exercise details will be lost."
-        confirmLabel="Discard"
+        title={t("member.personal.discardExerciseTitle")}
+        message={t("member.personal.discardExerciseMessage")}
+        confirmLabel={t("member.personal.discard")}
         onCancel={() => setConfirmCancel(false)}
         onConfirm={() => navigate(-1)}
       />

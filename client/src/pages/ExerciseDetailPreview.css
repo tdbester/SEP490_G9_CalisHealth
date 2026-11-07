@@ -1,0 +1,355 @@
+/* Exercise Detail & Preview - Member view */
+.exd-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 0% 50%, rgba(59, 29, 122, 0.55), rgba(13, 11, 26, 0) 62%),
+    #0d0b1a;
+  padding: 1rem 2rem 2rem;
+}
+
+.exd-container {
+  max-width: 976px;
+  margin: 0 auto;
+}
+
+.exd-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
+}
+
+.exd-back {
+  height: 40px;
+  padding: 0 1.25rem;
+  border-radius: 10px;
+  border: 1px solid #2f2a55;
+  background: #140f2a;
+  color: #e6e1ff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.exd-back:hover {
+  border-color: #4a3d8f;
+}
+
+.exd-title {
+  flex: 1;
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.exd-step {
+  padding: 0.6rem 1.5rem;
+  border-radius: 10px;
+  border: 1px solid #2f2a55;
+  background: #140f2a;
+  color: #c4b5fd;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.exd-status {
+  padding: 4rem 1rem;
+  text-align: center;
+  color: #a79bd6;
+}
+
+.exd-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 640px) minmax(0, 312px);
+  gap: 1.5rem;
+}
+
+.exd-main,
+.exd-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+/* Demo video */
+.exd-video {
+  position: relative;
+  aspect-ratio: 8 / 5;
+  border-radius: 16px;
+  border: 1px solid #3a2f70;
+  background: linear-gradient(135deg, #1a1240 0%, #2d1b78 100%);
+  overflow: hidden;
+}
+
+.exd-video video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  background: #000;
+}
+
+.exd-video-open {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.exd-video-open:focus-visible {
+  outline: 2px solid #c4b5fd;
+  outline-offset: -2px;
+}
+
+.exd-video-tag {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 1;
+  padding: 0.3rem 0.75rem;
+  border-radius: 13px;
+  border: 1px solid #4a3d8f;
+  background: rgba(13, 11, 26, 0.6);
+  color: #c4b5fd;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.exd-video-empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: #8b85b8;
+  font-size: 0.875rem;
+}
+
+.exd-video-empty p {
+  margin: 0;
+}
+
+.exd-play {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(90deg, #7c3aed 0%, #c026d3 55%, #f472b6 100%);
+  box-shadow: 0 0 0 38px rgba(168, 85, 247, 0.18);
+}
+
+.exd-play svg {
+  width: 30px;
+  height: 30px;
+  fill: #fff;
+}
+
+/* Cards */
+.exd-card {
+  border-radius: 16px;
+  border: 1px solid #2f2a55;
+  background: #110e24;
+  padding: 1.25rem 1.25rem 1.5rem;
+}
+
+.exd-card-title {
+  margin: 0 0 0.875rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.exd-description {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: #b4aedb;
+  white-space: pre-line;
+}
+
+.exd-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.exd-chip {
+  padding: 0.4rem 1.1rem;
+  border-radius: 15px;
+  border: 1px solid #4a3d8f;
+  background: #1a1240;
+  color: #c4b5fd;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Stats */
+.exd-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.exd-stat {
+  aspect-ratio: 1;
+  border-radius: 14px;
+  border: 1px solid #2f2a55;
+  background: #140e33;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.exd-stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.exd-stat-label {
+  font-size: 0.75rem;
+  color: #8b85b8;
+}
+
+/* Guide */
+.exd-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.exd-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #b4aedb;
+}
+
+.exd-step-num {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(90deg, #7c3aed 0%, #c026d3 55%, #f472b6 100%);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.exd-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.exd-browse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 52px;
+  max-width: 200px;
+  padding: 0 1rem;
+  border-radius: 14px;
+  border: 1px solid #2f2a55;
+  background: #110e24;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.exd-browse:hover {
+  border-color: #4a3d8f;
+}
+
+.exd-browse svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  fill: #fbbf24;
+}
+
+.exd-browse-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exd-start {
+  flex: 1 0 150px;
+  max-width: 176px;
+  height: 52px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #7c3aed 0%, #c026d3 55%, #f472b6 100%);
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.2s ease;
+}
+
+.exd-start:hover {
+  filter: brightness(1.1);
+}
+
+.exd-back:focus-visible,
+.exd-browse:focus-visible,
+.exd-start:focus-visible {
+  outline: 2px solid #c4b5fd;
+  outline-offset: 2px;
+}
+
+@media (max-width: 960px) {
+  .exd-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .exd-actions {
+    flex-direction: column;
+  }
+
+  .exd-browse {
+    max-width: none;
+  }
+
+  .exd-start {
+    flex-basis: auto;
+    max-width: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .exd-page {
+    padding: 1rem;
+  }
+
+  .exd-header {
+    flex-wrap: wrap;
+  }
+}

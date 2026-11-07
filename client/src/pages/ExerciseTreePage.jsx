@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useNavigate, useSearchParams } from "react-router-dom";
 import { Alert, Box, Button, Card, CircularProgress, Stack, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import { contentManagerApi } from "../api/contentManager";
@@ -12,18 +13,18 @@ import { GAP_X, GAP_Y, NODE_H, NODE_W, layoutChain, rootsOf } from "../exerciseT
 import { routeEdges } from "../exerciseTreeRouting";
 
 const BREADCRUMB = [
-  { label: "Content manager", to: CONTENT_PATHS.dashboard },
-  { label: "Progression Rules", to: CONTENT_PATHS.progressionRules },
-  { label: "Exercise tree" },
+  { labelKey: "nav.contentManagerRole", to: CONTENT_PATHS.dashboard },
+  { labelKey: "nav.progressionRules", to: CONTENT_PATHS.progressionRules },
+  { labelKey: "nav.exerciseTree" },
 ];
 
-const names = (list) => (list.length ? list.map((node) => node.name).join(", ") : "None");
+const names = (list, t) => (list.length ? list.map((node) => node.name).join(", ") : t("contentManager.exerciseTree.none"));
 
 /**
  * Một ô bài tập trong tree: bài gốc (check xanh), bài đang chọn (play tím), còn lại là ô thường.
  * Content Manager chỉ quản lý cấu trúc, nên không có trạng thái khóa / mở khóa như phía member.
  */
-function TreeNode({ item, x, y, state, levelTone, onSelect }) {
+function TreeNode({ item, x, y, state, levelTone, onSelect, t }) {
   const { node, col } = item;
   const styles = {
     selected: { border: CM.violetBright, bg: "rgba(139,92,246,0.22)", badge: CM.violetBright, Icon: PlayArrowRoundedIcon },
@@ -34,7 +35,10 @@ function TreeNode({ item, x, y, state, levelTone, onSelect }) {
     type="button"
     onClick={onSelect}
     aria-pressed={state === "selected"}
-    aria-label={`${node.name}, level ${col + 1}${node.difficultyLevel ? `, ${node.difficultyLevel}` : ""}`}
+    aria-label={t("contentManager.exerciseTree.nodeAria", {
+      name: node.name,
+      level: col + 1,
+    }) + (node.difficultyLevel ? `, ${node.difficultyLevel}` : "")}
     sx={{
       position: "absolute", left: x, top: y, width: NODE_W, height: NODE_H, p: 1.25,
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between",
@@ -50,12 +54,12 @@ function TreeNode({ item, x, y, state, levelTone, onSelect }) {
       <Box aria-hidden sx={{ width: 22, height: 22, borderRadius: "50%", bgcolor: styles.badge || "transparent", display: "grid", placeItems: "center" }}>
         {styles.Icon && <styles.Icon sx={{ fontSize: 14, color: "#fff" }} />}
       </Box>
-      <Typography sx={{ fontSize: 11, color: CM.textMuted }}>Lv {col + 1}</Typography>
+      <Typography sx={{ fontSize: 11, color: CM.textMuted }}>{t("contentManager.exerciseTree.nodeLevel", { count: col + 1 })}</Typography>
     </Stack>
     <Typography sx={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.25, px: 0.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
       {node.name}
     </Typography>
-    <DarkPill tone={levelTone(node.difficultyLevel)} sx={{ height: 18, fontSize: 10 }}>{node.difficultyLevel || "No level"}</DarkPill>
+    <DarkPill tone={levelTone(node.difficultyLevel)} sx={{ height: 18, fontSize: 10 }}>{node.difficultyLevel || t("contentManager.exerciseTree.noLevel")}</DarkPill>
   </Box>;
 }
 
@@ -68,6 +72,7 @@ function LegendDot({ color, hollow, label }) {
 
 /** Calisthenics Exercise Tree: xem các chuỗi progression rule dưới dạng cây. */
 export default function ExerciseTreePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const query = useApiQuery(() => contentManagerApi.progressionTree());
@@ -119,25 +124,25 @@ export default function ExerciseTreePage() {
 
   if (query.isLoading) return <Box sx={{ py: 10, display: "grid", placeItems: "center" }}><CircularProgress /></Box>;
 
-  const backButton = <Button component={RouterLink} to={CONTENT_PATHS.progressionRules} variant="outlined" startIcon={<ArrowBackRoundedIcon />}>Back</Button>;
+  const backButton = <Button component={RouterLink} to={CONTENT_PATHS.progressionRules} variant="outlined" startIcon={<ArrowBackRoundedIcon />}>{t("contentManager.exerciseTree.back")}</Button>;
   const header = <ContentPageHeader
     breadcrumb={BREADCRUMB}
-    title="Calisthenics Exercise Tree"
-    description="Every progression rule as a path from easier to harder exercises."
+    title={t("contentManager.exerciseTree.title")}
+    description={t("contentManager.exerciseTree.description")}
     action={backButton}
   />;
   if (query.error) {
     return <Box sx={{ maxWidth: 1100, mx: "auto", px: 3, py: 2.5 }}>
       {header}
-      <Alert severity="error" sx={{ mt: 2 }} action={<Button color="inherit" size="small" onClick={query.refetch}>Retry</Button>}>{query.error.message}</Alert>
+      <Alert severity="error" sx={{ mt: 2 }} action={<Button color="inherit" size="small" onClick={query.refetch}>{t("contentManager.exerciseTree.retry")}</Button>}>{query.error.message}</Alert>
     </Box>;
   }
   if (!chain) {
     return <Box sx={{ maxWidth: 1100, mx: "auto", px: 3, py: 2.5 }}>
       {header}
       <Card sx={{ mt: 2.5, p: 6, textAlign: "center" }}>
-        <Typography sx={{ color: CM.textMuted }}>No progression rules yet. Create a rule to start a tree.</Typography>
-        <Button component={RouterLink} to={`${CONTENT_PATHS.progressionRules}/new`} variant="contained" sx={{ mt: 2 }}>Create progression rule</Button>
+        <Typography sx={{ color: CM.textMuted }}>{t("contentManager.exerciseTree.empty")}</Typography>
+        <Button component={RouterLink} to={`${CONTENT_PATHS.progressionRules}/new`} variant="contained" sx={{ mt: 2 }}>{t("contentManager.exerciseTree.createRule")}</Button>
       </Card>
     </Box>;
   }
@@ -162,7 +167,7 @@ export default function ExerciseTreePage() {
     {header}
 
     <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", md: "center" }} gap={1.5} sx={{ mt: 2.5 }}>
-      <Stack direction="row" gap={1} flexWrap="wrap" role="tablist" aria-label="Progression chains">
+      <Stack direction="row" gap={1} flexWrap="wrap" role="tablist" aria-label={t("contentManager.exerciseTree.chainsAria")}>
         {roots.map((root) => {
           const active = root.code === rootCode;
           return <Button
@@ -183,11 +188,11 @@ export default function ExerciseTreePage() {
         size="small"
         value={reverse ? "hard" : "easy"}
         onChange={(_, value) => value && setReverse(value === "hard")}
-        aria-label="Tree direction"
+        aria-label={t("contentManager.exerciseTree.directionAria")}
         sx={{ alignSelf: { xs: "flex-start", md: "auto" } }}
       >
-        <ToggleButton value="easy" sx={{ px: 2, textTransform: "none" }}>Easy → Hard</ToggleButton>
-        <ToggleButton value="hard" sx={{ px: 2, textTransform: "none" }}>Hard → Easy</ToggleButton>
+        <ToggleButton value="easy" sx={{ px: 2, textTransform: "none" }}>{t("contentManager.exerciseTree.easyToHard")}</ToggleButton>
+        <ToggleButton value="hard" sx={{ px: 2, textTransform: "none" }}>{t("contentManager.exerciseTree.hardToEasy")}</ToggleButton>
       </ToggleButtonGroup>
     </Stack>
 
@@ -200,7 +205,7 @@ export default function ExerciseTreePage() {
         onPointerCancel={endDrag}
         onClickCapture={onClickCapture}
         onDragStart={(event) => event.preventDefault()}
-        aria-label="Exercise tree, drag to scroll"
+        aria-label={t("contentManager.exerciseTree.viewportAria")}
         sx={{
           overflow: "auto", pb: 1, cursor: dragging ? "grabbing" : "grab", userSelect: "none",
           scrollbarWidth: "none", msOverflowStyle: "none", "&::-webkit-scrollbar": { display: "none" },
@@ -245,19 +250,20 @@ export default function ExerciseTreePage() {
             state={stateOf(item.node.code)}
             levelTone={levelTone}
             onSelect={() => setSelectedCode(item.node.code)}
+            t={t}
           />)}
         </Box>
       </Box>
       <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={1} sx={{ mt: 2 }}>
       <Stack direction="row" gap={2} flexWrap="wrap">
-        <LegendDot color={CM.violetBright} label="Selected" />
-        <LegendDot color={CM.textMuted} hollow label="Other exercises" />
+        <LegendDot color={CM.violetBright} label={t("contentManager.exerciseTree.legendSelected")} />
+        <LegendDot color={CM.textMuted} hollow label={t("contentManager.exerciseTree.legendOther")} />
           <Stack direction="row" spacing={0.75} alignItems="center">
             <Box aria-hidden sx={{ width: 18, borderTop: `1.5px dashed ${CM.textMuted}` }} />
-            <Typography variant="caption" sx={{ color: CM.textMuted }}>Inactive rule</Typography>
+            <Typography variant="caption" sx={{ color: CM.textMuted }}>{t("contentManager.exerciseTree.legendInactive")}</Typography>
           </Stack>
         </Stack>
-        <Typography variant="caption" sx={{ color: CM.textMuted }}>Arrows point to harder exercises</Typography>
+        <Typography variant="caption" sx={{ color: CM.textMuted }}>{t("contentManager.exerciseTree.arrowsHint")}</Typography>
       </Stack>
     </Card>
 
@@ -266,19 +272,33 @@ export default function ExerciseTreePage() {
         <Box sx={{ minWidth: 0 }}>
           <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
             <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: 18 }}>{selected.node.name}</Typography>
-            <DarkPill tone="primary">Selected</DarkPill>
+            <DarkPill tone="primary">{t("contentManager.exerciseTree.selectedPill")}</DarkPill>
           </Stack>
           <Typography variant="body2" sx={{ color: CM.textMuted, mt: 0.75 }}>
-            Level {selected.col + 1} · {selected.node.difficultyLevel || "No level"} · {selected.node.type === "SKILL" ? "Skill" : "Health"} · {selected.node.category === "HOLD" ? "Hold" : "Reps"}
+            {t("contentManager.exerciseTree.detailMeta", {
+              level: selected.col + 1,
+              difficulty: selected.node.difficultyLevel || t("contentManager.exerciseTree.noLevel"),
+              type: selected.node.type === "SKILL"
+                ? t("contentManager.exerciseTree.typeSkill")
+                : t("contentManager.exerciseTree.typeHealth"),
+              category: selected.node.category === "HOLD"
+                ? t("contentManager.exerciseTree.categoryHold")
+                : t("contentManager.exerciseTree.categoryReps"),
+            })}
           </Typography>
           <Typography variant="caption" sx={{ color: CM.textDim, display: "block", mt: 0.5 }}>
-            Previous: {names(incoming.map((edge) => nodeOf(edge.prerequisiteCode)))} · Next: {names(outgoing.map((edge) => nodeOf(edge.exerciseCode)))}
+            {t("contentManager.exerciseTree.previousNext", {
+              previous: names(incoming.map((edge) => nodeOf(edge.prerequisiteCode)), t),
+              next: names(outgoing.map((edge) => nodeOf(edge.exerciseCode)), t),
+            })}
           </Typography>
         </Box>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ flexShrink: 0 }}>
-          {incoming.length === 0 && <Typography variant="body2" sx={{ color: CM.textMuted, alignSelf: "center" }}>Start of the chain, no prerequisite rule.</Typography>}
+          {incoming.length === 0 && <Typography variant="body2" sx={{ color: CM.textMuted, alignSelf: "center" }}>{t("contentManager.exerciseTree.startOfChain")}</Typography>}
           {incoming.map((edge) => <Button key={edge.ruleId} variant="contained" onClick={() => openRule(edge.ruleId)} sx={{ minWidth: 180 }}>
-            {incoming.length > 1 ? `View rule from ${nodeOf(edge.prerequisiteCode).name}` : "View progression rule"}
+            {incoming.length > 1
+              ? t("contentManager.exerciseTree.viewRuleFrom", { name: nodeOf(edge.prerequisiteCode).name })
+              : t("contentManager.exerciseTree.viewRule")}
           </Button>)}
         </Stack>
       </Stack>

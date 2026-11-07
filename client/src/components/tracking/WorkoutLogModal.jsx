@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
+import { useTranslation } from "react-i18next";
 import ModalShell from "../common/ModalShell";
 import "./WorkoutLogModal.css";
 
@@ -21,9 +22,10 @@ function perSet(total, sets) {
  * status: "loading" khi đang lấy danh sách bài tập từ API chi tiết, "error" khi lấy thất bại.
  */
 export default function WorkoutLogModal({ workout, status = "ready", onClose }) {
+  const { t } = useTranslation();
   const exercises = workout?.exercises ?? [];
   const exerciseCount = status === "ready" ? exercises.length : workout?.exerciseCount ?? 0;
-  const countLabel = `${exerciseCount} exercise${exerciseCount === 1 ? "" : "s"}`;
+  const countLabel = t("member.workoutLog.exerciseCount", { count: exerciseCount });
 
   return (
     <ModalShell open={workout != null} onClose={onClose} labelledBy="wlm-title" className="wlm">
@@ -31,13 +33,13 @@ export default function WorkoutLogModal({ workout, status = "ready", onClose }) 
         <>
           <header className="wlm-head">
             <div>
-              <span className="wlm-breadcrumb">Workout history / Workout log</span>
+              <span className="wlm-breadcrumb">{t("member.workoutLog.breadcrumb")}</span>
               <span className="wlm-date">
                 {dayjs(workout.completedAt).format("DD MMMM YYYY · HH:mm")}
               </span>
               <h2 id="wlm-title" className="wlm-title">{workout.name}</h2>
             </div>
-            <button type="button" className="modal-close" aria-label="Close" onClick={onClose}>
+            <button type="button" className="modal-close" aria-label={t("common.ui.closeAria")} onClick={onClose}>
               <CloseRoundedIcon />
             </button>
           </header>
@@ -47,26 +49,26 @@ export default function WorkoutLogModal({ workout, status = "ready", onClose }) 
               <FitnessCenterRoundedIcon />
             </span>
             <div>
-              <span className="wlm-total-label">List total time</span>
+              <span className="wlm-total-label">{t("member.workoutLog.listTotalTime")}</span>
               <strong className="wlm-total-value">{workout.durationMin} min</strong>
-              <p className="wlm-total-note">{countLabel} completed in this workout list</p>
+              <p className="wlm-total-note">{t("member.workoutLog.completedInList", { count: countLabel })}</p>
             </div>
           </section>
 
           <section>
-            <h3 className="wlm-section-title">Exercise details</h3>
+            <h3 className="wlm-section-title">{t("member.workoutLog.exerciseDetails")}</h3>
             <div className="wlm-table-head">
               <span>{countLabel} completed</span>
-              <span>Total sets</span>
-              <span>Reps or hold / set</span>
-              <span>Exercise time</span>
+              <span>{t("member.workoutLog.totalSets")}</span>
+              <span>{t("member.workoutLog.repsOrHoldPerSet")}</span>
+              <span>{t("member.workoutLog.exerciseTime")}</span>
             </div>
 
             {status !== "ready" && (
               <p className="wlm-total-note" role={status === "error" ? "alert" : undefined}>
                 {status === "loading"
-                  ? "Loading exercises…"
-                  : "We could not load the exercises of this workout. Please try again."}
+                  ? t("member.workoutLog.loadingExercises")
+                  : t("member.workoutLog.loadFailed")}
               </p>
             )}
             <ol className="wlm-list">
@@ -76,15 +78,15 @@ export default function WorkoutLogModal({ workout, status = "ready", onClose }) 
                     <span className="wlm-row-index">{index + 1}</span>
                     {exercise.name}
                   </span>
-                  <span className="wlm-row-stat" data-label="Total sets">
+                  <span className="wlm-row-stat" data-label={t("member.workoutLog.totalSets")}>
                     {exercise.sets}
-                    <small>sets</small>
+                    <small>{t("member.workoutLog.setsUnit")}</small>
                   </span>
-                  <span className="wlm-row-stat" data-label={exercise.hold ? "Hold / set" : "Reps / set"}>
+                  <span className="wlm-row-stat" data-label={exercise.hold ? t("member.workoutLog.holdPerSet") : t("member.workoutLog.repsPerSet")}>
                     {exercise.hold ? perSet(exercise.durationSec, exercise.sets) : perSet(exercise.reps, exercise.sets)}
-                    <small>{exercise.hold ? "sec hold" : "reps"}</small>
+                    <small>{exercise.hold ? t("member.workoutLog.secHold") : t("member.workoutLog.repsUnit")}</small>
                   </span>
-                  <span className="wlm-row-stat wlm-row-time" data-label="Exercise time">
+                  <span className="wlm-row-stat wlm-row-time" data-label={t("member.workoutLog.exerciseTime")}>
                     {formatExerciseTime(exercise.durationSec)}
                   </span>
                 </li>
@@ -93,7 +95,7 @@ export default function WorkoutLogModal({ workout, status = "ready", onClose }) 
           </section>
 
           <button type="button" className="modal-primary-btn wlm-done" onClick={onClose}>
-            Done
+            {t("common.ui.done")}
             <CheckRoundedIcon />
           </button>
         </>

@@ -70,6 +70,8 @@ api.interceptors.response.use(
 
 export const libraryApi = {
   exercises: () => api.get("/public/library/exercises").then((response) => response.data),
+  exercise: (code) =>
+    api.get(`/public/library/exercises/${encodeURIComponent(code)}`).then((response) => response.data),
   workouts: () => api.get("/public/library/workouts").then((response) => response.data),
 };
 

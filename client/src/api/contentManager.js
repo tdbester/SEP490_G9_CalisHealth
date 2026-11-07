@@ -1,4 +1,5 @@
 import axios from "axios";
+import i18n from "../i18n";
 import { handleMaintenanceError } from "../utils/maintenanceNotifications";
 
 /**
@@ -55,20 +56,21 @@ function messageFromPayload(payload) {
 }
 
 function statusMessage(status) {
+  const t = (key, options) => i18n.t(key, options);
   if (status == null) {
-    return "Could not reach the server. Check that the backend is running and the API URL is correct.";
+    return t("common.apiError.network");
   }
   if (status === 401) {
-    return "The server rejected this sign-in token (HTTP 401). Your session is still open; check the backend log for the authentication reason.";
+    return t("common.apiError.unauthorized");
   }
   if (status === 403) {
-    return "This account does not have the Content Manager role. Sign in with a Content Manager account.";
+    return t("common.apiError.forbidden");
   }
-  if (status === 404) return "The requested data could not be found.";
-  if (status === 409) return "This data already exists or is still used elsewhere.";
-  if (status === 413) return "The uploaded file is too large. Choose a smaller file.";
-  if (status >= 500) return "Server error. Please try again later.";
-  return `The server rejected the request (HTTP ${status}).`;
+  if (status === 404) return t("common.apiError.notFound");
+  if (status === 409) return t("common.apiError.conflict");
+  if (status === 413) return t("common.apiError.tooLarge");
+  if (status >= 500) return t("common.apiError.serverError");
+  return t("common.apiError.rejectedStatus", { status });
 }
 
 export function requestError(error) {
@@ -79,7 +81,7 @@ export function requestError(error) {
     return new ApiRequestError(message, status);
   }
   return new ApiRequestError(
-    error instanceof Error ? error.message : "Could not send the request. Please try again.",
+    error instanceof Error ? error.message : i18n.t("common.apiError.sendFailed"),
   );
 }
 
@@ -147,7 +149,7 @@ export const contentManagerApi = {
 
     if (!localStorage.getItem("token")) {
       return Promise.reject(
-        new ApiRequestError("You are not signed in. Sign in with a Content Manager account and retry.", 401),
+        new ApiRequestError(i18n.t("common.apiError.notSignedIn"), 401),
       );
     }
 
@@ -166,7 +168,7 @@ export const contentManagerApi = {
     if (anatomyImage) form.append("anatomyImage", anatomyImage);
     if (!localStorage.getItem("token")) {
       return Promise.reject(
-        new ApiRequestError("No sign-in token is stored in this browser. Sign in with a Content Manager account and retry.", 401),
+        new ApiRequestError(i18n.t("common.apiError.noToken"), 401),
       );
     }
     return contentApi
@@ -255,6 +257,55 @@ export const contentManagerApi = {
 
   deleteDailyPlanTemplate: (code) =>
     contentApi.delete(`/content/daily-plan-templates/${encodeURIComponent(code)}`)
+      .catch((error) => { throw requestError(error); }),
+
+  // ---- Góp ý & khiếu nại của Member ----
+  /**
+   * Danh sách đơn góp ý.
+   *
+   * @param {object} filters
+   * @param {string} [filters.status] lọc theo trạng thái
+   * @param {string} [filters.category] lọc theo nhóm nội dung
+   * @param {string} [filters.search] tìm theo tên/email thành viên hoặc tiêu đề/nội dung
+   * @param {string} [filters.fromDate] ngày gửi bắt đầu (yyyy-MM-dd)
+   * @param {string} [filters.toDate] ngày gửi kết thúc (yyyy-MM-dd)
+   */
+  feedback: (filters = {}) =>
+    contentApi
+      .get("/content/feedback", {
+        params: {
+          status: filters.status || undefined,
+          category: filters.category || undefined,
+          search: filters.search || undefined,
+          fromDate: filters.fromDate || undefined,
+          toDate: filters.toDate || undefined,
+        },
+      })
+      .then((r) => r.data)
+      .catch((error) => { throw requestError(error); }),
+
+  /** Chi tiết một đơn góp ý. */
+  feedbackDetail: (id) =>
+    contentApi
+      .get(`/content/feedback/${encodeURIComponent(id)}`)
+      .then((r) => r.data)
+      .catch((error) => { throw requestError(error); }),
+
+  /** Content Manager nhận việc xử lý một đơn. */
+  takeFeedback: (id) =>
+    contentApi
+      .patch(`/content/feedback/${encodeURIComponent(id)}/take`)
+      .then((r) => r.data)
+      .catch((error) => { throw requestError(error); }),
+
+  /** Xử lý đơn: APPROVE (tự giải quyết) | ESCALATE (chuyển lên Admin) | REJECT. */
+  handleFeedback: (id, action, resolutionNote) =>
+    contentApi
+      .patch(`/content/feedback/${encodeURIComponent(id)}/handle`, {
+        action,
+        resolutionNote: resolutionNote || null,
+      })
+      .then((r) => r.data)
       .catch((error) => { throw requestError(error); }),
 };
 

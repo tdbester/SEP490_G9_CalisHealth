@@ -61,6 +61,7 @@ public class MemberExerciseService {
 
         return new MemberExerciseDetailResponseDTO(
                 exercise.getId(),
+                exercise.getCode(),
                 exercise.getName(),
                 exercise.getDescription(),
                 levelLabel(exercise.getLevel()),
@@ -68,6 +69,9 @@ public class MemberExerciseService {
                 exercise.getDefaultSets(),
                 exercise.getDefaultReps(),
                 exercise.getDefaultDuration(),
+                // Giữ nguyên category của bài (HOLD / REPS / "Custom"...) — frontend tự
+                // chuẩn hoá, vì bài tạo bởi member có thể chưa khai báo category.
+                exercise.getCategory(),
                 exercise.getEquipment(),
                 exercise.getVideoUrl(),
                 steps,

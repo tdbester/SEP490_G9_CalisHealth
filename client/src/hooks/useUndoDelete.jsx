@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
+import i18n from "../i18n";
 
 const UNDO_SECONDS = 10;
 
@@ -21,7 +22,7 @@ function UndoDeleteToast({ onUndo, message }) {
         onClick={onUndo}
         className="!appearance-none flex items-center gap-1.5 rounded-lg border border-indigo-400/30 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-indigo-500 active:scale-95"
       >
-        Undo ({secondsLeft}s)
+        {i18n.t("common.ui.undo")} ({secondsLeft}s)
       </button>
     </div>
   );
@@ -35,7 +36,7 @@ export default function useUndoDelete() {
   const cancelConfirmation = () => {
     const operation = confirmation;
     setConfirmation(null);
-    toast.info("Action cancelled", operation?.toastOptions);
+    toast.info(i18n.t("common.ui.actionCancelled"), operation?.toastOptions);
   };
 
   const confirmDelete = () => {
@@ -47,7 +48,7 @@ export default function useUndoDelete() {
       operation.onOptimisticDelete();
     } catch (error) {
       console.error("Could not temporarily remove item:", error);
-      toast.error("Could not delete item.", operation.toastOptions);
+      toast.error(i18n.t("common.ui.deleteFailed"), operation.toastOptions);
       return;
     }
 
@@ -59,12 +60,12 @@ export default function useUndoDelete() {
       scheduledDeletes.current.delete(id);
       toast.dismiss(id);
       scheduled.onUndo();
-      toast.info(scheduled.undoMessage || "Deletion undone.", scheduled.toastOptions);
+      toast.info(scheduled.undoMessage || i18n.t("common.ui.deletionUndone"), scheduled.toastOptions);
     };
     id = toast(
       <UndoDeleteToast
         onUndo={handleUndo}
-        message={operation.toastMessage || "Item deleted."}
+        message={operation.toastMessage || i18n.t("common.ui.itemDeleted")}
       />,
       {
         autoClose: false,
@@ -88,7 +89,7 @@ export default function useUndoDelete() {
         scheduled.onUndo();
         console.error("Delete request failed:", error);
         toast.error(
-          error?.response?.data?.message || scheduled.failureMessage || "Failed to delete item.",
+          error?.response?.data?.message || scheduled.failureMessage || i18n.t("common.ui.deleteFailed"),
           scheduled.toastOptions,
         );
       }
@@ -119,11 +120,11 @@ export default function useUndoDelete() {
         className="w-full max-w-md rounded-2xl border border-[#44366f] bg-[#17112f] p-6 shadow-2xl shadow-black/50"
       >
         <h2 id="confirm-delete-title" className="text-lg font-semibold text-white">
-          {confirmation.confirmationTitle || "Confirm Delete"}
+          {confirmation.confirmationTitle || i18n.t("common.ui.confirmDelete")}
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-slate-300">
           {confirmation.confirmationMessage
-            || "Are you sure you want to delete this item? You will have 10 seconds to undo this action after confirming."}
+            || i18n.t("common.ui.confirmDeleteMessage", { seconds: UNDO_SECONDS })}
         </p>
         <div className="mt-6 flex justify-end gap-3">
           <button
@@ -131,14 +132,14 @@ export default function useUndoDelete() {
             onClick={cancelConfirmation}
             className="rounded-xl border border-[#51456f] bg-transparent px-4 py-2 text-sm font-medium text-[#d2ccdf] transition hover:border-[#8068c4] hover:bg-white/5"
           >
-            {confirmation.cancelLabel || "Cancel"}
+            {confirmation.cancelLabel || i18n.t("common.ui.cancel")}
           </button>
           <button
             type="button"
             onClick={confirmDelete}
             className="rounded-xl border border-rose-700 bg-rose-700 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-600"
           >
-            {confirmation.confirmLabel || "Delete"}
+            {confirmation.confirmLabel || i18n.t("common.ui.delete")}
           </button>
         </div>
       </section>

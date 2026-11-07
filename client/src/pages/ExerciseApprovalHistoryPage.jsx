@@ -6,6 +6,7 @@ import {
   TextField, Typography,
 } from "@mui/material";
 import { keyframes } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import { contentManagerApi } from "../api/contentManager";
@@ -15,6 +16,7 @@ import { CONTENT_PATHS, ContentPageHeader, DarkPill, formatDateTime, SummaryCard
 import ContentDataCard, { DbSourceNote, EmptyState, HEAD_ROW_SX } from "../components/ContentDataCard";
 import { CM } from "../theme-content";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { getLevelLabel } from "../utils/levelLabel";
 
 const rise = keyframes`
   from { opacity: 0; transform: translateY(8px); }
@@ -55,12 +57,13 @@ const dateFilterSx = {
 };
 
 const DECISION_TABS = [
-  { value: "all", label: "All decisions" },
-  { value: "APPROVED", label: "Approved" },
-  { value: "REJECTED", label: "Rejected" },
+  { value: "all", labelKey: "admin.approvalHistory.tabAll" },
+  { value: "APPROVED", labelKey: "admin.approvalHistory.approved" },
+  { value: "REJECTED", labelKey: "admin.approvalHistory.rejected" },
 ];
 
 export default function ExerciseApprovalHistoryPage() {
+  const { t } = useTranslation();
   const query = useApiQuery(() => contentManagerApi.exerciseApprovalHistory());
   const { levelTone } = useLevelNames();
   const rows = Array.isArray(query.data)
@@ -102,41 +105,41 @@ export default function ExerciseApprovalHistoryPage() {
     <Box sx={{ maxWidth: 1280, mx: "auto", px: { xs: 2, sm: 3 }, py: { xs: 2.5, sm: 3 } }}>
       <ContentPageHeader
         breadcrumb={[
-          { label: "Content manager", to: CONTENT_PATHS.dashboard },
-          { label: "Exercise & workout", to: CONTENT_PATHS.exercises },
-          { label: "Approval history" },
+          { labelKey: "nav.contentManagerRole", to: CONTENT_PATHS.dashboard },
+          { labelKey: "nav.exerciseAndWorkout", to: CONTENT_PATHS.exercises },
+          { labelKey: "nav.approvalHistory" },
         ]}
-        title="Exercise approval history"
-        description="Review approved and rejected custom exercises. Pending submissions remain in Pending moderation."
-        action={<Button component={RouterLink} to={CONTENT_PATHS.pendingExerciseModeration} variant="outlined" startIcon={<ArrowBackRoundedIcon />}>Back to pending</Button>}
+        title={t("admin.approvalHistory.title")}
+        description={t("admin.approvalHistory.description")}
+        action={<Button component={RouterLink} to={CONTENT_PATHS.pendingExerciseModeration} variant="outlined" startIcon={<ArrowBackRoundedIcon />}>{t("admin.approvalHistory.backToPending")}</Button>}
       />
 
-      <Box component="section" aria-label="Approval history summary" sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" } }}>
-        <Box sx={enter(0)}><SummaryCard label="Total decisions" count={totalDecisions} detail="exercises" /></Box>
-        <Box sx={enter(80)}><SummaryCard label="Approved" tone="success" count={approvedCount} detail="exercises" /></Box>
-        <Box sx={enter(160)}><SummaryCard label="Rejected" tone="warning" count={rejectedCount} detail="exercises" /></Box>
+      <Box component="section" aria-label={t("admin.approvalHistory.summary")} sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" } }}>
+        <Box sx={enter(0)}><SummaryCard label={t("admin.approvalHistory.totalDecisions")} count={totalDecisions} detail={t("admin.approvalHistory.exercises")} /></Box>
+        <Box sx={enter(80)}><SummaryCard label={t("admin.approvalHistory.approved")} tone="success" count={approvedCount} detail={t("admin.approvalHistory.exercises")} /></Box>
+        <Box sx={enter(160)}><SummaryCard label={t("admin.approvalHistory.rejected")} tone="warning" count={rejectedCount} detail={t("admin.approvalHistory.exercises")} /></Box>
       </Box>
 
       <Card sx={{ mt: 2.5, overflow: "hidden", ...enter(220) }}>
         <Tabs value={decision} onChange={(_, value) => { setDecision(value); setPage(0); }} variant="scrollable" scrollButtons="auto" sx={{ px: 1.5, borderBottom: `1px solid ${CM.border}`, "& .MuiTab-root": { minHeight: 48, textTransform: "none", fontWeight: 600 } }}>
-          {DECISION_TABS.map((tab) => <Tab key={tab.value} value={tab.value} label={tab.label} />)}
+          {DECISION_TABS.map((tab) => <Tab key={tab.value} value={tab.value} label={t(tab.labelKey)} />)}
         </Tabs>
         <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ xs: "stretch", md: "center" }} sx={{ p: 1.5, borderBottom: `1px solid ${CM.border}` }}>
-          <TextField size="small" fullWidth value={search} onChange={updateFilter(setSearch)} placeholder="Search exercise or submitter" inputProps={{ "aria-label": "Search approval history" }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" color="disabled" /></InputAdornment> }} sx={{ flex: 1, minWidth: 220 }} />
-          <TextField size="small" type="date" label="From" value={fromDate} onChange={(event) => { const nextFromDate = event.target.value; setFromDate(nextFromDate); if (toDate && nextFromDate && toDate < nextFromDate) setToDate(nextFromDate); setPage(0); }} InputLabelProps={{ shrink: true }} inputProps={{ max: toDate || undefined, "aria-label": "Reviewed from date" }} sx={{ ...dateFilterSx, minWidth: { xs: "100%", md: 155 } }} />
-          <TextField size="small" type="date" label="To" value={toDate} onChange={(event) => { setToDate(event.target.value); setPage(0); }} InputLabelProps={{ shrink: true }} inputProps={{ min: fromDate || undefined, "aria-label": "Reviewed to date" }} sx={{ ...dateFilterSx, minWidth: { xs: "100%", md: 155 } }} />
-          <TextField select size="small" value={sort} onChange={updateFilter(setSort)} SelectProps={{ SelectDisplayProps: { "aria-label": "Sort approval history" } }} sx={{ minWidth: 150 }}>
-            <MenuItem value="newest">Newest first</MenuItem><MenuItem value="oldest">Oldest first</MenuItem>
+          <TextField size="small" fullWidth value={search} onChange={updateFilter(setSearch)} placeholder={t("admin.approvalHistory.searchPlaceholder")} inputProps={{ "aria-label": t("admin.approvalHistory.searchAria") }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" color="disabled" /></InputAdornment> }} sx={{ flex: 1, minWidth: 220 }} />
+          <TextField size="small" type="date" label={t("admin.approvalHistory.fromDate")} value={fromDate} onChange={(event) => { const nextFromDate = event.target.value; setFromDate(nextFromDate); if (toDate && nextFromDate && toDate < nextFromDate) setToDate(nextFromDate); setPage(0); }} InputLabelProps={{ shrink: true }} inputProps={{ max: toDate || undefined, "aria-label": t("admin.approvalHistory.reviewedFromAria") }} sx={{ ...dateFilterSx, minWidth: { xs: "100%", md: 155 } }} />
+          <TextField size="small" type="date" label={t("admin.approvalHistory.toDate")} value={toDate} onChange={(event) => { setToDate(event.target.value); setPage(0); }} InputLabelProps={{ shrink: true }} inputProps={{ min: fromDate || undefined, "aria-label": t("admin.approvalHistory.reviewedToAria") }} sx={{ ...dateFilterSx, minWidth: { xs: "100%", md: 155 } }} />
+          <TextField select size="small" value={sort} onChange={updateFilter(setSort)} SelectProps={{ SelectDisplayProps: { "aria-label": t("admin.approvalHistory.sortAria") } }} sx={{ minWidth: 150 }}>
+            <MenuItem value="newest">{t("admin.approvalHistory.newestFirst")}</MenuItem><MenuItem value="oldest">{t("admin.approvalHistory.oldestFirst")}</MenuItem>
           </TextField>
         </Stack>
 
-        <ContentDataCard query={query} title="approval history">
-          {filteredRows.length === 0 ? <EmptyState message={rows.length ? "No decisions match these filters." : "No approval decisions found."} /> : (
+        <ContentDataCard query={query} title={t("admin.approvalHistory.title")}>
+          {filteredRows.length === 0 ? <EmptyState message={rows.length ? t("admin.approvalHistory.noMatch") : t("admin.approvalHistory.empty")} /> : (
             <>
               <TableContainer>
                 <Table size="small" sx={{ minWidth: 980 }}>
                   <TableHead><TableRow sx={HEAD_ROW_SX}>
-                    <TableCell sx={{ textAlign: "left !important", pl: 3 }}>Exercise</TableCell><TableCell>Uploaded by</TableCell><TableCell>Muscle group</TableCell><TableCell>Level</TableCell><TableCell>Decision</TableCell><TableCell>Reviewed</TableCell><TableCell align="center">Action</TableCell>
+                    <TableCell sx={{ textAlign: "left !important", pl: 3 }}>{t("admin.approvalHistory.colExercise")}</TableCell><TableCell>{t("admin.approvalHistory.colUploadedBy")}</TableCell><TableCell>{t("admin.approvalHistory.colMuscleGroup")}</TableCell><TableCell>{t("admin.approvalHistory.colLevel")}</TableCell><TableCell>{t("admin.approvalHistory.colDecision")}</TableCell><TableCell>{t("admin.approvalHistory.colReviewed")}</TableCell><TableCell align="center">{t("admin.approvalHistory.colAction")}</TableCell>
                   </TableRow></TableHead>
                   <TableBody>{visibleRows.map((row, idx) => (
                     <TableRow key={row.id} hover sx={{
@@ -145,22 +148,22 @@ export default function ExerciseApprovalHistoryPage() {
                       ...enter(240 + idx * 25),
                     }}>
                       <TableCell sx={{ textAlign: "left !important", pl: 3, "& > .MuiStack-root": { justifyContent: "flex-start" } }}><Stack direction="row" spacing={1.25} alignItems="center"><Box sx={{ width: 32, height: 32, borderRadius: 1.5, display: "grid", placeItems: "center", flexShrink: 0, bgcolor: "rgba(168,155,208,0.14)", color: CM.textMuted }}><FitnessIconSmall /></Box><Box sx={{ minWidth: 0, textAlign: "left" }}><Typography variant="body2" fontWeight={600} sx={{ color: "#fff" }}>{row.name}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>{row.code}</Typography></Box></Stack></TableCell>
-                      <TableCell><Stack direction="row" spacing={1} alignItems="center"><Avatar sx={{ width: 28, height: 28, fontSize: 11, fontWeight: 700, bgcolor: "rgba(65,201,173,0.2)", color: "#8dd8c5" }}>{initials(row.createdByName)}</Avatar><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.createdByName || "Unknown"}</Typography></Stack></TableCell>
+                      <TableCell><Stack direction="row" spacing={1} alignItems="center"><Avatar sx={{ width: 28, height: 28, fontSize: 11, fontWeight: 700, bgcolor: "rgba(65,201,173,0.2)", color: "#8dd8c5" }}>{initials(row.createdByName)}</Avatar><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.createdByName || t("admin.approvalHistory.unknown")}</Typography></Stack></TableCell>
                       <TableCell><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.muscleGroup || "—"}</Typography></TableCell>
                       <TableCell>
                         <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${getLevelBadgeStyle(row.level)}`}>
-                          {row.level || "Intermediate"}
+                          {row.level ? getLevelLabel(row.level) : t("admin.approvalHistory.defaultLevel")}
                         </span>
                       </TableCell>
-                      <TableCell><DarkPill tone={row.decision === "APPROVED" ? "success" : "danger"}>{row.decision === "APPROVED" ? "Approved" : "Rejected"}</DarkPill></TableCell>
+                      <TableCell><DarkPill tone={row.decision === "APPROVED" ? "success" : "danger"}>{row.decision === "APPROVED" ? t("admin.approvalHistory.approved") : t("admin.approvalHistory.rejected")}</DarkPill></TableCell>
                       <TableCell sx={{ whiteSpace: "nowrap" }}><Typography variant="caption" sx={{ color: CM.textDim }}>{formatDateTime(row.reviewedAt)}</Typography></TableCell>
-                      <TableCell align="center"><Button component={RouterLink} to={historyDetailPath(row)} state={{ historyRow: row }} size="small" variant="outlined" sx={{ py: 0.25, px: 1.25, fontSize: 11.5 }}>View</Button></TableCell>
+                      <TableCell align="center"><Button component={RouterLink} to={historyDetailPath(row)} state={{ historyRow: row }} size="small" variant="outlined" sx={{ py: 0.25, px: 1.25, fontSize: 11.5 }}>{t("admin.approvalHistory.view")}</Button></TableCell>
                     </TableRow>
                   ))}</TableBody>
                 </Table>
               </TableContainer>
-              <TablePagination component="div" count={filteredRows.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(event) => { setRowsPerPage(parseInt(event.target.value, 10)); setPage(0); }} rowsPerPageOptions={[10, 20, 50]} labelDisplayedRows={({ from, to, count }) => `Showing ${from}-${to} of ${count}`} />
-              <Box sx={{ px: 2, py: 1.5 }}><DbSourceNote>{filteredRows.length} moderation decisions</DbSourceNote></Box>
+              <TablePagination component="div" count={filteredRows.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(event) => { setRowsPerPage(parseInt(event.target.value, 10)); setPage(0); }} rowsPerPageOptions={[10, 20, 50]} labelDisplayedRows={({ from, to, count }) => t("admin.approvalHistory.showingRows", { from, to, count })} />
+              <Box sx={{ px: 2, py: 1.5 }}><DbSourceNote>{t("admin.approvalHistory.decisionsNote", { count: filteredRows.length })}</DbSourceNote></Box>
             </>
           )}
         </ContentDataCard>

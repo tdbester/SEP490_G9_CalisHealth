@@ -1,11 +1,25 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export default function LibraryDetailPlaceholder({ title, type: itemType }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
   const source = params.get("source") || "all";
   const filterType = params.get("type") || "all";
+
+  const sourceLabel =
+    source === "system"
+      ? t("member.library.placeholder.sourceSystem")
+      : source === "member"
+        ? t("member.library.placeholder.sourceMember")
+        : t("member.library.placeholder.sourceCustom");
+
+  const typeLabel =
+    itemType === "workouts"
+      ? t("member.library.placeholder.workoutType")
+      : t("member.library.placeholder.exerciseType");
 
   return (
     <div style={{ maxWidth: 1180, margin: "0 auto", color: "#FFFFFF" }}>
@@ -24,7 +38,7 @@ export default function LibraryDetailPlaceholder({ title, type: itemType }) {
           padding: 0,
         }}
       >
-        &larr; Back to Library
+        &larr; {t("member.library.placeholder.backToLibrary")}
       </button>
 
       <div
@@ -49,13 +63,17 @@ export default function LibraryDetailPlaceholder({ title, type: itemType }) {
               fontWeight: 600,
             }}
           >
-            {source === "system" ? "System" : source === "member" ? "Member Added" : "Custom"}
+            {sourceLabel}
             {filterType !== "all" ? ` • ${filterType}` : ""}
           </span>
         </div>
 
         <p style={{ color: "#A89BD0", fontSize: 14, margin: "0 0 24px 0" }}>
-          Viewing list of {itemType} filtered by {source} / {filterType}. (Detailed table/card view will be loaded here).
+          {t("member.library.placeholder.viewingList", {
+            type: typeLabel,
+            source: sourceLabel,
+            filter: filterType,
+          })}
         </p>
 
         <div
@@ -68,7 +86,7 @@ export default function LibraryDetailPlaceholder({ title, type: itemType }) {
             fontSize: 14,
           }}
         >
-          List view module connected successfully via query params:
+          {t("member.library.placeholder.connectedTitle")}
           <br />
           <code style={{ color: "#C084FC", display: "inline-block", marginTop: 8 }}>
             source={source}&amp;type={filterType}

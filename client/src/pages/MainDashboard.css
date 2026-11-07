@@ -540,11 +540,11 @@
   white-space: nowrap;
 }
 
-/* ── Bottom grid: Health & Community ─────────────────────────── */
+/* ── Bottom grid: Health, Community & Favorites ──────────────── */
 .dash-bottom-grid {
   margin-top: 28px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
 }
 
@@ -578,6 +578,12 @@
 .dash-panel-icon svg {
   width: 20px;
   height: 20px;
+}
+
+/* Favorites — icon ngôi sao màu hổ phách để nổi bật khỏi các panel tím khác. */
+.dash-panel-icon-star {
+  background: rgba(251, 191, 36, 0.16);
+  color: #FBBF24;
 }
 
 .dash-panel-title {
@@ -690,6 +696,12 @@
 }
 
 /* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 1320px) {
+  .dash-bottom-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1080px) {
   .dash-bottom-grid {
     grid-template-columns: minmax(0, 1fr);

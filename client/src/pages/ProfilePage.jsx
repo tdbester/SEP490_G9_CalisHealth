@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Box,
@@ -77,6 +78,7 @@ function toForm(profile) {
  */
 export default function ProfilePage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [profile, setProfile] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -159,7 +161,7 @@ export default function ProfilePage() {
     setSuccessMessage("");
 
     if (!form.fullName.trim()) {
-      setFieldError({ fullName: "Please enter your full name" });
+      setFieldError({ fullName: t("member.profile.fullNameRequired") });
       return;
     }
 
@@ -177,12 +179,12 @@ export default function ProfilePage() {
         daysPerWeek: form.daysPerWeek ? Number(form.daysPerWeek) : null,
         goal: form.goal,
       });
-      applyProfile(updated, "Your profile has been updated.");
+      applyProfile(updated, t("member.profile.saved"));
       setFieldError({});
     } catch (error) {
       const byField = fieldErrors(error);
       if (Object.keys(byField).length > 0) setFieldError(byField);
-      else setSaveError(error?.response?.data?.message || "Could not save your changes. Please try again.");
+      else setSaveError(error?.response?.data?.message || t("member.profile.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -219,7 +221,7 @@ export default function ProfilePage() {
               </Button>
             }
           >
-            {loadError?.response?.data?.message || "Could not load your profile."}
+            {loadError?.response?.data?.message || t("member.profile.loadFailed")}
           </Alert>
         </Box>
       </ThemeProvider>
@@ -269,7 +271,7 @@ export default function ProfilePage() {
               fontSize: 10.5,
             }}
           >
-            Account settings
+            {t("member.profile.accountSettings")}
           </Typography>
           <Typography
             component="h1"
@@ -282,10 +284,10 @@ export default function ProfilePage() {
               lineHeight: 1.15,
             }}
           >
-            Profile Information
+            {t("member.profile.heading")}
           </Typography>
           <Typography variant="body2" sx={{ mt: 1, color: CM.textMuted, maxWidth: 480, mx: "auto" }}>
-            Keep your personal details up to date so we can personalize your health journey.
+            {t("member.profile.intro")}
           </Typography>
         </Box>
 
@@ -301,13 +303,13 @@ export default function ProfilePage() {
           {/* ---- Account information (read-only) ---- */}
           <SectionCard
             icon={<BadgeOutlinedIcon />}
-            title="Account information"
-            description="These details are connected to your account and cannot be edited here."
+            title={t("member.profile.accountInfo")}
+            description={t("member.profile.accountInfoDesc")}
             aside={
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                 <StatePill tone="primary" icon={<ShieldRoundedIcon />} label={profile?.roleLabel || "Member"} />
                 {profile?.active && (
-                  <StatePill tone="success" icon={<CheckCircleRoundedIcon />} label="Secure" />
+                  <StatePill tone="success" icon={<CheckCircleRoundedIcon />} label={t("member.profile.secure")} />
                 )}
               </Stack>
             }
@@ -315,24 +317,24 @@ export default function ProfilePage() {
           >
             <Box sx={FIELD_GRID}>
               <ReadOnlyField
-                label="Email address"
+                label={t("member.profile.emailAddress")}
                 value={profile?.email}
                 adornment={
                   profile?.emailVerified ? (
                     <Stack direction="row" spacing={0.5} alignItems="center" sx={{ color: CM.green, flexShrink: 0 }}>
                       <CheckCircleRoundedIcon sx={{ fontSize: 14 }} />
                       <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                        Verified
+                        {t("member.profile.verified")}
                       </Typography>
                     </Stack>
                   ) : (
                     <Typography variant="caption" sx={{ color: CM.amber, flexShrink: 0, fontWeight: 600 }}>
-                      Not verified
+                      {t("member.profile.notVerified")}
                     </Typography>
                   )
                 }
               />
-              <ReadOnlyField label="Join date" value={formatProfileDate(profile?.memberSince)} />
+              <ReadOnlyField label={t("member.profile.joinDate")} value={formatProfileDate(profile?.memberSince)} />
             </Box>
           </SectionCard>
 
@@ -340,8 +342,8 @@ export default function ProfilePage() {
           <Box component="form" onSubmit={handleSave} noValidate>
             <SectionCard
               icon={<PersonOutlineRoundedIcon />}
-              title="Personal details"
-              description="Tell us a little more about yourself."
+            title={t("member.profile.personalDetails")}
+            description={t("member.profile.personalDetailsDesc")}
               delay={120}
             >
               {saveError && (
@@ -352,7 +354,7 @@ export default function ProfilePage() {
 
               <Box sx={FIELD_GRID}>
                 <TextField
-                  label="Full name"
+                  label={t("member.profile.fullName")}
                   value={form.fullName}
                   onChange={set("fullName")}
                   required
@@ -363,21 +365,21 @@ export default function ProfilePage() {
                   inputProps={{ autoComplete: "name", maxLength: 255 }}
                 />
                 <TextField
-                  label="Phone number"
+                  label={t("member.profile.phone")}
                   value={form.phone}
                   onChange={set("phone")}
                   fullWidth
                   size="small"
-                  placeholder="0912345678"
+                  placeholder={t("member.profile.phonePlaceholder")}
                   error={Boolean(fieldError.phone)}
                   helperText={
-                    fieldError.phone || "Digits, spaces, dashes and an optional + country code."
+                    fieldError.phone || t("member.profile.phoneHint")
                   }
                   inputProps={{ autoComplete: "tel", inputMode: "tel", maxLength: 30 }}
                 />
                 <TextField
                   select
-                  label="Gender"
+                  label={t("member.profile.gender")}
                   value={form.gender}
                   onChange={set("gender")}
                   fullWidth
@@ -391,14 +393,14 @@ export default function ProfilePage() {
                     renderValue: (selected) =>
                       selected || (
                         <Box component="span" sx={{ color: CM.textDim }}>
-                          Not specified
+                          {t("member.profile.notSpecified")}
                         </Box>
                       ),
-                    SelectDisplayProps: { "aria-label": "Gender" },
+                    SelectDisplayProps: { "aria-label": t("member.profile.genderAria") },
                   }}
                 >
                   <MenuItem value="">
-                    <em>Not specified</em>
+                    <em>{t("member.profile.notSpecified")}</em>
                   </MenuItem>
                   {(profile?.genderOptions || []).map((option) => (
                     <MenuItem key={option} value={option}>
@@ -409,16 +411,20 @@ export default function ProfilePage() {
                 {profile?.role === "MEMBER" ? (
                   <>
                     <TextField
-                      label="Age"
-                      value={profile?.age != null ? `${profile.age} years old` : "Not specified"}
+                      label={t("member.profile.age")}
+                      value={
+                        profile?.age != null
+                          ? t("member.profile.yearsOld", { count: profile.age })
+                          : t("member.profile.notSpecified")
+                      }
                       fullWidth
                       size="small"
                       InputProps={{ readOnly: true }}
-                      helperText="Taken from your onboarding survey answers."
+                      helperText={t("member.profile.ageHelper")}
                     />
                     <TextField
                       select
-                      label="Training days per week"
+                      label={t("member.profile.trainingDaysPerWeek")}
                       value={form.daysPerWeek}
                       onChange={set("daysPerWeek")}
                       fullWidth
@@ -426,41 +432,48 @@ export default function ProfilePage() {
                       disabled={!profile?.member || saving}
                       error={Boolean(fieldError.daysPerWeek)}
                       helperText={
-                        fieldError.daysPerWeek ||
-                        "Starts from your onboarding survey answer. Your weekly plan follows this."
+                        fieldError.daysPerWeek || t("member.profile.daysHelper")
                       }
                       InputLabelProps={{ shrink: true }}
                       SelectProps={{
                         displayEmpty: true,
                         renderValue: (selected) =>
-                          selected ? `${selected} ${Number(selected) === 1 ? "day" : "days"} per week` : (
+                          selected ? (
+                            t("member.profile.daysPerWeekValue", {
+                              count: selected,
+                              dayPlural: Number(selected) === 1 ? "day" : "days",
+                            })
+                          ) : (
                             <Box component="span" sx={{ color: CM.textDim }}>
-                              Not set
+                              {t("member.profile.notSet")}
                             </Box>
                           ),
-                        SelectDisplayProps: { "aria-label": "Training days per week" },
+                        SelectDisplayProps: { "aria-label": t("member.profile.trainingDaysPerWeek") },
                       }}
                     >
                       {DAYS_PER_WEEK_OPTIONS.map((days) => (
                         <MenuItem key={days} value={String(days)}>
-                          {days} {days === 1 ? "day" : "days"} per week
+                          {t("member.profile.daysPerWeekValue", {
+                            count: days,
+                            dayPlural: days === 1 ? "day" : "days",
+                          })}
                         </MenuItem>
                       ))}
                     </TextField>
                     <TextField
                       select
-                      label="Goal"
+                      label={t("member.profile.goal")}
                       value={form.goal}
                       onChange={set("goal")}
                       fullWidth
                       size="small"
                       disabled={!profile?.member || saving}
                       error={Boolean(fieldError.goal)}
-                      helperText={fieldError.goal || "Choose the focus for your training plan."}
+                      helperText={fieldError.goal || t("member.profile.goalHelper")}
                       InputLabelProps={{ shrink: true }}
                     >
-                      <MenuItem value="SKILLS">SKILLS</MenuItem>
-                      <MenuItem value="HEALTH">HEALTH</MenuItem>
+                      <MenuItem value="SKILLS">{t("member.profile.goalSkills")}</MenuItem>
+                      <MenuItem value="HEALTH">{t("member.profile.goalHealth")}</MenuItem>
                     </TextField>
                     <FitnessLevelField
                       value={form.fitnessLevel}
@@ -476,18 +489,18 @@ export default function ProfilePage() {
                   </>
                 ) : (
                   <TextField
-                    label="Date of birth"
+                    label={t("member.profile.dateOfBirth")}
                     type="date"
                     value={form.dateOfBirth}
                     onChange={set("dateOfBirth")}
                     fullWidth
                     size="small"
                     InputLabelProps={{ shrink: true }}
-                    helperText="Used to keep your personal information up to date."
+                    helperText={t("member.profile.dateOfBirthHelper")}
                   />
                 )}
                 <TextField
-                  label="Bio / Note"
+                  label={t("member.profile.bioNote")}
                   value={form.bio}
                   onChange={set("bio")}
                   fullWidth
@@ -495,9 +508,12 @@ export default function ProfilePage() {
                   minRows={3}
                   maxRows={6}
                   size="small"
-                  placeholder="A short line about your goals, habits or training routine."
+                  placeholder={t("member.profile.bioPlaceholder")}
                   error={Boolean(fieldError.bio)}
-                  helperText={fieldError.bio || `${form.bio.length}/500 characters`}
+                  helperText={
+                    fieldError.bio ||
+                    t("member.profile.charCount", { count: form.bio.length })
+                  }
                   inputProps={{ maxLength: 500 }}
                   sx={{ gridColumn: { xs: "auto", sm: "1 / -1" } }}
                 />
@@ -516,10 +532,10 @@ export default function ProfilePage() {
                   disabled={!dirty || saving}
                   sx={{ color: CM.textMuted }}
                 >
-                  Discard changes
+                  {t("member.profile.discardChanges")}
                 </Button>
                 <Button type="submit" variant="contained" size="small" disabled={!dirty || saving}>
-                  {saving ? "Saving…" : "Save changes"}
+                  {saving ? t("member.profile.saving") : t("member.profile.save")}
                 </Button>
               </Stack>
             </SectionCard>

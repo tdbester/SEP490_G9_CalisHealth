@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { getSystemWorkouts } from "../api/library";
+import { FAVORITE_ITEM_TYPES } from "../api/favorites";
+import FavoriteButton from "../components/favorites/FavoriteButton";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { getLevelLabel } from "../utils/levelLabel";
+import { localizeSeed, localizeSeedDeep } from "../utils/seedText";
 import "./ExerciseListPage.css";
 
 const MUSCLE_GROUPS = ["All", "Full body", "Chest", "Back", "Arms", "Core", "Legs"];
@@ -158,24 +163,29 @@ export const mockSystemWorkouts = [
   },
 ].map((workout) => ({
   ...workout,
-  exercises: workout.exercises.map((exercise) => ({
-    ...exercise,
-    level: exercise.level || "Beginner",
-    muscleGroup: exercise.muscleGroup || workout.muscleGroup || "Full body",
-    sets: toNumberOrNull(exercise.sets) ?? 3,
-    reps: toNumberOrNull(exercise.reps),
-    duration: toNumberOrNull(exercise.duration),
-    rest: exercise.rest || "60s",
-    description: exercise.description
-      || `${exercise.name} develops ${(exercise.muscleGroup || workout.muscleGroup || "target muscle").toLowerCase()} strength and supports ${(exercise.level || "beginner").toLowerCase()} training.`,
-    instructions: exercise.instructions || [
-      `Set up in a stable position for ${exercise.name}.`,
-      `Perform each repetition with controlled movement and steady breathing.`,
-      `Return to the starting position and complete the prescribed sets.`,
-    ],
-    videoUrl: exercise.videoUrl || "",
-    tips: exercise.tips || "Keep your movement controlled and stop if you feel pain.",
-  })),
+  exercises: workout.exercises.map((exercise) => {
+    const muscle = exercise.muscleGroup || workout.muscleGroup || "Full body";
+    const level = exercise.level || "Beginner";
+    const description = exercise.description
+      || `The ${exercise.name} develops ${muscle.toLowerCase()} strength and supports ${level.toLowerCase()} training.`;
+    return {
+      ...exercise,
+      level,
+      muscleGroup: muscle,
+      sets: toNumberOrNull(exercise.sets) ?? 3,
+      reps: toNumberOrNull(exercise.reps),
+      duration: toNumberOrNull(exercise.duration),
+      rest: exercise.rest || "60s",
+      description,
+      instructions: exercise.instructions || [
+        `Set up in a stable position for ${exercise.name}.`,
+        "Perform each repetition with controlled movement and steady breathing.",
+        "Return to the starting position and complete the prescribed sets.",
+      ],
+      videoUrl: exercise.videoUrl || "",
+      tips: exercise.tips || "Keep your movement controlled and stop if you feel pain.",
+    };
+  }),
 }));
 
 function HeartIcon({ className = "h-3.5 w-3.5" }) {
@@ -244,8 +254,8 @@ function RadioIcon({ checked }) {
   );
 }
 
-function getLevelLabel(level) {
-  const normalized = String(level || "BEGINNER").toUpperCase();
+function titleCaseLevel(level) {
+  const normalized = String(level || "Beginner").trim().toUpperCase();
   return normalized.charAt(0) + normalized.slice(1).toLowerCase();
 }
 
@@ -266,7 +276,7 @@ function normalizeWorkout(workout) {
     id: workout.id,
     title: workout.title,
     type: String(workout.type || "").toLowerCase(),
-    level: getLevelLabel(workout.level),
+    level: titleCaseLevel(workout.level),
     muscleGroup: workout.muscleGroup || "Full body",
     exerciseCount: Number(workout.exerciseCount ?? workout.exercisesCount ?? workout.totalExercises ?? 0),
     totalSets: Number.isFinite(Number(workout.totalSets ?? workout.setsCount))
@@ -294,45 +304,54 @@ function matchesMuscleGroup(workout, selectedGroup) {
 }
 
 function ExerciseCard({ workout, onClick }) {
+  const { t } = useTranslation();
   const level = workout.level || workout.difficultyLevel || "Intermediate";
-  const details = [
-    workout.muscleGroup,
-    `${workout.exerciseCount} exercises`,
-    `${workout.totalSets} sets`,
-    workout.totalTime,
+  const localized = localizeSeedDeep(workout);  const details = [
+    localized.muscleGroup,
+    t("member.catalog.totalExercises", { count: workout.exerciseCount }),
+    t("member.catalog.totalSets", { count: workout.totalSets }),
+    localized.totalTime,
   ].filter(Boolean).join(" • ");
 
   return (
-    <button
-      type="button"
-      onClick={() => onClick(workout)}
+    <div
       className="exercise-row-card group flex w-full items-center justify-between rounded-xl border border-[#22184c] bg-[#130d2e] px-3 py-2 text-left transition-all hover:border-[#382672]"
     >
-      <span className="mr-3 flex min-w-0 flex-1 items-center gap-2.5">
+      <button
+        type="button"
+        onClick={() => onClick(workout)}
+        className="mr-3 flex min-w-0 flex-1 items-center gap-2.5 text-left"
+      >
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#201748]">
           <DumbbellIcon className="h-7 w-7 text-[#9d7aff]" />
         </span>
         <span className="flex min-w-0 flex-col">
           <span className="truncate text-xs font-semibold text-white transition-colors group-hover:text-purple-300">
-            {workout.title}
+            {localized.title}
           </span>
           <span className="mt-0.5 truncate text-[10px] text-slate-400">{details}</span>
         </span>
-      </span>
-      <span className="flex shrink-0 items-center">
+      </button>
+      <span className="flex shrink-0 items-center gap-2">
+        <FavoriteButton
+          itemType={FAVORITE_ITEM_TYPES.SYSTEM_WORKOUT}
+          itemId={workout.id}
+          label={workout.title}
+        />
         <span className={`min-w-[96px] rounded-full px-4 py-1.5 text-center text-xs font-bold tracking-wide capitalize ${getLevelBadgeStyle(level)}`}>
-          {level}
+          {getLevelLabel(level)}
         </span>
       </span>
-    </button>
+    </div>
   );
 }
 
 function FilterSidebar({ selectedMuscles, onToggleMuscle, isAllActive, getMuscleCount }) {
+  const { t } = useTranslation();
   return (
     <aside className="w-full shrink-0 rounded-2xl border border-[#22184c] bg-[#130d2e] p-3 md:w-48">
       <h2 className="mb-2 px-1 text-[10.5px] font-bold uppercase tracking-wider text-[#8a82af]">
-        MUSCLE GROUP
+        {t("member.catalog.muscleGroup")}
       </h2>
       <div className="flex flex-col gap-1">
         {MUSCLE_GROUPS.map((muscleGroup) => {
@@ -352,7 +371,7 @@ function FilterSidebar({ selectedMuscles, onToggleMuscle, isAllActive, getMuscle
             >
               <span className="flex min-w-0 items-center gap-2">
                 <RadioIcon checked={active} />
-                <span className="truncate text-xs">{muscleGroup}</span>
+                <span className="truncate text-xs">{muscleGroup === "All" ? t("member.catalog.all") : localizeSeed(muscleGroup)}</span>
               </span>
               <span className={`ml-2 shrink-0 text-[11px] opacity-60 ${active ? "font-semibold" : ""}`}>
                 {getMuscleCount(muscleGroup)}
@@ -366,6 +385,7 @@ function FilterSidebar({ selectedMuscles, onToggleMuscle, isAllActive, getMuscle
 }
 
 function SearchFilterBar({ searchInput, onSearchChange, selectedLevel, onLevelChange }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-4 mb-4 w-full">
       <div className="flex-1 relative flex items-center">
@@ -375,7 +395,7 @@ function SearchFilterBar({ searchInput, onSearchChange, selectedLevel, onLevelCh
         <input
           type="text"
           className="w-full rounded-xl bg-[#130d2e] border border-[#22184c] pl-10 pr-4 py-2.5 text-xs md:text-sm text-white placeholder-[#655c88] outline-none focus:border-[#6340f1] transition-all"
-          placeholder="Search workouts..."
+          placeholder={t("member.catalog.searchWorkouts")}
           value={searchInput}
           onChange={onSearchChange}
         />
@@ -388,7 +408,7 @@ function SearchFilterBar({ searchInput, onSearchChange, selectedLevel, onLevelCh
         >
           {LEVEL_OPTIONS.map((option) => (
             <option key={option} value={option} className="bg-[#130d2e] text-white">
-              {option}
+              {option === "All levels" ? t("member.catalog.allLevels") : getLevelLabel(option)}
             </option>
           ))}
         </select>
@@ -401,6 +421,7 @@ function SearchFilterBar({ searchInput, onSearchChange, selectedLevel, onLevelCh
 }
 
 function PaginationBar({ currentPage, totalPages, onPageChange }) {
+  const { t } = useTranslation();
   const firstPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
   const visiblePages = Array.from(
     { length: Math.min(5, totalPages) },
@@ -413,7 +434,7 @@ function PaginationBar({ currentPage, totalPages, onPageChange }) {
         className="h-7 w-7 rounded-md border border-[#22184c] bg-[#130d2e] text-[#8a82af] hover:text-white flex items-center justify-center text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         disabled={currentPage <= 1}
         onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-        aria-label="Previous page"
+        aria-label={t("member.catalog.previous")}
       >
         <ChevronLeftIcon className="w-3.5 h-3.5" />
       </button>
@@ -439,7 +460,7 @@ function PaginationBar({ currentPage, totalPages, onPageChange }) {
         className="h-7 w-7 rounded-md border border-[#22184c] bg-[#130d2e] text-[#8a82af] hover:text-white flex items-center justify-center text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         disabled={currentPage >= totalPages}
         onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-        aria-label="Next page"
+        aria-label={t("member.catalog.next")}
       >
         <ChevronRightIcon className="w-3.5 h-3.5" />
       </button>
@@ -448,6 +469,7 @@ function PaginationBar({ currentPage, totalPages, onPageChange }) {
 }
 
 export default function WorkoutSystemListPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -535,7 +557,7 @@ export default function WorkoutSystemListPage() {
   const totalPages = Math.ceil(filteredWorkouts.length / PAGE_SIZE);
   const visibleWorkouts = filteredWorkouts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const isAllActive = selectedMuscles.includes("All") || selectedMuscles.length === 0;
-  const subtitle = "Browse workouts that support your health and skill goals.";
+  const subtitle = t("member.catalog.workoutListSubtitle");
 
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, Math.max(totalPages, 1)));
@@ -586,7 +608,7 @@ export default function WorkoutSystemListPage() {
     <div className="exercise-list-page w-full max-w-7xl mx-auto text-white">
       <header className="exercise-header mb-4">
         <h1 className="exercise-title text-xl md:text-2xl font-bold text-white tracking-tight mb-1">
-          Workout for health &amp; skill list
+          {t("member.catalog.workoutListTitle")}
         </h1>
         <p className="exercise-description text-xs md:text-sm text-[#8a82af]">{subtitle}</p>
       </header>
@@ -604,7 +626,7 @@ export default function WorkoutSystemListPage() {
           onClick={() => handleTabSwitch("health")}
         >
           <HeartIcon className="h-3.5 w-3.5 text-white" />
-          <span>Health</span>
+          <span>{t("member.catalog.health")}</span>
         </button>
         <button
           type="button"
@@ -618,7 +640,7 @@ export default function WorkoutSystemListPage() {
           onClick={() => handleTabSwitch("skills")}
         >
           <StarIcon className="h-3.5 w-3.5" />
-          <span>Skills</span>
+          <span>{t("member.catalog.skills")}</span>
         </button>
       </div>
 
@@ -642,7 +664,7 @@ export default function WorkoutSystemListPage() {
 
         <main className="flex-1 w-full min-w-0">
           <div className="text-xs font-medium text-[#8a82af] mb-1.5 px-1">
-            {filteredWorkouts.length} workouts
+            {t("member.catalog.totalWorkouts", { count: filteredWorkouts.length })}
           </div>
           <div className="space-y-1.5">
             {loading ? (
@@ -661,16 +683,16 @@ export default function WorkoutSystemListPage() {
                 <div className="w-10 h-10 mx-auto mb-2 text-purple-400 flex items-center justify-center">
                   <DumbbellIcon className="h-6 w-6 text-[#9d7aff]" />
                 </div>
-                <h3 className="text-base font-bold text-white mb-1">No workouts found</h3>
+                <h3 className="text-base font-bold text-white mb-1">{t("member.catalog.noWorkoutsFound")}</h3>
                 <p className="text-xs text-[#8a82af] mb-3">
-                  Try adjusting your search keywords, filter, or difficulty level.
+                  {t("member.catalog.adjustFilters")}
                 </p>
                 <button
                   type="button"
                   className="bg-[#5b32e8] hover:bg-[#4d28d0] text-white text-xs font-semibold px-3.5 py-1.5 rounded-xl transition-all cursor-pointer"
                   onClick={clearFilters}
                 >
-                  Clear all filters
+                  {t("member.catalog.clearAllFilters")}
                 </button>
               </div>
             ) : (

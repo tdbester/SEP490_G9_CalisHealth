@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import BackButton from "../components/common/BackButton";
@@ -6,21 +7,14 @@ import BarChart from "../components/common/BarChart";
 import trackingApi from "../api/tracking";
 import "./PerformanceAnalytics.css";
 
-const RANGES = [
-  { id: "1M", period: "this month" },
-  { id: "3M", period: "in the last 3 months" },
-  { id: "1Y", period: "this year" },
-];
+const RANGE_IDS = ["1M", "3M", "1Y"];
 
 const ERROR_COLORS = ["#EC4899", "#C084FC", "#6C8CFF", "#4A4466"];
 
 // Nhãn cột 1Y là "Q1 2026"... -> thêm các tháng của quý ở dòng chữ nhỏ bên dưới
 const QUARTER_MONTHS = { Q1: "Jan – Mar", Q2: "Apr – Jun", Q3: "Jul – Sep", Q4: "Oct – Dec" };
 
-const VOLUME_METRICS = [
-  { id: "reps", label: "Reps" },
-  { id: "hold", label: "Hold time" },
-];
+const VOLUME_METRIC_IDS = ["reps", "hold"];
 
 function formatDuration(totalMinutes) {
   const hours = Math.floor(totalMinutes / 60);
@@ -39,6 +33,7 @@ function formatHold(totalSeconds) {
 
 /** Vòng donut chia theo tỉ lệ các lỗi form. */
 function ErrorDonut({ items, total }) {
+  const { t } = useTranslation();
   const radius = 54;
   const circumference = 2 * Math.PI * radius;
   const gap = 4;
@@ -70,7 +65,7 @@ function ErrorDonut({ items, total }) {
       </svg>
       <div className="pa-donut-center">
         <strong>{total}</strong>
-        <span>Tags</span>
+        <span>{t("member.analytics.tags")}</span>
       </div>
     </div>
   );
@@ -124,11 +119,18 @@ function SectionLabel({ index, children }) {
 }
 
 export default function PerformanceAnalytics() {
+  const { t } = useTranslation();
   const [range, setRange] = useState("1M");
   const [volumeMetric, setVolumeMetric] = useState("reps");
   // Số liệu luôn lấy từ tài khoản đang đăng nhập; không còn dữ liệu mẫu dự phòng
   const [state, setState] = useState({ status: "loading", data: null });
-  const period = RANGES.find((r) => r.id === range).period;
+  const period = t(
+    {
+      "1M": "member.analytics.periodThisMonth",
+      "3M": "member.analytics.periodLast3Months",
+      "1Y": "member.analytics.periodThisYear",
+    }[range],
+  );
 
   useEffect(() => {
     let active = true;
@@ -152,7 +154,13 @@ export default function PerformanceAnalytics() {
   const showHold = volumeMetric === "hold";
   const volumeValue = (b) => (showHold ? b.holdSeconds ?? 0 : b.reps);
   const volumeTotal = data?.volume.reduce((sum, b) => sum + volumeValue(b), 0) ?? 0;
-  const bucket = { "1M": "week", "3M": "month", "1Y": "quarter" }[range];
+  const bucket = t(
+    {
+      "1M": "member.analytics.bucketWeek",
+      "3M": "member.analytics.bucketMonth",
+      "1Y": "member.analytics.bucketQuarter",
+    }[range],
+  );
   const totalMinutes = data ? data.duration.activeMin + data.duration.restMin : 0;
   const activePercent = totalMinutes
     ? Math.round((data.duration.activeMin / totalMinutes) * 100)
@@ -160,28 +168,28 @@ export default function PerformanceAnalytics() {
 
   return (
     <div className="performance-analytics">
-      <BackButton to="/tracking">Back to health overview</BackButton>
+      <BackButton to="/tracking">{t("member.analytics.backToOverview")}</BackButton>
 
       {/* ── Header ─────────────────────────────────────────────── */}
       <header className="pa-header">
-        <span className="pa-eyebrow">Deep insights</span>
-        <h1 className="pa-title">Performance analytics</h1>
+        <span className="pa-eyebrow">{t("member.analytics.eyebrow")}</span>
+        <h1 className="pa-title">{t("member.analytics.title")}</h1>
         <p className="pa-subtitle">
-          Understand your training trends and make every session count.
+          {t("member.analytics.subtitle")}
         </p>
       </header>
 
-      <div className="pa-tabs" role="tablist" aria-label="Time range">
-        {RANGES.map((r) => (
+      <div className="pa-tabs" role="tablist" aria-label={t("member.analytics.timeRangeAria")}>
+        {RANGE_IDS.map((id) => (
           <button
-            key={r.id}
+            key={id}
             type="button"
             role="tab"
-            aria-selected={range === r.id}
-            className={`pa-tab ${range === r.id ? "active" : ""}`}
-            onClick={() => setRange(r.id)}
+            aria-selected={range === id}
+            className={`pa-tab ${range === id ? "active" : ""}`}
+            onClick={() => setRange(id)}
           >
-            {r.id}
+            {id}
           </button>
         ))}
       </div>
@@ -189,24 +197,24 @@ export default function PerformanceAnalytics() {
       {!data ? (
         <p className="pa-card pa-empty" role={state.status === "error" ? "alert" : undefined}>
           {state.status === "loading"
-            ? "Loading your analytics…"
+            ? t("member.analytics.loading")
             : state.status === "error"
-              ? "We could not load your analytics. Please try again later."
-              : `No workouts recorded ${period}. Complete a few AI-tracked workouts to see your trends.`}
+              ? t("member.analytics.loadFailed")
+              : t("member.analytics.empty", { period })}
         </p>
       ) : (
         <>
           {/* ── 01 AI form & accuracy ─────────────────────────────── */}
           <section className="pa-section">
-            <SectionLabel index="01">AI form &amp; accuracy metrics</SectionLabel>
+            <SectionLabel index="01">{t("member.analytics.sectionForm")}</SectionLabel>
             <div className="pa-grid">
               <article className="pa-card pa-errors">
-                <h3 className="pa-card-title">Common Form Errors</h3>
-                <p className="pa-card-subtitle">Issues detected by AI coaching</p>
+                <h3 className="pa-card-title">{t("member.analytics.commonFormErrors")}</h3>
+                <p className="pa-card-subtitle">{t("member.analytics.issuesDetected")}</p>
                 <div className="pa-card-body">
                   <ErrorDonut items={data.formErrors.items} total={data.formErrors.totalTags} />
                   {data.formErrors.items.length === 0 && (
-                    <p className="pa-card-subtitle">No form errors flagged {period}.</p>
+                    <p className="pa-card-subtitle">{t("member.analytics.noFormErrors", { period })}</p>
                   )}
                   <ul className="pa-legend">
                     {data.formErrors.items.map((item, i) => (
@@ -224,79 +232,79 @@ export default function PerformanceAnalytics() {
               </article>
 
               <article className="pa-card">
-                <h3 className="pa-card-title">Clean Rep Ratio</h3>
-                <p className="pa-card-subtitle">Valid reps vs. total reps</p>
+                <h3 className="pa-card-title">{t("member.analytics.cleanRepRatio")}</h3>
+                <p className="pa-card-subtitle">{t("member.analytics.validVsTotal")}</p>
                 <div className="pa-card-body">
-                  <RatioRing percent={cleanRatio} label="clean reps" />
+                  <RatioRing percent={cleanRatio} label={t("member.analytics.cleanReps")} />
                   <div className="pa-reps">
                     <div>
                       <strong>{data.reps.valid.toLocaleString("en-US")}</strong>
-                      <span>Valid reps</span>
+                      <span>{t("member.analytics.validReps")}</span>
                     </div>
                     <div>
                       <strong>{data.reps.total.toLocaleString("en-US")}</strong>
-                      <span>Total reps</span>
+                      <span>{t("member.analytics.totalReps")}</span>
                     </div>
                   </div>
                 </div>
-                <p className="pa-formula">Clean reps ÷ Total reps × 100</p>
+                <p className="pa-formula">{t("member.analytics.cleanRepFormula")}</p>
               </article>
 
               <article className="pa-card">
-                <h3 className="pa-card-title">Clean Hold Ratio</h3>
-                <p className="pa-card-subtitle">AI form score across your hold sets</p>
+                <h3 className="pa-card-title">{t("member.analytics.cleanHoldRatio")}</h3>
+                <p className="pa-card-subtitle">{t("member.analytics.holdScore")}</p>
                 {hold.entries === 0 ? (
                   <p className="pa-card-subtitle pa-card-empty">
-                    No hold exercises (plank, L-sit, lever…) recorded {period}.
+                    {t("member.analytics.noHoldExercises", { period })}
                   </p>
                 ) : (
                   <div className="pa-card-body">
                     <RatioRing
                       percent={hold.formScore}
-                      label="clean hold"
+                      label={t("member.analytics.cleanHold")}
                       colors={["#EC4899", "#A855F7"]}
                     />
                     <div className="pa-reps">
                       <div>
                         <strong>{formatHold(hold.totalSeconds)}</strong>
-                        <span>Total hold time</span>
+                        <span>{t("member.analytics.totalHoldTime")}</span>
                       </div>
                       <div>
                         <strong>{formatHold(hold.bestSetSeconds)}</strong>
-                        <span>Best hold / set</span>
+                        <span>{t("member.analytics.bestHoldSet")}</span>
                       </div>
                     </div>
                   </div>
                 )}
-                <p className="pa-formula">Sum of hold form scores ÷ Number of holds</p>
+                <p className="pa-formula">{t("member.analytics.cleanHoldFormula")}</p>
               </article>
             </div>
           </section>
 
           {/* ── 02 Training volume & load ─────────────────────────── */}
           <section className="pa-section">
-            <SectionLabel index="02">Training volume &amp; load</SectionLabel>
+            <SectionLabel index="02">{t("member.analytics.sectionVolume")}</SectionLabel>
 
             <article className={`pa-card pa-volume ${range === "1Y" ? "pa-volume-sublabels" : ""}`}>
               <header className="pa-volume-head">
                 <div>
-                  <h3 className="pa-card-title">Volume Load Progression</h3>
+                  <h3 className="pa-card-title">{t("member.analytics.volumeProgression")}</h3>
                   <p className="pa-card-subtitle">
                     {showHold
-                      ? `Total time held in hold exercises per ${bucket}`
-                      : `Total completed reps per ${bucket}`}
+                      ? t("member.analytics.volumeHoldSubtitle", { bucket })
+                      : t("member.analytics.volumeRepsSubtitle", { bucket })}
                   </p>
-                  <div className="pa-metric-tabs" role="tablist" aria-label="Volume metric">
-                    {VOLUME_METRICS.map((m) => (
+                  <div className="pa-metric-tabs" role="tablist" aria-label={t("member.analytics.volumeMetricAria")}>
+                    {VOLUME_METRIC_IDS.map((id) => (
                       <button
-                        key={m.id}
+                        key={id}
                         type="button"
                         role="tab"
-                        aria-selected={volumeMetric === m.id}
-                        className={`pa-metric-tab ${volumeMetric === m.id ? "active" : ""}`}
-                        onClick={() => setVolumeMetric(m.id)}
+                        aria-selected={volumeMetric === id}
+                        className={`pa-metric-tab ${volumeMetric === id ? "active" : ""}`}
+                        onClick={() => setVolumeMetric(id)}
                       >
-                        {m.label}
+                        {t(id === "hold" ? "member.analytics.metricHold" : "member.analytics.metricReps")}
                       </button>
                     ))}
                   </div>
@@ -305,12 +313,19 @@ export default function PerformanceAnalytics() {
                   <strong>
                     {showHold ? formatHold(volumeTotal) : volumeTotal.toLocaleString("en-US")}
                   </strong>
-                  <span>{showHold ? "hold time" : "reps"} {period}</span>
+                  <span>
+                    {showHold
+                      ? t("member.analytics.holdTimeUnit")
+                      : t("member.analytics.repsUnit")}{" "}
+                    {period}
+                  </span>
                 </div>
               </header>
               <div className="pa-volume-chart">
                 <BarChart
-                  ariaLabel={showHold ? "Hold time bar chart" : "Completed reps bar chart"}
+                  ariaLabel={showHold
+                    ? t("member.analytics.holdChartAria")
+                    : t("member.analytics.repsChartAria")}
                   height={150}
                   barWidth={80}
                   data={data.volume.map((b) => {
@@ -332,20 +347,20 @@ export default function PerformanceAnalytics() {
                   <AccessTimeRoundedIcon />
                 </span>
                 <div className="pa-duration-title">
-                  <h3 className="pa-card-title">Workout Duration &amp; Active Time</h3>
-                  <p className="pa-card-subtitle">Your time distribution {period}</p>
+                  <h3 className="pa-card-title">{t("member.analytics.durationTitle")}</h3>
+                  <p className="pa-card-subtitle">{t("member.analytics.durationSubtitle", { period })}</p>
                 </div>
                 <dl className="pa-duration-stats">
                   <div>
-                    <dt>Total workout duration</dt>
+                    <dt>{t("member.analytics.totalDuration")}</dt>
                     <dd>{formatDuration(totalMinutes)}</dd>
                   </div>
                   <div>
-                    <dt>Active training</dt>
+                    <dt>{t("member.analytics.activeTraining")}</dt>
                     <dd>{formatDuration(data.duration.activeMin)}</dd>
                   </div>
                   <div>
-                    <dt>Rest between sets</dt>
+                    <dt>{t("member.analytics.restBetweenSets")}</dt>
                     <dd>{formatDuration(data.duration.restMin)}</dd>
                   </div>
                 </dl>
@@ -356,13 +371,13 @@ export default function PerformanceAnalytics() {
                 aria-valuenow={activePercent}
                 aria-valuemin={0}
                 aria-valuemax={100}
-                aria-label="Active training share"
+                aria-label={t("member.analytics.activeShareAria")}
               >
                 <div className="pa-progress-fill" style={{ width: `${activePercent}%` }} />
               </div>
               <div className="pa-progress-legend">
-                <span className="active">{activePercent}% active</span>
-                <span>{100 - activePercent}% rest</span>
+                <span className="active">{t("member.analytics.percentActive", { count: activePercent })}</span>
+                <span>{t("member.analytics.percentRest", { count: 100 - activePercent })}</span>
               </div>
             </article>
           </section>
@@ -374,7 +389,7 @@ export default function PerformanceAnalytics() {
                 <AutoAwesomeRoundedIcon />
               </span>
               <div>
-                <span className="pa-insight-label">Insight</span>
+                <span className="pa-insight-label">{t("member.analytics.insight")}</span>
                 <p className="pa-insight-title">{data.insight.title}</p>
                 <p className="pa-insight-text">{data.insight.text}</p>
               </div>

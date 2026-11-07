@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { getExerciseTree } from "../api/library";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { getLevelLabel } from "../utils/levelLabel";
 import { GAP_X, GAP_Y, NODE_H, NODE_W, layoutChain, rootsOf } from "../exerciseTreeLayout";
 import { routeEdges } from "../exerciseTreeRouting";
 
@@ -15,6 +17,7 @@ function normalizeExerciseName(value) {
 
 // Layout constants for the SVG grid
 export default function CalisthenicsExerciseTreePage() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -39,7 +42,7 @@ export default function CalisthenicsExerciseTreePage() {
       "";
   const initialSearch = searchParams.get("search") || "";
 
-  const [direction, setDirection] = useState("Easy → Hard");
+  const [direction, setDirection] = useState("EASY_TO_HARD");
   const [selectedCode, setSelectedCode] = useState(null);
   const [exerciseFilter, setExerciseFilter] = useState(
       initialExerciseName || initialSearch || initialExerciseCode || initialExerciseId,
@@ -52,11 +55,11 @@ export default function CalisthenicsExerciseTreePage() {
 
   // Keep document title synced
   useEffect(() => {
-    document.title = "CalisHealth - Explore";
+    document.title = t("member.exerciseTree.documentTitle");
     return () => {
       document.title = "CalisHealth";
     };
-  }, []);
+  }, [t]);
 
   // Sync context if URL parameters or navigation state change externally.
   useEffect(() => {
@@ -97,7 +100,7 @@ export default function CalisthenicsExerciseTreePage() {
           console.error("Failed to load exercise tree:", error);
           if (isMounted) {
             setTreeResponse(null);
-          setTreeError("Unable to load the exercise tree. Please try again.");
+            setTreeError(t("member.exerciseTree.loadFailed"));
           }
         })
         .finally(() => {
@@ -106,7 +109,8 @@ export default function CalisthenicsExerciseTreePage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t]);
 
   const groupData = useMemo(() => {
     const rawNodes = treeResponse?.nodes || [];
@@ -222,7 +226,7 @@ export default function CalisthenicsExerciseTreePage() {
       () => (rootCode ? layoutChain(treeGraph.nodes, treeGraph.edges, rootCode) : null),
       [treeGraph, rootCode],
   );
-  const isReverse = direction === "Hard → Easy";
+  const isReverse = direction === "HARD_TO_EASY";
   const spots = useMemo(() => new Map((chain?.items || []).map((item) => {
     const col = isReverse ? chain.cols - 1 - item.col : item.col;
     return [item.node.code, {
@@ -304,10 +308,10 @@ export default function CalisthenicsExerciseTreePage() {
         {/* 1. HEADER */}
         <header className="mb-6">
           <h1 className="text-2xl font-bold text-white tracking-tight">
-            Calisthenics Exercise Tree
+            {t("member.exerciseTree.title")}
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Browse exercises and progression paths for your training.
+            {t("member.exerciseTree.subtitle")}
           </p>
         </header>
 
@@ -323,25 +327,25 @@ export default function CalisthenicsExerciseTreePage() {
             <div className="flex items-center gap-1.5 rounded-full border border-[#51427f] bg-[#0c0820] p-1.5 shadow-inner shadow-black/30">
             <button
                 type="button"
-                onClick={() => setDirection("Easy → Hard")}
+                onClick={() => setDirection("EASY_TO_HARD")}
                 className={`min-w-[112px] rounded-full border px-5 py-2 text-xs font-semibold transition-all cursor-pointer ${
-                    direction === "Easy → Hard"
+                    direction === "EASY_TO_HARD"
                         ? "border-[#9b83ff] bg-[#643bf6] text-white shadow-md shadow-purple-950/50"
                         : "border-[#403464] bg-[#1a1435] text-[#c4b5fd] hover:border-[#8068c4] hover:bg-[#261c4b] hover:text-white"
                 }`}
             >
-              Easy → Hard
+              {t("member.exerciseTree.easyToHard")}
             </button>
             <button
                 type="button"
-                onClick={() => setDirection("Hard → Easy")}
+                onClick={() => setDirection("HARD_TO_EASY")}
                 className={`min-w-[112px] rounded-full border px-5 py-2 text-xs font-semibold transition-all cursor-pointer ${
-                    direction === "Hard → Easy"
+                    direction === "HARD_TO_EASY"
                         ? "border-[#9b83ff] bg-[#643bf6] text-white shadow-md shadow-purple-950/50"
                         : "border-[#403464] bg-[#1a1435] text-[#c4b5fd] hover:border-[#8068c4] hover:bg-[#261c4b] hover:text-white"
                 }`}
             >
-              Hard → Easy
+              {t("member.exerciseTree.hardToEasy")}
             </button>
             </div>
           </div>
@@ -350,7 +354,7 @@ export default function CalisthenicsExerciseTreePage() {
 
         {/* Member uses the same progression layout and edge routing as Content Manager. */}
         <section className="exercise-tree-scroll rounded-2xl border border-[#382b68] bg-[#171133] p-6 mt-5 relative shadow-2xl overflow-x-auto">
-          {treeLoading && <p className="mb-4 text-sm text-slate-400">Loading exercise tree…</p>}
+          {treeLoading && <p className="mb-4 text-sm text-slate-400">{t("member.exerciseTree.loading")}</p>}
           {treeError && (
               <p role="alert" className="mb-4 rounded-lg border border-amber-900/70 bg-amber-950/40 px-4 py-3 text-sm text-amber-300">
                 {treeError}
@@ -358,7 +362,7 @@ export default function CalisthenicsExerciseTreePage() {
           )}
           {!treeLoading && !treeError && !chain?.items.length && (
               <p className="py-12 text-center text-sm text-slate-400">
-                No progression rules are available for this tree.
+                {t("member.exerciseTree.empty")}
               </p>
           )}
           {chain?.items.length > 0 && <div className="mx-auto" style={{ width: `${treeWidth}px` }}>
@@ -468,7 +472,7 @@ export default function CalisthenicsExerciseTreePage() {
                       )}
 
                       <span className="text-xs text-[#c4b5fd] font-semibold">
-                    Lv {item.col + 1}
+                    {t("member.exerciseTree.levelBadge", { level: item.col + 1 })}
                   </span>
                     </div>
 
@@ -482,7 +486,7 @@ export default function CalisthenicsExerciseTreePage() {
                   <span
                       className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border capitalize ${getLevelBadgeStyle(node.difficulty)}`}
                   >
-                    {node.difficulty}
+                    {getLevelLabel(node.difficulty)}
                   </span>
                     </div>
                   </button>
@@ -496,24 +500,24 @@ export default function CalisthenicsExerciseTreePage() {
             <div className="flex items-center gap-5">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block shadow-sm" />
-                <span className="text-slate-300 font-medium">{groupData.legend?.MASTERED || "Mastered"}</span>
+                <span className="text-slate-300 font-medium">{groupData.legend?.MASTERED || t("member.exerciseTree.legendMastered")}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#643bf6] inline-block shadow-sm" />
-                <span className="text-slate-300 font-medium">{groupData.legend?.CURRENT || "Current"}</span>
+                <span className="text-slate-300 font-medium">{groupData.legend?.CURRENT || t("member.exerciseTree.legendCurrent")}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full border border-slate-500 inline-block bg-transparent" />
-                <span className="text-slate-300 font-medium">{groupData.legend?.LOCKED || "Locked"}</span>
+                <span className="text-slate-300 font-medium">{groupData.legend?.LOCKED || t("member.exerciseTree.legendLocked")}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-5 border-t border-dashed border-slate-500 inline-block" />
-                <span className="text-slate-300 font-medium">Inactive rule</span>
+                <span className="text-slate-300 font-medium">{t("member.exerciseTree.legendInactiveRule")}</span>
               </div>
             </div>
 
             <div className="text-slate-500 italic">
-              {isReverse ? "Progression arrows point from right to left" : "Progression arrows point from left to right"}
+              {isReverse ? t("member.exerciseTree.arrowsRightToLeft") : t("member.exerciseTree.arrowsLeftToRight")}
             </div>
           </div>
         </section>
@@ -536,28 +540,30 @@ export default function CalisthenicsExerciseTreePage() {
                       }`}
                   >
                 {selectedTreeItem.node.state === "current"
-                    ? "Current"
+                    ? t("member.exerciseTree.stateCurrent")
                     : selectedTreeItem.node.state === "mastered"
-                        ? "Mastered"
-                        : "Locked"}
+                        ? t("member.exerciseTree.stateMastered")
+                        : t("member.exerciseTree.stateLocked")}
               </span>
                 </div>
 
                 <p className="text-xs text-slate-300 mt-1.5">
-                  Level {selectedTreeItem.col + 1} ·{" "}
-                  {selectedTreeItem.node.difficulty || "No level"} ·{" "}
-                  {(selectedTreeItem.node.muscleGroups || []).join(", ")}
+                  {t("member.exerciseTree.detailMeta", {
+                    level: selectedTreeItem.col + 1,
+                    difficulty: selectedTreeItem.node.difficulty || t("member.exerciseTree.noLevel"),
+                    muscles: (selectedTreeItem.node.muscleGroups || []).join(", "),
+                  })}
                 </p>
 
                 <p className="text-xs text-slate-300 mt-1">
-                  Previous:{" "}
+                  {t("member.exerciseTree.previousLabel")}:{" "}
                   {selectedTreeItem.node.previous && selectedTreeItem.node.previous.length > 0
                       ? selectedTreeItem.node.previous.join(", ")
-                      : "None"}{" "}
-                  · Next:{" "}
+                      : t("member.exerciseTree.none")}{" "}
+                  · {t("member.exerciseTree.nextLabel")}:{" "}
                   {selectedTreeItem.node.next && selectedTreeItem.node.next.length > 0
                       ? selectedTreeItem.node.next.join(", ")
-                      : "None"}
+                      : t("member.exerciseTree.none")}
                 </p>
               </div>
 
@@ -567,7 +573,7 @@ export default function CalisthenicsExerciseTreePage() {
                     onClick={handleViewExercise}
                     className="rounded-xl bg-[#643bf6] hover:bg-[#522cd9] text-white text-xs font-semibold px-6 py-3 shadow-md transition-all active:scale-95 cursor-pointer whitespace-nowrap outline-none border-0"
                 >
-                  View exercise
+                  {t("member.exerciseTree.viewExercise")}
                 </button>
               </div>
             </section>
