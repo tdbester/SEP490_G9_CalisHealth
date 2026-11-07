@@ -40,9 +40,21 @@ function SurveyIcon({ isActive }) {
   );
 }
 
+function LeaderboardIcon({ isActive }) {
+  const color = isActive ? "#c4b5fd" : "#A89BD0";
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="14" width="4" height="8" fill={color} opacity="0.6" />
+      <rect x="10" y="8" width="4" height="14" fill={color} />
+      <rect x="18" y="11" width="4" height="11" fill={color} opacity="0.8" />
+    </svg>
+  );
+}
+
 const NAV_ITEMS = [
-  { label: "Dashboard", path: "/",        icon: DashboardIcon },
-  { label: "Library",   path: "/library", icon: LibraryIcon },
+  { label: "Dashboard", path: "/",           icon: DashboardIcon },
+  { label: "Library",   path: "/library",    icon: LibraryIcon },
+  { label: "Leaderboard", path: "/leaderboard", icon: LeaderboardIcon },
   { label: "Health & Progress", path: "/tracking", icon: TrackingIcon },
 ];
 

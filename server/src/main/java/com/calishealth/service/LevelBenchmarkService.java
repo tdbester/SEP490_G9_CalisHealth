@@ -279,10 +279,65 @@ public class LevelBenchmarkService {
         if (!Set.of("ACTIVE", "INACTIVE").contains(normalized)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status must be Active or Inactive");
         }
+        
+        // When deactivating a level, downgrade all members from this level to the next lower active level
+        if ("INACTIVE".equals(normalized) && "ACTIVE".equals(level.getStatus())) {
+            downgradeMembers(level);
+        }
+        
         level.setStatus(normalized);
         level.setUpdatedBy(actor);
         fitnessLevels.save(level);
         return getConfiguration();
+    }
+    
+    private void downgradeMembers(FitnessLevel deactivatedLevel) {
+        try {
+            // Get all levels sorted by score
+            List<FitnessLevel> allLevels = fitnessLevels.findAll().stream()
+                    .sorted(Comparator.comparingInt(FitnessLevel::getScoreMin))
+                    .toList();
+            
+            // Find the index of the deactivated level
+            int deactivatedIndex = -1;
+            for (int i = 0; i < allLevels.size(); i++) {
+                if (allLevels.get(i).getId().equals(deactivatedLevel.getId())) {
+                    deactivatedIndex = i;
+                    break;
+                }
+            }
+            
+            if (deactivatedIndex <= 0) {
+                return; // Cannot downgrade from the lowest level
+            }
+            
+            // Find the next lower active level
+            FitnessLevel targetLevel = null;
+            for (int i = deactivatedIndex - 1; i >= 0; i--) {
+                if ("ACTIVE".equals(allLevels.get(i).getStatus())) {
+                    targetLevel = allLevels.get(i);
+                    break;
+                }
+            }
+            
+            if (targetLevel == null) {
+                return; // No active level to downgrade to
+            }
+            
+            // Find all members with the deactivated level
+            List<MemberProfile> membersToDowngrade = memberProfiles.findAll().stream()
+                    .filter(profile -> profile.getFitnessLevel() != null && 
+                                      deactivatedLevel.getId().equals(profile.getFitnessLevel().getId()))
+                    .toList();
+            
+            // Downgrade each member
+            for (MemberProfile profile : membersToDowngrade) {
+                profile.setFitnessLevel(targetLevel);
+                memberProfiles.save(profile);
+            }
+        } catch (Exception e) {
+            System.err.println("Warning: Failed to downgrade members: " + e.getMessage());
+        }
     }
 
     @Transactional
