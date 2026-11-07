@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Navigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { getLibraryOverview } from "../api/library";
 import "./Library.css";
 
@@ -32,8 +33,18 @@ function ArrowRightIcon() {
   );
 }
 
+/** Ngôi sao — dùng cho nút mở màn Favorites. */
+function StarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
 export default function Library() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const queryType = searchParams.get("type");
 
@@ -65,7 +76,7 @@ export default function Library() {
 
     if (overviewResult.status === "rejected") {
       console.error("Failed to load library summary:", overviewResult.reason);
-      setError("Unable to load latest library statistics. Showing cached or default view.");
+      setError(t("member.library.loadError"));
     }
 
     setCounts({
@@ -95,8 +106,18 @@ export default function Library() {
     <div className="library-container">
       {/* 2. Tiêu đề trang */}
       <header className="library-header">
-        <h1 className="library-title">Exercise &amp; Skill library</h1>
-        <p className="library-description">Choose a section to open its list.</p>
+        <div>
+          <h1 className="library-title">{t("member.library.pageTitle")}</h1>
+          <p className="library-description">{t("member.library.pageDescription")}</p>
+        </div>
+        <button
+          type="button"
+          className="library-favorites-link"
+          onClick={() => handleNavigate("/library/favorites")}
+        >
+          <StarIcon />
+          <span>{t("member.favorites.title")}</span>
+        </button>
       </header>
 
       {/* Error state alert */}
@@ -104,19 +125,19 @@ export default function Library() {
         <div className="library-error-banner" role="alert">
           <span>{error}</span>
           <button className="library-retry-btn" onClick={fetchData}>
-            Retry
+            {t("common.retry")}
           </button>
         </div>
       )}
 
       {/* 3. Section 1: Exercise (Bài tập) */}
       <section className="library-section">
-        <h2 className="section-title">Exercise</h2>
+        <h2 className="section-title">{t("member.library.exerciseSection")}</h2>
 
         <div className="section-grid">
           {/* Sub-header row: System exercise (span 2) and Member provided exercise (span 1) */}
-          <div className="group-label group-label-system">System exercise</div>
-          <div className="group-label group-label-member">Member provided exercise</div>
+          <div className="group-label group-label-system">{t("member.library.systemExercise")}</div>
+          <div className="group-label group-label-member">{t("member.library.memberProvidedExercise")}</div>
 
           {/* Card 1: Exercise for health */}
           <div className="library-card card-system-1">
@@ -125,17 +146,17 @@ export default function Library() {
                 <PlayIcon />
               </div>
               <div className="card-title-row">
-                <h3 className="card-title">Exercise for health</h3>
+                <h3 className="card-title">{t("member.library.exerciseForHealth")}</h3>
                 {loading ? (
                   <div className="skeleton-pulse skeleton-text-count" />
                 ) : (
                   <span className="card-count">
-                    {counts.exercise.healthCount} exercises
+                    {t("member.library.exerciseCount", { count: counts.exercise.healthCount })}
                   </span>
                 )}
               </div>
               <p className="card-description">
-                Bodyweight exercises for general health and fitness.
+                {t("member.library.exerciseForHealthDesc")}
               </p>
             </div>
             <div className="card-footer">
@@ -146,7 +167,7 @@ export default function Library() {
                   handleNavigate("/library/exercises?type=health")
                 }
               >
-                <span>View list</span>
+                <span>{t("member.library.viewList")}</span>
                 <ArrowRightIcon />
               </button>
             </div>
@@ -159,17 +180,17 @@ export default function Library() {
                 <PlayIcon />
               </div>
               <div className="card-title-row">
-                <h3 className="card-title">Exercise for skill</h3>
+                <h3 className="card-title">{t("member.library.exerciseForSkill")}</h3>
                 {loading ? (
                   <div className="skeleton-pulse skeleton-text-count" />
                 ) : (
                   <span className="card-count">
-                    {counts.exercise.skillCount} exercises
+                    {t("member.library.exerciseCount", { count: counts.exercise.skillCount })}
                   </span>
                 )}
               </div>
               <p className="card-description">
-                Exercises that build calisthenics skills.
+                {t("member.library.exerciseForSkillDesc")}
               </p>
             </div>
             <div className="card-footer">
@@ -180,7 +201,7 @@ export default function Library() {
                   handleNavigate("/library/exercises?type=skill")
                 }
               >
-                <span>View list</span>
+                <span>{t("member.library.viewList")}</span>
                 <ArrowRightIcon />
               </button>
             </div>
@@ -193,16 +214,16 @@ export default function Library() {
                 <PlayIcon />
               </div>
               <div className="card-title-row">
-                <h3 className="card-title">Member provided exercise</h3>
+                <h3 className="card-title">{t("member.library.memberProvidedExercise")}</h3>
                 {loading ? (
                   <div className="skeleton-pulse skeleton-text-count" />
                 ) : (
                   <span className="card-count">
-                    {counts.exercise.memberCount} exercises
+                    {t("member.library.exerciseCount", { count: counts.exercise.memberCount })}
                   </span>
                 )}
               </div>
-              <p className="card-description">Exercises you added yourself.</p>
+              <p className="card-description">{t("member.library.memberProvidedDesc")}</p>
             </div>
             <div className="card-footer">
               <button
@@ -212,7 +233,7 @@ export default function Library() {
                   handleNavigate("/library/community")
                 }
               >
-                <span>View list</span>
+                <span>{t("member.library.viewList")}</span>
                 <ArrowRightIcon />
               </button>
             </div>
@@ -222,12 +243,12 @@ export default function Library() {
 
       {/* 4. Section 2: Workout (Giáo án/Buổi tập) */}
       <section className="library-section">
-        <h2 className="section-title">Workout</h2>
+        <h2 className="section-title">{t("member.library.workoutSection")}</h2>
 
         <div className="section-grid">
           {/* Sub-header row: System workout (span 2) and Custom workout (span 1) */}
-          <div className="group-label group-label-system">System workout</div>
-          <div className="group-label group-label-member">Custom workout</div>
+          <div className="group-label group-label-system">{t("member.library.systemWorkout")}</div>
+          <div className="group-label group-label-member">{t("member.library.customWorkout")}</div>
 
           {/* Card 1: Workout for health */}
           <div className="library-card card-system-1">
@@ -236,17 +257,17 @@ export default function Library() {
                 <ListIcon />
               </div>
               <div className="card-title-row">
-                <h3 className="card-title">Workout for health</h3>
+                <h3 className="card-title">{t("member.library.workoutForHealth")}</h3>
                 {loading ? (
                   <div className="skeleton-pulse skeleton-text-count" />
                 ) : (
                   <span className="card-count">
-                    {counts.workout.healthCount} workouts
+                    {t("member.library.workoutCount", { count: counts.workout.healthCount })}
                   </span>
                 )}
               </div>
               <p className="card-description">
-                Built from exercises for health.
+                {t("member.library.workoutForHealthDesc")}
               </p>
             </div>
             <div className="card-footer">
@@ -255,7 +276,7 @@ export default function Library() {
                 className="card-view-btn"
                 onClick={() => handleNavigate("/library/workouts/system?type=health")}
               >
-                <span>View list</span>
+                <span>{t("member.library.viewList")}</span>
                 <ArrowRightIcon />
               </button>
             </div>
@@ -268,17 +289,17 @@ export default function Library() {
                 <ListIcon />
               </div>
               <div className="card-title-row">
-                <h3 className="card-title">Workout for skill</h3>
+                <h3 className="card-title">{t("member.library.workoutForSkill")}</h3>
                 {loading ? (
                   <div className="skeleton-pulse skeleton-text-count" />
                 ) : (
                   <span className="card-count">
-                    {counts.workout.skillCount} workouts
+                    {t("member.library.workoutCount", { count: counts.workout.skillCount })}
                   </span>
                 )}
               </div>
               <p className="card-description">
-                Built from exercises for skill.
+                {t("member.library.workoutForSkillDesc")}
               </p>
             </div>
             <div className="card-footer">
@@ -287,7 +308,7 @@ export default function Library() {
                 className="card-view-btn"
                 onClick={() => handleNavigate("/library/workouts/system?type=skills")}
               >
-                <span>View list</span>
+                <span>{t("member.library.viewList")}</span>
                 <ArrowRightIcon />
               </button>
             </div>
@@ -300,17 +321,17 @@ export default function Library() {
                 <ListIcon />
               </div>
               <div className="card-title-row">
-                <h3 className="card-title">Custom workout</h3>
+                <h3 className="card-title">{t("member.library.customWorkout")}</h3>
                 {loading ? (
                   <div className="skeleton-pulse skeleton-text-count" />
                 ) : (
                   <span className="card-count">
-                    {counts.workout.customCount} workouts
+                    {t("member.library.workoutCount", { count: counts.workout.customCount })}
                   </span>
                 )}
               </div>
               <p className="card-description">
-                System based or member provided workouts.
+                {t("member.library.customWorkoutDesc")}
               </p>
             </div>
             <div className="card-footer">
@@ -319,7 +340,7 @@ export default function Library() {
                 className="card-view-btn"
                 onClick={() => handleNavigate("/library/custom")}
               >
-                <span>View list</span>
+                <span>{t("member.library.viewList")}</span>
                 <ArrowRightIcon />
               </button>
             </div>

@@ -1,4 +1,5 @@
 import { Alert, Box, Button, Card, CircularProgress, Stack, Typography } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { ContentPageHeader } from "../components/ContentShared";
 import { CM } from "../theme-content";
 
@@ -7,6 +8,7 @@ import { CM } from "../theme-content";
  * loading / lỗi / nội dung. Giữ style tối giống Exercise list.
  */
 export default function ContentDataCard({ query, title, children }) {
+  const { t } = useTranslation();
   const { isLoading, error, refetch } = query;
 
   if (isLoading) {
@@ -15,7 +17,7 @@ export default function ContentDataCard({ query, title, children }) {
         <Stack spacing={1.5} alignItems="center">
           <CircularProgress size={24} />
           <Typography variant="body2" color="text.secondary">
-            Loading data from the database…
+            {t("contentManager.common.loadingData")}
           </Typography>
         </Stack>
       </Card>
@@ -29,11 +31,14 @@ export default function ContentDataCard({ query, title, children }) {
           severity="error"
           action={
             <Button color="inherit" size="small" onClick={() => refetch()}>
-              Try again
+              {t("common.apiError.retry")}
             </Button>
           }
         >
-          Could not load {title || "this data"}. {error.message}
+          {t("contentManager.common.loadFailedNamed", {
+            title: title || t("contentManager.common.thisData"),
+            message: error.message,
+          })}
         </Alert>
       </Card>
     );

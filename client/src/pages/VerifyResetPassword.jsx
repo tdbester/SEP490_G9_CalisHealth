@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import AuthLogo from "../components/AuthLogo";
 import "./Login.css";
@@ -7,6 +8,7 @@ import "./Login.css";
 const REDIRECT_SECONDS = 8;
 
 export default function VerifyResetPassword() {
+  const { t } = useTranslation();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const token = params.get("token") || "";
@@ -38,12 +40,16 @@ export default function VerifyResetPassword() {
       <div className="login-card">
         <AuthLogo />
         <h1 className="login-title">
-          {status === "verifying" ? "Verifying..." : status === "success" ? "Verification successful" : "Verification failed"}
+          {status === "verifying"
+            ? t("common.auth.verifyResetPassword.verifying")
+            : status === "success"
+              ? t("common.auth.verifyResetPassword.successTitle")
+              : t("common.auth.verifyResetPassword.errorTitle")}
         </h1>
         <div className="login-form">
-          {status === "verifying" && <div className="login-success">Checking the password reset link...</div>}
-          {status === "success" && <div className="login-success">Token is valid. You will be redirected to the reset password page in {seconds} seconds.</div>}
-          {status === "error" && <div className="login-error">The token has expired, please sign up again. Redirecting to the login page in {seconds} seconds.</div>}
+          {status === "verifying" && <div className="login-success">{t("common.auth.verifyResetPassword.checkingLink")}</div>}
+          {status === "success" && <div className="login-success">{t("common.auth.verifyResetPassword.validToken", { seconds })}</div>}
+          {status === "error" && <div className="login-error">{t("common.auth.verifyResetPassword.expiredToken", { seconds })}</div>}
         </div>
       </div>
     </div>

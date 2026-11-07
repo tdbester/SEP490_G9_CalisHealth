@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import LocalFireDepartmentRoundedIcon from "@mui/icons-material/LocalFireDepartmentRounded";
@@ -12,12 +13,6 @@ import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import api from "../api/client";
 import DayReportModal from "../components/DayReportModal";
 import "./DayStreak.css";
-
-const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
-const MONTH_LABELS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
 
 function buildMonthGrid(year, month, workoutDays, streakDays, todayKey) {
   const loggedDays = new Set(workoutDays.map((key) => Number(key.slice(-2))));
@@ -50,11 +45,11 @@ function buildMonthGrid(year, month, workoutDays, streakDays, todayKey) {
   return cells;
 }
 
-function formatStreakRange(streakDays) {
-  if (streakDays.length === 0) return "No active streak";
+function formatStreakRange(streakDays, monthLabels, noStreakLabel) {
+  if (streakDays.length === 0) return noStreakLabel;
   const format = (key) => {
     const [, month, day] = key.split("-").map(Number);
-    return `${MONTH_LABELS[month - 1].slice(0, 3)} ${day}`;
+    return `${monthLabels[month - 1].slice(0, 3)} ${day}`;
   };
   return `${format(streakDays[0])} – ${format(streakDays[streakDays.length - 1])}`;
 }
@@ -67,7 +62,7 @@ function localDateKey(date = new Date()) {
 }
 
 /** Một ô ngày trong lịch: trống, đã tập, thuộc chuỗi streak, hoặc ngày nghỉ. */
-function CalendarCell({ cell, onSelect }) {
+function CalendarCell({ cell, onSelect, monthLabels, t }) {
   if (cell.empty) {
     return <div className="streak-cell streak-cell-empty" aria-hidden="true" />;
   }
@@ -84,10 +79,10 @@ function CalendarCell({ cell, onSelect }) {
     .join(" ");
 
   const label = [
-    `${MONTH_LABELS[cell.month]} ${cell.day}`,
-    cell.logged ? "workout logged" : "rest day",
-    cell.streak ? "streak day" : "",
-    cell.isToday ? "current active day" : "",
+    `${monthLabels[cell.month]} ${cell.day}`,
+    cell.logged ? t("member.streak.loggedWorkout") : t("member.streak.restDay"),
+    cell.streak ? t("member.streak.streakDay") : "",
+    cell.isToday ? t("member.streak.currentActiveDay") : "",
   ]
     .filter(Boolean)
     .join(", ");
@@ -102,20 +97,20 @@ function CalendarCell({ cell, onSelect }) {
 }
 
 /** Chú giải các ký hiệu trên lịch. */
-function CalendarLegend() {
+function CalendarLegend({ t }) {
   return (
     <ul className="streak-legend">
       <li>
         <span className="streak-legend-mark streak-legend-dot" />
-        Logged Workout
+        {t("member.streak.loggedWorkout")}
       </li>
       <li>
         <span className="streak-legend-mark streak-legend-block" />
-        Streak Day
+        {t("member.streak.streakDay")}
       </li>
       <li>
         <LocalFireDepartmentRoundedIcon className="streak-legend-flame" />
-        Current Active Day
+        {t("member.streak.currentActiveDay")}
       </li>
     </ul>
   );
@@ -138,6 +133,9 @@ function StreakStatCard({ icon, label, value, unit, caption }) {
 
 export default function DayStreak() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const monthLabels = t("date.months", { returnObjects: true });
+  const weekdayLabels = t("date.weekdaysShort", { returnObjects: true });
   const todayKey = localDateKey();
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
@@ -172,7 +170,7 @@ export default function DayStreak() {
 
   const streakDays = streakData?.currentStreakDays ?? [];
   const weeklyGoal = streakData?.weeklyGoal;
-  const streakRange = useMemo(() => formatStreakRange(streakDays), [streakDays]);
+  const streakRange = useMemo(() => formatStreakRange(streakDays, monthLabels, t("member.streak.noActiveStreak")), [streakDays, monthLabels, t]);
   const grid = useMemo(
     () => buildMonthGrid(
       viewYear,
@@ -237,20 +235,20 @@ export default function DayStreak() {
       <header className="streak-page-head">
         <button type="button" className="streak-back" onClick={() => navigate(-1)}>
           <ArrowBackRoundedIcon />
-          Back
+          {t("common.back")}
         </button>
 
         <div className="streak-page-title">
           <div>
-            <h1 className="streak-page-heading">Day Streak</h1>
-            <p className="streak-page-caption">Highlighted days are part of your active streak.</p>
+            <h1 className="streak-page-heading">{t("member.streak.title")}</h1>
+            <p className="streak-page-caption">{t("member.streak.caption")}</p>
           </div>
         </div>
 
         {streakData?.active && (
           <span className="streak-active-badge">
             <LocalFireDepartmentRoundedIcon />
-            ACTIVE STREAK
+            {t("member.streak.activeBadge")}
           </span>
         )}
       </header>
@@ -259,66 +257,68 @@ export default function DayStreak() {
         <section className="streak-panel streak-calendar-panel">
           <header className="streak-calendar-head">
             <h2 className="streak-calendar-title">
-              {MONTH_LABELS[viewMonth]} {viewYear}
+              {monthLabels[viewMonth]} {viewYear}
             </h2>
             <div className="streak-calendar-nav">
-              <button type="button" className="streak-nav-btn" onClick={goToPreviousMonth} aria-label="Previous month">
+              <button type="button" className="streak-nav-btn" onClick={goToPreviousMonth} aria-label={t("member.schedule.previousMonth")}>
                 <ChevronLeftRoundedIcon />
               </button>
-              <button type="button" className="streak-nav-btn" onClick={goToNextMonth} aria-label="Next month">
+              <button type="button" className="streak-nav-btn" onClick={goToNextMonth} aria-label={t("member.schedule.nextMonth")}>
                 <ChevronRightRoundedIcon />
               </button>
             </div>
           </header>
 
           <div className="streak-weekdays" role="row">
-            {WEEKDAY_LABELS.map((label, index) => (
+            {weekdayLabels.map((label, index) => (
               <span key={`${label}-${index}`} className="streak-weekday" role="columnheader">
                 {label}
               </span>
             ))}
           </div>
 
-          <div className="streak-grid" role="grid" aria-label="Monthly workout streak calendar" aria-busy={streakLoading}>
+          <div className="streak-grid" role="grid" aria-label={t("member.streak.calendarLabel")} aria-busy={streakLoading}>
             {grid.map((cell) => (
               <CalendarCell
                 key={cell.key}
                 cell={cell}
+                monthLabels={monthLabels}
+                t={t}
                 onSelect={() => loadDayReport(cell.key)}
               />
             ))}
           </div>
-          {streakLoading && <p role="status">Loading workout history...</p>}
-          {streakError && <p role="alert">Workout history is unavailable. Please try again later.</p>}
-          <CalendarLegend />
+          {streakLoading && <p role="status">{t("member.streak.loadingHistory")}</p>}
+          {streakError && <p role="alert">{t("member.streak.historyUnavailable")}</p>}
+          <CalendarLegend t={t} />
         </section>
 
         <aside className="streak-summary">
           <StreakStatCard
             icon={<TrendingUpRoundedIcon />}
-            label="Current Streak"
+            label={t("member.streak.currentStreak")}
             value={streakData?.currentStreak ?? "-"}
-            unit=" days"
-            caption={streakData ? streakRange : "Loading"}
+            unit={t("member.streak.daysUnit")}
+            caption={streakData ? streakRange : t("common.loading")}
           />
           <StreakStatCard
             icon={<EmojiEventsRoundedIcon />}
-            label="Longest Streak"
+            label={t("member.streak.longestStreak")}
             value={streakData?.longestStreak ?? "-"}
-            unit=" days"
-            caption="Personal best"
+            unit={t("member.streak.daysUnit")}
+            caption={t("member.streak.personalBest")}
           />
           <StreakStatCard
             icon={<CalendarMonthRoundedIcon />}
-            label="Workouts This Month"
+            label={t("member.streak.workoutsThisMonth")}
             value={streakData ? monthWorkouts : "-"}
-            caption={`across ${monthStreakDays} streak days`}
+            caption={t("member.streak.acrossStreakDays", { count: monthStreakDays })}
           />
 
           <article className="streak-goal-card">
             <header className="streak-goal-head">
               <span className="streak-goal-icon"><FlagRoundedIcon /></span>
-              <h3 className="streak-goal-title">Weekly Goal</h3>
+              <h3 className="streak-goal-title">{t("member.streak.weeklyGoal")}</h3>
               <span className="streak-goal-percent">{weeklyGoal?.percent ?? 0}%</span>
             </header>
 
@@ -328,19 +328,24 @@ export default function DayStreak() {
               aria-valuenow={weeklyGoal?.percent ?? 0}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-label="Weekly goal progress"
+              aria-label={t("member.streak.goalProgressLabel")}
             >
               <div className="streak-goal-fill" style={{ width: `${weeklyGoal?.percent ?? 0}%` }} />
             </div>
 
             <p className="streak-goal-note">
               {weeklyGoal
-                ? `Keep going — ${goalRemaining} more session${goalRemaining === 1 ? "" : "s"} to hit your goal`
-                : streakLoading ? "Loading your weekly goal..." : "Weekly goal unavailable"}
+                ? t("member.streak.keepGoing", {
+                    count: goalRemaining,
+                    plural: goalRemaining === 1 ? "" : "s",
+                  })
+                : streakLoading
+                  ? t("member.streak.goalLoading")
+                  : t("member.streak.goalUnavailable")}
             </p>
 
-            <button type="button" className="streak-start-btn" onClick={() => navigate("/tracking")}>
-              Start Workout
+            <button type="button" className="streak-start-btn" onClick={() => navigate("/schedule")}>
+              {t("member.streak.startWorkout")}
               <PlayArrowRoundedIcon />
             </button>
           </article>

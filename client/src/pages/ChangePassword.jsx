@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import "./Login.css";
 import AuthLogo from "../components/AuthLogo";
 import ImeNotice from "../components/ImeNotice";
-import { PASSWORD_RULE_MESSAGE, hasNonAscii, isStrongPassword } from "../utils/authInput";
+import { hasNonAscii, isStrongPassword } from "../utils/authInput";
 
 /** Shown after an admin created the account with a temporary password. */
 export default function ChangePassword() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const hasToken = Boolean(localStorage.getItem("token"));
   const [form, setForm] = useState({ oldPassword: "", newPassword: "", confirmNewPassword: "" });
@@ -40,11 +42,11 @@ export default function ChangePassword() {
     setError("");
     if (Object.values(imeWarn).some(Boolean)) return;
     if (!isStrongPassword(form.newPassword)) {
-      setError(PASSWORD_RULE_MESSAGE);
+      setError(t("common.passwordRule"));
       return;
     }
     if (form.newPassword !== form.confirmNewPassword) {
-      setError("The confirmation password does not match");
+      setError(t("common.changePassword.mismatch"));
       return;
     }
     setLoading(true);
@@ -55,7 +57,7 @@ export default function ChangePassword() {
       localStorage.removeItem("user");
       navigate("/login", { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || "Unable to change password. Please try again.");
+      setError(err.response?.data?.message || t("common.changePassword.fallbackError"));
     } finally {
       setLoading(false);
     }
@@ -84,17 +86,31 @@ export default function ChangePassword() {
     <div className="login">
       <div className="login-card">
         <AuthLogo />
-        <h1 className="login-title">Change password</h1>
+        <h1 className="login-title">{t("common.changePassword.title")}</h1>
         <form className="login-form" onSubmit={handleSubmit}>
           <div className="login-success">
-            Your account was created with the default password. Choose a new one to continue.
+            {t("common.changePassword.notice")}
           </div>
           {error && <div className="login-error">{error}</div>}
-          {field("oldPassword", "Current (default) password", "Default password")}
-          {field("newPassword", "New password", PASSWORD_RULE_MESSAGE)}
-          {field("confirmNewPassword", "Confirm new password", "Re-enter new password")}
+          {field(
+            "oldPassword",
+            t("common.changePassword.oldPassword"),
+            t("common.changePassword.oldPasswordPlaceholder"),
+          )}
+          {field(
+            "newPassword",
+            t("common.changePassword.newPassword"),
+            t("common.changePassword.newPasswordPlaceholder"),
+          )}
+          {field(
+            "confirmNewPassword",
+            t("common.changePassword.confirmNewPassword"),
+            t("common.changePassword.confirmNewPasswordPlaceholder"),
+          )}
           <button type="submit" className="login-submit" disabled={loading}>
-            <span className="login-submit-text">{loading ? "Saving..." : "Change password"}</span>
+            <span className="login-submit-text">
+              {loading ? t("common.changePassword.submitting") : t("common.changePassword.submit")}
+            </span>
           </button>
         </form>
       </div>

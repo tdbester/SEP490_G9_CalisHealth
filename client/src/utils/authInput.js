@@ -5,8 +5,7 @@ export function hasNonAscii(value) {
 }
 
 // Same rule as the backend StrongPasswordValidator: 8+ chars, upper, lower, digit, and any other char.
-export const PASSWORD_RULE_MESSAGE =
-  "Password must be at least 8 characters and include uppercase, lowercase, a digit and a special character";
+export const PASSWORD_RULE_MESSAGE_KEY = "common.passwordRule";
 
 export function isStrongPassword(value) {
   if (!value || value.length < 8) return false;
@@ -26,5 +25,4 @@ export function fieldErrors(err) {
   return errors && typeof errors === "object" ? errors : {};
 }
 
-export const IME_WARNING_MESSAGE =
-  "Accented characters detected. Switch your input method to English and type again.";
+export const IME_WARNING_MESSAGE_KEY = "common.imeWarning";

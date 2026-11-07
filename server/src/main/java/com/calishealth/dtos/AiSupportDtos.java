@@ -1,0 +1,114 @@
+package com.calishealth.dtos;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+/** DTO cho tính năng AI Support (member hỏi AI về lỗi form sau buổi tập). */
+public class AiSupportDtos {
+
+    /**
+     * Body khi member đặt câu hỏi.
+     *
+     * @param exerciseCode bài tập member đang hỏi (bắt buộc để AI bám đúng ngưỡng form)
+     * @param question     câu hỏi của member
+     * @param sessionId    id phiên chat do client sinh khi mở popup — dùng đếm số câu
+     *                     trong phiên (giới hạn 5 câu/phiên) và khôi phục hội thoại
+     * @param formIssues   các lỗi form AI phát hiện trong buổi tập (nếu có)
+     * @param accuracy     accuracy của bài đó (0-100), nếu có
+     */
+    public record AskQuestionRequest(
+            @NotBlank(message = "exerciseCode is required")
+            @Size(max = 64, message = "exerciseCode is too long")
+            String exerciseCode,
+
+            @NotBlank(message = "question is required")
+            @Size(max = 1000, message = "question must be at most 1000 characters")
+            String question,
+
+            @Size(max = 64, message = "sessionId is too long")
+            String sessionId,
+
+            List<@Size(max = 200, message = "form issue is too long") String> formIssues,
+
+            Double accuracy
+    ) {}
+
+    /**
+     * Một nguyên nhân có thể gây lỗi form.
+     *
+     * @param title   tiêu đề ngắn (vd: "Core fatigue")
+     * @param detail  giải thích (vd: "Abs and glutes tire before your chest, so hips drop.")
+     */
+    public record LikelyCause(
+            String title,
+            String detail
+    ) {}
+
+    /**
+     * Câu trả lời của AI cho một câu hỏi.
+     *
+     * @param causes      các nguyên nhân có thể (Figma hiển thị "3 likely causes")
+     * @param tip         mẹo sửa form (1 dòng cuối, ngăn cách bởi divider)
+     * @param followUps   câu hỏi gợi ý tiếp theo cho member
+     */
+    public record AnswerResponse(
+            List<LikelyCause> causes,
+            String tip,
+            List<String> followUps
+    ) {}
+
+    /**
+     * Kết quả trả về cho client.
+     *
+     * @param answer        nội dung AI trả lời
+     * @param questionCount số câu đã hỏi hôm nay (sau khi tính câu này)
+     * @param dailyLimit    hạn mức câu/ngày
+     * @param remaining     số câu còn lại hôm nay
+     * @param sessionIndex  số thứ tự câu hỏi trong phiên chat
+     * @param sessionLimit  hạn mức câu/phiên chat
+     */
+    public record AskQuestionResponse(
+            AnswerResponse answer,
+            int questionCount,
+            int dailyLimit,
+            int remaining,
+            int sessionIndex,
+            int sessionLimit
+    ) {}
+
+    /**
+     * Trạng thái quota của member hôm nay — dùng để mở popup mà không cần hỏi trước.
+     *
+     * @param questionCount số câu đã hỏi hôm nay
+     * @param dailyLimit   hạn mức câu/ngày
+     * @param remaining    số câu còn lại hôm nay
+     * @param sessionLimit hạn mức câu/phiên chat
+     * @param sessionUsed  số câu đã hỏi trong phiên chat hiện tại
+     */
+    public record QuotaResponse(
+            int questionCount,
+            int dailyLimit,
+            int remaining,
+            int sessionLimit,
+            int sessionUsed
+    ) {}
+
+    /**
+     * Một cặp hỏi/đáp trong lịch sử hôm nay.
+     *
+     * @param exerciseName tên bài tập đã hỏi (null nếu hỏi chung)
+     * @param sessionId    id phiên chat của câu hỏi đó
+     * @param answerJson   câu trả lời dạng JSON (causes + tip + followUps)
+     * @param createdAt    thời điểm hỏi
+     */
+    public record HistoryItem(
+            String exerciseName,
+            String question,
+            String answerJson,
+            String sessionId,
+            LocalDateTime createdAt
+    ) {}
+}

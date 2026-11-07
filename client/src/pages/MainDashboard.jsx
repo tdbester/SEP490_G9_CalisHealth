@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import ArrowBackIosNewRoundedIcon from "@mui/icons-material/ArrowBackIosNewRounded";
 import ArrowForwardIosRoundedIcon from "@mui/icons-material/ArrowForwardIosRounded";
@@ -13,8 +14,11 @@ import EmojiEventsRoundedIcon from "@mui/icons-material/EmojiEventsRounded";
 import MonitorWeightRoundedIcon from "@mui/icons-material/MonitorWeightRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
+import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import workoutPlanImage from "../image/Daily_Workout_Plan.png";
 import api from "../api/client";
+import { FAVORITE_ITEM_TYPES } from "../api/favorites";
+import { useFavorites } from "../context/FavoritesContext";
 import OnboardingRedirect from "../components/survey/OnboardingRedirect";
 import "./MainDashboard.css";
 
@@ -28,14 +32,15 @@ const MUSCLE_ICONS = {
 };
 
 /** `BEGINNER` -> `Beginner`, để chip level không hiển thị chữ IN HOA toàn bộ. */
-function levelLabel(value) {
-  if (!value) return "All levels";
+function levelLabel(value, allLevelsLabel = "All levels") {
+  if (!value) return allLevelsLabel;
   const lowered = String(value).toLowerCase();
   return lowered.charAt(0).toUpperCase() + lowered.slice(1);
 }
 
 /** Carousel ngang: cuộn mảnh theo từng bước, dùng chung cho Muscle & Skills. */
 function Carousel({ children, ariaLabel }) {
+  const { t } = useTranslation();
   const trackRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -64,7 +69,7 @@ function Carousel({ children, ariaLabel }) {
       <button
         type="button"
         className="dash-carousel-btn"
-        aria-label="Scroll left"
+        aria-label={t("member.dashboard.scrollLeft")}
         disabled={!canScrollLeft}
         onClick={() => scrollByStep(-1)}
       >
@@ -83,7 +88,7 @@ function Carousel({ children, ariaLabel }) {
       <button
         type="button"
         className="dash-carousel-btn"
-        aria-label="Scroll right"
+        aria-label={t("member.dashboard.scrollRight")}
         disabled={!canScrollRight}
         onClick={() => scrollByStep(1)}
       >
@@ -95,6 +100,8 @@ function Carousel({ children, ariaLabel }) {
 
 export default function MainDashboard() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { items: favoriteItems } = useFavorites();
   const [user, setUser] = useState(null);
   const [authStatus, setAuthStatus] = useState(() =>
     localStorage.getItem("token") ? "loading" : "guest",
@@ -144,6 +151,23 @@ export default function MainDashboard() {
     navigate({ pathname: "/library/exercises", search: params });
   };
 
+  // Đếm nhanh số bài tập / workout đã đánh dấu sao cho thẻ Favorites trên dashboard.
+  const favoriteCounts = useMemo(
+    () => ({
+      exercises: favoriteItems.filter((item) =>
+        [FAVORITE_ITEM_TYPES.SYSTEM_EXERCISE, FAVORITE_ITEM_TYPES.MEMBER_EXERCISE].includes(
+          item.itemType
+        )
+      ).length,
+      workouts: favoriteItems.filter((item) =>
+        [FAVORITE_ITEM_TYPES.SYSTEM_WORKOUT, FAVORITE_ITEM_TYPES.MEMBER_WORKOUT].includes(
+          item.itemType
+        )
+      ).length,
+    }),
+    [favoriteItems]
+  );
+
   return (
     <div className="dashboard">
       {user?.role === "MEMBER" && <OnboardingRedirect />}
@@ -157,10 +181,10 @@ export default function MainDashboard() {
           aria-hidden="true"
         />
         <div className="dash-plan-copy">
-          <span className="dash-plan-eyebrow">DAILY WORKOUT PLAN</span>
-          <h2 className="dash-plan-heading">Your training, planned for today</h2>
+          <span className="dash-plan-eyebrow">{t("member.dashboard.planEyebrow")}</span>
+          <h2 className="dash-plan-heading">{t("member.dashboard.planHeading")}</h2>
           <p className="dash-plan-description">
-            Build strength with a focused calisthenics routine.
+            {t("member.dashboard.planDescription")}
           </p>
         </div>
 
@@ -168,9 +192,9 @@ export default function MainDashboard() {
           <button
             type="button"
             className="dash-btn dash-btn-primary"
-            onClick={() => navigate("/tracking")}
+            onClick={() => navigate("/schedule")}
           >
-            Start Workout
+            {t("member.dashboard.startWorkout")}
             <PlayArrowRoundedIcon />
           </button>
         )}
@@ -180,7 +204,7 @@ export default function MainDashboard() {
             className="dash-btn dash-btn-primary"
             onClick={() => navigate("/login")}
           >
-            Log in
+            {t("member.dashboard.logIn")}
           </button>
         )}
       </section>
@@ -188,15 +212,15 @@ export default function MainDashboard() {
       {/* ── Explore ────────────────────────────────────────────── */}
       <section className="dash-explore">
         <header className="dash-section-head">
-          <h2 className="dash-section-title">Explore</h2>
+          <h2 className="dash-section-title">{t("member.dashboard.exploreTitle")}</h2>
           <p className="dash-section-subtitle">
-            Pick a muscle group or skill to start training.
+            {t("member.dashboard.exploreSubtitle")}
           </p>
         </header>
 
         {/* Muscle focus */}
-        <h3 className="dash-subsection-title">Muscle Focus</h3>
-        <Carousel ariaLabel="Muscle groups">
+        <h3 className="dash-subsection-title">{t("member.dashboard.muscleFocus")}</h3>
+        <Carousel ariaLabel={t("member.dashboard.muscleFocus")}>
           {(dashboardData?.muscleGroups ?? []).map((group) => {
             const Icon = MUSCLE_ICONS[group.icon] ?? FitnessCenterRoundedIcon;
             return (
@@ -214,15 +238,17 @@ export default function MainDashboard() {
                   <Icon />
                 </span>
                 <span className="dash-muscle-name">{group.name}</span>
-                <span className="dash-muscle-count">{group.count} exercises</span>
+                <span className="dash-muscle-count">
+                  {t("member.dashboard.exerciseCount", { count: group.count })}
+                </span>
               </button>
             );
           })}
         </Carousel>
 
         {/* Skills */}
-        <h3 className="dash-subsection-title">Skills</h3>
-        <Carousel ariaLabel="Calisthenics skills">
+        <h3 className="dash-subsection-title">{t("member.dashboard.skills")}</h3>
+        <Carousel ariaLabel={t("member.dashboard.skills")}>
           {(dashboardData?.skills ?? []).map((skill) => (
             <button
               type="button"
@@ -241,10 +267,12 @@ export default function MainDashboard() {
               <span className="dash-skill-meta">
                 <span className="dash-skill-steps">
                   {skill.steps > 0
-                    ? `${skill.steps} steps`
-                    : "View technique"}
+                    ? t("member.dashboard.steps", { count: skill.steps })
+                    : t("member.dashboard.viewTechnique")}
                 </span>
-                <span className="dash-skill-level">{levelLabel(skill.level)}</span>
+                <span className="dash-skill-level">
+                  {levelLabel(skill.level, t("member.dashboard.allLevels"))}
+                </span>
               </span>
             </button>
           ))}
@@ -258,7 +286,7 @@ export default function MainDashboard() {
             <span className="dash-panel-icon">
               <MonitorWeightRoundedIcon />
             </span>
-            <h3 className="dash-panel-title">Health &amp; Progress</h3>
+            <h3 className="dash-panel-title">{t("member.dashboard.healthProgress")}</h3>
           </header>
 
           {authStatus === "authed" ? (
@@ -271,13 +299,13 @@ export default function MainDashboard() {
                   <ul className="dash-metric-list">
                     {dashboardData.healthMetrics.weight != null && (
                       <li>
-                        <span className="dash-metric-label">Weight</span>
+                        <span className="dash-metric-label">{t("member.dashboard.weight")}</span>
                         <span className="dash-metric-value">{dashboardData.healthMetrics.weight} kg</span>
                       </li>
                     )}
                     {dashboardData.healthMetrics.bmi != null && (
                       <li>
-                        <span className="dash-metric-label">BMI</span>
+                        <span className="dash-metric-label">{t("member.dashboard.bmi")}</span>
                         <span className="dash-metric-value">
                           {dashboardData.healthMetrics.bmi} ({dashboardData.healthMetrics.bmiLabel})
                         </span>
@@ -285,9 +313,11 @@ export default function MainDashboard() {
                     )}
                     {dashboardData.healthMetrics.weeklyGoal != null && (
                       <li>
-                        <span className="dash-metric-label">Weekly goal</span>
+                        <span className="dash-metric-label">{t("member.dashboard.weeklyGoal")}</span>
                         <span className="dash-metric-value">
-                          {dashboardData.healthMetrics.weeklyGoal}% reached
+                          {t("member.dashboard.weeklyGoalReached", {
+                            percent: dashboardData.healthMetrics.weeklyGoal,
+                          })}
                         </span>
                       </li>
                     )}
@@ -307,10 +337,10 @@ export default function MainDashboard() {
               ) : (
                 <p className="dash-auth-prompt">
                   {dashboardError
-                    ? "Health measurements are currently unavailable."
+                    ? t("member.dashboard.healthUnavailable")
                     : dashboardData
-                      ? "No body measurements yet. Add your measurements to see your health progress."
-                      : "Loading your health measurements..."}
+                      ? t("member.dashboard.healthEmpty")
+                      : t("member.dashboard.healthLoading")}
                 </p>
               )}
               <div className="dash-panel-actions">
@@ -320,7 +350,7 @@ export default function MainDashboard() {
                   onClick={() => navigate("/tracking")}
                 >
                   <InsightsRoundedIcon />
-                  View Details
+                  {t("member.dashboard.viewDetails")}
                 </button>
               </div>
             </>
@@ -328,8 +358,8 @@ export default function MainDashboard() {
             <div className="dash-auth-gate">
               <p className="dash-auth-prompt">
                 {authStatus === "loading"
-                  ? "Loading your health and progress..."
-                  : "Log in to view your health metrics and progress."}
+                  ? t("member.dashboard.healthAuthLoading")
+                  : t("member.dashboard.healthAuthPrompt")}
               </p>
               {authStatus === "guest" && (
                 <button
@@ -337,7 +367,7 @@ export default function MainDashboard() {
                   className="dash-btn dash-btn-ghost"
                   onClick={() => navigate("/login")}
                 >
-                  Log in
+                  {t("member.dashboard.logIn")}
                 </button>
               )}
             </div>
@@ -349,11 +379,11 @@ export default function MainDashboard() {
             <span className="dash-panel-icon">
               <GroupsRoundedIcon />
             </span>
-            <h3 className="dash-panel-title">Community</h3>
+            <h3 className="dash-panel-title">{t("member.dashboard.community")}</h3>
           </header>
 
           <p className="dash-community-text">
-            Discover exercises and workouts shared by the Calisthenics community
+            {t("member.dashboard.communityText")}
           </p>
 
           {dashboardData?.community && (
@@ -362,19 +392,19 @@ export default function MainDashboard() {
                 <span className="dash-community-number">
                   {Number(dashboardData.community.exercises || 0).toLocaleString()}
                 </span>
-                <span className="dash-community-label">Exercises</span>
+                <span className="dash-community-label">{t("member.dashboard.exercises")}</span>
               </div>
               <div>
                 <span className="dash-community-number">
                   {dashboardData.community.workouts.toLocaleString()}
                 </span>
-                <span className="dash-community-label">Workouts</span>
+                <span className="dash-community-label">{t("member.dashboard.workouts")}</span>
               </div>
               <div>
                 <span className="dash-community-number">
                   {dashboardData.community.athletes.toLocaleString()}
                 </span>
-                <span className="dash-community-label">Athletes</span>
+                <span className="dash-community-label">{t("member.dashboard.athletes")}</span>
               </div>
             </div>
           )}
@@ -385,14 +415,76 @@ export default function MainDashboard() {
               className="dash-btn dash-btn-ghost"
               onClick={() => navigate("/library?tab=community")}
             >
-              Explore →
+              {t("member.dashboard.explore")}
             </button>
           </div>
+        </article>
+
+        {/* ── Favorites: mục đánh dấu sao của member ─────────────── */}
+        <article className="dash-panel dash-favorites">
+          <header className="dash-panel-head">
+            <span className="dash-panel-icon dash-panel-icon-star">
+              <StarRoundedIcon />
+            </span>
+            <h3 className="dash-panel-title">{t("member.dashboard.favorites")}</h3>
+          </header>
+
+          <p className="dash-community-text">
+            {t("member.dashboard.favoritesText")}
+          </p>
+
+          {authStatus === "authed" ? (
+            <>
+              <div className="dash-community-stats">
+                <div>
+                  <span className="dash-community-number">
+                    {favoriteCounts.exercises.toLocaleString()}
+                  </span>
+                  <span className="dash-community-label">{t("member.dashboard.exercises")}</span>
+                </div>
+                <div>
+                  <span className="dash-community-number">
+                    {favoriteCounts.workouts.toLocaleString()}
+                  </span>
+                  <span className="dash-community-label">{t("member.dashboard.workouts")}</span>
+                </div>
+              </div>
+              <div className="dash-panel-actions">
+                <button
+                  type="button"
+                  className="dash-btn dash-btn-ghost"
+                  onClick={() => navigate("/library/favorites")}
+                >
+                  <StarRoundedIcon />
+                  {t("member.dashboard.openFavorites")}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="dash-auth-gate">
+              <p className="dash-auth-prompt">
+                {authStatus === "loading"
+                  ? t("member.dashboard.healthAuthLoading")
+                  : t("member.dashboard.favoritesAuthPrompt")}
+              </p>
+              {authStatus === "guest" && (
+                <button
+                  type="button"
+                  className="dash-btn dash-btn-ghost"
+                  onClick={() => navigate("/login")}
+                >
+                  {t("member.dashboard.logIn")}
+                </button>
+              )}
+            </div>
+          )}
         </article>
       </section>
 
       <p className="dash-greeting">
-        {user?.fullName ? `Welcome back, ${user.fullName}` : "Welcome back"}
+        {user?.fullName
+          ? t("member.dashboard.welcomeBack", { name: user.fullName })
+          : t("member.dashboard.welcomeBackShort")}
       </p>
     </div>
   );

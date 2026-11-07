@@ -26,24 +26,25 @@ import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import PersonOffOutlinedIcon from "@mui/icons-material/PersonOffOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { adminUsersApi, apiErrorMessage } from "../api/adminUsers";
 import { CM } from "../theme-content";
 
 const PAGE_SIZE = 10;
 
-const ROLE_LABEL = { MEMBER: "Member", CONTENT_MANAGER: "Content Manager", ADMIN: "Admin" };
+const ROLE_KEY = { MEMBER: "role.member", CONTENT_MANAGER: "role.contentManager", ADMIN: "role.admin" };
 const ROLE_TONE = {
   MEMBER: { fg: "#A78BFA", bg: "rgba(139,92,246,0.16)" },
   CONTENT_MANAGER: { fg: "#F8C858", bg: "rgba(248,200,88,0.14)" },
   ADMIN: { fg: "#FF7799", bg: "rgba(255,119,153,0.15)" },
 };
-const STATUS_LABEL = { ACTIVE: "Active", INACTIVE: "Inactive" };
-const SORTS = [
-  { value: "newest", label: "Joined: Newest first" },
-  { value: "oldest", label: "Joined: Oldest first" },
-  { value: "name_asc", label: "Name: A to Z" },
-  { value: "name_desc", label: "Name: Z to A" },
-];
+const STATUS_KEY = { ACTIVE: "admin.users.active", INACTIVE: "admin.users.inactive" };
+const SORT_KEYS = {
+  newest: "admin.users.sortNewest",
+  oldest: "admin.users.sortOldest",
+  name_asc: "admin.users.sortNameAsc",
+  name_desc: "admin.users.sortNameDesc",
+};
 
 const fmtDate = (iso) =>
   iso
@@ -120,6 +121,7 @@ const userCellSx = { ...bodyCellSx, textAlign: "left" };
 
 /** Admin user management (Figma users-list 1, node 710:520). */
 export default function AdminUsersPage() {
+  const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -143,8 +145,8 @@ export default function AdminUsersPage() {
   }, []);
 
   useEffect(() => {
-    document.title = "User Management | CalisHealth";
-  }, []);
+    document.title = `${t("admin.users.pageTitle")} | CalisHealth`;
+  }, [t]);
 
   // Debounce the search box so we do not call the API on every keystroke.
   useEffect(() => {
@@ -165,11 +167,11 @@ export default function AdminUsersPage() {
       setData(res);
       if (res.totalPages > 0 && page >= res.totalPages) setPage(res.totalPages - 1);
     } catch (err) {
-      if (id === requestId.current) setError(apiErrorMessage(err, "Could not load users."));
+      if (id === requestId.current) setError(apiErrorMessage(err, t("admin.users.loadFailed")));
     } finally {
       if (id === requestId.current) setLoading(false);
     }
-  }, [q, role, status, joinedOn, sort, page]);
+  }, [q, role, status, joinedOn, sort, page, t]);
 
   useEffect(() => {
     load();
@@ -199,7 +201,10 @@ export default function AdminUsersPage() {
     if (!ids.length) return;
     try {
       const res = await adminUsersApi.setActive(ids, active);
-      setToast(`${res.affected} user(s) ${active ? "activated" : "deactivated"}.`);
+      setToast(t("admin.users.statusUpdated", {
+        count: res.affected,
+        action: t(active ? "admin.users.activated" : "admin.users.deactivated"),
+      }));
       setSelected(new Set());
       load();
     } catch (err) {
@@ -211,7 +216,7 @@ export default function AdminUsersPage() {
   const to = data ? Math.min((data.page + 1) * data.size, data.totalElements) : 0;
   return (
     <Box sx={{ p: { xs: 2, md: 3.5 } }}>
-      <Typography sx={{ fontSize: 13, color: CM.textMuted }}>Admin / Users</Typography>
+      <Typography sx={{ fontSize: 13, color: CM.textMuted }}>{t("admin.users.breadcrumb")}</Typography>
 
       <Box
         sx={{
@@ -226,30 +231,30 @@ export default function AdminUsersPage() {
       >
         <Box sx={{ maxWidth: 640 }}>
           <Typography component="h1" sx={{ fontSize: 34, fontWeight: 700, lineHeight: 1.2 }}>
-            User Management
+            {t("admin.users.pageTitle")}
           </Typography>
           <Typography sx={{ mt: 0.75, fontSize: 14, color: CM.textMuted }}>
-            View and manage registered CalisHealth athletes, coaches, account access tiers, and security statuses.
+            {t("admin.users.description")}
           </Typography>
         </Box>
         <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => navigate("/admin/users/create")}
           sx={{ background: CM.buttonGradient, borderRadius: "10px", px: 2.25 }}>
-          Add admin/content manager
+          {t("admin.users.addStaff")}
         </Button>
       </Box>
 
       <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 3 }}>
-        <StatCard label="All Users" value={summary?.total} />
-        <StatCard label="Active" value={summary?.active} tone={CM.green} />
-        <StatCard label="Inactive" value={summary?.inactive} tone={CM.pink} />
+        <StatCard label={t("admin.users.allUsers")} value={summary?.total} />
+        <StatCard label={t("admin.users.active")} value={summary?.active} tone={CM.green} />
+        <StatCard label={t("admin.users.inactive")} value={summary?.inactive} tone={CM.pink} />
       </Box>
 
       <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap", mb: 2 }}>
         <TextField
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Search by athlete name, email, or USR-ID..."
-          inputProps={{ "aria-label": "Search users" }}
+          placeholder={t("admin.users.searchPlaceholder")}
+          inputProps={{ "aria-label": t("admin.users.searchAria") }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -266,17 +271,18 @@ export default function AdminUsersPage() {
             setRole(e.target.value);
             setPage(0);
           }}
-          inputProps={{ "aria-label": "Filter by role" }}
+          inputProps={{ "aria-label": t("admin.users.filterByRole") }}
           SelectProps={{
             displayEmpty: true,
-            renderValue: (v) => (v ? `Role: ${ROLE_LABEL[v]}` : "Role: All Roles"),
+            renderValue: (v) =>
+              v ? t("admin.users.rolePrefix", { role: t(ROLE_KEY[v]) }) : t("admin.users.roleAll"),
           }}
           sx={{ ...fieldSx, width: 220 }}
         >
-          <MenuItem value="">All Roles</MenuItem>
-          {Object.keys(ROLE_LABEL).map((r) => (
+          <MenuItem value="">{t("admin.users.roleAll")}</MenuItem>
+          {Object.keys(ROLE_KEY).map((r) => (
             <MenuItem key={r} value={r}>
-              {ROLE_LABEL[r]}
+              {t(ROLE_KEY[r])}
             </MenuItem>
           ))}
         </TextField>
@@ -287,30 +293,31 @@ export default function AdminUsersPage() {
             setStatus(e.target.value);
             setPage(0);
           }}
-          inputProps={{ "aria-label": "Filter by status" }}
+          inputProps={{ "aria-label": t("admin.users.filterByStatus") }}
           SelectProps={{
             displayEmpty: true,
-            renderValue: (v) => (v ? `Status: ${STATUS_LABEL[v]}` : "Status: All"),
+            renderValue: (v) =>
+              v ? t("admin.users.statusPrefix", { status: t(STATUS_KEY[v]) }) : t("admin.users.statusAll"),
           }}
           sx={{ ...fieldSx, width: 190 }}
         >
-          <MenuItem value="">All Statuses</MenuItem>
-          {Object.keys(STATUS_LABEL).map((s) => (
+          <MenuItem value="">{t("admin.users.statusAll")}</MenuItem>
+          {Object.keys(STATUS_KEY).map((s) => (
             <MenuItem key={s} value={s}>
-              {STATUS_LABEL[s]}
+              {t(STATUS_KEY[s])}
             </MenuItem>
           ))}
         </TextField>
         <TextField
           type="date"
-          label="Joined date"
+          label={t("admin.users.joinedDate")}
           value={joinedOn}
           onChange={(e) => {
             setJoinedOn(e.target.value);
             setPage(0);
           }}
           InputLabelProps={{ shrink: true }}
-          inputProps={{ "aria-label": "Filter by joined date" }}
+          inputProps={{ "aria-label": t("admin.users.filterByJoinedDate") }}
           sx={{
             ...fieldSx,
             width: 190,
@@ -328,7 +335,7 @@ export default function AdminUsersPage() {
             }}
             sx={{ borderRadius: "10px" }}
           >
-            Clear filters
+            {t("admin.users.clearFilters")}
           </Button>
         )}
         <TextField
@@ -338,12 +345,12 @@ export default function AdminUsersPage() {
             setSort(e.target.value);
             setPage(0);
           }}
-          inputProps={{ "aria-label": "Sort users" }}
+          inputProps={{ "aria-label": t("admin.users.sortUsers") }}
           sx={{ ...fieldSx, width: 230 }}
         >
-          {SORTS.map((s) => (
-            <MenuItem key={s.value} value={s.value}>
-              {s.label}
+          {Object.keys(SORT_KEYS).map((s) => (
+            <MenuItem key={s} value={s}>
+              {t(SORT_KEYS[s])}
             </MenuItem>
           ))}
         </TextField>
@@ -352,7 +359,7 @@ export default function AdminUsersPage() {
       {selected.size > 0 && (
         <Box
           role="region"
-          aria-label="Bulk actions"
+          aria-label={t("admin.users.bulkActions")}
           sx={{
             mb: 2,
             px: 2,
@@ -367,12 +374,12 @@ export default function AdminUsersPage() {
           }}
         >
           <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>
-            {selected.size} Users selected across table
+            {t("admin.users.selectedCount", { count: selected.size })}
           </Typography>
           <Box sx={{ flex: 1 }} />
-          <Tooltip title="Activate selected">
+          <Tooltip title={t("admin.users.activateSelected")}>
             <IconButton
-              aria-label="Activate selected users"
+              aria-label={t("admin.users.activateSelectedAria")}
               onClick={() => applyStatus(true)}
               sx={{
                 color: CM.green,
@@ -383,9 +390,9 @@ export default function AdminUsersPage() {
               <PersonOutlineOutlinedIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Deactivate selected">
+          <Tooltip title={t("admin.users.deactivateSelected")}>
             <IconButton
-              aria-label="Deactivate selected users"
+              aria-label={t("admin.users.deactivateSelectedAria")}
               onClick={() => applyStatus(false)}
               sx={{
                 color: CM.pink,
@@ -397,7 +404,7 @@ export default function AdminUsersPage() {
             </IconButton>
           </Tooltip>
           <Button color="inherit" size="small" onClick={() => setSelected(new Set())}>
-            Clear
+            {t("admin.users.clear")}
           </Button>
         </Box>
       )}
@@ -409,7 +416,7 @@ export default function AdminUsersPage() {
       )}
 
       <TableContainer sx={{ borderRadius: "16px", bgcolor: CM.surface, border: `1px solid ${CM.border}` }}>
-        <Table aria-label="Users" sx={{ minWidth: 860 }}>
+        <Table aria-label={t("admin.users.tableAria")} sx={{ minWidth: 860 }}>
           <TableHead>
             <TableRow>
               <TableCell padding="checkbox" sx={headCellSx}>
@@ -417,15 +424,15 @@ export default function AdminUsersPage() {
                   checked={allOnPageSelected}
                   indeterminate={selectedOnPage > 0 && !allOnPageSelected}
                   onChange={toggleAllOnPage}
-                  inputProps={{ "aria-label": "Select all users on this page" }}
+                  inputProps={{ "aria-label": t("admin.users.selectAll") }}
                 />
               </TableCell>
-              <TableCell sx={{ ...headCellSx, textAlign: "left" }}>USER / ATHLETE</TableCell>
-              <TableCell sx={headCellSx}>CONTACT EMAIL</TableCell>
-              <TableCell sx={headCellSx}>ROLE</TableCell>
-              <TableCell sx={headCellSx}>STATUS</TableCell>
-              <TableCell sx={headCellSx}>JOINED DATE</TableCell>
-              <TableCell sx={headCellSx}>ACTIONS</TableCell>
+              <TableCell sx={{ ...headCellSx, textAlign: "left" }}>{t("admin.users.colUser")}</TableCell>
+              <TableCell sx={headCellSx}>{t("admin.users.colEmail")}</TableCell>
+              <TableCell sx={headCellSx}>{t("admin.users.colRole")}</TableCell>
+              <TableCell sx={headCellSx}>{t("admin.users.colStatus")}</TableCell>
+              <TableCell sx={headCellSx}>{t("admin.users.colJoined")}</TableCell>
+              <TableCell sx={headCellSx}>{t("admin.users.colActions")}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -446,7 +453,7 @@ export default function AdminUsersPage() {
                         <Checkbox
                           checked={selected.has(u.id)}
                           onChange={() => toggleOne(u.id)}
-                          inputProps={{ "aria-label": `Select ${u.fullName}` }}
+                          inputProps={{ "aria-label": t("admin.users.selectUser", { name: u.fullName }) }}
                         />
                       </TableCell>
                       <TableCell sx={userCellSx}>
@@ -483,14 +490,14 @@ export default function AdminUsersPage() {
                       <TableCell sx={{ ...bodyCellSx, color: CM.textMuted }}>{u.email}</TableCell>
                       <TableCell sx={bodyCellSx}>
                         <Pill fg={tone.fg} bg={tone.bg}>
-                          {ROLE_LABEL[u.role] ?? u.role}
+                          {t(ROLE_KEY[u.role] ?? `role.${u.role?.toLowerCase()}`, u.role)}
                         </Pill>
                       </TableCell>
                       <TableCell sx={bodyCellSx}>
                         {u.active ? (
-                          <Pill fg={CM.green} bg="rgba(120,232,136,0.13)">Active</Pill>
+                          <Pill fg={CM.green} bg="rgba(120,232,136,0.13)">{t("admin.users.active")}</Pill>
                         ) : (
-                          <Pill fg={CM.textMuted} bg="rgba(168,155,208,0.14)">Inactive</Pill>
+                          <Pill fg={CM.textMuted} bg="rgba(168,155,208,0.14)">{t("admin.users.inactive")}</Pill>
                         )}
                       </TableCell>
                       <TableCell sx={{ ...bodyCellSx, color: CM.textMuted }}>{fmtDate(u.createdAt)}</TableCell>
@@ -499,10 +506,10 @@ export default function AdminUsersPage() {
                           size="small"
                           variant="outlined"
                           onClick={() => navigate(`/admin/users/${u.id}`)}
-                          aria-label={`View details of ${u.fullName}`}
+                          aria-label={t("admin.users.viewDetailsAria", { name: u.fullName })}
                           sx={{ borderRadius: "8px", minWidth: 84 }}
                         >
-                          Details
+                          {t("admin.users.details")}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -511,7 +518,7 @@ export default function AdminUsersPage() {
             {!loading && !error && items.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} align="center" sx={{ ...bodyCellSx, py: 6, color: CM.textMuted }}>
-                  No users match your search.
+                  {t("admin.users.empty")}
                 </TableCell>
               </TableRow>
             )}
@@ -531,7 +538,11 @@ export default function AdminUsersPage() {
           }}
         >
           <Typography sx={{ fontSize: 13, color: CM.textMuted }}>
-            Showing {from}–{to} of {data.totalElements.toLocaleString("en-US")} athletes
+            {t("admin.users.showing", {
+              from,
+              to,
+              total: data.totalElements.toLocaleString("en-US"),
+            })}
           </Typography>
           <Pagination
             count={data.totalPages}
@@ -542,7 +553,10 @@ export default function AdminUsersPage() {
             renderItem={(item) => (
               <PaginationItem
                 {...item}
-                slots={{ previous: () => <span>Previous</span>, next: () => <span>Next</span> }}
+                slots={{
+                  previous: () => <span>{t("admin.users.previous")}</span>,
+                  next: () => <span>{t("admin.users.next")}</span>,
+                }}
               />
             )}
           />

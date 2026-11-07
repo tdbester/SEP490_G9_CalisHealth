@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { surveyApi, surveyErrorMessage } from "../../api/survey";
+import { useTranslation } from "react-i18next";
 import { findStepBySlug, stepSlug, toFormValue } from "../../utils/survey";
 import "./Survey.css";
 
@@ -15,6 +16,7 @@ import "./Survey.css";
 export default function SurveyFlow() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation("member");
   const retake = Boolean(location.state?.retake);
   const [state, setState] = useState({ status: "loading" });
   const [formValues, setFormValues] = useState({});
@@ -57,7 +59,7 @@ export default function SurveyFlow() {
       setErrors({});
       setState({ status: "ready", session, definition });
     } catch (err) {
-      setState({ status: "error", message: surveyErrorMessage(err, "We could not load the survey.") });
+      setState({ status: "error", message: surveyErrorMessage(err, t("survey.loadFailed")) });
     }
   }, [navigate, retake]);
 
@@ -83,7 +85,7 @@ export default function SurveyFlow() {
   if (state.status === "loading") {
     return (
       <div className="survey-page survey-page--center">
-        <p className="survey-status">Loading your survey…</p>
+        <p className="survey-status">{t("survey.loading")}</p>
       </div>
     );
   }
@@ -94,10 +96,10 @@ export default function SurveyFlow() {
           <p className="survey-status">{state.message}</p>
           <div className="survey-status-actions">
             <button type="button" className="survey-btn survey-btn--primary" onClick={load}>
-              Try again
+              {t("survey.tryAgain")}
             </button>
             <button type="button" className="survey-link" onClick={() => navigate("/", { replace: true })}>
-              Go to dashboard
+              {t("survey.goToDashboard")}
             </button>
           </div>
         </div>

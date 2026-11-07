@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import {
   Alert,
@@ -23,6 +23,7 @@ import {
   Typography,
 } from "@mui/material";
 import { keyframes } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
@@ -53,15 +54,20 @@ const enter = (delay = 0) => ({
 });
 
 const BREADCRUMB = [
-  { label: "Content manager", to: CONTENT_PATHS.dashboard },
-  { label: "Exercise & Workout", to: CONTENT_PATHS.exercises },
-  { label: "Exercise list" },
+  { labelKey: "nav.contentManagerRole", to: CONTENT_PATHS.dashboard },
+  { labelKey: "nav.exerciseAndWorkout", to: CONTENT_PATHS.exercises },
+  { labelKey: "nav.exerciseList" },
 ];
 
 function TypeChip({ type }) {
+  const { t } = useTranslation();
   const normalized = String(type || "").trim().toLowerCase();
   const isSkill = normalized === "skill";
-  const label = isSkill ? "Skill" : normalized === "health" ? "Health" : "—";
+  const label = isSkill
+    ? t("contentManager.exercises.typeSkill")
+    : normalized === "health"
+      ? t("contentManager.exercises.typeHealth")
+      : "—";
   return (
     <DarkPill
       tone={isSkill ? "primary" : "neutral"}
@@ -74,10 +80,11 @@ function TypeChip({ type }) {
 }
 
 function SourceChip({ source }) {
+  const { t } = useTranslation();
   const isCustom = String(source || "").toLowerCase() === "custom";
   return (
     <DarkPill tone={isCustom ? "warning" : "neutral"}>
-      {isCustom ? "Custom" : "System"}
+      {isCustom ? t("contentManager.exercises.typeCustom") : t("contentManager.exercises.typeSystem")}
     </DarkPill>
   );
 }
@@ -87,6 +94,7 @@ function LevelChip({ level, toneOf }) {
 }
 
 function StatusDot({ active }) {
+  const { t } = useTranslation();
   return (
     <Stack direction="row" spacing={0.75} alignItems="center">
       <Box
@@ -98,13 +106,16 @@ function StatusDot({ active }) {
         }}
       />
       <Typography variant="caption" sx={{ color: active ? CM.green : CM.pink, fontWeight: 600 }}>
-        {active ? "Active" : "Inactive"}
+        {active
+          ? t("contentManager.exercises.active")
+          : t("contentManager.exercises.inactive")}
       </Typography>
     </Stack>
   );
 }
 
 export default function ExerciseListPage() {
+  const { t } = useTranslation();
   const { data, isLoading, error, isFetching, refetch, setData } = useApiQuery(() =>
     contentManagerApi.exercises(),
   );
@@ -185,8 +196,8 @@ export default function ExerciseListPage() {
     >
       <ContentPageHeader
         breadcrumb={BREADCRUMB}
-        title="Exercise & workout"
-        description="Manage system exercises and skills, and moderate exercises submitted by users."
+        title={t("contentManager.exercises.listTitle")}
+        description={t("contentManager.exercises.listDescription")}
         action={
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
             <Button
@@ -196,7 +207,7 @@ export default function ExerciseListPage() {
               size="medium"
               sx={{ minHeight: 40, whiteSpace: "nowrap" }}
             >
-              Pending exercise moderation
+              {t("contentManager.exercises.pendingModeration")}
             </Button>
             <Button
               component={RouterLink}
@@ -206,7 +217,7 @@ export default function ExerciseListPage() {
               startIcon={<AddRoundedIcon />}
               sx={{ minHeight: 40, whiteSpace: "nowrap" }}
             >
-              Create content
+              {t("contentManager.exercises.createContent")}
             </Button>
           </Stack>
         }
@@ -214,7 +225,7 @@ export default function ExerciseListPage() {
 
       <Box
         component="section"
-        aria-label="Exercise summary"
+        aria-label={t("contentManager.exercises.summary")}
         sx={{
           mt: 2.5,
           display: "grid",
@@ -222,18 +233,18 @@ export default function ExerciseListPage() {
           gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" },
         }}
       >
-        <Box sx={enter(0)}><SummaryCard label="All exercises" count={entries.length} detail="exercises" /></Box>
+        <Box sx={enter(0)}><SummaryCard label={t("contentManager.exercises.allExercises")} count={entries.length} detail={t("contentManager.exercises.exercisesUnit")} /></Box>
         <Box sx={enter(80)}><SummaryCard
-          label="Active"
+          label={t("contentManager.exercises.active")}
           tone="success"
           count={activeCount}
-          detail="exercises"
+          detail={t("contentManager.exercises.exercisesUnit")}
         /></Box>
         <Box sx={enter(160)}><SummaryCard
-          label="Inactive"
+          label={t("contentManager.exercises.inactive")}
           tone="error"
           count={inactiveCount}
-          detail="exercises"
+          detail={t("contentManager.exercises.exercisesUnit")}
         /></Box>
       </Box>
 
@@ -250,8 +261,8 @@ export default function ExerciseListPage() {
             fullWidth
             value={search}
             onChange={resetPage(setSearch)}
-            placeholder="Search exercise or skill"
-            inputProps={{ "aria-label": "Search exercise or skill" }}
+            placeholder={t("contentManager.exercises.searchPlaceholder")}
+            inputProps={{ "aria-label": t("contentManager.exercises.searchAria") }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -266,22 +277,22 @@ export default function ExerciseListPage() {
             size="small"
             value={status}
             onChange={resetPage(setStatus)}
-            SelectProps={{ SelectDisplayProps: { "aria-label": "Filter by status" } }}
+            SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.exercises.filterByStatus") } }}
             sx={{ minWidth: 130 }}
           >
-            <MenuItem value="all">All status</MenuItem>
-            <MenuItem value="active">Active</MenuItem>
-            <MenuItem value="inactive">Inactive</MenuItem>
+            <MenuItem value="all">{t("contentManager.exercises.allStatus")}</MenuItem>
+            <MenuItem value="active">{t("contentManager.exercises.active")}</MenuItem>
+            <MenuItem value="inactive">{t("contentManager.exercises.inactive")}</MenuItem>
           </TextField>
           <TextField
             select
             size="small"
             value={level}
             onChange={resetPage(setLevel)}
-            SelectProps={{ SelectDisplayProps: { "aria-label": "Filter by level" } }}
+            SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.exercises.filterByLevel") } }}
             sx={{ minWidth: 130 }}
           >
-            <MenuItem value="all">All levels</MenuItem>
+            <MenuItem value="all">{t("contentManager.exercises.allLevels")}</MenuItem>
             {levelNames.map((name) => (
               <MenuItem key={name} value={name.toLowerCase()}>{name}</MenuItem>
             ))}
@@ -291,20 +302,20 @@ export default function ExerciseListPage() {
             size="small"
             value={type}
             onChange={resetPage(setType)}
-            SelectProps={{ SelectDisplayProps: { "aria-label": "Filter by type" } }}
+            SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.exercises.filterByType") } }}
             sx={{ minWidth: 120 }}
           >
-            <MenuItem value="all">All types</MenuItem>
-            <MenuItem value="health">Health</MenuItem>
-            <MenuItem value="skill">Skill</MenuItem>
-            <MenuItem value="custom">Custom</MenuItem>
+            <MenuItem value="all">{t("contentManager.exercises.allTypes")}</MenuItem>
+            <MenuItem value="health">{t("contentManager.exercises.typeHealth")}</MenuItem>
+            <MenuItem value="skill">{t("contentManager.exercises.typeSkill")}</MenuItem>
+            <MenuItem value="custom">{t("contentManager.exercises.typeCustom")}</MenuItem>
           </TextField>
-          <Tooltip title="Refresh">
+          <Tooltip title={t("contentManager.exercises.refresh")}>
             <span>
               <IconButton
                 onClick={() => refetch()}
                 disabled={isFetching}
-                aria-label="Refresh exercise list"
+                aria-label={t("contentManager.exercises.refreshAria")}
                 sx={{ border: 1, borderColor: "divider", borderRadius: 2, transition: "all .2s ease", "&:hover": { borderColor: CM.violetBright, bgcolor: "rgba(139,92,246,0.1)" } }}
               >
                 {isFetching ? <CircularProgress size={18} /> : <RefreshRoundedIcon fontSize="small" />}
@@ -315,8 +326,8 @@ export default function ExerciseListPage() {
         {(statusMutation.error || deleteMutation.error) && (
           <Alert severity="error" sx={{ m: 2 }} onClose={() => { statusMutation.reset(); deleteMutation.reset(); }}>
             {deleteMutation.error
-              ? `Could not delete the exercise. ${deleteMutation.error.message}`
-              : `Could not update the status. ${statusMutation.error.message}`}
+              ? t("contentManager.exercises.deleteFailed", { message: deleteMutation.error.message })
+              : t("contentManager.exercises.statusUpdateFailed", { message: statusMutation.error.message })}
           </Alert>
         )}
 
@@ -325,7 +336,7 @@ export default function ExerciseListPage() {
             <Stack spacing={1.5} alignItems="center">
               <CircularProgress size={24} />
               <Typography variant="body2" color="text.secondary">
-                Loading exercises…
+                {t("contentManager.exercises.loading")}
               </Typography>
             </Stack>
           </Box>
@@ -336,11 +347,11 @@ export default function ExerciseListPage() {
               sx={{ mb: 2, textAlign: "left" }}
               action={
                 <Button color="inherit" size="small" onClick={() => refetch()}>
-                  Try again
+                  {t("contentManager.exercises.tryAgain")}
                 </Button>
               }
             >
-              Could not load the exercise list. {error.message}
+              {t("contentManager.exercises.loadFailed", { message: error.message })}
             </Alert>
           </Box>
         ) : (
@@ -349,14 +360,14 @@ export default function ExerciseListPage() {
               <Table size="small" sx={{ minWidth: 940, "& th, & td": { textAlign: "center" } }}>
                 <TableHead>
                   <TableRow sx={{ "& th": { bgcolor: "rgba(19,10,39,0.85)", color: CM.textMuted, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, whiteSpace: "nowrap" } }}>
-                    <TableCell sx={{ textAlign: "left !important", pl: 3 }}>Exercise / Skill</TableCell>
-                    <TableCell>Type</TableCell>
-                    <TableCell>Source</TableCell>
-                    <TableCell>Muscle group</TableCell>
-                    <TableCell>Level</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Updated</TableCell>
-                    <TableCell align="center">Action</TableCell>
+                    <TableCell sx={{ textAlign: "left !important", pl: 3 }}>{t("contentManager.exercises.colExercise")}</TableCell>
+                    <TableCell>{t("contentManager.exercises.colType")}</TableCell>
+                    <TableCell>{t("contentManager.exercises.colSource")}</TableCell>
+                    <TableCell>{t("contentManager.exercises.colMuscleGroup")}</TableCell>
+                    <TableCell>{t("contentManager.exercises.colLevel")}</TableCell>
+                    <TableCell>{t("contentManager.exercises.colStatus")}</TableCell>
+                    <TableCell>{t("contentManager.exercises.colUpdated")}</TableCell>
+                    <TableCell align="center">{t("contentManager.exercises.colAction")}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -435,11 +446,11 @@ export default function ExerciseListPage() {
                               variant="outlined"
                               sx={{ py: 0.25, px: 1.25, fontSize: 11.5, minWidth: 0, borderRadius: "8px" }}
                             >
-                              View
+                              {t("contentManager.exercises.view")}
                             </Button>
                             <IconButton
                               size="small"
-                              aria-label={`More actions for ${entry.name}`}
+                              aria-label={t("contentManager.exercises.moreActions", { name: entry.name })}
                               aria-expanded={Boolean(menu.anchor) && menu.entry?.code === entry.code}
                               onClick={(event) => setMenu({ anchor: event.currentTarget, entry })}
                             >
@@ -457,8 +468,8 @@ export default function ExerciseListPage() {
                           <FitnessCenterRoundedIcon sx={{ fontSize: 44, color: CM.textDim, opacity: 0.4 }} />
                           <Typography variant="body2" color="text.secondary">
                             {entries.length
-                              ? "No exercises match these filters."
-                              : "No exercises or skills yet. Create your first entry to get started."}
+                              ? t("contentManager.exercises.noMatch")
+                              : t("contentManager.exercises.empty")}
                           </Typography>
                         </Stack>
                       </TableCell>
@@ -475,7 +486,7 @@ export default function ExerciseListPage() {
               onPageChange={(_, nextPage) => setPage(nextPage)}
               rowsPerPage={rowsPerPage}
               rowsPerPageOptions={[]}
-              labelDisplayedRows={({ from, to, count }) => `Showing ${from}-${to} of ${count}`}
+              labelDisplayedRows={({ from, to, count }) => t("contentManager.exercises.showingRows", { from, to, count })}
             />
           </>
         )}
@@ -487,7 +498,7 @@ export default function ExerciseListPage() {
           to={menu.entry ? `${CONTENT_PATHS.exercises}/${encodeURIComponent(menu.entry.code)}` : "#"}
           onClick={closeMenu}
         >
-          View details
+          {t("contentManager.exercises.viewDetails")}
         </MenuItem>
         <MenuItem
           disabled={statusMutation.isPending}
@@ -497,7 +508,9 @@ export default function ExerciseListPage() {
             if (entry) statusMutation.mutate({ code: entry.code, active: !entry.active });
           }}
         >
-          {menu.entry?.active ? "Set inactive" : "Set active"}
+          {menu.entry?.active
+            ? t("contentManager.exercises.setInactive")
+            : t("contentManager.exercises.setActive")}
         </MenuItem>
         <MenuItem
           disabled={deleteMutation.isPending}
@@ -505,13 +518,13 @@ export default function ExerciseListPage() {
           onClick={() => {
             const entry = menu.entry;
             closeMenu();
-            if (entry && window.confirm(`Delete "${entry.name}"? This cannot be undone.`)) {
+            if (entry && window.confirm(t("contentManager.exercises.deleteConfirm", { name: entry.name }))) {
               deleteMutation.mutate(entry.code);
             }
           }}
         >
           <DeleteOutlineRoundedIcon fontSize="small" sx={{ mr: 1 }} />
-          Delete
+          {t("contentManager.exercises.delete")}
         </MenuItem>
       </Menu>
     </Box>

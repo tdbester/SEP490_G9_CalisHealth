@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { displayOf, questionLabel, widgetOf } from "../../utils/survey";
 import { ChevronDown, SurveyIcon } from "./SurveyIcons";
 
@@ -69,6 +70,7 @@ function NumberField({ question, value, error, onChange, errorId }) {
 }
 
 function SelectField({ question, value, error, onChange, errorId }) {
+  const { t } = useTranslation("member");
   const display = displayOf(question);
   return (
     <IconCard question={question} error={error} errorId={errorId}>
@@ -82,7 +84,7 @@ function SelectField({ question, value, error, onChange, errorId }) {
           className={value ? "" : "is-placeholder"}
         >
           <option value="" disabled>
-            {display.placeholder ?? "Select an option"}
+            {display.placeholder ?? t("survey.selectOption")}
           </option>
           {question.options.map((o) => (
             <option key={o.optionCode} value={o.optionCode}>
@@ -160,6 +162,7 @@ function ScaleField({ question, value, onChange }) {
 }
 
 export default function QuestionField({ question, value, error, onChange }) {
+  const { t } = useTranslation("member");
   const errorId = `q-${question.questionCode}`;
   const widget = widgetOf(question);
   const icons = displayOf(question).optionIcons ?? {};
@@ -225,8 +228,8 @@ export default function QuestionField({ question, value, error, onChange }) {
         <ChoiceGroup {...common}>
           <div className="survey-tiles">
             {[
-              [true, "Yes"],
-              [false, "No"],
+              [true, t("survey.yes")],
+              [false, t("survey.no")],
             ].map(([option, label]) => (
               <button
                 key={label}

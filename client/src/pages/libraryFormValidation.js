@@ -1,3 +1,7 @@
+import i18n from "../i18n";
+
+const t = (key, options) => i18n.t(key, options);
+
 const VIDEO_MAX_SIZE = 50 * 1024 * 1024;
 const VIDEO_EXTENSIONS = new Set(["mp4", "mov", "webm"]);
 const WORKOUT_LEVELS = new Set(["Beginner", "Intermediate", "Advanced"]);
@@ -14,21 +18,21 @@ export function validatePersonalExercise({
   const normalizedTitle = title.trim();
   const normalizedDescription = description.trim();
 
-  if (!normalizedTitle) errors.title = "Title is required";
-  else if (normalizedTitle.length > 50) errors.title = "Title cannot exceed 50 characters";
+  if (!normalizedTitle) errors.title = t("member.validation.titleRequired");
+  else if (normalizedTitle.length > 50) errors.title = t("member.validation.titleTooLong");
 
   if (normalizedDescription.length > 300) {
-    errors.description = "Description cannot exceed 300 characters";
+    errors.description = t("member.validation.descriptionTooLong");
   }
 
-  if (!WORKOUT_LEVELS.has(level)) errors.level = "Please select a valid level";
-  if (steps.length === 0) errors.steps = "Add at least one guide step";
+  if (!WORKOUT_LEVELS.has(level)) errors.level = t("member.validation.invalidLevel");
+  if (steps.length === 0) errors.steps = t("member.validation.stepsRequired");
   steps.forEach((step, index) => {
-    if (!step.trim()) errors[`step-${index}`] = "This step cannot be empty";
+    if (!step.trim()) errors[`step-${index}`] = t("member.validation.stepEmpty");
   });
 
   if (requireVideo && !videoFile) {
-    errors.video = "A demo video is required";
+    errors.video = t("member.validation.videoRequired");
   } else if (videoFile) {
     const videoError = validateVideoFile(videoFile);
     if (videoError) errors.video = videoError;
@@ -39,14 +43,14 @@ export function validatePersonalExercise({
 
 export function validateWorkoutName(name) {
   const normalizedName = name.trim();
-  if (!normalizedName) return "Workout name is required";
-  if (normalizedName.length > 60) return "Workout name cannot exceed 60 characters";
+  if (!normalizedName) return t("member.validation.workoutNameRequired");
+  if (normalizedName.length > 60) return t("member.validation.workoutNameTooLong");
   return "";
 }
 
 export function validateWorkoutDescription(description) {
   return description.trim().length > 200
-    ? "Description cannot exceed 200 characters"
+    ? t("member.validation.description200TooLong")
     : "";
 }
 
@@ -54,13 +58,13 @@ export function validateVideoFile(file) {
   if (!file) return "";
   const extension = file.name.split(".").pop()?.toLowerCase();
   if (!extension || !VIDEO_EXTENSIONS.has(extension)) {
-    return "Video must be an MP4, MOV, or WebM file";
+    return t("member.validation.videoFormat");
   }
   if (file.type && !file.type.toLowerCase().startsWith("video/")) {
-    return "The selected file must be a video";
+    return t("member.validation.videoMustBeVideo");
   }
   if (file.size > VIDEO_MAX_SIZE) {
-    return "Video file size cannot exceed 50 MB";
+    return t("member.validation.videoTooLarge");
   }
   return "";
 }
@@ -68,7 +72,7 @@ export function validateVideoFile(file) {
 export function validateWorkoutExercises(exercises) {
   const errors = {};
   if (exercises.length === 0) {
-    errors.list = "Please add at least one exercise to your workout";
+    errors.list = t("member.validation.workoutExercisesRequired");
   }
 
   exercises.forEach((exercise, index) => {
@@ -80,13 +84,13 @@ export function validateWorkoutExercises(exercises) {
       Number(value) >= min &&
       Number(value) <= max;
     if (!isValidInteger(exercise.sets, 1, 100)) {
-      errors[`sets-${index}`] = "Sets must be an integer from 1 to 100";
+      errors[`sets-${index}`] = t("member.validation.setsRange");
     }
     if (!isValidInteger(exercise.reps, 1, 2147483647)) {
-      errors[`reps-${index}`] = "Value must be an integer greater than 0";
+      errors[`reps-${index}`] = t("member.validation.valuePositive");
     }
     if (!isValidInteger(exercise.restSec, 10, 180)) {
-      errors[`rest-${index}`] = "Rest must be an integer from 10 to 180 seconds";
+      errors[`rest-${index}`] = t("member.validation.restRange");
     }
   });
 

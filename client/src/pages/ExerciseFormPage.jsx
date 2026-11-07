@@ -33,10 +33,12 @@ import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import VideoLibraryRoundedIcon from "@mui/icons-material/VideoLibraryRounded";
 import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
+import { useTranslation } from "react-i18next";
 import { contentManagerApi } from "../api/contentManager";
 import { useLevelNames } from "../useLevelNames";
 import { useApiMutation, useApiQuery } from "../hooks";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { getLevelLabel } from "../utils/levelLabel";
 import { CONTENT_PATHS, ContentPageHeader, DarkPill, TONE_STYLES } from "../components/ContentShared";
 import { CM } from "../theme-content";
 import ConfirmDialog from "../components/common/ConfirmDialog";
@@ -52,14 +54,31 @@ const enter = (delay = 0) => ({
 
 const SYSTEM_PAGE_SIZE = 6;
 const ITEM_PAGE_SIZE = 2;
-const MUSCLE_OPTIONS = ["Chest", "Back", "Shoulders", "Arms", "Core", "Legs", "Glutes"];
+const MUSCLE_OPTIONS = [
+  { value: "Chest", labelKey: "member.customExercise.muscleChest" },
+  { value: "Back", labelKey: "member.customExercise.muscleBack" },
+  { value: "Shoulders", labelKey: "member.customExercise.muscleShoulders" },
+  { value: "Arms", labelKey: "member.customExercise.muscleArms" },
+  { value: "Core", labelKey: "member.customExercise.muscleCore" },
+  { value: "Legs", labelKey: "member.customExercise.muscleLegs" },
+  { value: "Glutes", labelKey: "member.customExercise.muscleGlutes" },
+];
 const CATEGORY_OPTIONS = ["REPS", "HOLD"];
-const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+const WEEK_DAYS_FALLBACK = [
+  "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+];
 
 const CATEGORY_LABELS = {
-  REPS: "Count reps",
-  HOLD: "Hold (plank / timed)",
+  REPS: "contentManager.form.categoryReps",
+  HOLD: "contentManager.form.categoryHold",
 };
+
+/** Tên các ngày trong tuần — lấy động từ i18n để hỗ trợ đa ngôn ngữ. */
+function weekdayNames(t) {
+  const names = t("common.date.weekdaysFull", { returnObjects: true });
+  return Array.isArray(names) && names.length === 7 ? names : WEEK_DAYS_FALLBACK;
+}
 
 export function workoutTypeFromExercises(items, exercises) {
   const typeByCode = new Map(
@@ -81,9 +100,9 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const ALLOWED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 
 const BREADCRUMB = [
-  { label: "Content manager", to: CONTENT_PATHS.dashboard },
-  { label: "Exercise & Workout", to: CONTENT_PATHS.exercises },
-  { label: "Create content" },
+  { labelKey: "nav.contentManagerRole", to: CONTENT_PATHS.dashboard },
+  { labelKey: "nav.exerciseAndWorkout", to: CONTENT_PATHS.exercises },
+  { labelKey: "nav.createContent" },
 ];
 
 const EMPTY_EXERCISE = {
@@ -190,6 +209,7 @@ function validateFile(file, { maxSize, allowedTypes, allowedExtensions, label })
 /* ------------------------------- Guide editor ------------------------------ */
 
 function GuideEditor({ value, onChange }) {
+  const { t } = useTranslation();
   const steps = value ? value.split("\n") : [""];
 
   const updateStep = (index, step) => {
@@ -216,14 +236,16 @@ function GuideEditor({ value, onChange }) {
             value={step}
             onChange={(event) => updateStep(index, event.target.value)}
             placeholder={
-              index === 0 ? "e.g. Start in a plank with hands under shoulders" : "Next step"
+              index === 0
+                ? t("contentManager.form.guideStepPlaceholderFirst")
+                : t("contentManager.form.guideStepPlaceholderNext")
             }
-            inputProps={{ "aria-label": `Guide step ${index + 1}` }}
+            inputProps={{ "aria-label": t("contentManager.form.guideStepAria", { number: index + 1 }) }}
           />
           <Button
             type="button"
             color="error"
-            aria-label={`Remove guide step ${index + 1}`}
+            aria-label={t("contentManager.form.removeGuideStepAria", { number: index + 1 })}
             disabled={steps.length === 1}
             onClick={() => removeStep(index)}
             sx={{ minWidth: 0, px: 1 }}
@@ -240,7 +262,7 @@ function GuideEditor({ value, onChange }) {
           startIcon={<AddRoundedIcon />}
           onClick={() => onChange([...steps, ""].join("\n"))}
         >
-          Add step
+          {t("contentManager.form.addStep")}
         </Button>
       </Box>
     </Stack>
@@ -250,6 +272,7 @@ function GuideEditor({ value, onChange }) {
 /* ------------------------------ Exercise form ------------------------------ */
 
 function FileDropField({ label, hint, accept, file, error, onChange, preview }) {
+  const { t } = useTranslation();
   return (
     <Box
       sx={{
@@ -275,7 +298,7 @@ function FileDropField({ label, hint, accept, file, error, onChange, preview }) 
         startIcon={<CloudUploadRoundedIcon />}
         sx={{ mt: 1.5, borderColor: CM.borderStrong, bgcolor: "rgba(139,92,246,0.1)", transition: "all .2s ease", "&:hover": { borderColor: CM.violetBright, bgcolor: "rgba(139,92,246,0.2)" } }}
       >
-        Choose file
+        {t("contentManager.form.chooseFile")}
         <input
           hidden
           type="file"
@@ -287,7 +310,7 @@ function FileDropField({ label, hint, accept, file, error, onChange, preview }) 
       </Button>
       {file && (
         <Typography variant="caption" sx={{ color: CM.green, fontWeight: 600, mt: 1, display: "block" }}>
-          Selected: {file.name} ({fileSizeMb(file)} MB)
+          {t("contentManager.form.selectedFile", { name: file.name, size: fileSizeMb(file) })}
         </Typography>
       )}
       {preview}
@@ -297,6 +320,7 @@ function FileDropField({ label, hint, accept, file, error, onChange, preview }) 
 }
 
 function LocalImagePreview({ file }) {
+  const { t } = useTranslation();
   const [url, setUrl] = useState(null);
 
   useEffect(() => {
@@ -314,7 +338,7 @@ function LocalImagePreview({ file }) {
     <Box
       component="img"
       src={url}
-      alt="Selected muscle anatomy preview"
+      alt={t("contentManager.form.anatomyPreviewAlt")}
       sx={{
         mt: 1.5,
         width: "100%",
@@ -354,6 +378,7 @@ export function ExerciseFields({
   onAnatomyImageChange,
   anatomyImagePreview,
 }) {
+  const { t } = useTranslation();
   const { levels: LEVELS, activeLevels } = useLevelNames();
   return (
     <Stack spacing={2.5}>
@@ -364,12 +389,12 @@ export function ExerciseFields({
               <FitnessCenterRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
             </Box>
             <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
-              Exercise details
+              {t("contentManager.form.exerciseDetails")}
             </Typography>
           </Stack>
           <Stack spacing={2}>
             <TextField
-              label="Title"
+              label={t("contentManager.form.fieldTitle")}
               required
               size="small"
               value={value.name}
@@ -377,26 +402,26 @@ export function ExerciseFields({
                 onChange({ ...value, name: event.target.value });
                 onClearField("title");
               }}
-              placeholder="e.g. Archer push-up"
+              placeholder={t("contentManager.form.exerciseTitlePlaceholder")}
               inputProps={{ maxLength: 120 }}
               error={invalid.title}
-              helperText={invalid.title ? "Enter a title of 1–120 characters." : ` ${value.name.length}/120`}
+              helperText={invalid.title ? t("contentManager.form.errTitleLength") : ` ${value.name.length}/120`}
             />
             <TextField
-              label="Description"
+              label={t("contentManager.form.fieldDescription")}
               size="small"
               multiline
               minRows={3}
               value={value.description}
               onChange={(event) => onChange({ ...value, description: event.target.value })}
-              placeholder="What does this exercise train, and who is it for?"
+              placeholder={t("contentManager.form.exerciseDescPlaceholder")}
               inputProps={{ maxLength: 300 }}
               helperText={`${value.description.length}/300`}
             />
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
               <TextField
                 select
-                label="Type"
+                label={t("contentManager.form.fieldType")}
                 size="small"
                 fullWidth
                 value={value.type}
@@ -405,14 +430,14 @@ export function ExerciseFields({
                   onClearField("type");
                 }}
                 error={invalid.type}
-                helperText={invalid.type ? "Choose Health or Skill." : " "}
+                helperText={invalid.type ? t("contentManager.form.errType") : " "}
               >
-                <MenuItem value="HEALTH">Health</MenuItem>
-                <MenuItem value="SKILL">Skill</MenuItem>
+                <MenuItem value="HEALTH">{t("contentManager.form.typeHealth")}</MenuItem>
+                <MenuItem value="SKILL">{t("contentManager.form.typeSkill")}</MenuItem>
               </TextField>
               <TextField
                 select
-                label="Category"
+                label={t("contentManager.form.fieldCategory")}
                 size="small"
                 fullWidth
                 value={CATEGORY_OPTIONS.includes(value.category) ? value.category : ""}
@@ -425,34 +450,34 @@ export function ExerciseFields({
                       component="span"
                       sx={{ color: selected ? CM.text : CM.textDim }}
                     >
-                      {CATEGORY_LABELS[selected] || "Select a category"}
+                      {CATEGORY_LABELS[selected] ? t(CATEGORY_LABELS[selected]) : t("contentManager.form.selectCategory")}
                     </Box>
                   ),
                 }}
               >
-                <MenuItem value="">Select a category</MenuItem>
+                <MenuItem value="">{t("contentManager.form.selectCategory")}</MenuItem>
                 {CATEGORY_OPTIONS.map((category) => (
                   <MenuItem key={category} value={category}>
-                    {CATEGORY_LABELS[category]}
+                    {t(`contentManager.form.${category === "HOLD" ? "categoryHold" : "categoryReps"}`)}
                   </MenuItem>
                 ))}
               </TextField>
             </Stack>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
               <TextField
-                label={value.category === "HOLD" ? "Hold duration" : "Number of reps"}
+                label={value.category === "HOLD" ? t("contentManager.form.fieldHoldDuration") : t("contentManager.form.fieldNumberOfReps")}
                 type="number"
                 size="small"
                 fullWidth
                 value={value.value}
                 onChange={(event) => onChange({ ...value, value: event.target.value })}
                 inputProps={{ min: 1, max: 3600, step: 1 }}
-                InputProps={{ endAdornment: <InputAdornment position="end">{value.category === "HOLD" ? "sec" : "reps"}</InputAdornment> }}
+                InputProps={{ endAdornment: <InputAdornment position="end">{value.category === "HOLD" ? t("contentManager.form.unitSec") : t("contentManager.form.unitReps")}</InputAdornment> }}
                 error={invalid.value}
-                helperText={invalid.value ? "Enter a whole number from 1 to 3600." : " "}
+                helperText={invalid.value ? t("contentManager.form.errValueRange") : " "}
               />
               <TextField
-                label="Default Sets"
+                label={t("contentManager.form.fieldDefaultSets")}
                 type="number"
                 size="small"
                 fullWidth
@@ -460,13 +485,13 @@ export function ExerciseFields({
                 onChange={(event) => onChange({ ...value, defaultSets: event.target.value })}
                 inputProps={{ min: 1, max: 20, step: 1 }}
                 error={invalid.defaultSets}
-                helperText={invalid.defaultSets ? "Enter a whole number from 1 to 20." : " "}
+                helperText={invalid.defaultSets ? t("contentManager.form.errSetsRange") : " "}
               />
             </Stack>
 
             <Box>
               <Typography variant="caption" color="text.secondary">
-                Level
+                {t("contentManager.form.fieldLevel")}
               </Typography>
               <ToggleButtonGroup
                 exclusive
@@ -478,7 +503,7 @@ export function ExerciseFields({
                   onChange({ ...value, level: next });
                   onClearField("level");
                 }}
-                aria-label="Exercise level"
+                aria-label={t("contentManager.form.fieldLevel")}
                 sx={{
                   mt: 0.75,
                   "& .MuiToggleButton-root": invalid.level ? { borderColor: "error.main" } : undefined,
@@ -489,7 +514,7 @@ export function ExerciseFields({
                   const unavailable = !activeLevels.includes(level) && value.level !== level;
                   return (
                     <ToggleButton key={level} value={level} disabled={unavailable} sx={{ fontSize: 12.5 }}>
-                      {unavailable ? `${level} (inactive)` : level}
+                      {unavailable ? t("contentManager.form.levelInactive", { level }) : level}
                     </ToggleButton>
                   );
                 })}
@@ -505,17 +530,17 @@ export function ExerciseFields({
               }}
             >
               <Typography variant="caption" color="text.secondary">
-                Muscle groups
+                {t("contentManager.form.fieldMuscleGroups")}
               </Typography>
               <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1} sx={{ mt: 0.75 }}>
                 {MUSCLE_OPTIONS.map((muscle) => {
-                  const selected = selectedMuscles.includes(muscle);
+                  const selected = selectedMuscles.includes(muscle.value);
                   return (
                     <Chip
-                      key={muscle}
-                      label={muscle}
+                      key={muscle.value}
+                      label={t(muscle.labelKey)}
                       clickable
-                      onClick={() => onToggleMuscle(muscle)}
+                      onClick={() => onToggleMuscle(muscle.value)}
                       color={selected ? "primary" : "default"}
                       variant={selected ? "filled" : "outlined"}
                       aria-pressed={selected}
@@ -524,7 +549,7 @@ export function ExerciseFields({
                 })}
               </Stack>
               {invalid.muscles && (
-                <FormHelperText error>Select at least one muscle group.</FormHelperText>
+                <FormHelperText error>{t("contentManager.form.errMuscles")}</FormHelperText>
               )}
             </Box>
           </Stack>
@@ -539,10 +564,10 @@ export function ExerciseFields({
             </Box>
             <Box>
               <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
-                Guide
+                {t("contentManager.form.guide")}
               </Typography>
               <Typography variant="caption" sx={{ color: CM.textMuted }}>
-                Add one action step at a time, in order.
+                {t("contentManager.form.guideCaption")}
               </Typography>
             </Box>
           </Stack>
@@ -557,12 +582,12 @@ export function ExerciseFields({
               <VideoLibraryRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
             </Box>
             <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
-              Demo video
+              {t("contentManager.form.demoVideo")}
             </Typography>
           </Stack>
           <FileDropField
-            label="Upload video file"
-            hint="MP4, MOV or WebM · up to 50 MB"
+            label={t("contentManager.form.uploadVideo")}
+            hint={t("contentManager.form.uploadVideoHint")}
             accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
             file={demoVideo}
             error={demoVideoError}
@@ -578,12 +603,12 @@ export function ExerciseFields({
               <ImageRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
             </Box>
             <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
-              Muscle anatomy image
+              {t("contentManager.form.anatomyImage")}
             </Typography>
           </Stack>
           <FileDropField
-            label="Upload anatomy image"
-            hint="JPG, PNG or WebP · up to 10 MB"
+            label={t("contentManager.form.uploadImage")}
+            hint={t("contentManager.form.uploadImageHint")}
             accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
             file={anatomyImage}
             error={anatomyImageError}
@@ -599,6 +624,7 @@ export function ExerciseFields({
 /* ------------------------------ Workout form ------------------------------- */
 
 function PlanLevelInputs({ label, sets, reps, onSetsChange, onRepsChange }) {
+  const { t } = useTranslation();
   return (
     <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1, p: 1 }}>
       <Typography variant="caption" fontWeight={600} sx={{ fontSize: 10.5 }}>
@@ -606,7 +632,7 @@ function PlanLevelInputs({ label, sets, reps, onSetsChange, onRepsChange }) {
       </Typography>
       <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
         <TextField
-          label="Sets"
+          label={t("contentManager.form.fieldSets")}
           type="number"
           size="small"
           value={sets}
@@ -616,7 +642,7 @@ function PlanLevelInputs({ label, sets, reps, onSetsChange, onRepsChange }) {
           sx={{ "& input": { fontSize: 12, py: 0.75 } }}
         />
         <TextField
-          label="Reps"
+          label={t("contentManager.form.fieldReps")}
           type="number"
           size="small"
           value={reps}
@@ -654,6 +680,7 @@ function ItemNumberField({ label, value, onChange, min, max, error, unit }) {
  * Nút chuyển trang ẩn khi chỉ có một trang.
  */
 function ListPager({ page, count, total, pageSize, noun, onChange, label }) {
+  const { t } = useTranslation();
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
   return (
@@ -665,7 +692,7 @@ function ListPager({ page, count, total, pageSize, noun, onChange, label }) {
       sx={{ mt: 2, pt: 1.5, borderTop: 1, borderColor: "divider", columnGap: 1.5, rowGap: 1 }}
     >
       <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
-        Showing {from}–{to} of {total} {noun}
+        {t("contentManager.form.showingRange", { from, to, total, noun })}
       </Typography>
       {count > 1 && (
         <Stack direction="row" spacing={0.75} alignItems="center" sx={{ flexShrink: 0, flexWrap: "nowrap", ml: "auto" }}>
@@ -677,9 +704,9 @@ function ListPager({ page, count, total, pageSize, noun, onChange, label }) {
             onClick={() => onChange(page - 1)}
             startIcon={<KeyboardArrowLeftRoundedIcon fontSize="small" />}
             sx={{ fontSize: 11, minWidth: 0 }}
-            aria-label={`${label} previous page`}
+            aria-label={t("contentManager.form.pageAria", { label, page: page - 1 })}
           >
-            Previous
+            {t("contentManager.form.previous")}
           </Button>
           <Pagination
             size="small"
@@ -693,7 +720,7 @@ function ListPager({ page, count, total, pageSize, noun, onChange, label }) {
             hideNextButton
             sx={{ "& .MuiPagination-ul": { flexWrap: "nowrap" }, "& .MuiPaginationItem-root": { whiteSpace: "nowrap", flexShrink: 0 } }}
             onChange={(_, next) => onChange(next)}
-            getItemAriaLabel={(type, itemPage) => `${label} page ${itemPage}`}
+            getItemAriaLabel={(type, itemPage) => t("contentManager.form.pageAria", { label, page: itemPage })}
           />
           <Button
             type="button"
@@ -703,9 +730,9 @@ function ListPager({ page, count, total, pageSize, noun, onChange, label }) {
             onClick={() => onChange(page + 1)}
             endIcon={<KeyboardArrowRightRoundedIcon fontSize="small" />}
             sx={{ fontSize: 11, minWidth: 0 }}
-            aria-label={`${label} next page`}
+            aria-label={t("contentManager.form.pageAria", { label, page: page + 1 })}
           >
-            Next
+            {t("contentManager.form.next")}
           </Button>
         </Stack>
       )}
@@ -715,6 +742,7 @@ function ListPager({ page, count, total, pageSize, noun, onChange, label }) {
 
 /** Thẻ một bài trong workout: count by, sets, reps / duration, rest, đổi thứ tự và xoá. */
 function WorkoutItemCard({ item, index, total, entry, showErrors, onChange, onMove, onRemove }) {
+  const { t } = useTranslation();
   const errors = showErrors ? workoutItemErrors(item) : {};
   const byDuration = item.countBy === "DURATION";
   const name = entry?.name || item.exerciseCode;
@@ -747,18 +775,18 @@ function WorkoutItemCard({ item, index, total, entry, showErrors, onChange, onMo
           </Typography>
         </Box>
         <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
-          <IconButton size="small" aria-label={`Move ${name} up`} disabled={index === 0} onClick={() => onMove(-1)}>
+          <IconButton size="small" aria-label={t("contentManager.form.moveUpAria", { name })} disabled={index === 0} onClick={() => onMove(-1)}>
             <KeyboardArrowUpRoundedIcon fontSize="small" />
           </IconButton>
           <IconButton
             size="small"
-            aria-label={`Move ${name} down`}
+            aria-label={t("contentManager.form.moveDownAria", { name })}
             disabled={index === total - 1}
             onClick={() => onMove(1)}
           >
             <KeyboardArrowDownRoundedIcon fontSize="small" />
           </IconButton>
-          <IconButton size="small" color="error" aria-label={`Remove ${name}`} onClick={onRemove}>
+          <IconButton size="small" color="error" aria-label={t("contentManager.form.removeExerciseAria", { name })} onClick={onRemove}>
             <CloseRoundedIcon fontSize="small" />
           </IconButton>
         </Stack>
@@ -767,7 +795,7 @@ function WorkoutItemCard({ item, index, total, entry, showErrors, onChange, onMo
       {/* Count by cố định theo category của bài tập, chỉ hiển thị. */}
       <Box sx={{ mt: 1.5 }}>
         <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
-          Count by
+          {t("contentManager.form.countBy")}
         </Typography>
         <Box
           sx={{
@@ -781,13 +809,13 @@ function WorkoutItemCard({ item, index, total, entry, showErrors, onChange, onMo
             bgcolor: "rgba(255,255,255,0.03)",
           }}
         >
-          {byDuration ? "Duration" : "Sets & Reps"}
+          {byDuration ? t("contentManager.form.countByDuration") : t("contentManager.form.countBySetsReps")}
         </Box>
       </Box>
 
       <Box sx={{ mt: 1.5, display: "grid", gap: 1, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
         <ItemNumberField
-          label="Sets"
+          label={t("contentManager.form.fieldSets")}
           value={item.sets}
           min={1}
           max={20}
@@ -796,8 +824,8 @@ function WorkoutItemCard({ item, index, total, entry, showErrors, onChange, onMo
         />
         {byDuration ? (
           <ItemNumberField
-            label="Duration"
-            unit="sec"
+            label={t("contentManager.form.fieldDuration")}
+            unit={t("contentManager.form.unitSec")}
             value={item.durationSeconds}
             min={1}
             max={3600}
@@ -806,7 +834,7 @@ function WorkoutItemCard({ item, index, total, entry, showErrors, onChange, onMo
           />
         ) : (
           <ItemNumberField
-            label="Reps"
+            label={t("contentManager.form.fieldReps")}
             value={item.reps}
             min={1}
             max={100}
@@ -815,8 +843,8 @@ function WorkoutItemCard({ item, index, total, entry, showErrors, onChange, onMo
           />
         )}
         <ItemNumberField
-          label="Rest"
-          unit="sec"
+          label={t("contentManager.form.fieldRest")}
+          unit={t("contentManager.form.unitSec")}
           value={item.restSeconds}
           min={0}
           max={3600}
@@ -835,6 +863,7 @@ function LevelDot({ tone }) {
 }
 
 function ExercisePickerRow({ entry, onAdd, toneOf }) {
+  const { t } = useTranslation();
   const level = entry.level || entry.difficultyLevel || "Intermediate";
   const isStandardLevel = ["BEGINNER", "INTERMEDIATE", "ADVANCED"]
     .includes(String(level).trim().toUpperCase());
@@ -867,16 +896,16 @@ function ExercisePickerRow({ entry, onAdd, toneOf }) {
           </Typography>
           <Chip
             size="small"
-            label={String(entry.type).toUpperCase() === "SKILL" ? "Skill" : "Health"}
+            label={String(entry.type).toUpperCase() === "SKILL" ? t("contentManager.form.typeSkill") : t("contentManager.form.typeHealth")}
             color={String(entry.type).toUpperCase() === "SKILL" ? "secondary" : "info"}
             sx={{ height: 18, fontSize: 10, fontWeight: 700 }}
           />
           {isStandardLevel ? (
             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${getLevelBadgeStyle(level)}`}>
-              {level}
+              {getLevelLabel(level)}
             </span>
           ) : (
-            <DarkPill tone={toneOf(level)} sx={{ height: 18, fontSize: 10 }}>{level}</DarkPill>
+            <DarkPill tone={toneOf(level)} sx={{ height: 18, fontSize: 10 }}>{getLevelLabel(level)}</DarkPill>
           )}
         </Stack>
         <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ minHeight: 18 }}>
@@ -890,7 +919,7 @@ function ExercisePickerRow({ entry, onAdd, toneOf }) {
         onClick={onAdd}
         sx={{ flexShrink: 0, fontSize: 11 }}
       >
-        + Add
+        {t("contentManager.form.addExercise")}
       </Button>
     </Stack>
   );
@@ -912,7 +941,9 @@ export function WorkoutFields({
   selectedDay,
   onSelectedDayChange,
 }) {
+  const { t } = useTranslation();
   const { levels: LEVELS, activeLevels, levelTone } = useLevelNames();
+  const WEEK_DAYS = weekdayNames(t);
   const isDailyPlan = value.type === "DAILY_TRAINING_PLAN";
   const dayItems = value.planItems.filter((item) => item.dayOfWeek === selectedDay);
   const entryByCode = useMemo(() => {
@@ -1019,47 +1050,51 @@ export function WorkoutFields({
               <FitnessCenterRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
             </Box>
             <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
-              Workout details
+              {t("contentManager.form.workoutDetails")}
             </Typography>
           </Stack>
           <Stack spacing={2}>
             <TextField
-              label="Title"
+              label={t("contentManager.form.fieldTitle")}
               required
               size="small"
               value={value.name}
               onChange={(event) => onChange({ ...value, name: event.target.value })}
-              placeholder="e.g. Beginner full body"
+              placeholder={t("contentManager.form.workoutTitlePlaceholder")}
               inputProps={{ maxLength: 60 }}
               error={hasSubmitted && !value.name.trim()}
               helperText={`${value.name.length}/60`}
             />
             <TextField
-              label="Description"
+              label={t("contentManager.form.fieldDescription")}
               required
               size="small"
               multiline
               minRows={2}
               value={value.description}
               onChange={(event) => onChange({ ...value, description: event.target.value })}
-              placeholder="A short summary shown in the workout list"
+              placeholder={t("contentManager.form.workoutDescPlaceholder")}
               inputProps={{ maxLength: 300 }}
               error={hasSubmitted && !value.description.trim()}
               helperText={`${value.description.length}/300`}
             />
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
               <TextField
-                label="Type"
+                label={t("contentManager.form.fieldType")}
                 size="small"
                 fullWidth
-                value={value.type === "HEALTH" ? "Health" : value.type === "SKILL" ? "Skill" : "Flex"}
+                value={value.type === "HEALTH"
+                  ? t("contentManager.form.typeHealth")
+                  : value.type === "SKILL"
+                    ? t("contentManager.form.typeSkill")
+                    : t("contentManager.form.typeFlex")}
                 InputProps={{ readOnly: true }}
-                helperText="Automatically based on the selected exercises."
+                helperText={t("contentManager.form.workoutTypeAuto")}
               >
               </TextField>
               <TextField
                 select
-                label="Level"
+                label={t("contentManager.form.fieldLevel")}
                 size="small"
                 fullWidth
                 value={value.level}
@@ -1071,7 +1106,7 @@ export function WorkoutFields({
                   return (
                     <MenuItem key={item} value={item} disabled={unavailable}>
                       <LevelDot tone={levelTone(item)} />
-                      {unavailable ? `${item} (inactive)` : item}
+                      {unavailable ? t("contentManager.form.levelInactive", { level: item }) : item}
                     </MenuItem>
                   );
                 })}
@@ -1087,14 +1122,14 @@ export function WorkoutFields({
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
               <Box>
                 <Typography variant="subtitle2" fontWeight={700}>
-                  7-day training schedule
+                  {t("contentManager.form.planScheduleTitle")}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  Select a day to add exercises. Leave it empty for a rest day.
+                  {t("contentManager.form.planScheduleCaption")}
                 </Typography>
               </Box>
               <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
-                {value.planItems.length} scheduled
+                {t("contentManager.form.planScheduledCount", { count: value.planItems.length })}
               </Typography>
             </Stack>
 
@@ -1136,7 +1171,7 @@ export function WorkoutFields({
                       variant="caption"
                       sx={{ fontSize: 10.5, opacity: selected ? 0.85 : 0.7 }}
                     >
-                      {count ? `${count} exercise${count === 1 ? "" : "s"}` : "Rest day"}
+                      {count ? t("contentManager.form.planExerciseCount", { count }) : t("contentManager.form.planRestDay")}
                     </Typography>
                   </Box>
                 );
@@ -1153,11 +1188,11 @@ export function WorkoutFields({
               }}
             >
               <Typography variant="caption" fontWeight={700}>
-                {WEEK_DAYS[selectedDay - 1]} exercises
+                {t("contentManager.form.planDayExercises", { day: WEEK_DAYS[selectedDay - 1] })}
               </Typography>
               {dayItems.length === 0 ? (
                 <Typography variant="caption" color="text.secondary" display="block" sx={{ py: 4, textAlign: "center" }}>
-                  Rest day — add exercises below to make this a training day.
+                  {t("contentManager.form.planRestDayHint")}
                 </Typography>
               ) : (
                 <Stack spacing={1.25} sx={{ mt: 1 }}>
@@ -1179,7 +1214,7 @@ export function WorkoutFields({
                           type="button"
                           color="error"
                           size="small"
-                          aria-label={`Remove ${item.exerciseCode} from ${WEEK_DAYS[selectedDay - 1]}`}
+                          aria-label={t("contentManager.form.removeFromDayAria", { code: item.exerciseCode, day: WEEK_DAYS[selectedDay - 1] })}
                           onClick={() => removeExercise(item.exerciseCode)}
                           sx={{ minWidth: 0, px: 0.75, py: 0 }}
                         >
@@ -1195,21 +1230,21 @@ export function WorkoutFields({
                         }}
                       >
                         <PlanLevelInputs
-                          label="Beginner"
+                          label={t("contentManager.form.fieldBeginner")}
                           sets={item.beginnerSets}
                           reps={item.beginnerReps}
                           onSetsChange={(n) => updatePlanItem(item.exerciseCode, "beginnerSets", n)}
                           onRepsChange={(n) => updatePlanItem(item.exerciseCode, "beginnerReps", n)}
                         />
                         <PlanLevelInputs
-                          label="Intermediate"
+                          label={t("contentManager.form.fieldIntermediate")}
                           sets={item.intermediateSets}
                           reps={item.intermediateReps}
                           onSetsChange={(n) => updatePlanItem(item.exerciseCode, "intermediateSets", n)}
                           onRepsChange={(n) => updatePlanItem(item.exerciseCode, "intermediateReps", n)}
                         />
                         <PlanLevelInputs
-                          label="Advanced"
+                          label={t("contentManager.form.fieldAdvanced")}
                           sets={item.advancedSets}
                           reps={item.advancedReps}
                           onSetsChange={(n) => updatePlanItem(item.exerciseCode, "advancedSets", n)}
@@ -1230,10 +1265,10 @@ export function WorkoutFields({
         <CardContent sx={{ p: { xs: 2, sm: 2.5 }, flex: 1, display: "flex", flexDirection: "column", "&:last-child": { pb: { xs: 2, sm: 2.5 } } }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
             <Typography variant="subtitle2" fontWeight={700}>
-              {isDailyPlan ? `Add exercises to ${WEEK_DAYS[selectedDay - 1]}` : "System exercises"}
+              {isDailyPlan ? t("contentManager.form.addExercisesToDay", { day: WEEK_DAYS[selectedDay - 1] }) : t("contentManager.form.systemExercises")}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {totalExerciseCount} available
+              {t("contentManager.form.availableCount", { count: totalExerciseCount })}
             </Typography>
           </Stack>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 1.5 }}>
@@ -1242,7 +1277,7 @@ export function WorkoutFields({
               fullWidth
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
-              placeholder="Search by title"
+              placeholder={t("contentManager.form.searchByTitle")}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -1256,10 +1291,10 @@ export function WorkoutFields({
               size="small"
               value={level}
               onChange={(event) => onLevelChange(event.target.value)}
-              SelectProps={{ SelectDisplayProps: { "aria-label": "Filter exercises by level" } }}
+              SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.form.filterByLevelAria") } }}
               sx={{ minWidth: 140 }}
             >
-              <MenuItem value="all">All levels</MenuItem>
+              <MenuItem value="all">{t("contentManager.form.allLevels")}</MenuItem>
               {LEVELS.map((item) => (
                 <MenuItem key={item} value={item.toLowerCase()}>
                   <LevelDot tone={levelTone(item)} />
@@ -1273,10 +1308,10 @@ export function WorkoutFields({
             {isLoadingExercises ? (
               [0, 1, 2, 3].map((row) => <Skeleton key={row} variant="rounded" height={48} />)
             ) : exerciseLoadError ? (
-              <Alert severity="error">Could not load system exercises.</Alert>
+              <Alert severity="error">{t("contentManager.form.loadExercisesFailed")}</Alert>
             ) : entries.length === 0 ? (
               <Typography variant="caption" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
-                No active exercises match this search.
+                {t("contentManager.form.noActiveExercises")}
               </Typography>
             ) : (
               pagedEntries.map((entry) => (
@@ -1296,9 +1331,9 @@ export function WorkoutFields({
                 count={systemPageCount}
                 total={entries.length}
                 pageSize={SYSTEM_PAGE_SIZE}
-                noun="exercises"
+                noun={t("member.catalog.exercises")}
                 onChange={setSystemPage}
-                label="System exercises"
+                label={t("contentManager.form.systemExercises")}
               />
             </Box>
           )}
@@ -1310,15 +1345,15 @@ export function WorkoutFields({
           <CardContent sx={{ p: { xs: 2, sm: 2.5 }, flex: 1, display: "flex", flexDirection: "column", "&:last-child": { pb: { xs: 2, sm: 2.5 } } }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
               <Typography variant="subtitle2" fontWeight={700}>
-                Workout exercises
+                {t("contentManager.form.workoutExercises")}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {value.items.length} added
+                {t("contentManager.form.addedCount", { count: value.items.length })}
               </Typography>
             </Stack>
             {value.items.length === 0 ? (
               <Typography variant="caption" color="text.secondary" display="block" sx={{ py: 6, textAlign: "center" }}>
-                No exercises yet. Add some from the list.
+                {t("contentManager.form.noExercisesYet")}
               </Typography>
             ) : (
               <>
@@ -1358,9 +1393,9 @@ export function WorkoutFields({
                     count={itemPageCount}
                     total={value.items.length}
                     pageSize={ITEM_PAGE_SIZE}
-                    noun="exercises"
+                    noun={t("member.catalog.exercises")}
                     onChange={setItemPage}
-                    label="Workout exercises"
+                    label={t("contentManager.form.workoutExercises")}
                   />
                   <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                     {summarizeWorkoutItems(value.items)}
@@ -1396,6 +1431,7 @@ function fieldErrorsFromMessage(message) {
 }
 
 export default function ExerciseFormPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const kind = searchParams.get("type") === "workout" ? "workout" : "exercise";
@@ -1470,7 +1506,7 @@ export default function ExerciseFormPage() {
     onSuccess: (entry) =>
       navigate(CONTENT_PATHS.workouts, {
         replace: true,
-        state: { successMessage: `Workout "${entry.name}" created successfully.` },
+        state: { successMessage: t("contentManager.form.workoutCreated", { name: entry.name }) },
       }),
     onError: (requestError) => setError(requestError.message),
   });
@@ -1514,7 +1550,7 @@ export default function ExerciseFormPage() {
       }
       setInvalidFields(invalid);
       if (invalid.length > 0) {
-        setError("Please correct the highlighted fields before creating this exercise.");
+        setError(t("contentManager.form.errCorrectFields"));
         return;
       }
 
@@ -1538,23 +1574,23 @@ export default function ExerciseFormPage() {
     }
 
     if (!workout.name.trim() || !workout.description.trim()) {
-      setError("Enter a workout title and description.");
+      setError(t("contentManager.form.errWorkoutTitleDesc"));
       return;
     }
     if (!["HEALTH", "SKILL", "FLEX"].includes(workout.type)) {
-      setError("Choose a workout type.");
+      setError(t("contentManager.form.errWorkoutType"));
       return;
     }
     if (!activeLevels.includes(workout.level)) {
-      setError("Choose an active workout level.");
+      setError(t("contentManager.form.errWorkoutLevel"));
       return;
     }
     if (workout.items.length === 0) {
-      setError("Add at least one system exercise to this workout.");
+      setError(t("contentManager.form.errWorkoutItems"));
       return;
     }
     if (workout.items.some((item) => Object.keys(workoutItemErrors(item)).length > 0)) {
-      setError("Check the sets, reps, duration and rest of the highlighted exercises.");
+      setError(t("contentManager.form.errWorkoutItemConfig"));
       return;
     }
     workoutMutation.mutate({
@@ -1582,11 +1618,11 @@ export default function ExerciseFormPage() {
     <Box sx={{ maxWidth: 1024, mx: "auto", px: { xs: 2, sm: 3 }, py: { xs: 2.5, sm: 3 } }}>
       <ContentPageHeader
         breadcrumb={BREADCRUMB}
-        title="Create System Workout & Exercise"
+        title={t("contentManager.form.pageTitle")}
         description={
           kind === "workout"
-            ? "Build a workout for members by picking exercises that already exist in the system."
-            : "Add a new exercise or skill to the system library."
+            ? t("contentManager.form.descWorkout")
+            : t("contentManager.form.descExercise")
         }
       />
 
@@ -1595,7 +1631,7 @@ export default function ExerciseFormPage() {
         size="small"
         value={kind}
         onChange={(_, next) => next && changeKind(next)}
-        aria-label="Content type"
+        aria-label={t("contentManager.form.contentTypeAria")}
         sx={{
           mt: 2.5,
           p: 0.5,
@@ -1618,10 +1654,10 @@ export default function ExerciseFormPage() {
         }}
       >
         <ToggleButton value="exercise">
-          Exercise
+          {t("contentManager.form.toggleExercise")}
         </ToggleButton>
         <ToggleButton value="workout">
-          Workout
+          {t("contentManager.form.toggleWorkout")}
         </ToggleButton>
       </ToggleButtonGroup>
 
@@ -1704,8 +1740,7 @@ export default function ExerciseFormPage() {
         )}
         {!isLoadingExercises && kind === "workout" && allExercises.length === 0 && !exerciseLoadError && (
           <Alert severity="info" sx={{ mt: 2 }}>
-            There are no exercises in the system yet. Create an exercise first, then come back to build a
-            workout.
+            {t("contentManager.form.noSystemExercises")}
           </Alert>
         )}
       </Box>
@@ -1732,7 +1767,7 @@ export default function ExerciseFormPage() {
             setConfirmCancel(true);
           }}
         >
-          Cancel
+          {t("contentManager.form.cancel")}
         </Button>
         <Button
           type="submit"
@@ -1741,14 +1776,14 @@ export default function ExerciseFormPage() {
           disabled={isSaving}
           sx={{ minWidth: 140 }}
         >
-          {isSaving ? "Creating…" : `Create ${kind}`}
+          {isSaving ? t("contentManager.form.creating") : t("contentManager.form.createAction", { kind: t(kind === "workout" ? "contentManager.form.toggleWorkout" : "contentManager.form.toggleExercise") })}
         </Button>
       </Stack>
       <ConfirmDialog
         open={confirmCancel}
-        title={`Discard this ${kind}?`}
-        message={`Are you sure you want to cancel? Your unsaved ${kind} details will be lost.`}
-        confirmLabel="Discard"
+        title={t("contentManager.form.discardTitle", { kind: t(kind === "workout" ? "contentManager.form.toggleWorkout" : "contentManager.form.toggleExercise") })}
+        message={t("contentManager.form.discardMessage", { kind: t(kind === "workout" ? "contentManager.form.toggleWorkout" : "contentManager.form.toggleExercise") })}
+        confirmLabel={t("contentManager.form.discard")}
         onCancel={() => setConfirmCancel(false)}
         onConfirm={() => navigate(kind === "exercise" ? CONTENT_PATHS.exercises : CONTENT_PATHS.workouts)}
       />

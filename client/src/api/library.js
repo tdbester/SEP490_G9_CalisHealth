@@ -149,14 +149,22 @@ const normalizeWorkout = (workout) => ({
     ? workout.exercises.map((exercise) => ({
         id: exercise.exerciseId,
         exerciseId: exercise.exerciseId,
+        // Mã bài tập — dùng để mở màn tracking AI và gửi kết quả.
+        exerciseCode: exercise.exerciseCode ?? exercise.code ?? null,
         name: exercise.exerciseTitle,
         title: exercise.exerciseTitle,
         isSystem: Boolean(exercise.isSystem),
         level: displayLevel(exercise.level),
         sets: exercise.sets,
         reps: exercise.reps ?? exercise.duration ?? 8,
+        // Giữ riêng reps/duration để xếp hàng đo đúng (HOLD đếm giây, REPS đếm lần).
+        repsCount: exercise.reps ?? null,
+        durationSeconds: exercise.duration ?? null,
+        // HOLD | REPS — quyết định cách đo của bài.
+        category: exercise.category ?? (exercise.countBy === "SECONDS" ? "HOLD" : "REPS"),
         countBy: exercise.countBy === "SECONDS" ? "sec" : "reps",
         restSec: exercise.restSeconds,
+        restSeconds: exercise.restSeconds,
       }))
     : undefined,
 });

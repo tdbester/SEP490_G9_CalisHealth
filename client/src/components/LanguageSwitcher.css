@@ -1,0 +1,128 @@
+/* Nút đổi ngôn ngữ — dùng chung cho sidebar và các trang đăng nhập. */
+
+.lang-switcher {
+  position: relative;
+  display: inline-flex;
+}
+
+.lang-switcher__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid rgba(168, 155, 208, 0.28);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #d8cff2;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.lang-switcher__button:hover {
+  background: rgba(168, 155, 208, 0.14);
+  border-color: rgba(196, 181, 253, 0.45);
+  color: #f3eeff;
+}
+
+.lang-switcher__button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.lang-switcher__short {
+  min-width: 20px;
+  text-align: center;
+}
+
+/* Menu xổ xuống — ẩn mặc định, hiện khi rê chuột hoặc focus. */
+.lang-switcher__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 132px;
+  padding: 4px;
+  border: 1px solid rgba(168, 155, 208, 0.28);
+  border-radius: 10px;
+  background: #241b3a;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+  z-index: 40;
+}
+
+.lang-switcher:hover .lang-switcher__menu,
+.lang-switcher:focus-within .lang-switcher__menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.lang-switcher__option {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #d8cff2;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lang-switcher__option:hover {
+  background: rgba(196, 181, 253, 0.16);
+  color: #ffffff;
+}
+
+.lang-switcher__option.is-active {
+  background: rgba(168, 85, 247, 0.28);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* Biến thể select — dùng trong các trang auth. Gọn nhẹ để không lấn át form. */
+.lang-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border: 1px solid rgba(168, 155, 208, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #d8cff2;
+  line-height: 1;
+}
+
+.lang-select .lang-select__icon {
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.lang-select__control {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  outline: none;
+  /* Ẩn mũi tên mặc định của trình duyệt để control gọn hơn. */
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0 2px;
+}
+
+.lang-select__control option {
+  background: #241b3a;
+  color: #f3eeff;
+  font-size: 12px;
+}

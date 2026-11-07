@@ -1,0 +1,630 @@
+/* Daily Workout Plan - Member view */
+.daily-plan-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #05030F 0%, #0B0720 100%);
+  padding: 2rem;
+}
+
+.daily-plan-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Header */
+.plan-header {
+  margin-bottom: 2rem;
+}
+
+.plan-date {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #A79BD6;
+  margin-bottom: 0.5rem;
+}
+
+.plan-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin: 0;
+}
+
+/* Workout Card */
+.workout-card {
+  background: linear-gradient(135deg, #151124 0%, #1A1435 100%);
+  border: 1px solid #2A2150;
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.workout-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-bottom: 1rem;
+}
+
+.workout-badges {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid;
+}
+
+.badge-health {
+  background: rgba(18, 51, 47, 0.6);
+  border-color: #5FBFA0;
+  color: #86E3A0;
+}
+
+.badge-skill {
+  background: rgba(58, 32, 92, 0.6);
+  border-color: #A78BFA;
+  color: #D8C7FF;
+}
+
+.badge-level {
+  background: rgba(38, 28, 88, 0.6);
+  border-color: #5B4AA8;
+  color: #FFFFFF;
+}
+
+.badge-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Stats Grid */
+.workout-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #151124 0%, #242055 100%);
+  border: 1px solid #2A2150;
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  gap: 1rem;
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #242455;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke: #C9BFF0;
+  stroke-width: 2;
+  fill: none;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #B7AEDF;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+/* Exercise Section */
+.exercises-section {
+  margin-top: 2rem;
+}
+
+.exercises-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-bottom: 1rem;
+}
+
+/* Nhiều workout trong cùng ngày (member xếp nhiều buổi) */
+.plan-workout + .plan-workout {
+  margin-top: 2.5rem;
+}
+
+.daily-plan-status {
+  text-align: center;
+  padding: 4rem 1rem;
+  color: #A79BD6;
+  font-size: 1rem;
+}
+
+.daily-plan-retry {
+  display: block;
+  margin: 1rem auto 0;
+  padding: 0.6rem 1.5rem;
+  border-radius: 10px;
+  border: 1px solid #4A3D8F;
+  background: #1A1435;
+  color: #E6E1FF;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.daily-plan-retry:hover {
+  border-color: #7C6BD8;
+}
+
+.daily-plan-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #C4B5FD;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.exercise-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.exercise-card {
+  background: linear-gradient(135deg, #151124 0%, #1A1435 100%);
+  border: 1px solid #2F255F;
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  transition: all 0.2s;
+  cursor: pointer;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+}
+
+.exercise-card:hover {
+  border-color: #5B4AA8;
+  transform: translateY(-2px);
+}
+
+.exercise-card:focus-visible {
+  outline: 2px solid #A78BFA;
+  outline-offset: 2px;
+}
+
+.exercise-chevron {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8B7FD4;
+}
+
+.exercise-chevron svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.exercise-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #7C4AE8 0%, #4F9CF0 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.exercise-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke: #FFFFFF;
+  stroke-width: 2;
+  fill: none;
+}
+
+.exercise-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.exercise-name {
+  display: block;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #FFFFFF;
+}
+
+.exercise-details {
+  display: block;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  color: #A79BD6;
+}
+
+.exercise-complete-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.exercise-complete-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: #A78BFA;
+}
+
+/* Start Button */
+.start-button {
+  width: 100%;
+  padding: 1rem;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #7C3AED 0%, #C13ECD 60%, #E07AB5 100%);
+  color: #FFFFFF;
+  font-size: 1.125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.start-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+}
+
+.start-button:active {
+  transform: translateY(0);
+}
+
+.start-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.empty-state-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.5rem;
+  opacity: 0.5;
+}
+
+.empty-state-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: #C9BFF0;
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.empty-state-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state-text {
+  font-size: 1rem;
+  color: #A79BD6;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* CTA của màn "chưa xếp lịch tháng" */
+.empty-state-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.75rem;
+  padding: 0.85rem 1.5rem;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #7C3AED 0%, #C13ECD 60%, #E07AB5 100%);
+  color: #FFFFFF;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.empty-state-cta svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.18s ease;
+}
+
+.empty-state-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.42);
+}
+
+.empty-state-cta:hover svg {
+  transform: translateX(3px);
+}
+
+.empty-state-cta:focus-visible {
+  outline: 2px solid #A78BFA;
+  outline-offset: 3px;
+}
+
+/* ── Rest day ─────────────────────────────────────────────── */
+.rest-card {
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  padding: 3rem 2rem 2.5rem;
+  border-radius: 20px;
+  border: 1px solid #2E2459;
+  background: linear-gradient(160deg, #14102A 0%, #1B1440 55%, #150F2E 100%);
+}
+
+/* Quầng sáng tím phía sau icon, tạo cảm giác "nghỉ nhưng vẫn sống động" */
+.rest-card__glow {
+  position: absolute;
+  top: -120px;
+  left: 50%;
+  width: 340px;
+  height: 340px;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    circle,
+    rgba(124, 58, 237, 0.35) 0%,
+    rgba(124, 58, 237, 0) 68%
+  );
+  pointer-events: none;
+}
+
+.rest-card__icon {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(124, 58, 237, 0.16);
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  color: #C9BFF0;
+}
+
+.rest-card__icon svg {
+  width: 30px;
+  height: 30px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  fill: none;
+}
+
+.rest-card__eyebrow {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #A78BFA;
+}
+
+.rest-card__title {
+  position: relative;
+  margin: 0 0 0.75rem;
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.rest-card__text {
+  position: relative;
+  max-width: 460px;
+  margin: 0 auto;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: #A79BD6;
+}
+
+.rest-card__actions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.875rem;
+  margin-top: 2rem;
+}
+
+.rest-card__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.4rem;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.rest-card__btn svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.18s ease;
+}
+
+.rest-card__btn--primary {
+  border: none;
+  color: #FFFFFF;
+  background: linear-gradient(90deg, #7C3AED 0%, #C13ECD 60%, #E07AB5 100%);
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.32);
+}
+
+.rest-card__btn--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.45);
+}
+
+.rest-card__btn--primary:hover svg {
+  transform: translateX(3px);
+}
+
+.rest-card__btn--ghost {
+  border: 1px solid #3A2E6E;
+  background: rgba(30, 22, 60, 0.7);
+  color: #D8CFFF;
+}
+
+.rest-card__btn--ghost:hover {
+  transform: translateY(-2px);
+  border-color: #5B4AA8;
+}
+
+.rest-card__btn:focus-visible {
+  outline: 2px solid #A78BFA;
+  outline-offset: 3px;
+}
+
+/* Gợi ý hồi phục dưới rest card */
+.rest-tips {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.rest-tip {
+  padding: 1.25rem;
+  border-radius: 14px;
+  border: 1px solid #241C48;
+  background: linear-gradient(135deg, #120E24 0%, #170F33 100%);
+}
+
+.rest-tip__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-bottom: 0.85rem;
+  border-radius: 10px;
+  background: rgba(124, 58, 237, 0.14);
+  color: #B49BF5;
+}
+
+.rest-tip__icon svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  fill: none;
+}
+
+.rest-tip__title {
+  margin: 0 0 0.4rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.rest-tip__text {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: #9A8FCB;
+}
+
+@media (max-width: 768px) {
+  .daily-plan-page {
+    padding: 1rem;
+  }
+
+  .plan-title {
+    font-size: 1.5rem;
+  }
+
+  .workout-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .exercise-list {
+    grid-template-columns: 1fr;
+  }
+
+  .workout-badges {
+    flex-wrap: wrap;
+  }
+
+  .rest-card {
+    padding: 2.25rem 1.25rem 2rem;
+  }
+
+  .rest-card__title {
+    font-size: 1.5rem;
+  }
+
+  .rest-card__actions {
+    flex-direction: column;
+  }
+
+  .rest-card__btn {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .rest-tips {
+    grid-template-columns: 1fr;
+  }
+}

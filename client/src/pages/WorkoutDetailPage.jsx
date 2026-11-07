@@ -17,6 +17,7 @@ import {
   Typography,
 } from "@mui/material";
 import { keyframes } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
@@ -84,10 +85,11 @@ function Detail({ label, value, full, icon: Icon }) {
 }
 
 export default function WorkoutDetailPage() {
+  const { t } = useTranslation();
   const { code = "" } = useParams();
   const location = useLocation();
   const returnTo = location.state?.returnTo || CONTENT_PATHS.workouts;
-  const returnLabel = location.state?.returnLabel || "Back to list";
+  const returnLabel = location.state?.returnLabel || t("contentManager.detail.backToList");
   const { levels: levelNames } = useLevelNames();
   const { data: workout, isLoading, error, refetch } = useApiQuery(
     () => contentManagerApi.workout(code),
@@ -116,15 +118,15 @@ export default function WorkoutDetailPage() {
   );
 
   const crumb = [
-    { label: "Content manager", to: CONTENT_PATHS.dashboard },
-    { label: "Exercise & Workout", to: CONTENT_PATHS.exercises },
-    { label: "Workout details" },
+    { labelKey: "nav.contentManagerRole", to: CONTENT_PATHS.dashboard },
+    { labelKey: "nav.exerciseAndWorkout", to: CONTENT_PATHS.exercises },
+    { labelKey: "nav.workoutDetails" },
   ];
 
   if (isLoading) {
     return (
       <Box sx={{ maxWidth: 960, mx: "auto", px: { xs: 2, sm: 3 }, py: 4 }}>
-        <ContentPageHeader breadcrumb={crumb} title="Loading workout…" />
+        <ContentPageHeader breadcrumb={crumb} title={t("contentManager.detail.loadingWorkout")} />
         <Box sx={{ py: 8, display: "grid", placeItems: "center" }}>
           <CircularProgress size={24} />
         </Box>
@@ -135,17 +137,17 @@ export default function WorkoutDetailPage() {
   if (error || !workout) {
     return (
       <Box sx={{ maxWidth: 960, mx: "auto", px: { xs: 2, sm: 3 }, py: 4 }}>
-        <ContentPageHeader breadcrumb={crumb} title="Workout not found" />
+        <ContentPageHeader breadcrumb={crumb} title={t("contentManager.detail.workoutNotFound")} />
         <Alert
           severity="warning"
           sx={{ mt: 2 }}
           action={
             <Button color="inherit" size="small" onClick={() => refetch()}>
-              Try again
+              {t("contentManager.detail.tryAgain")}
             </Button>
           }
         >
-          {error?.message || "This workout may have been deleted or the link is invalid."}
+          {error?.message || t("contentManager.detail.workoutDeleted")}
         </Alert>
         <Button
           component={RouterLink}
@@ -223,12 +225,12 @@ export default function WorkoutDetailPage() {
       <ContentPageHeader
         breadcrumb={crumb}
         title={workout.name}
-        description={`Workout details · ${workout.code}`}
+        description={t("contentManager.detail.workoutDetailsMeta", { code: workout.code })}
         action={
           <Stack direction="row" spacing={1}>
             {!isDailyPlan && !editing && (
               <Button variant="contained" startIcon={<EditRoundedIcon />} onClick={startEditing}>
-                Edit
+                {t("contentManager.detail.edit")}
               </Button>
             )}
             <Button
@@ -247,7 +249,7 @@ export default function WorkoutDetailPage() {
         <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
           {editing && form ? (
             <Stack spacing={2}>
-              {exerciseLoadError && <Alert severity="error">Could not load exercises: {exerciseLoadError.message}</Alert>}
+              {exerciseLoadError && <Alert severity="error">{t("contentManager.detail.couldNotLoadExercises", { message: exerciseLoadError.message })}</Alert>}
               <WorkoutFields
                 value={form}
                 onChange={setForm}
@@ -279,7 +281,7 @@ export default function WorkoutDetailPage() {
                 }}
               >
                 <Button startIcon={<CloseRoundedIcon />} onClick={() => setConfirmCancel(true)} disabled={saveMutation.isPending}>
-                  Cancel
+                  {t("contentManager.form.cancel")}
                 </Button>
                 <Button
                   variant="contained"
@@ -287,20 +289,20 @@ export default function WorkoutDetailPage() {
                   onClick={submitEdit}
                   disabled={saveMutation.isPending || isLoadingExercises || Boolean(exerciseLoadError)}
                 >
-                  {saveMutation.isPending ? "Saving…" : "Save changes"}
+                  {saveMutation.isPending ? t("contentManager.detail.saving") : t("contentManager.detail.saveChanges")}
                 </Button>
               </Stack>
             </Stack>
           ) : (
             <>
-              <Detail label="Description" value={workout.description} full />
+              <Detail label={t("contentManager.detail.description")} value={workout.description} full />
 
               <Divider sx={{ my: 2.5 }} />
 
               {isDailyPlan ? (
             <>
               <Typography variant="subtitle2" fontWeight={700} sx={{ color: "#fff" }}>
-                7-day training schedule
+                {t("contentManager.detail.sevenDaySchedule")}
               </Typography>
               <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
                 {WEEK_DAYS.map((day, index) => {
@@ -321,7 +323,7 @@ export default function WorkoutDetailPage() {
                         </Typography>
                         {dayItems.length === 0 ? (
                           <Typography variant="caption" sx={{ display: "block", mt: 1, color: CM.textDim }}>
-                            Rest day
+                            {t("contentManager.detail.restDay")}
                           </Typography>
                         ) : (
                           <Stack spacing={1} sx={{ mt: 1 }}>
@@ -375,11 +377,11 @@ export default function WorkoutDetailPage() {
           ) : (
             <>
               <Typography variant="subtitle2" fontWeight={700} sx={{ color: "#fff" }}>
-                Workout exercises
+                {t("contentManager.detail.workoutExercises")}
               </Typography>
               {exercises.length === 0 ? (
                 <Typography variant="body2" sx={{ mt: 1, color: CM.textMuted }}>
-                  No exercises are linked to this workout.
+                  {t("contentManager.detail.noExercisesLinked")}
                 </Typography>
               ) : (
                 <Stack component="ol" spacing={1} sx={{ mt: 1.5, p: 0, m: 0, listStyle: "none" }}>
@@ -439,14 +441,24 @@ export default function WorkoutDetailPage() {
                         </Typography>
                         <Typography variant="caption" display="block" sx={{ mt: 0.5, color: CM.textMuted }}>
                           {exercise.countBy
-                            ? `${exercise.sets} sets · ${
-                                exercise.countBy === "DURATION"
+                            ? t("contentManager.detail.setsRepsRest", {
+                                sets: exercise.sets,
+                                dosage: exercise.countBy === "DURATION"
                                   ? `${exercise.durationSeconds} sec`
-                                  : `${exercise.reps} reps`
-                              } · rest ${exercise.restSeconds} sec`
+                                  : `${exercise.reps} reps`,
+                                rest: exercise.restSeconds,
+                              })
                             : String(exercise.category || "").toUpperCase() === "HOLD"
-                              ? `${exercise.defaultSets ?? "Not set"} sets · ${exercise.duration == null ? "Not set" : `${exercise.duration} sec`}`
-                              : `${exercise.defaultSets ?? "Not set"} sets · ${exercise.defaultReps ?? "Not set"} reps`}
+                              ? t("contentManager.detail.setsNotSet", {
+                                  sets: exercise.defaultSets ?? t("contentManager.detail.notSet"),
+                                  value: exercise.duration == null
+                                    ? t("contentManager.detail.notSet")
+                                    : `${exercise.duration} sec`,
+                                })
+                              : t("contentManager.detail.setsNotSet", {
+                                  sets: exercise.defaultSets ?? t("contentManager.detail.notSet"),
+                                  value: exercise.defaultReps ?? t("contentManager.detail.notSet"),
+                                })}
                         </Typography>
                       </Box>
                     </Stack>
@@ -455,8 +467,8 @@ export default function WorkoutDetailPage() {
               )}
               <Divider sx={{ my: 2.5 }} />
               <Grid container spacing={1.5}>
-                <Detail icon={LayersRoundedIcon} label="Level" value={workout.level} />
-                <Detail icon={FitnessCenterRoundedIcon} label="Type" value={workout.type} />
+                <Detail icon={LayersRoundedIcon} label={t("contentManager.detail.level")} value={workout.level} />
+                <Detail icon={FitnessCenterRoundedIcon} label={t("contentManager.detail.type")} value={workout.type} />
               </Grid>
             </>
           )}
@@ -466,9 +478,9 @@ export default function WorkoutDetailPage() {
       </Card>
       <ConfirmDialog
         open={confirmCancel}
-        title="Discard your changes?"
-        message="Are you sure you want to cancel? Any unsaved workout changes will be lost."
-        confirmLabel="Discard"
+        title={t("contentManager.detail.discardWorkoutTitle")}
+        message={t("contentManager.detail.discardWorkoutMessage")}
+        confirmLabel={t("contentManager.detail.discard")}
         onCancel={() => setConfirmCancel(false)}
         onConfirm={() => {
           setConfirmCancel(false);

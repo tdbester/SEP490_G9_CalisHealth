@@ -12,6 +12,7 @@ import UpdateStepModal from "../../components/content/UpdateStepModal";
 import PreviewStepModal from "../../components/content/PreviewStepModal";
 import ConfigureResultModal from "../../components/content/ConfigureResultModal";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
+import { useTranslation } from "react-i18next";
 import { STATUS_LABELS, STATUS_TABS, errorDetails, stepMeta } from "../../utils/contentSurvey";
 import "./SurveyManagement.css";
 
@@ -21,6 +22,9 @@ import "./SurveyManagement.css";
  * Kéo thả chỉ bật ở tab All khi không tìm kiếm, vì Save order phải gửi đủ mọi bước.
  */
 export default function SurveyManagement() {
+  // Namespace mặc định ("translation") đã gộp sẵn các namespace khác nên key
+  // dùng dạng đầy đủ: contentManager.survey.mgmt.*, contentManager.survey.statusTabs.*
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [list, setList] = useState(null); // response F1
@@ -48,9 +52,11 @@ export default function SurveyManagement() {
       .listSteps({ search: search.trim(), status })
       .then((res) => requestId === requestRef.current && applyList(res))
       .catch((err) => {
-        if (requestId === requestRef.current) setLoadError(surveyErrorMessage(err, "We could not load the survey steps."));
+        if (requestId === requestRef.current) {
+          setLoadError(surveyErrorMessage(err, t("contentManager.survey.mgmt.loadFailed")));
+        }
       });
-  }, [search, status, applyList]);
+  }, [search, status, applyList, t]);
 
   useEffect(() => {
     const timer = setTimeout(load, 250);
@@ -89,20 +95,27 @@ export default function SurveyManagement() {
   const saveOrder = () =>
     runAction(
       () => contentSurveyApi.saveOrder(order.map((s) => s.id)).then(applyList),
-      "Step order saved.",
-      "We could not save the new order.",
+      t("contentManager.survey.mgmt.orderSaved"),
+      t("contentManager.survey.mgmt.orderSaveFailed"),
     );
 
   const changeStatus = (step, next) =>
     runAction(
       () => contentSurveyApi.changeStatus(step.id, next),
-      `"${step.stepName}" is now ${STATUS_LABELS[next].toLowerCase()}.`,
-      "We could not change the step status.",
+      t("contentManager.survey.mgmt.statusChanged", {
+        name: step.stepName,
+        status: STATUS_LABELS[next].toLowerCase(),
+      }),
+      t("contentManager.survey.mgmt.statusChangeFailed"),
     );
 
   const deleteStep = async () => {
     const step = confirmDelete;
-    await runAction(() => contentSurveyApi.deleteStep(step.id), `"${step.stepName}" was deleted.`, "We could not delete the step.");
+    await runAction(
+      () => contentSurveyApi.deleteStep(step.id),
+      t("contentManager.survey.mgmt.deleted", { name: step.stepName }),
+      t("contentManager.survey.mgmt.deleteFailed"),
+    );
     // lỗi cũng đóng popup: thông báo lỗi hiện trên danh sách
     setConfirmDelete(null);
   };
@@ -136,9 +149,9 @@ export default function SurveyManagement() {
   return (
     <div className="survey-mgmt">
       <header className="sm-header">
-        <p className="sm-breadcrumb">Admin / Survey</p>
-        <h1 className="sm-title">Survey management</h1>
-        <p className="sm-subtitle">Manage the survey steps and questions members answer when they sign up.</p>
+        <p className="sm-breadcrumb">{t("contentManager.survey.mgmt.breadcrumb")}</p>
+        <h1 className="sm-title">{t("contentManager.survey.mgmt.title")}</h1>
+        <p className="sm-subtitle">{t("contentManager.survey.mgmt.subtitle")}</p>
       </header>
 
       <div className="sm-card sm-toolbar">
@@ -146,23 +159,24 @@ export default function SurveyManagement() {
           <SearchRoundedIcon />
           <input
             type="search"
-            placeholder="Search step name"
+            placeholder={t("contentManager.survey.mgmt.searchPlaceholder")}
+            aria-label={t("contentManager.survey.mgmt.searchAria")}
             maxLength={100}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </label>
-        <div className="sm-tabs" role="tablist" aria-label="Step status">
+        <div className="sm-tabs" role="tablist" aria-label={t("contentManager.survey.mgmt.statusAria")}>
           {STATUS_TABS.map((tab) => (
             <button
-              key={tab.label}
+              key={tab.labelKey}
               type="button"
               role="tab"
               aria-selected={status === tab.status}
               className={status === tab.status ? "active" : ""}
               onClick={() => setStatus(tab.status)}
             >
-              {tab.label} ({counts?.[tab.countKey] ?? 0})
+              {t(`contentManager.survey.statusTabs.${tab.labelKey}`)} ({counts?.[tab.countKey] ?? 0})
             </button>
           ))}
         </div>
@@ -170,10 +184,10 @@ export default function SurveyManagement() {
 
       <section className="sm-card sm-steps">
         <div className="sm-steps-head">
-          <h2>Survey steps</h2>
+          <h2>{t("contentManager.survey.mgmt.stepsTitle")}</h2>
           <button type="button" className="sm-link-btn" onClick={() => setModal({ type: "create" })}>
             <AddRoundedIcon />
-            Create step
+            {t("contentManager.survey.mgmt.createStep")}
           </button>
         </div>
 
@@ -193,9 +207,9 @@ export default function SurveyManagement() {
         {loadError ? (
           <p className="sm-empty">{loadError}</p>
         ) : !list ? (
-          <p className="sm-empty">Loading steps…</p>
+          <p className="sm-empty">{t("contentManager.survey.mgmt.loadingSteps")}</p>
         ) : order.length === 0 ? (
-          <p className="sm-empty">No steps match this filter.</p>
+          <p className="sm-empty">{t("contentManager.survey.mgmt.noMatch")}</p>
         ) : (
           <ol className="sm-list">
             {order.map((step) => {
@@ -221,16 +235,16 @@ export default function SurveyManagement() {
                     className={`sm-handle ${draggable ? "" : "disabled"}`}
                     title={
                       isResult
-                        ? "The result step always stays last"
+                        ? t("contentManager.survey.mgmt.resultStepAlwaysLast")
                         : canReorder
-                          ? "Drag to reorder"
-                          : "Clear the search and pick All to reorder"
+                          ? t("contentManager.survey.mgmt.dragToReorder")
+                          : t("contentManager.survey.mgmt.clearSearchToReorder")
                     }
                   >
                     <DragIndicatorRoundedIcon />
                   </span>
                   <span className="sm-step-no">
-                    <small>STEP</small>
+                    <small>{t("contentManager.survey.mgmt.stepLabel")}</small>
                     <strong>{step.position}</strong>
                   </span>
                   <span className="sm-row-info">
@@ -244,24 +258,24 @@ export default function SurveyManagement() {
                   <span className="sm-row-actions">
                     <button type="button" className="sm-action" onClick={() => setModal({ type: "preview", stepId: step.id })}>
                       <VisibilityOutlinedIcon />
-                      Preview
+                      {t("contentManager.survey.mgmt.preview")}
                     </button>
                     {isResult ? (
                       <button type="button" className="sm-action" onClick={() => setModal({ type: "result", stepId: step.id })}>
                         <TuneRoundedIcon />
-                        Configure
+                        {t("contentManager.survey.mgmt.configure")}
                       </button>
                     ) : (
                       <button type="button" className="sm-action" onClick={() => setModal({ type: "edit", stepId: step.id })}>
                         <EditOutlinedIcon />
-                        Edit
+                        {t("contentManager.survey.mgmt.edit")}
                       </button>
                     )}
                     <span className="sm-menu-wrap">
                       <button
                         type="button"
                         className="sm-kebab"
-                        aria-label={`More actions for ${step.stepName}`}
+                        aria-label={t("contentManager.survey.mgmt.moreActionsAria", { name: step.stepName })}
                         aria-expanded={menuId === step.id}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -274,11 +288,11 @@ export default function SurveyManagement() {
                         <span className="sm-menu" role="menu">
                           {step.status === "ACTIVE" ? (
                             <button type="button" role="menuitem" onClick={() => changeStatus(step, "INACTIVE")}>
-                              Deactivate
+                              {t("contentManager.survey.mgmt.deactivate")}
                             </button>
                           ) : (
                             <button type="button" role="menuitem" onClick={() => changeStatus(step, "ACTIVE")}>
-                              Activate
+                              {t("contentManager.survey.mgmt.activate")}
                             </button>
                           )}
                           {!isResult && (
@@ -287,10 +301,14 @@ export default function SurveyManagement() {
                               role="menuitem"
                               className="danger"
                               disabled={step.status === "ACTIVE"}
-                              title={step.status === "ACTIVE" ? "Deactivate the step before deleting it" : undefined}
+                              title={
+                                step.status === "ACTIVE"
+                                  ? t("contentManager.survey.mgmt.deactivateBeforeDelete")
+                                  : undefined
+                              }
                               onClick={() => setConfirmDelete(step)}
                             >
-                              Delete
+                              {t("contentManager.survey.mgmt.delete")}
                             </button>
                           )}
                         </span>
@@ -306,11 +324,13 @@ export default function SurveyManagement() {
         <div className="sm-footer">
           {orderChanged && (
             <button type="button" className="sm-ghost-btn" onClick={() => setOrder(list.steps)} disabled={busy}>
-              Reset
+              {t("contentManager.survey.mgmt.reset")}
             </button>
           )}
           <button type="button" className="sm-primary-btn" onClick={saveOrder} disabled={!orderChanged || busy}>
-            {busy && orderChanged ? "Saving…" : "Save order"}
+            {busy && orderChanged
+              ? t("contentManager.survey.mgmt.saving")
+              : t("contentManager.survey.mgmt.saveOrder")}
           </button>
         </div>
       </section>
@@ -338,16 +358,15 @@ export default function SurveyManagement() {
       <ConfirmDialog
         open={confirmDelete != null}
         tone="danger"
-        title="Delete this step?"
+        title={t("contentManager.survey.mgmt.deleteTitle")}
         message={
           confirmDelete && (
             <>
-              <strong>{confirmDelete.stepName}</strong> will be removed from the survey. Its questions stay in the
-              question bank. This cannot be undone.
+              {t("contentManager.survey.mgmt.deleteMessage", { name: confirmDelete.stepName })}
             </>
           )
         }
-        confirmLabel="Delete step"
+        confirmLabel={t("contentManager.survey.mgmt.deleteConfirm")}
         busy={busy}
         onConfirm={deleteStep}
         onCancel={() => setConfirmDelete(null)}

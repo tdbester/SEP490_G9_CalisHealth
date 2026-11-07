@@ -1,20 +1,23 @@
 import { Link as RouterLink } from "react-router-dom";
 import { Box, Breadcrumbs, Link, Stack, Typography, Chip } from "@mui/material";
 import NavigateNextRoundedIcon from "@mui/icons-material/NavigateNextRounded";
+import { useTranslation } from "react-i18next";
 import { CM } from "../theme-content";
 
 export function PageBreadcrumb({ items }) {
+  const { t } = useTranslation();
   return (
     <Breadcrumbs
       separator={<NavigateNextRoundedIcon sx={{ fontSize: 13, color: CM.textDim }} />}
-      aria-label="breadcrumb"
+      aria-label={t("common.ui.breadcrumb")}
       sx={{ "& .MuiBreadcrumbs-separator": { mx: 0.6 } }}
     >
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
+        const text = item.labelKey ? t(item.labelKey) : item.label;
         return isLast || !item.to ? (
           <Typography
-            key={item.label}
+            key={item.labelKey || item.label}
             variant="caption"
             sx={{
               color: isLast ? CM.violetBright : CM.textDim,
@@ -22,18 +25,18 @@ export function PageBreadcrumb({ items }) {
               letterSpacing: "0.01em",
             }}
           >
-            {item.label}
+            {text}
           </Typography>
         ) : (
           <Link
-            key={item.label}
+            key={item.labelKey || item.label}
             component={RouterLink}
             to={item.to}
             variant="caption"
             underline="none"
             sx={{ color: CM.textDim, "&:hover": { color: CM.violetBright } }}
           >
-            {item.label}
+            {text}
           </Link>
         );
       })}
@@ -190,4 +193,5 @@ export const CONTENT_PATHS = {
   workouts: "/content/workouts",
   create: "/content/create",
   profile: "/content/profile",
+  feedback: "/content/feedback",
 };

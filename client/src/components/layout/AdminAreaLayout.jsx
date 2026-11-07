@@ -1,23 +1,13 @@
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
+  Alert,
   Box,
-  Button,
-  Chip,
   CircularProgress,
   CssBaseline,
-  Drawer,
-  Alert,
-  IconButton,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Stack,
   ThemeProvider,
   Typography,
-  useMediaQuery,
-  useTheme,
 } from "@mui/material";
 import { createTheme } from "@mui/material/styles";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
@@ -26,46 +16,18 @@ import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import NotificationsNoneRoundedIcon from "@mui/icons-material/NotificationsNoneRounded";
 import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
 import BuildRoundedIcon from "@mui/icons-material/BuildRounded";
-import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
+import SupportAgentRoundedIcon from "@mui/icons-material/SupportAgentRounded";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
-import CalendarTodayRoundedIcon from "@mui/icons-material/CalendarTodayRounded";
-import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
-import api from "../../api/client";
+import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";import api from "../../api/client";
 import NotificationBell from "../notifications/NotificationBell";
+import StaffTopbar from "./StaffTopbar";
+import StaffSidebar from "./StaffSidebar";
 import contentTheme, { CM } from "../../theme-content";
-import {
-  AccountMenu,
-  DRAWER_WIDTH,
-  LogoutButton,
-  SidebarBrand,
-  drawerPaperSx,
-  navItemSx,
-  topbarSx,
-} from "./ContentManagerLayout";
 import "../../styles/notification.css";
 
 const adminTheme = createTheme(contentTheme, {
   typography: { fontFamily: "Arial, sans-serif" },
 });
-
-const adminDrawerPaperSx = {
-  ...drawerPaperSx,
-  bgcolor: "#0B0E14",
-  backgroundImage: "none",
-  "& .MuiToolbar-root": { fontFamily: "Arial, sans-serif" },
-};
-
-function adminNavItemSx(active) {
-  return {
-    ...navItemSx(active),
-    color: active ? "#FFFFFF" : "#A89BD0",
-    bgcolor: active ? "rgba(139,92,246,0.2)" : "transparent",
-    boxShadow: active ? "inset 0 0 0 1px rgba(167,139,250,0.35)" : "none",
-    "&:hover": { bgcolor: "#131823", color: "#FFFFFF" },
-    "&.Mui-selected": { bgcolor: active ? "rgba(139,92,246,0.2)" : "#131823", color: "#FFFFFF" },
-    "&.Mui-selected:hover": { bgcolor: "#131823" },
-  };
-}
 
 export const ADMIN_PATHS = {
   dashboard: "/admin/dashboard",
@@ -75,16 +37,18 @@ export const ADMIN_PATHS = {
   storage: "/admin/storage",
   maintenance: "/admin/maintenance",
   profile: "/admin/profile",
+  feedback: "/admin/feedback",
 };
 
-/** Main navigation of the Admin area (same sidebar look as the Content Manager). */
+/** Main navigation of the Admin area. */
 export const ADMIN_LINKS = [
-  { to: ADMIN_PATHS.dashboard, label: "Dashboard", icon: DashboardRoundedIcon },
-  { to: ADMIN_PATHS.users, label: "Users", icon: PeopleAltRoundedIcon },
-  { to: ADMIN_PATHS.surveys, label: "Survey Management", icon: MenuBookRoundedIcon },
-  { to: ADMIN_PATHS.notifications, label: "Notifications", icon: NotificationsNoneRoundedIcon },
-  { to: ADMIN_PATHS.storage, label: "Media storage & infrastructure", icon: StorageRoundedIcon },
-  { to: ADMIN_PATHS.maintenance, label: "Maintenance schedules", icon: BuildRoundedIcon },
+  { to: ADMIN_PATHS.dashboard, label: "Dashboard", labelKey: "nav.dashboard", icon: DashboardRoundedIcon },
+  { to: ADMIN_PATHS.users, label: "Users", labelKey: "nav.users", icon: PeopleAltRoundedIcon },
+  { to: ADMIN_PATHS.surveys, label: "Survey Management", labelKey: "nav.survey", icon: MenuBookRoundedIcon },
+  { to: ADMIN_PATHS.notifications, label: "Notifications", labelKey: "nav.notifications_admin", icon: NotificationsNoneRoundedIcon },
+  { to: ADMIN_PATHS.storage, label: "Media storage & infrastructure", labelKey: "admin.maintenance.storage", icon: StorageRoundedIcon },
+  { to: ADMIN_PATHS.maintenance, label: "Maintenance schedules", labelKey: "nav.maintenance", icon: BuildRoundedIcon },
+  { to: ADMIN_PATHS.feedback, label: "Feedback & Complaints", labelKey: "admin.feedback.navLabel", icon: SupportAgentRoundedIcon },
 ];
 
 /**
@@ -137,48 +101,15 @@ function useAdminGuard() {
   return { status, user };
 }
 
-function SidebarContent({ onNavigate }) {
-  const { pathname } = useLocation();
-
-  return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <SidebarBrand />
-      <List sx={{ pt: 1.5, pb: 1 }} aria-label="Admin menu">
-        {ADMIN_LINKS.map(({ to, label, icon: Icon }) => {
-          const active = pathname === to || pathname.startsWith(`${to}/`);
-          return (
-            <ListItemButton
-              key={to}
-              component={NavLink}
-              to={to}
-              onClick={onNavigate}
-              selected={active}
-              aria-current={active ? "page" : undefined}
-              sx={adminNavItemSx(active)}
-            >
-              <ListItemIcon>
-                <Icon sx={{ fontSize: 18 }} />
-              </ListItemIcon>
-              <ListItemText primary={label} />
-            </ListItemButton>
-          );
-        })}
-      </List>
-      <Box sx={{ flex: 1 }} />
-    </Box>
-  );
-}
-
-function AdminShell({ user, logout, children }) {
-  const theme = useTheme();
+function AdminShell({ user, children }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
-  const [open, setOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [adminMaintenanceActive, setAdminMaintenanceActive] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
-    setOpen(false);
+    setMenuOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -205,88 +136,41 @@ function AdminShell({ user, logout, children }) {
   }, []);
 
   return (
-    <Box className="admin-area-shell" sx={{ display: "flex", minHeight: "100vh", bgcolor: CM.bg }}>
-      <Box
-        component="nav"
-        aria-label="Admin menu"
-        sx={{ width: { md: DRAWER_WIDTH }, flexShrink: 0 }}
-      >
-        {isDesktop ? (
-          <Drawer variant="permanent" open sx={{ "& .MuiDrawer-paper": adminDrawerPaperSx }}>
-            <SidebarContent />
-          </Drawer>
-        ) : (
-          <Drawer
-            variant="temporary"
-            open={open}
-            onClose={() => setOpen(false)}
-            ModalProps={{ keepMounted: true }}
-            sx={{ "& .MuiDrawer-paper": adminDrawerPaperSx }}
-          >
-            <SidebarContent onNavigate={() => setOpen(false)} />
-          </Drawer>
-        )}
-      </Box>
+    <div className="staff-layout">
+      <StaffTopbar
+        roleLabel={t("common.ui.adminLabel")}
+        roleIcon={<ShieldRoundedIcon sx={{ fontSize: "15px !important" }} />}
+        user={user}
+        showDate
+        onOpenMenu={() => setMenuOpen(true)}
+        profilePath={ADMIN_PATHS.profile}
+        bell={
+          <NotificationBell apiClient={api} ariaLabel={t("common.ui.openNotifications")} />
+        }
+      />
 
-      <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-        <Stack component="header" direction="row" alignItems="center" spacing={1.5} sx={topbarSx}>
-          {!isDesktop && (
-            <IconButton
-              size="small"
-              aria-label="Open admin menu"
-              onClick={() => setOpen(true)}
-              sx={{ border: `1px solid ${CM.border}` }}
-            >
-              <MenuRoundedIcon sx={{ fontSize: 19 }} />
-            </IconButton>
-          )}
-          <Box sx={{ flex: 1 }} />
-          <Chip
-            icon={<CalendarTodayRoundedIcon sx={{ fontSize: "15px !important" }} />}
-            label={new Date().toLocaleDateString("en-US", {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            })}
-            size="small"
-            variant="outlined"
-            sx={{
-              display: { xs: "none", sm: "inline-flex" },
-              borderColor: CM.border,
-              color: CM.textMuted,
-              fontSize: 12,
-              fontFamily: "Arial, sans-serif",
-            }}
-          />
-          <Chip
-            icon={<ShieldRoundedIcon sx={{ fontSize: "15px !important" }} />}
-            label="ADMIN"
-            size="small"
-            sx={{
-              bgcolor: "rgba(139,92,246,0.15)",
-              color: "#C4B5FD",
-              fontSize: 11,
-              fontWeight: 700,
-              fontFamily: "Arial, sans-serif",
-            }}
-          />
-          <NotificationBell apiClient={api} ariaLabel="Open notifications" />
-          <AccountMenu
-            user={user}
-            logout={logout}
-            onProfile={() => navigate(ADMIN_PATHS.profile)}
-            onSettings={() => navigate(ADMIN_PATHS.profile)}
-            fallbackName="Admin"
-          />
-          <LogoutButton logout={logout} />
-        </Stack>
-        {adminMaintenanceActive && (
+      {menuOpen ? (
+        <button
+          type="button"
+          className="staff-scrim"
+          aria-label={t("common.ui.close")}
+          onClick={() => setMenuOpen(false)}
+        />
+      ) : null}
+
+      <StaffSidebar
+        links={ADMIN_LINKS}
+        open={menuOpen}
+        onNavigate={() => setMenuOpen(false)}
+      />
+
+      <main className="staff-content">
+        {adminMaintenanceActive ? (
           <Alert
             icon={<WarningAmberRoundedIcon fontSize="inherit" />}
             severity="warning"
             sx={{
-              mx: 2,
-              mt: 1.5,
+              mb: 2,
               bgcolor: "rgba(245, 158, 11, 0.14)",
               color: "#fde68a",
               border: "1px solid rgba(245, 158, 11, 0.4)",
@@ -295,17 +179,16 @@ function AdminShell({ user, logout, children }) {
           >
             Admin Management Portal is under scheduled maintenance. Administrative access remains available.
           </Alert>
-        )}
+        ) : null}
 
-        <Box component="main" sx={{ flex: 1, pb: 5 }}>
-          {children}
-        </Box>
-      </Box>
-    </Box>
+        {children}
+      </main>
+    </div>
   );
 }
 
 export default function AdminAreaLayout() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { status, user } = useAdminGuard();
@@ -327,12 +210,12 @@ export default function AdminAreaLayout() {
       <CssBaseline />
       {status === "loading" || status === "guest" ? (
         <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", bgcolor: CM.bg }}>
-          <CircularProgress size={28} aria-label="Loading" />
+          <CircularProgress size={28} aria-label={t("common.ui.loadingAria")} />
         </Box>
       ) : status === "forbidden" ? (
         <ForbiddenState user={user} logout={logout} navigate={navigate} />
       ) : (
-        <AdminShell user={user} logout={logout}>
+        <AdminShell user={user}>
           <Outlet />
         </AdminShell>
       )}
@@ -343,12 +226,19 @@ export default function AdminAreaLayout() {
 function ForbiddenState({ user, logout, navigate }) {
   return (
     <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", px: 3, bgcolor: CM.bg }}>
-      <Stack
-        spacing={2}
-        alignItems="center"
-        textAlign="center"
-        maxWidth={440}
-        sx={{ p: 4, borderRadius: 3, bgcolor: CM.surface, border: `1px solid ${CM.border}` }}
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 2,
+          alignItems: "center",
+          textAlign: "center",
+          maxWidth: 440,
+          p: 4,
+          borderRadius: 3,
+          bgcolor: CM.surface,
+          border: `1px solid ${CM.border}`,
+        }}
       >
         <ShieldRoundedIcon sx={{ color: CM.pink }} />
         <Typography variant="h5" fontWeight={700}>
@@ -358,15 +248,15 @@ function ForbiddenState({ user, logout, navigate }) {
           This area is limited to accounts with the ADMIN role.
           {user?.email ? ` Account ${user.email} is not allowed.` : ""}
         </Typography>
-        <Stack direction="row" spacing={1}>
-          <Button variant="contained" onClick={() => navigate("/")}>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <button type="button" className="staff-logout-btn" onClick={() => navigate("/")}>
             Back to home
-          </Button>
-          <Button variant="outlined" onClick={logout}>
+          </button>
+          <button type="button" className="staff-logout-btn" onClick={logout}>
             Logout
-          </Button>
-        </Stack>
-      </Stack>
+          </button>
+        </Box>
+      </Box>
     </Box>
   );
 }

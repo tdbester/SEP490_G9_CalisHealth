@@ -23,6 +23,7 @@ import {
   Typography,
 } from "@mui/material";
 import { keyframes } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import FitnessCenterRoundedIcon from "@mui/icons-material/FitnessCenterRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
@@ -53,9 +54,9 @@ const enter = (delay = 0) => ({
 });
 
 const BREADCRUMB = [
-  { label: "Content manager", to: CONTENT_PATHS.dashboard },
-  { label: "Exercise & Workout", to: CONTENT_PATHS.exercises },
-  { label: "Workout list" },
+  { labelKey: "nav.contentManagerRole", to: CONTENT_PATHS.dashboard },
+  { labelKey: "nav.exerciseAndWorkout", to: CONTENT_PATHS.exercises },
+  { labelKey: "nav.workoutList" },
 ];
 
 function LevelChip({ level, toneOf }) {
@@ -63,6 +64,7 @@ function LevelChip({ level, toneOf }) {
 }
 
 function StatusDot({ active }) {
+  const { t } = useTranslation();
   return (
     <Stack direction="row" spacing={0.75} alignItems="center">
       <Box
@@ -74,13 +76,16 @@ function StatusDot({ active }) {
         }}
       />
       <Typography variant="caption" sx={{ color: active ? CM.green : CM.pink, fontWeight: 600 }}>
-        {active ? "Active" : "Inactive"}
+        {active
+          ? t("contentManager.exercises.active")
+          : t("contentManager.exercises.inactive")}
       </Typography>
     </Stack>
   );
 }
 
 export default function WorkoutListPage() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const routedSuccess = location.state?.successMessage;
@@ -159,8 +164,8 @@ export default function WorkoutListPage() {
 
       <ContentPageHeader
         breadcrumb={BREADCRUMB}
-        title="Exercise & workout"
-        description="Manage workouts members can follow and complete."
+        title={t("contentManager.exercises.workoutListTitle")}
+        description={t("contentManager.exercises.workoutListDescription")}
         action={
           <Button
             component={RouterLink}
@@ -168,14 +173,14 @@ export default function WorkoutListPage() {
             variant="contained"
             startIcon={<AddRoundedIcon />}
           >
-            Create content
+            {t("contentManager.exercises.createContent")}
           </Button>
         }
       />
 
       <Box
         component="section"
-        aria-label="Workout summary"
+        aria-label={t("contentManager.exercises.summary")}
         sx={{
           mt: 2.5,
           display: "grid",
@@ -183,18 +188,18 @@ export default function WorkoutListPage() {
           gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" },
         }}
       >
-        <Box sx={enter(0)}><SummaryCard label="All workouts" count={workouts.length} detail="workouts" /></Box>
+        <Box sx={enter(0)}><SummaryCard label={t("contentManager.exercises.allWorkouts")} count={workouts.length} detail={t("contentManager.exercises.workoutsUnit")} /></Box>
         <Box sx={enter(80)}><SummaryCard
-          label="Active"
+          label={t("contentManager.exercises.active")}
           tone="success"
           count={activeCount}
-          detail="workouts"
+          detail={t("contentManager.exercises.workoutsUnit")}
         /></Box>
         <Box sx={enter(160)}><SummaryCard
-          label="Inactive"
+          label={t("contentManager.exercises.inactive")}
           tone="error"
           count={workouts.length - activeCount}
-          detail="workouts"
+          detail={t("contentManager.exercises.workoutsUnit")}
         /></Box>
       </Box>
 
@@ -214,8 +219,8 @@ export default function WorkoutListPage() {
               setSearch(event.target.value);
               setPage(0);
             }}
-            placeholder="Search workout"
-            inputProps={{ "aria-label": "Search workout" }}
+            placeholder={t("contentManager.exercises.workoutSearchPlaceholder")}
+            inputProps={{ "aria-label": t("contentManager.exercises.workoutSearchAria") }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -233,12 +238,12 @@ export default function WorkoutListPage() {
               setStatus(event.target.value);
               setPage(0);
             }}
-            SelectProps={{ SelectDisplayProps: { "aria-label": "Filter by status" } }}
+            SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.exercises.filterByStatus") } }}
             sx={{ minWidth: 125 }}
           >
-            <MenuItem value="all">All status</MenuItem>
-            <MenuItem value="active">Active</MenuItem>
-            <MenuItem value="inactive">Inactive</MenuItem>
+            <MenuItem value="all">{t("contentManager.exercises.allStatus")}</MenuItem>
+            <MenuItem value="active">{t("contentManager.exercises.active")}</MenuItem>
+            <MenuItem value="inactive">{t("contentManager.exercises.inactive")}</MenuItem>
           </TextField>
           <TextField
             select
@@ -248,10 +253,10 @@ export default function WorkoutListPage() {
               setLevel(event.target.value);
               setPage(0);
             }}
-            SelectProps={{ SelectDisplayProps: { "aria-label": "Filter by level" } }}
+            SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.exercises.filterByLevel") } }}
             sx={{ minWidth: 125 }}
           >
-            <MenuItem value="all">All levels</MenuItem>
+            <MenuItem value="all">{t("contentManager.exercises.allLevels")}</MenuItem>
             {levelNames.map((name) => (
               <MenuItem key={name} value={name.toLowerCase()}>{name}</MenuItem>
             ))}
@@ -264,19 +269,19 @@ export default function WorkoutListPage() {
               setSource(event.target.value);
               setPage(0);
             }}
-            SelectProps={{ SelectDisplayProps: { "aria-label": "Filter by type" } }}
+            SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.exercises.filterByType") } }}
             sx={{ minWidth: 125 }}
           >
-            <MenuItem value="all">All types</MenuItem>
-            <MenuItem value="system">System</MenuItem>
-            <MenuItem value="custom">Custom</MenuItem>
+            <MenuItem value="all">{t("contentManager.exercises.allTypes")}</MenuItem>
+            <MenuItem value="system">{t("contentManager.exercises.typeSystem")}</MenuItem>
+            <MenuItem value="custom">{t("contentManager.exercises.typeCustom")}</MenuItem>
           </TextField>
-          <Tooltip title="Refresh">
+          <Tooltip title={t("contentManager.exercises.refresh")}>
             <span>
               <IconButton
                 onClick={() => refetch()}
                 disabled={isFetching}
-                aria-label="Refresh workout list"
+                aria-label={t("contentManager.exercises.workoutRefreshAria")}
                 sx={{ border: 1, borderColor: "divider", borderRadius: 2, transition: "all .2s ease", "&:hover": { borderColor: CM.violetBright, bgcolor: "rgba(139,92,246,0.1)" } }}
               >
                 {isFetching ? <CircularProgress size={18} /> : <RefreshRoundedIcon fontSize="small" />}
@@ -288,8 +293,8 @@ export default function WorkoutListPage() {
         {(statusMutation.error || deleteMutation.error) && (
           <Alert severity="error" sx={{ m: 2 }} onClose={() => { statusMutation.reset(); deleteMutation.reset(); }}>
             {deleteMutation.error
-              ? `Could not delete the workout. ${deleteMutation.error.message}`
-              : `Could not update the status. ${statusMutation.error.message}`}
+              ? t("contentManager.exercises.workoutDeleteFailed", { message: deleteMutation.error.message })
+              : t("contentManager.exercises.statusUpdateFailed", { message: statusMutation.error.message })}
           </Alert>
         )}
 
@@ -298,7 +303,7 @@ export default function WorkoutListPage() {
             <Stack spacing={1.5} alignItems="center">
               <CircularProgress size={24} />
               <Typography variant="body2" color="text.secondary">
-                Loading workouts…
+                {t("contentManager.exercises.workoutLoading")}
               </Typography>
             </Stack>
           </Box>
@@ -308,11 +313,11 @@ export default function WorkoutListPage() {
               severity="error"
               action={
                 <Button color="inherit" size="small" onClick={() => refetch()}>
-                  Try again
+                  {t("contentManager.exercises.tryAgain")}
                 </Button>
               }
             >
-              Could not load the workout list. {error.message}
+              {t("contentManager.exercises.workoutLoadFailed", { message: error.message })}
             </Alert>
           </Box>
         ) : (
@@ -321,13 +326,13 @@ export default function WorkoutListPage() {
               <Table size="small" sx={{ minWidth: { xs: 760, md: 900 }, "& th, & td": { textAlign: "center" } }}>
                 <TableHead>
                   <TableRow sx={{ "& th": { bgcolor: "rgba(19,10,39,0.85)", color: CM.textMuted, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, whiteSpace: "nowrap", py: 1.5 } }}>
-                    <TableCell sx={{ textAlign: "left !important", pl: 3 }}>Workout</TableCell>
-                    <TableCell align="center">Source</TableCell>
-                    <TableCell align="center">Level</TableCell>
-                    <TableCell align="center">Exercises</TableCell>
-                    <TableCell align="center">Status</TableCell>
-                    <TableCell align="center">Updated</TableCell>
-                    <TableCell align="center">Action</TableCell>
+                    <TableCell sx={{ textAlign: "left !important", pl: 3 }}>{t("contentManager.exercises.colWorkout")}</TableCell>
+                    <TableCell align="center">{t("contentManager.exercises.colSource")}</TableCell>
+                    <TableCell align="center">{t("contentManager.exercises.colLevel")}</TableCell>
+                    <TableCell align="center">{t("contentManager.exercises.colExercises")}</TableCell>
+                    <TableCell align="center">{t("contentManager.exercises.colStatus")}</TableCell>
+                    <TableCell align="center">{t("contentManager.exercises.colUpdated")}</TableCell>
+                    <TableCell align="center">{t("contentManager.exercises.colAction")}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -355,7 +360,11 @@ export default function WorkoutListPage() {
                       </TableCell>
                       <TableCell align="center">
                         <DarkPill tone={String(workout.source).toLowerCase() === "system" ? "info" : "warning"}>
-                          {String(workout.source || "unknown").toLowerCase() === "system" ? "System" : String(workout.source || "Unknown").toLowerCase() === "custom" ? "Custom" : "Unknown source"}
+                          {String(workout.source || "unknown").toLowerCase() === "system"
+                            ? t("contentManager.exercises.typeSystem")
+                            : String(workout.source || "Unknown").toLowerCase() === "custom"
+                              ? t("contentManager.exercises.typeCustom")
+                              : t("contentManager.exercises.typeUnknown")}
                         </DarkPill>
                       </TableCell>
                       <TableCell align="center">
@@ -385,11 +394,11 @@ export default function WorkoutListPage() {
                             variant="outlined"
                             sx={{ py: 0.25, px: 1.25, fontSize: 11.5, minWidth: 0, borderRadius: "8px" }}
                           >
-                            View
+                            {t("contentManager.exercises.view")}
                           </Button>
                           <IconButton
                             size="small"
-                            aria-label={`More actions for ${workout.name}`}
+                            aria-label={t("contentManager.exercises.moreActions", { name: workout.name })}
                             aria-expanded={Boolean(menu.anchor) && menu.workout?.code === workout.code}
                             onClick={(event) => setMenu({ anchor: event.currentTarget, workout })}
                           >
@@ -406,8 +415,8 @@ export default function WorkoutListPage() {
                           <FitnessCenterRoundedIcon sx={{ fontSize: 44, color: CM.textDim, opacity: 0.4 }} />
                           <Typography variant="body2" color="text.secondary">
                             {workouts.length
-                              ? "No workouts match this search."
-                              : "No workouts yet. Create your first workout to get started."}
+                              ? t("contentManager.exercises.workoutNoMatch")
+                              : t("contentManager.exercises.workoutEmpty")}
                           </Typography>
                         </Stack>
                       </TableCell>
@@ -427,7 +436,7 @@ export default function WorkoutListPage() {
                 setPage(0);
               }}
               rowsPerPageOptions={[10, 20, 50]}
-              labelDisplayedRows={({ from, to, count }) => `Showing ${from}-${to} of ${count} workouts`}
+              labelDisplayedRows={({ from, to, count }) => t("contentManager.exercises.workoutShowingRows", { from, to, count })}
             />
           </>
         )}
@@ -439,7 +448,7 @@ export default function WorkoutListPage() {
           to={menu.workout ? `${CONTENT_PATHS.workouts}/${encodeURIComponent(menu.workout.code)}` : "#"}
           onClick={closeMenu}
         >
-          View details
+          {t("contentManager.exercises.viewDetails")}
         </MenuItem>
         <MenuItem
           disabled={statusMutation.isPending}
@@ -449,7 +458,9 @@ export default function WorkoutListPage() {
             if (workout) statusMutation.mutate({ code: workout.code, active: !workout.active });
           }}
         >
-          {menu.workout?.active ? "Set inactive" : "Set active"}
+          {menu.workout?.active
+            ? t("contentManager.exercises.setInactive")
+            : t("contentManager.exercises.setActive")}
         </MenuItem>
         <MenuItem
           disabled={deleteMutation.isPending}
@@ -457,13 +468,13 @@ export default function WorkoutListPage() {
           onClick={() => {
             const workout = menu.workout;
             closeMenu();
-            if (workout && window.confirm(`Delete "${workout.name}"? This cannot be undone.`)) {
+            if (workout && window.confirm(t("contentManager.exercises.deleteConfirm", { name: workout.name }))) {
               deleteMutation.mutate(workout.code);
             }
           }}
         >
           <DeleteOutlineRoundedIcon fontSize="small" sx={{ mr: 1 }} />
-          Delete
+          {t("contentManager.exercises.delete")}
         </MenuItem>
       </Menu>
     </Box>

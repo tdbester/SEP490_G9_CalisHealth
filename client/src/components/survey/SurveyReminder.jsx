@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { surveyApi } from "../../api/survey";
 import { ArrowRight } from "./SurveyIcons";
+import { useTranslation } from "react-i18next";
 import "./SurveyReminder.css";
 
 /**
@@ -10,6 +11,7 @@ import "./SurveyReminder.css";
  */
 export default function SurveyReminder() {
   const navigate = useNavigate();
+  const { t } = useTranslation("member");
   const [status, setStatus] = useState(null); // null | "NONE" | "IN_PROGRESS" | "SKIPPED"
 
   useEffect(() => {
@@ -31,13 +33,11 @@ export default function SurveyReminder() {
   return (
     <section className="survey-reminder">
       <div>
-        <h2 className="survey-reminder-title">Find your fitness level</h2>
-        <p className="survey-reminder-text">
-          Take the 4-step survey and level test to get your level and a training plan that fits you.
-        </p>
+        <h2 className="survey-reminder-title">{t("survey.reminder.title")}</h2>
+        <p className="survey-reminder-text">{t("survey.reminder.text")}</p>
       </div>
       <button type="button" className="survey-reminder-btn" onClick={() => navigate("/survey")}>
-        {status === "IN_PROGRESS" ? "Continue survey" : "Take the survey"}
+        {status === "IN_PROGRESS" ? t("survey.reminder.continue") : t("survey.reminder.take")}
         <ArrowRight />
       </button>
     </section>
