@@ -187,12 +187,20 @@ public class ProfileService {
             return new MemberSummary(null, null, null, null, null, 0, 0, DEFAULT_DAYS_PER_WEEK);
         }
         MemberSummary base = MemberSummary.of(profile);
-        return new MemberSummary(base.levelName(), levelRank(profile), base.goal(), base.heightCm(),
+        Integer rank = null;
+        try {
+            rank = levelRank(profile);
+        } catch (Exception e) {
+            // Fitness level may not exist or be properly configured
+            rank = null;
+        }
+        return new MemberSummary(base.levelName(), rank, base.goal(), base.heightCm(),
                 base.weightKg(), base.streakDays(), base.longestStreak(), base.daysPerWeek());
     }
 
     /** 1-based position of the member's level in the ordered ladder; null when it has no level yet. */
     private Integer levelRank(MemberProfile profile) {
+        if (profile == null) return null;
         FitnessLevel level = profile.getFitnessLevel();
         if (level == null) return null;
         List<String> names = fitnessLevels
