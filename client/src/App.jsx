@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
+import { useTranslation } from "react-i18next";
 import "react-toastify/dist/ReactToastify.css";
 import AdminLayout from "./components/layout/AdminLayout";
 import RoleHomeRoute from "./components/RoleHomeRoute";
@@ -38,6 +39,13 @@ import MyCustomWorkoutListPage from "./pages/MyCustomWorkoutListPage";
 import UpdateMyCustomWorkoutPage from "./pages/UpdateMyCustomWorkoutPage";
 import WorkoutSystemListPage from "./pages/WorkoutSystemListPage";
 import SystemWorkoutDetailPage from "./pages/SystemWorkoutDetailPage";
+import FavoritesPage from "./pages/FavoritesPage";
+import MemberFeedbackPage from "./pages/MemberFeedbackPage";
+import ContentFeedbackPage from "./pages/ContentFeedbackPage";
+import ContentFeedbackDetailPage from "./pages/ContentFeedbackDetailPage";
+import AdminFeedbackPage from "./pages/AdminFeedbackPage";
+import AdminFeedbackDetailPage from "./pages/AdminFeedbackDetailPage";
+import { FavoritesProvider } from "./context/FavoritesContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ContentManagerDashboard from "./pages/ContentManagerDashboard";
 import ExerciseTreePage from "./pages/ExerciseTreePage";
@@ -81,6 +89,7 @@ import SurveyManagement from "./pages/content/SurveyManagement";
 import { ContentManagementPage } from "./features/content-manager/pages/ContentManagementPage";
 
 export default function App() {
+  const { t } = useTranslation();
   const memberPage = (page) => (
     <ProtectedRoute>
       <AdminLayout>{page}</AdminLayout>
@@ -95,8 +104,9 @@ export default function App() {
         toastClassName="!rounded-xl !border !border-[#3c3063] !bg-[#1a1438] !text-slate-200 !shadow-2xl"
         className="!top-0 !right-0 !z-[9999]"
       />
-      <BrowserRouter>
-        <Routes>
+      <FavoritesProvider>
+        <BrowserRouter>
+          <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -162,6 +172,8 @@ export default function App() {
           <Route path="create" element={<ExerciseFormPage />} />
           <Route path="library" element={<Navigate to="/content/exercises" replace />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="feedback" element={<ContentFeedbackPage />} />
+          <Route path="feedback/:id" element={<ContentFeedbackDetailPage />} />
           <Route path="*" element={<Navigate to="/content/dashboard" replace />} />
         </Route>
 
@@ -196,6 +208,10 @@ export default function App() {
         <Route path="/library/custom-workouts" element={<Navigate to="/library/custom" replace />} />
         <Route path="/library/custom-workouts/:id" element={memberPage(<CustomWorkoutDetailPage />)} />
         <Route path="/library/skills/tree" element={memberPage(<CalisthenicsExerciseTreePage />)} />
+        <Route path="/library/favorites" element={memberPage(<FavoritesPage />)} />
+        <Route path="/favorites" element={memberPage(<FavoritesPage />)} />
+        <Route path="/library/feedback" element={memberPage(<MemberFeedbackPage />)} />
+        <Route path="/feedback" element={memberPage(<MemberFeedbackPage />)} />
         <Route path="/explore" element={memberPage(<CalisthenicsExerciseTreePage />)} />
 
         {/* Admin area (role ADMIN) - the guard reads /auth/me, same pattern as /content. */}
@@ -210,10 +226,12 @@ export default function App() {
           <Route path="notifications" element={<NotificationListPage />} />
           <Route path="notifications/new" element={<CreateNotificationPage />} />
           <Route path="notifications/:id" element={<NotificationDetailPage />} />
-          <Route path="storage" element={<AdminSectionPage title="Media storage & infrastructure" />} />
+          <Route path="storage" element={<AdminSectionPage title={t("admin.maintenance.storage")} />} />
           <Route path="maintenance" element={<MaintenanceScheduleListPage />} />
           <Route path="maintenance/create" element={<CreateMaintenanceSchedulePage />} />
           <Route path="maintenance/:id" element={<MaintenanceScheduleDetailPage />} />
+          <Route path="feedback" element={<AdminFeedbackPage />} />
+          <Route path="feedback/:id" element={<AdminFeedbackDetailPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
@@ -297,8 +315,9 @@ export default function App() {
         <Route path="/settings" element={<Navigate to="/" replace />} />
 
         <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </BrowserRouter>
+          </Routes>
+        </BrowserRouter>
+      </FavoritesProvider>
     </>
   );
 }

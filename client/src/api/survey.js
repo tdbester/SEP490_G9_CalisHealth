@@ -1,4 +1,5 @@
 import api from "./client";
+import i18n from "../i18n";
 
 /** Mã khảo sát onboarding của member (surveys.survey_code). */
 export const ONBOARDING_SURVEY_CODE = "CALISHEALTH_ONBOARDING";
@@ -96,9 +97,9 @@ export function markOnboardingPrompted() {
 }
 
 /** Thông báo lỗi đọc được từ response của Survey API ({code, message, errors}). */
-export function surveyErrorMessage(err, fallback = "Something went wrong. Please try again.") {
+export function surveyErrorMessage(err, fallback) {
   const data = err?.response?.data;
   if (typeof data?.message === "string" && data.message) return data.message;
-  if (!err?.response) return "Cannot reach the server. Please check your connection.";
-  return fallback;
+  if (!err?.response) return i18n.t("common.apiError.unreachable");
+  return fallback || i18n.t("common.error.generic");
 }

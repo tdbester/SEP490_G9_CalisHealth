@@ -1,3 +1,5 @@
+import i18n from "../i18n";
+
 const regions = {
   chest: `
     <path d="M143 91 Q160 79 178 87 L176 113 Q158 119 145 108 Z"/>
@@ -31,7 +33,7 @@ const regions = {
 
 const fullBody = `${regions.chest}${regions.back}${regions.core}${regions.legs}${regions.arms}`;
 
-function createAnatomyImage(highlights) {
+function createAnatomyImage(highlights, caption) {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 270">
       <defs>
@@ -55,40 +57,35 @@ function createAnatomyImage(highlights) {
       <g fill="url(#highlight)" stroke="#ffd0e3" stroke-width="1" opacity=".96">
         ${highlights}
       </g>
-      <text x="180" y="263" text-anchor="middle" fill="#c4b5fd" font-family="Arial, sans-serif" font-size="12">Target muscle groups</text>
+      <text x="180" y="263" text-anchor="middle" fill="#c4b5fd" font-family="Arial, sans-serif" font-size="12">${caption}</text>
     </svg>
   `;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
-const anatomyImages = {
-  chest: createAnatomyImage(regions.chest),
-  back: createAnatomyImage(regions.back),
-  core: createAnatomyImage(regions.core),
-  legs: createAnatomyImage(regions.legs),
-  arms: createAnatomyImage(regions.arms),
-  fullBody: createAnatomyImage(fullBody),
-};
+/** Caption (nhãn nhóm cơ) của hình giải phẫu, đã dịch theo ngôn ngữ hiện tại. */
+const anatomyCaption = () => i18n.t("member:exerciseDetail.targetMuscleGroups");
 
 export function getAnatomyImage(muscleGroup) {
   const text = (Array.isArray(muscleGroup) ? muscleGroup.join(" ") : String(muscleGroup || ""))
     .trim()
     .toLowerCase();
+  const caption = anatomyCaption();
 
   if (/\b(legs?|quads?|quadriceps|glutes?|hamstrings?|calves?|squat)\b/.test(text)) {
-    return anatomyImages.legs;
+    return createAnatomyImage(regions.legs, caption);
   }
   if (/\b(back|lats?|pull|rhomboids?)\b/.test(text)) {
-    return anatomyImages.back;
+    return createAnatomyImage(regions.back, caption);
   }
   if (/\b(core|abs?|abdominals?|obliques?)\b/.test(text)) {
-    return anatomyImages.core;
+    return createAnatomyImage(regions.core, caption);
   }
   if (/\b(arms?|biceps?|triceps?|forearms?)\b/.test(text)) {
-    return anatomyImages.arms;
+    return createAnatomyImage(regions.arms, caption);
   }
   if (/\b(chest|pectorals?|push|shoulders?)\b/.test(text)) {
-    return anatomyImages.chest;
+    return createAnatomyImage(regions.chest, caption);
   }
-  return anatomyImages.fullBody;
+  return createAnatomyImage(fullBody, caption);
 }
