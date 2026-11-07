@@ -60,6 +60,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/content/**").hasRole("CONTENT_MANAGER")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/library/exercises/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/favorites/**").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/library/feedback/**").hasRole("MEMBER")
                         .requestMatchers("/api/v1/library/muscle-groups").hasRole("MEMBER")
                         .requestMatchers("/api/v1/library/exercise-tree/**").hasAnyRole("MEMBER", "CONTENT_MANAGER")
                         .requestMatchers("/api/v1/library/member-exercises/**").hasRole("MEMBER")

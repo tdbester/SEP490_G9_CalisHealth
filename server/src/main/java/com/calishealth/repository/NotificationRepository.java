@@ -26,7 +26,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
               and (
                     (:role = 'MEMBER' and n.targetAudience in ('MEMBER', 'ALL_MEMBERS', 'SYSTEM_WIDE', 'ALL_USERS', 'GLOBAL', 'ALL_ROLES'))
                     or (:role = 'CONTENT_MANAGER' and n.targetAudience in ('CONTENT_MANAGER', 'SYSTEM_WIDE', 'ALL_USERS', 'GLOBAL', 'ALL_ROLES'))
-                    or (:role = 'ADMIN' and n.targetAudience in ('SYSTEM_WIDE', 'ALL_USERS', 'GLOBAL', 'ALL_ROLES'))
+                    or (:role = 'ADMIN' and n.targetAudience in ('ADMIN', 'SYSTEM_WIDE', 'ALL_USERS', 'GLOBAL', 'ALL_ROLES'))
                     or (:role <> 'ADMIN' and n.targetAudience = 'SPECIFIC_USER' and n.userId = :userId)
               )
             order by n.createdAt desc
