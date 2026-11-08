@@ -11,6 +11,7 @@ import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
 import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import notificationToast from "../utils/notificationToast";
+import { apiErrorMessage } from "../utils/apiError";
 
 const AREA_LABEL_KEYS = {
   MEMBER_APP_ACCESS: "admin.maintenance.detail.areaMemberApp",
@@ -77,7 +78,7 @@ export default function MaintenanceScheduleDetailPage() {
       })
       .catch((requestError) => {
         if (active) {
-          setError(requestError.response?.data?.message || t("admin.maintenance.detail.loadFailed"));
+          setError(apiErrorMessage(requestError, "admin.maintenance.detail.loadFailed"));
         }
       });
     return () => { active = false; };
@@ -91,7 +92,7 @@ export default function MaintenanceScheduleDetailPage() {
       notificationToast.success(t("admin.maintenance.startSuccess"));
     } catch (requestError) {
       notificationToast.error(
-        requestError.response?.data?.message || t("admin.maintenance.startFailed"),
+        apiErrorMessage(requestError, "admin.maintenance.startFailed"),
       );
     } finally {
       setBusy(false);
@@ -106,7 +107,7 @@ export default function MaintenanceScheduleDetailPage() {
       notificationToast.success(t("admin.maintenance.completeSuccess"));
     } catch (requestError) {
       notificationToast.error(
-        requestError.response?.data?.message || t("admin.maintenance.completeFailed"),
+        apiErrorMessage(requestError, "admin.maintenance.completeFailed"),
       );
     } finally {
       setBusy(false);

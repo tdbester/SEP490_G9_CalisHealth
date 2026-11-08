@@ -6,7 +6,10 @@ import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import notificationToast from "../utils/notificationToast";
+import { apiErrorMessage, fieldErrors } from "../utils/apiError";
 import "./CreateMaintenanceSchedulePage.css";
+
+const MAX_MESSAGE_LENGTH = 2000;
 
 const AREAS = [
   { value: "MEMBER_APP_ACCESS", labelKey: "admin.maintenance.createForm.areaMemberApp" },
@@ -160,20 +163,23 @@ export default function CreateMaintenanceSchedulePage() {
       window.dispatchEvent(new Event("member-notifications-updated"));
       navigate("/admin/maintenance");
     } catch (error) {
-      const validationErrors = error.response?.data?.errors;
-      const startError = validationErrors?.startsAt || validationErrors?.startTime;
-      const endError = validationErrors?.endsAt || validationErrors?.endTime;
-      if (startError || endError) {
+      const validationErrors = fieldErrors(error);
+      const startError = validationErrors.startsAt || validationErrors.startTime;
+      const endError = validationErrors.endsAt || validationErrors.endTime;
+      const messageError = validationErrors.message;
+      if (startError || endError || messageError) {
         setErrors((current) => ({
           ...current,
           ...(startError ? { startsAt: startError } : {}),
           ...(endError ? { endsAt: endError } : {}),
+          ...(messageError ? { message: messageError } : {}),
         }));
       }
+      const fieldMessage =
+        Object.values(validationErrors).find((value) => typeof value === "string");
       notificationToast.error(
-        startError || endError ||
-        Object.values(validationErrors || {}).find((value) => typeof value === "string") ||
-        error.response?.data?.message ||
+        startError || endError || messageError || fieldMessage ||
+        apiErrorMessage(error) ||
         t("admin.maintenance.createForm.createFailed"),
       );
     } finally {
@@ -221,12 +227,26 @@ export default function CreateMaintenanceSchedulePage() {
             <textarea
               id="maintenance-message"
               value={message}
-              onChange={(event) => setMessage(event.target.value)}
+              onChange={(event) => {
+                setMessage(event.target.value);
+                setErrors((current) => ({ ...current, message: "" }));
+              }}
               rows={2}
+              maxLength={MAX_MESSAGE_LENGTH}
               placeholder={t("admin.maintenance.createForm.messagePlaceholder")}
               className={`${fieldClass} min-h-[58px] resize-y`}
+              aria-invalid={Boolean(errors.message)}
             />
-            <p className="mt-1 text-[11px] text-[#857ba3]">{t("admin.maintenance.createForm.messageHint")}</p>
+            {errors.message
+              ? <p className="mt-1 text-xs text-rose-300">{errors.message}</p>
+              : (
+                <p className="mt-1 text-[11px] text-[#857ba3]">
+                  {t("admin.maintenance.createForm.messageHint")}{" "}
+                  <span className="text-[#6f6591]">
+                    {message.length}/{MAX_MESSAGE_LENGTH}
+                  </span>
+                </p>
+              )}
           </div>
         </section>
 

@@ -50,6 +50,8 @@ public class MaintenanceScheduleService {
                     "ADMIN_MANAGEMENT_PORTAL"
             );
     private static final Set<Integer> ALLOWED_REMINDERS = Set.of(1, 12, 24, 48);
+    /** Cột message trong DB là TEXT; chặn sớm để không sinh lỗi 500 khi ghi quá giới hạn. */
+    private static final int MAX_MESSAGE_LENGTH = 2000;
     private static final int PAGE_SIZE = 5;
     private static final Map<String, String> AREA_LABELS = Map.of(
             "MEMBER_APP_ACCESS", "Member App Access",
@@ -254,6 +256,12 @@ public class MaintenanceScheduleService {
         }
         if (request.endsAt().isBefore(request.startsAt().plusHours(2))) {
             throw new RequestValidationException("endsAt", "Maintenance duration must be at least 2 hours.");
+        }
+        if (request.message() != null && request.message().length() > MAX_MESSAGE_LENGTH) {
+            throw new RequestValidationException(
+                    "message",
+                    "Message must not exceed " + MAX_MESSAGE_LENGTH + " characters."
+            );
         }
         if (!ALLOWED_REMINDERS.contains(request.reminderHours())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported reminder interval");

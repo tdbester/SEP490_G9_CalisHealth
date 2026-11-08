@@ -14,6 +14,7 @@ import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import api from "../api/client";
 import useUndoDelete from "../hooks/useUndoDelete";
 import notificationToast from "../utils/notificationToast";
+import { apiErrorMessage } from "../utils/apiError";
 
 const AREA_KEYS = {
   MEMBER_APP_ACCESS: "admin.maintenance.memberApp",
@@ -115,8 +116,7 @@ export default function MaintenanceScheduleListPage() {
       setTotalPages(data.totalPages || 0);
       setTotalElements(data.totalElements || 0);
     } catch (requestError) {
-      const message =
-        requestError.response?.data?.message || t("admin.maintenance.loadFailed");
+      const message = apiErrorMessage(requestError, "admin.maintenance.loadFailed");
       setError(message);
     } finally {
       setLoading(false);
@@ -177,7 +177,7 @@ export default function MaintenanceScheduleListPage() {
       notificationToast.success(t("admin.maintenance.startSuccess"));
     } catch (requestError) {
       notificationToast.error(
-        requestError.response?.data?.message || t("admin.maintenance.startFailed"),
+        apiErrorMessage(requestError, "admin.maintenance.startFailed"),
       );
     } finally {
       setBusyId(null);
@@ -195,7 +195,7 @@ export default function MaintenanceScheduleListPage() {
       notificationToast.success(t("admin.maintenance.completeSuccess"));
     } catch (requestError) {
       notificationToast.error(
-        requestError.response?.data?.message || t("admin.maintenance.completeFailed"),
+        apiErrorMessage(requestError, "admin.maintenance.completeFailed"),
       );
     } finally {
       setBusyId(null);
@@ -213,7 +213,7 @@ export default function MaintenanceScheduleListPage() {
       notificationToast.success(t("admin.maintenance.lockUpdated"));
     } catch (requestError) {
       notificationToast.error(
-        requestError.response?.data?.message || t("admin.maintenance.lockUpdateFailed"),
+        apiErrorMessage(requestError, "admin.maintenance.lockUpdateFailed"),
       );
     } finally {
       setLockBusyArea(null);

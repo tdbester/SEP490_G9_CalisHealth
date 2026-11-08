@@ -16,6 +16,7 @@ public record CreateMaintenanceScheduleRequestDto(
         @Size(max = 255, message = "Title must not exceed 255 characters")
         String title,
 
+        @Size(max = 2000, message = "Message must not exceed 2000 characters")
         String message,
 
         @NotNull(message = "Start time is required")

@@ -327,6 +327,28 @@ class MaintenanceScheduleServiceTest {
         return lock;
     }
 
+    @Test
+    void rejectsAMessageLongerThanTheDatabaseColumnAllows() {
+        LocalDateTime start = startsAt();
+        CreateMaintenanceScheduleRequestDto tooLong = new CreateMaintenanceScheduleRequestDto(
+                "Database upgrade",
+                "x".repeat(2001),
+                start,
+                start.plusHours(2),
+                Set.of(AffectedArea.MEMBER_APP_ACCESS),
+                true,
+                24
+        );
+
+        RequestValidationException exception = assertThrows(
+                RequestValidationException.class,
+                () -> service.create(tooLong, "admin@example.com")
+        );
+
+        assertEquals("message", exception.getField());
+        verify(schedules, never()).save(any(MaintenanceSchedule.class));
+    }
+
     private static CreateMaintenanceScheduleRequestDto request(
             boolean notifyMembers,
             LocalDateTime startsAt,

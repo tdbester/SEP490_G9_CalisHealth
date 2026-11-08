@@ -1,5 +1,6 @@
 package com.calishealth.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -103,6 +104,48 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MissingServletRequestPartException.class)
     public ResponseEntity<Map<String, String>> handleMissingPart(MissingServletRequestPartException e) {
         return invalidRequest("Request part '" + e.getRequestPartName() + "' is required");
+    }
+
+    /**
+     * Vi phạm ràng buộc DB (quá độ dài, trùng khóa, vi phạm FK) -> 400 kèm message rõ ràng
+     * thay vì để Spring trả về trang lỗi HTML 500 khiến frontend không đọc được lý do.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrity(DataIntegrityViolationException e) {
+        String detail = rootCauseMessage(e);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("message", "Dữ liệu không hợp lệ");
+        body.put("errors", Map.of("request", detail));
+        body.put("detail", detail);
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    /** Rút ra thông báo ngắn gọn từ lỗi DB, bỏ phần câu SQL dài. */
+    private static String rootCauseMessage(Throwable error) {
+        Throwable cause = error;
+        while (cause.getCause() != null && cause.getCause() != cause) {
+            cause = cause.getCause();
+        }
+        String message = cause.getMessage();
+        if (message == null || message.isBlank()) {
+            return "The submitted data does not fit the allowed limits.";
+        }
+        // Bỏ đuôi " [insert into ...]" / "; SQL [...]" để không lộ cấu trúc câu truy vấn.
+        int cut = -1;
+        for (String marker : new String[]{" [insert ", " [update ", " [delete ", " [select ", " [SQL "}) {
+            int index = message.indexOf(marker);
+            if (index >= 0 && (cut < 0 || index < cut)) {
+                cut = index;
+            }
+        }
+        if (cut > 0) {
+            message = message.substring(0, cut);
+        }
+        if (message.length() > 300) {
+            message = message.substring(0, 300) + "…";
+        }
+        return message;
     }
 
     @ExceptionHandler(MultipartException.class)
