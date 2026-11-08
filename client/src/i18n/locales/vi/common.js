@@ -127,6 +127,7 @@ export default {
   nav: {
     dashboard: "Bảng điều khiển",
     library: "Thư viện",
+    leaderboard: "Bảng xếp hạng",
     favorites: "Yêu thích",
     feedback: "Góp ý & Khiếu nại",
     tracking: "Sức khỏe & Tiến độ",
