@@ -3,10 +3,12 @@ package com.calishealth.service;
 import com.calishealth.dtos.CreatePersonalExerciseRequestDTO;
 import com.calishealth.dtos.ContentTextCheckRequestDTO;
 import com.calishealth.models.Exercise;
+import com.calishealth.models.FitnessLevel;
 import com.calishealth.models.ProfanityWord;
 import com.calishealth.models.User;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.ExerciseModerationHistoryRepository;
+import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.ProfanityWordRepository;
 import com.calishealth.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +37,7 @@ class PersonalExerciseServiceTest {
     private ExerciseModerationHistoryRepository moderationHistory;
     private UserRepository users;
     private ProfanityWordRepository profanityWords;
+    private FitnessLevelRepository fitnessLevels;
     private SystemNotificationService systemNotifications;
     private PersonalExerciseService service;
 
@@ -44,8 +47,20 @@ class PersonalExerciseServiceTest {
         moderationHistory = mock(ExerciseModerationHistoryRepository.class);
         users = mock(UserRepository.class);
         profanityWords = mock(ProfanityWordRepository.class);
+        fitnessLevels = mock(FitnessLevelRepository.class);
         systemNotifications = mock(SystemNotificationService.class);
         when(profanityWords.findByActiveTrueOrderByIdAsc()).thenReturn(blockedWords());
+        // Level do Content Manager cấu hình động trong fitness_levels.
+        FitnessLevel beginner = new FitnessLevel();
+        beginner.setId(1L);
+        beginner.setName("Beginner");
+        beginner.setScoreMin(0);
+        beginner.setScoreMax(1);
+        when(fitnessLevels.findAll()).thenReturn(List.of(beginner));
+        when(fitnessLevels.findByNameIgnoreCase(any())).thenAnswer(invocation -> {
+            String requested = invocation.getArgument(0, String.class);
+            return "Beginner".equalsIgnoreCase(requested) ? Optional.of(beginner) : Optional.empty();
+        });
         ExerciseVideoStorageService videoStorage = new ExerciseVideoStorageService(
                 temporaryDirectory.resolve("videos").toString(),
                 temporaryDirectory.resolve("anatomy").toString());
@@ -53,6 +68,7 @@ class PersonalExerciseServiceTest {
                 exercises,
                 moderationHistory,
                 users,
+                fitnessLevels,
                 new ContentModerationService(profanityWords),
                 videoStorage,
                 mock(ExerciseMuscleGroupCatalog.class),
@@ -100,7 +116,7 @@ class PersonalExerciseServiceTest {
         var holdRequest = new CreatePersonalExerciseRequestDTO(
                 "Plank hold",
                 "A controlled bodyweight hold.",
-                Exercise.EntryLevel.BEGINNER,
+                "Beginner",
                 List.of("Brace your core", "Hold steady"),
                 "Core",
                 3,
@@ -204,7 +220,7 @@ class PersonalExerciseServiceTest {
         rejected.setName("Wall sit challenge");
         rejected.setDescription("A wall sit exercise.");
         rejected.setType(Exercise.EntryType.HEALTH);
-        rejected.setLevel(Exercise.EntryLevel.BEGINNER);
+        rejected.setLevel("Beginner");
         rejected.setMuscleGroup("Legs");
         rejected.setStatus(Exercise.EntryStatus.REJECTED);
         rejected.setVideoUrl("/media/exercise-demos/current.mp4");
@@ -216,7 +232,7 @@ class PersonalExerciseServiceTest {
                 new CreatePersonalExerciseRequestDTO(
                         "Wall sit challenge",
                         "A wall sit exercise.",
-                        Exercise.EntryLevel.BEGINNER,
+                        "Beginner",
                         List.of("Brace your core", "Hold the squat"),
                         "Legs",
                         3,
@@ -247,7 +263,7 @@ class PersonalExerciseServiceTest {
         accepted.setName("Wall sit challenge");
         accepted.setDescription("A wall sit exercise.");
         accepted.setType(Exercise.EntryType.HEALTH);
-        accepted.setLevel(Exercise.EntryLevel.BEGINNER);
+        accepted.setLevel("Beginner");
         accepted.setMuscleGroup("Legs");
         accepted.setStatus(Exercise.EntryStatus.ACCEPTED);
         accepted.setVideoUrl("/media/exercise-demos/current.mp4");
@@ -259,7 +275,7 @@ class PersonalExerciseServiceTest {
                 new CreatePersonalExerciseRequestDTO(
                         "Wall sit challenge",
                         "A wall sit exercise.",
-                        Exercise.EntryLevel.BEGINNER,
+                        "Beginner",
                         List.of("Brace your core", "Hold the squat"),
                         "Legs",
                         1,
@@ -298,7 +314,7 @@ class PersonalExerciseServiceTest {
                 new CreatePersonalExerciseRequestDTO(
                         "Wall sit",
                         "A wall sit exercise.",
-                        Exercise.EntryLevel.BEGINNER,
+                        "Beginner",
                         List.of("Brace your core"),
                         "Legs",
                         3,
@@ -334,7 +350,7 @@ class PersonalExerciseServiceTest {
         return new CreatePersonalExerciseRequestDTO(
                 title,
                 "A controlled bodyweight movement.",
-                Exercise.EntryLevel.BEGINNER,
+                "Beginner",
                 List.of("Brace your core", "Lower with control"),
                 "Chest",
                 3,

@@ -9,6 +9,7 @@ import useUndoDelete from "../hooks/useUndoDelete";
 import { useTranslation } from "react-i18next";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { getLevelLabel } from "../utils/levelLabel";
+import { useSystemLevels } from "../useSystemLevels";
 
 /* -------------------- ICONS -------------------- */
 function BarbellIcon({ className = "h-5 w-5 text-[#9d7aff]" }) {
@@ -192,6 +193,8 @@ export default function MyExerciseListPage() {
   const pageSize = 5;
   const [exercises, setExercises] = useState([]);
   const [statusCounts, setStatusCounts] = useState({ pending: 0, rejected: 0, accepted: 0 });
+  // Level do Content Manager cấu hình động nên danh sách lọc lấy từ hệ thống.
+  const { levels: levelNames } = useSystemLevels();
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -381,11 +384,12 @@ export default function MyExerciseListPage() {
         </div>
         <div className="w-44 flex-shrink-0 relative flex items-center">
           <select className="w-full appearance-none rounded-xl bg-[#120d29] border border-[#231b46] px-4 py-2.5 pr-9 text-sm text-slate-300 outline-none focus:border-[#6340f1] cursor-pointer" value={selectedLevel} onChange={(e) => { setSelectedLevel(e.target.value); setCurrentPage(1); }}>
-            {['All levels', 'Beginner', 'Intermediate', 'Advanced'].map((lvl) => (
+            <option value="All levels" className="bg-[#120d29] text-white">
+              {t("member.catalog.allLevels")}
+            </option>
+            {levelNames.map((lvl) => (
               <option key={lvl} value={lvl} className="bg-[#120d29] text-white">
-                {lvl === "All levels"
-                  ? t("member.catalog.allLevels")
-                  : t(`member.catalog.${lvl.toLowerCase()}`)}
+                {getLevelLabel(lvl)}
               </option>
             ))}
           </select>

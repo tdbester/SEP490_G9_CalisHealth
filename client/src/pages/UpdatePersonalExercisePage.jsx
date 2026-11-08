@@ -13,6 +13,8 @@ import {
   resubmitPersonalExercise,
   updateAcceptedPersonalExercise,
 } from '../api/library';
+import { getLevelLabel } from '../utils/levelLabel';
+import { useSystemLevels } from '../useSystemLevels';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
@@ -92,7 +94,7 @@ export default function UpdatePersonalExercisePage() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [level, setLevel] = useState('Beginner');
+  const [level, setLevel] = useState('');
   const [guide, setGuide] = useState(['']);
   const [video, setVideo] = useState(null);
   const [replaceVideo, setReplaceVideo] = useState(false);
@@ -108,6 +110,13 @@ export default function UpdatePersonalExercisePage() {
   const [isDragging, setIsDragging] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [touchedFields, setTouchedFields] = useState({});
+
+  // Level do Content Manager cấu hình động nên danh sách level lấy từ hệ thống.
+  const { activeLevels } = useSystemLevels();
+  const levelChoices = activeLevels.map((name) => ({
+    name,
+    description: '',
+  }));
 
   useEffect(() => {
     if (!anatomyImageFile) {
@@ -505,11 +514,8 @@ export default function UpdatePersonalExercisePage() {
         <div>
           <label className="block text-xs text-slate-400 mb-2">{t("member.personal.level")}</label>
           <div id="exercise-level" tabIndex={-1} className={`grid grid-cols-1 md:grid-cols-3 gap-4 rounded-xl ${showFieldError('level') && validationErrors.level ? 'ring-1 ring-rose-500' : ''}`}>
-            {[
-              { name: t("member.catalog.beginner"), description: t("member.personal.levelBeginnerDesc") },
-              { name: t("member.catalog.intermediate"), description: t("member.personal.levelIntermediateDesc") },
-              { name: t("member.catalog.advanced"), description: t("member.personal.levelAdvancedDesc") },
-            ].map(({ name, description: levelDescription }) => (
+            {/* Level do Content Manager cấu hình động nên danh sách lấy từ hệ thống. */}
+            {levelChoices.map(({ name, description: levelDescription }) => (
               <div
                 key={name}
                 role="radio"

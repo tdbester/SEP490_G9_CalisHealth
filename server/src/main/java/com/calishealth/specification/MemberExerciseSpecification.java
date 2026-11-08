@@ -36,8 +36,12 @@ public final class MemberExerciseSpecification {
                 predicates.add(builder.isTrue(root.get("shareWithCommunity")));
             }
 
-            if (filter.getLevel() != null) {
-                predicates.add(builder.equal(                root.get("difficultyLevel"), filter.getLevel().name()));
+            if (filter.getLevel() != null && !filter.getLevel().isBlank()) {
+                // Level do Content Manager đặt tên trong bảng fitness_levels; so khớp không phân biệt
+                // hoa thường để client gửi "beginner" hay "Beginner" đều ra kết quả.
+                predicates.add(builder.equal(
+                        builder.lower(root.get("difficultyLevel")),
+                        filter.getLevel().trim().toLowerCase(Locale.ROOT)));
             }
 
             if (filter.getSearch() != null && !filter.getSearch().isBlank()) {

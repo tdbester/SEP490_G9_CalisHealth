@@ -6,11 +6,11 @@ import { FAVORITE_ITEM_TYPES } from "../api/favorites";
 import FavoriteButton from "../components/favorites/FavoriteButton";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { getLevelLabel } from "../utils/levelLabel";
+import { useSystemLevels } from "../useSystemLevels";
 import { localizeSeed, localizeSeedDeep } from "../utils/seedText";
 import "./ExerciseListPage.css";
 
 const MUSCLE_GROUPS = ["All", "Full body", "Chest", "Back", "Arms", "Core", "Legs"];
-const LEVEL_OPTIONS = ["All levels", "Beginner", "Intermediate", "Advanced"];
 const PAGE_SIZE = 5;
 
 function toNumberOrNull(value) {
@@ -384,7 +384,7 @@ function FilterSidebar({ selectedMuscles, onToggleMuscle, isAllActive, getMuscle
   );
 }
 
-function SearchFilterBar({ searchInput, onSearchChange, selectedLevel, onLevelChange }) {
+function SearchFilterBar({ searchInput, onSearchChange, selectedLevel, onLevelChange, levelOptions }) {
   const { t } = useTranslation();
   return (
     <div className="flex items-center gap-4 mb-4 w-full">
@@ -406,7 +406,7 @@ function SearchFilterBar({ searchInput, onSearchChange, selectedLevel, onLevelCh
           value={selectedLevel}
           onChange={onLevelChange}
         >
-          {LEVEL_OPTIONS.map((option) => (
+          {levelOptions.map((option) => (
             <option key={option} value={option} className="bg-[#130d2e] text-white">
               {option === "All levels" ? t("member.catalog.allLevels") : getLevelLabel(option)}
             </option>
@@ -487,6 +487,12 @@ export default function WorkoutSystemListPage() {
   const [workouts, setWorkouts] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
 
+  const { levels: systemLevels } = useSystemLevels();
+  const levelOptions = useMemo(
+    () => ["All levels", ...systemLevels],
+    [systemLevels]
+  );
+
   useEffect(() => {
     const handler = window.setTimeout(() => {
       setDebouncedSearch(searchInput);
@@ -548,7 +554,8 @@ export default function WorkoutSystemListPage() {
         || workout.title.toLowerCase().includes(search)
         || workout.description.toLowerCase().includes(search)
         || workout.muscleGroup.toLowerCase().includes(search);
-      const matchesLevel = selectedLevel === "All levels" || workout.level === selectedLevel;
+      const matchesLevel = selectedLevel === "All levels"
+        || String(workout.level || "").toLowerCase() === selectedLevel.toLowerCase();
       const matchesMuscle = allActive || selectedMuscles.some((muscle) => matchesMuscleGroup(workout, muscle));
       return matchesSearch && matchesLevel && matchesMuscle;
     });
@@ -648,6 +655,7 @@ export default function WorkoutSystemListPage() {
         searchInput={searchInput}
         onSearchChange={(event) => setSearchInput(event.target.value)}
         selectedLevel={selectedLevel}
+        levelOptions={levelOptions}
         onLevelChange={(event) => {
           setSelectedLevel(event.target.value);
           setCurrentPage(1);

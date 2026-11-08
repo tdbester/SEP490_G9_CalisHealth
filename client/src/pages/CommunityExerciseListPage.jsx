@@ -9,6 +9,7 @@ import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { getLevelLabel } from "../utils/levelLabel";
 import { localizeSeed } from "../utils/seedText";
 import ConfirmDialog from "../components/common/ConfirmDialog";
+import { useSystemLevels } from "../useSystemLevels";
 
 // Mock data matching mockup 100%
 const INITIAL_COMMUNITY_EXERCISES = [
@@ -226,6 +227,8 @@ export default function CommunityExerciseListPage() {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
   const pageSize = 5;
+  // Level do Content Manager cấu hình động nên danh sách lọc lấy từ hệ thống.
+  const { levels: levelNames, activeLevels } = useSystemLevels();
 
   useEffect(() => {
     let active = true;
@@ -234,7 +237,7 @@ export default function CommunityExerciseListPage() {
     getMemberExerciseList({
       tab: "COMMUNITY",
       search: searchInput.trim() || undefined,
-      level: selectedLevel === "All levels" ? undefined : selectedLevel.toUpperCase(),
+      level: selectedLevel === "All levels" ? undefined : selectedLevel,
       sortBy: sortOrder === "Most saved" ? "MOST_SAVED" : sortOrder === "Oldest" ? "OLDEST" : "NEWEST",
       page: currentPage,
       size: pageSize,
@@ -295,7 +298,7 @@ export default function CommunityExerciseListPage() {
   const [formSuccess, setFormSuccess] = useState(null);
   const [createForm, setCreateForm] = useState({
     title: "",
-    level: "Intermediate",
+    level: "",
     muscles: "Chest, triceps",
     sets: 3,
     repsOrDuration: "8 reps",
@@ -304,6 +307,17 @@ export default function CommunityExerciseListPage() {
   });
 
   const filteredExercises = exercises;
+
+  // Mặc định chọn level dễ nhất đang active cho form tạo bài tập.
+  useEffect(() => {
+    setCreateForm((current) => {
+      if (current.level && activeLevels.some((name) => name.toLowerCase() === current.level.toLowerCase())) {
+        return current;
+      }
+      if (!activeLevels.length) return current;
+      return { ...current, level: activeLevels[0] };
+    });
+  }, [activeLevels]);
 
   const handleView = (item) => {
     const slug =
@@ -451,15 +465,11 @@ export default function CommunityExerciseListPage() {
             <option value="All levels" className="bg-[#120d29] text-white">
               {t("member.catalog.allLevels")}
             </option>
-            <option value="Beginner" className="bg-[#120d29] text-white">
-              {t("member.catalog.beginner")}
-            </option>
-            <option value="Intermediate" className="bg-[#120d29] text-white">
-              {t("member.catalog.intermediate")}
-            </option>
-            <option value="Advanced" className="bg-[#120d29] text-white">
-              {t("member.catalog.advanced")}
-            </option>
+            {levelNames.map((name) => (
+              <option key={name} value={name} className="bg-[#120d29] text-white">
+                {getLevelLabel(name)}
+              </option>
+            ))}
           </select>
           <div className="absolute right-3.5 pointer-events-none text-slate-400 flex items-center justify-center">
             <ChevronDownIcon className="w-4 h-4" />
@@ -671,9 +681,9 @@ export default function CommunityExerciseListPage() {
                     }
                     className="w-full rounded-xl bg-[#1a123d] border border-[#2b2257] px-3.5 py-2 text-xs text-white outline-none focus:border-[#643bf6] cursor-pointer"
                   >
-                    <option value="Beginner">{t("member.catalog.beginner")}</option>
-                    <option value="Intermediate">{t("member.catalog.intermediate")}</option>
-                    <option value="Advanced">{t("member.catalog.advanced")}</option>
+                    {levelNames.map((name) => (
+                      <option key={name} value={name}>{getLevelLabel(name)}</option>
+                    ))}
                   </select>
                 </div>
 

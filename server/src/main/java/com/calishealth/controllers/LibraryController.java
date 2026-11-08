@@ -3,6 +3,7 @@ package com.calishealth.controllers;
 import com.calishealth.dtos.LibraryDtos.CreateMemberExerciseRequest;
 import com.calishealth.dtos.LibraryDtos.ExerciseCounts;
 import com.calishealth.dtos.LibraryDtos.ExerciseListItem;
+import com.calishealth.dtos.LibraryDtos.FitnessLevelOption;
 import com.calishealth.dtos.LibraryDtos.LibrarySummaryResponse;
 import com.calishealth.dtos.LibraryDtos.PagedExerciseListResponse;
 import com.calishealth.service.LibraryService;
@@ -11,11 +12,22 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/library")
 @RequiredArgsConstructor
 public class LibraryController {
     private final LibraryService libraryService;
+
+    /**
+     * Danh sách level của hệ thống. Level do Content Manager cấu hình động nên client lấy từ
+     * đây thay vì hard-code Beginner / Intermediate / Advanced.
+     */
+    @GetMapping("/levels")
+    public List<FitnessLevelOption> getLevels() {
+        return libraryService.getFitnessLevels();
+    }
 
     @GetMapping("/summary")
     public LibrarySummaryResponse getSummary(Authentication authentication) {

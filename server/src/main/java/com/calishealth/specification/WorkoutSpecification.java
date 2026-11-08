@@ -20,9 +20,9 @@ public final class WorkoutSpecification {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
             predicates.add(builder.equal(root.get("source"), "CUSTOM"));
             if (community) {
-                predicates.add(builder.isTrue(root.get("active")));
+                predicates.add(builder.equal(root.get("templateStatus"), "PUBLISHED"));
                 predicates.add(builder.isTrue(root.get("sharedWithCommunity")));
-                predicates.add(builder.equal(root.get("status"), "ACCEPTED"));
+                predicates.add(builder.equal(root.get("moderationStatus"), "ACTIVE"));
             } else {
                 predicates.add(builder.equal(root.get("createdBy").get("id"), memberId));
             }
@@ -60,8 +60,8 @@ public final class WorkoutSpecification {
         return (root, query, builder) -> {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
             predicates.add(builder.equal(root.get("source"), "SYSTEM"));
-            predicates.add(builder.isTrue(root.get("active")));
-            predicates.add(builder.equal(root.get("status"), "ACCEPTED"));
+            predicates.add(builder.equal(root.get("templateStatus"), "PUBLISHED"));
+            predicates.add(builder.equal(root.get("moderationStatus"), "ACTIVE"));
             predicates.add(builder.equal(builder.upper(root.get("type")), type));
 
             if (filter.getLevel() != null && !filter.getLevel().isBlank()

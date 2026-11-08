@@ -5,10 +5,12 @@ import com.calishealth.dtos.WorkoutFilterRequestDTO;
 import com.calishealth.dtos.WorkoutItemDTO;
 import com.calishealth.exception.ResourceNotFoundException;
 import com.calishealth.models.Exercise;
+import com.calishealth.models.FitnessLevel;
 import com.calishealth.models.User;
 import com.calishealth.models.WorkoutEntry;
 import com.calishealth.models.WorkoutExerciseItem;
 import com.calishealth.repository.ExerciseRepository;
+import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.UserRepository;
 import com.calishealth.repository.WorkoutRepository;
 import org.junit.jupiter.api.Test;
@@ -34,7 +36,30 @@ class LibraryWorkoutServiceTest {
     @Mock private WorkoutRepository workouts;
     @Mock private ExerciseRepository exercises;
     @Mock private UserRepository users;
+    @Mock private FitnessLevelRepository fitnessLevels;
     @InjectMocks private LibraryWorkoutService service;
+
+    /** Level do Content Manager cấu hình động, nên test dựng sẵn các level trong fitness_levels. */
+    private void mockFitnessLevels() {
+        FitnessLevel beginner = new FitnessLevel();
+        beginner.setId(1L);
+        beginner.setName("Beginner");
+        beginner.setScoreMin(0);
+        beginner.setScoreMax(1);
+        FitnessLevel advanced = new FitnessLevel();
+        advanced.setId(3L);
+        advanced.setName("Advanced");
+        advanced.setScoreMin(2);
+        advanced.setScoreMax(3);
+        List<FitnessLevel> levels = List.of(beginner, advanced);
+        lenient().when(fitnessLevels.findAll()).thenReturn(levels);
+        lenient().when(fitnessLevels.findByNameIgnoreCase(anyString())).thenAnswer(invocation -> {
+            String requested = invocation.getArgument(0, String.class);
+            return levels.stream()
+                    .filter(level -> level.getName().equalsIgnoreCase(requested))
+                    .findFirst();
+        });
+    }
 
     @Test
     void createWorkoutCalculatesLevelSetsAndDuration() {
@@ -42,13 +67,14 @@ class LibraryWorkoutServiceTest {
         member.setId(4L);
         member.setEmail("member@example.test");
         when(users.findByEmail(member.getEmail())).thenReturn(Optional.of(member));
+        mockFitnessLevels();
 
         Exercise beginner = new Exercise();
         beginner.setId(10L);
-        beginner.setLevel(Exercise.EntryLevel.BEGINNER);
+        beginner.setLevel("Beginner");
         Exercise advanced = new Exercise();
         advanced.setId(20L);
-        advanced.setLevel(Exercise.EntryLevel.ADVANCED);
+        advanced.setLevel("Advanced");
         when(exercises.findAll(any(org.springframework.data.jpa.domain.Specification.class)))
                 .thenReturn(List.of(beginner, advanced));
         when(workouts.saveAndFlush(any(WorkoutEntry.class)))
@@ -68,14 +94,15 @@ class LibraryWorkoutServiceTest {
 
         assertEquals(102, response.totalSets());
         assertEquals(825, response.estimatedDuration());
-        assertEquals("ADVANCED", response.level());
+        // Level được đưa về đúng tên trong bảng fitness_levels.
+        assertEquals("Advanced", response.level());
 
         ArgumentCaptor<WorkoutEntry> workoutCaptor = ArgumentCaptor.forClass(WorkoutEntry.class);
         verify(workouts, times(2)).saveAndFlush(workoutCaptor.capture());
         WorkoutEntry saved = workoutCaptor.getValue();
         assertEquals(102, saved.getTotalSets());
         assertEquals(825, saved.getEstimatedDuration());
-        assertEquals("ADVANCED", saved.getLevel());
+        assertEquals("Advanced", saved.getLevel());
         assertEquals("SKILL", saved.getType());
         assertEquals(member, saved.getCreatedBy());
         assertEquals(member.getId(), saved.getAuthorId());
@@ -94,10 +121,11 @@ class LibraryWorkoutServiceTest {
         member.setId(4L);
         member.setEmail("member@example.test");
         when(users.findByEmail(member.getEmail())).thenReturn(Optional.of(member));
+        mockFitnessLevels();
 
         Exercise exercise = new Exercise();
         exercise.setId(10L);
-        exercise.setLevel(Exercise.EntryLevel.BEGINNER);
+        exercise.setLevel("Beginner");
         when(exercises.findAll(any(org.springframework.data.jpa.domain.Specification.class)))
                 .thenReturn(List.of(exercise));
         when(workouts.saveAndFlush(any(WorkoutEntry.class)))
@@ -114,11 +142,11 @@ class LibraryWorkoutServiceTest {
                         new WorkoutItemDTO(10L, 1, 2, 8, null, "REPS", 30))));
 
         assertEquals(5, response.totalSets());
-        assertEquals("ADVANCED", response.level());
+        assertEquals("Advanced", response.level());
         ArgumentCaptor<WorkoutEntry> workoutCaptor = ArgumentCaptor.forClass(WorkoutEntry.class);
         verify(workouts, times(2)).saveAndFlush(workoutCaptor.capture());
         assertEquals(2, workoutCaptor.getValue().getExercises().size());
-        assertEquals("ADVANCED", workoutCaptor.getValue().getLevel());
+        assertEquals("Advanced", workoutCaptor.getValue().getLevel());
         assertNull(workoutCaptor.getValue().getType());
         assertEquals(10L, workoutCaptor.getValue().getExercises().get(0).getExercise().getId());
         assertEquals(10L, workoutCaptor.getValue().getExercises().get(1).getExercise().getId());
@@ -153,9 +181,9 @@ class LibraryWorkoutServiceTest {
         workout.setName("Health circuit");
         workout.setType("HEALTH");
         workout.setSystem(true);
-        workout.setActive(true);
-        workout.setStatus("ACCEPTED");
-        workout.setLevel("BEGINNER");
+        workout.setTemplateStatus("PUBLISHED");
+        workout.setModerationStatus("ACTIVE");
+        workout.setLevel("Beginner");
         workout.setTotalSets(9);
         workout.setEstimatedDuration(12);
         Exercise exercise = new Exercise();

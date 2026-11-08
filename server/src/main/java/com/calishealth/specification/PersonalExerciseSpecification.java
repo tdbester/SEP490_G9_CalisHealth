@@ -14,7 +14,7 @@ public final class PersonalExerciseSpecification {
             Long memberId,
             Exercise.EntryStatus status,
             String search,
-            Exercise.EntryLevel level
+            String level
     ) {
         return (root, query, builder) -> {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
@@ -27,8 +27,12 @@ public final class PersonalExerciseSpecification {
                         builder.upper(root.get("moderationStatus")),
                         status.name()));
             }
-            if (level != null) {
-                predicates.add(builder.equal(root.get("difficultyLevel"), level.name()));
+            if (level != null && !level.isBlank()) {
+                // Level do Content Manager đặt tên trong bảng fitness_levels; so khớp không phân biệt
+                // hoa thường để client gửi "beginner" hay "Beginner" đều ra kết quả.
+                predicates.add(builder.equal(
+                        builder.lower(root.get("difficultyLevel")),
+                        level.trim().toLowerCase(Locale.ROOT)));
             }
             if (search != null && !search.isBlank()) {
                 predicates.add(builder.like(

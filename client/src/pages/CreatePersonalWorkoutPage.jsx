@@ -13,6 +13,7 @@ import useUndoDelete from "../hooks/useUndoDelete";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { getLevelLabel } from "../utils/levelLabel";
+import { useSystemLevels } from "../useSystemLevels";
 
 function DumbbellIcon({ size = "h-4 w-4" }) {
   return (
@@ -93,14 +94,17 @@ export default function CreatePersonalWorkoutPage() {
   const { requestDelete, confirmationModal } = useUndoDelete();
   const [confirmCancel, setConfirmCancel] = useState(false);
 
+  // Level do Content Manager cấu hình động nên danh sách level lấy từ hệ thống, không hard-code.
+  const { activeLevels } = useSystemLevels();
+
   const [availableExercises, setAvailableExercises] = useState([]);
   const [exercisePage, setExercisePage] = useState(1);
   const [workoutName, setWorkoutName] = useState("");
   const [note, setNote]               = useState("");
-  const [workoutLevel, setWorkoutLevel] = useState("BEGINNER");
+  const [workoutLevel, setWorkoutLevel] = useState("");
   const [workoutType, setWorkoutType] = useState("FLEX");
   const [search, setSearch]           = useState("");
-  const [levelFilter, setLevelFilter] = useState("All levels");
+  const [levelFilter, setLevelFilter] = useState("");
   const [selected, setSelected]       = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -117,7 +121,7 @@ export default function CreatePersonalWorkoutPage() {
             return {
               id: exercise.id,
               title: exercise.title,
-              level: level ? level.toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase()) : "Intermediate",
+              level,
               muscles: exercise.targetMuscle,
               defaultSets: exercise.defaultSets,
               defaultReps: exercise.defaultReps,
@@ -140,7 +144,8 @@ export default function CreatePersonalWorkoutPage() {
   const filteredExercises = useMemo(() =>
     availableExercises.filter((ex) => {
       const matchSearch = ex.title.toLowerCase().includes(search.toLowerCase());
-      const matchLevel  = levelFilter === "All levels" || ex.level === levelFilter;
+      const matchLevel  = !levelFilter
+        || ex.level.toLowerCase() === levelFilter.toLowerCase();
       return matchSearch && matchLevel;
     }),
   [availableExercises, search, levelFilter]);
@@ -159,6 +164,16 @@ export default function CreatePersonalWorkoutPage() {
     if (exercisePage > exercisePageCount) setExercisePage(exercisePageCount);
   }, [exercisePage, exercisePageCount]);
 
+  // Mặc định chọn level dễ nhất đang active; người dùng vẫn đổi được sang level khác.
+  useEffect(() => {
+    setWorkoutLevel((current) => {
+      if (current && activeLevels.some((level) => level.toLowerCase() === current.toLowerCase())) {
+        return current;
+      }
+      return activeLevels[0] || "";
+    });
+  }, [activeLevels]);
+
   const totalExercises = selected.length;
   const totalSets      = selected.reduce((sum, e) => sum + Number(e.sets || 0), 0);
   const estimatedMin   = Math.round(totalSets * 1.2);
@@ -169,6 +184,7 @@ export default function CreatePersonalWorkoutPage() {
     ...exerciseErrors,
     ...(nameError ? { name: nameError } : {}),
     ...(descriptionError ? { description: descriptionError } : {}),
+    ...(!workoutLevel ? { level: t("member.personal.pleaseSelectLevel") } : {}),
   };
   const isDirty = Boolean(workoutName || note || selected.length);
   const showFieldError = (field) =>
@@ -352,9 +368,9 @@ export default function CreatePersonalWorkoutPage() {
               onChange={(event) => setWorkoutLevel(event.target.value)}
               className="w-full cursor-pointer rounded-xl border border-[#231b46] bg-[#0c0820] px-4 py-2.5 text-xs text-white focus:border-[#7c3aed] focus:outline-none transition-colors"
             >
-              <option value="BEGINNER">{t("member.catalog.beginner")}</option>
-              <option value="INTERMEDIATE">{t("member.catalog.intermediate")}</option>
-              <option value="ADVANCED">{t("member.catalog.advanced")}</option>
+              {activeLevels.map((level) => (
+                <option key={level} value={level}>{getLevelLabel(level)}</option>
+              ))}
             </select>
           </div>
           <div>
@@ -411,10 +427,10 @@ export default function CreatePersonalWorkoutPage() {
               }}
               className="rounded-xl border border-[#231b46] bg-[#0d0922] py-2.5 px-3 text-xs text-slate-300 focus:outline-none cursor-pointer"
             >
-              <option>{t("member.personal.allLevels")}</option>
-              <option>{t("member.catalog.beginner")}</option>
-              <option>{t("member.catalog.intermediate")}</option>
-              <option>{t("member.catalog.advanced")}</option>
+              <option value="">{t("member.personal.allLevels")}</option>
+              {activeLevels.map((level) => (
+                <option key={level} value={level}>{getLevelLabel(level)}</option>
+              ))}
             </select>
           </div>
           <div className="space-y-2.5">

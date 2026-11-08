@@ -8,9 +8,11 @@ import com.calishealth.dtos.PersonalExerciseResponseDTO;
 import com.calishealth.dtos.SubmissionCountsDTO;
 import com.calishealth.exception.ResourceNotFoundException;
 import com.calishealth.models.Exercise;
+import com.calishealth.models.FitnessLevel;
 import com.calishealth.models.User;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.ExerciseModerationHistoryRepository;
+import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.UserRepository;
 import com.calishealth.specification.PersonalExerciseSpecification;
 import lombok.RequiredArgsConstructor;
@@ -39,10 +41,25 @@ public class PersonalExerciseService {
     private final ExerciseRepository exercises;
     private final ExerciseModerationHistoryRepository moderationHistory;
     private final UserRepository users;
+    private final FitnessLevelRepository fitnessLevels;
     private final ContentModerationService moderation;
     private final ExerciseVideoStorageService videoStorage;
     private final ExerciseMuscleGroupCatalog muscleGroupCatalog;
     private final SystemNotificationService systemNotifications;
+
+    /**
+     * Level do Content Manager quản lý trong Level & Benchmark Criteria nên tên level lấy động
+     * từ bảng fitness_levels; bài của member không được dùng level ngoài danh sách đó.
+     */
+    private String resolveLevelName(String level) {
+        if (level == null || level.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please select an exercise level");
+        }
+        return fitnessLevels.findByNameIgnoreCase(level.trim())
+                .map(FitnessLevel::getName)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Choose a valid exercise level"));
+    }
 
     @Transactional(readOnly = true)
     public ContentTextCheckResponseDTO checkText(ContentTextCheckRequestDTO request) {
@@ -91,7 +108,7 @@ public class PersonalExerciseService {
                     ? Exercise.EntryStatus.PENDING
                     : Exercise.EntryStatus.REJECTED);
             exercise.setActive(false);
-            exercise.setLevel(request.level());
+            exercise.setLevel(resolveLevelName(request.level()));
             applyCountConfiguration(exercise, request);
             exercise.setGuideSteps(String.join("\n", request.guideSteps()));
             exercise.setGuide(exercise.getGuideSteps());
@@ -122,7 +139,7 @@ public class PersonalExerciseService {
             String memberEmail,
             Exercise.EntryStatus status,
             String search,
-            Exercise.EntryLevel level,
+            String level,
             int page,
             int size
     ) {
@@ -225,7 +242,7 @@ public class PersonalExerciseService {
         try {
             exercise.setName(request.title().trim());
             exercise.setDescription(request.description() == null ? "" : request.description().trim());
-            exercise.setLevel(request.level());
+            exercise.setLevel(resolveLevelName(request.level()));
             muscleGroupCatalog.assign(exercise, request.targetMuscle());
             applyCountConfiguration(exercise, request);
             exercise.setGuideSteps(String.join("\n", request.guideSteps()));
@@ -313,7 +330,7 @@ public class PersonalExerciseService {
         try {
             exercise.setName(request.title().trim());
             exercise.setDescription(request.description() == null ? "" : request.description().trim());
-            exercise.setLevel(request.level());
+            exercise.setLevel(resolveLevelName(request.level()));
             muscleGroupCatalog.assign(exercise, request.targetMuscle());
             applyCountConfiguration(exercise, request);
             exercise.setGuideSteps(String.join("\n", request.guideSteps()));

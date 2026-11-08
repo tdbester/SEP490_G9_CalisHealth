@@ -68,7 +68,12 @@ public class DashboardService {
                            ROW_NUMBER() OVER (
                                PARTITION BY dedup.target_skill
                                ORDER BY (dedup.guide_text IS NULL),
-                                        FIELD(dedup.difficulty_level, 'BEGINNER', 'INTERMEDIATE', 'ADVANCED'),
+                                        -- Level do Content Manager cấu hình động trong fitness_levels,
+                                        -- nên thứ tự bậc lấy theo score_min thay vì danh sách level cố định.
+                                        COALESCE((SELECT MIN(fl.score_min)
+                                                  FROM fitness_levels fl
+                                                  WHERE UPPER(fl.name) = UPPER(dedup.difficulty_level)),
+                                                 2147483647),
                                         dedup.id
                            ) AS rank_in_skill
                     FROM (
@@ -122,8 +127,8 @@ public class DashboardService {
                 SELECT COUNT(*)
                 FROM workout_entries
                 WHERE source = 'CUSTOM'
-                  AND active = TRUE
-                  AND status = 'ACCEPTED'
+                  AND template_status = 'PUBLISHED'
+                  AND moderation_status = 'ACTIVE'
                   AND is_shared_with_community = TRUE
                 """,
                 Long.class
@@ -146,8 +151,8 @@ public class DashboardService {
                        FROM workout_entries w
                        WHERE w.created_by = u.id
                          AND w.source = 'CUSTOM'
-                         AND w.active = TRUE
-                         AND w.status = 'ACCEPTED'
+                         AND w.template_status = 'PUBLISHED'
+                         AND w.moderation_status = 'ACTIVE'
                          AND w.is_shared_with_community = TRUE
                    )
                 """,

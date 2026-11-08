@@ -9,6 +9,8 @@ import {
 } from "../api/library";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import useVideoSafetyScan from "../hooks/useVideoSafetyScan";
+import { getLevelLabel } from "../utils/levelLabel";
+import { useSystemLevels } from "../useSystemLevels";
 import {
   getApiErrorMessage,
   validatePersonalExercise,
@@ -41,7 +43,7 @@ export default function CreatePersonalExercisePage() {
   const [anatomyImageFile, setAnatomyImageFile] = useState(null);
   const [anatomyPreview, setAnatomyPreview] = useState("");
   const [confirmCancel, setConfirmCancel] = useState(false);
-  const [level, setLevel] = useState("Beginner");
+  const [level, setLevel] = useState("");
   const [guideSteps, setGuideSteps] = useState([
     t("member.personal.defaultFirstStep"),
     "",
@@ -50,6 +52,23 @@ export default function CreatePersonalExercisePage() {
   const [videoUploadsUnderMaintenance, setVideoUploadsUnderMaintenance] = useState(false);
   const [maintenanceStatusLoading, setMaintenanceStatusLoading] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Level do Content Manager cấu hình động nên danh sách level lấy từ hệ thống.
+  const { activeLevels } = useSystemLevels();
+  const levelChoices = activeLevels.map((name) => ({
+    name,
+    label: getLevelLabel(name),
+    description: "",
+  }));
+  // Mặc định chọn level dễ nhất đang active.
+  useEffect(() => {
+    setLevel((current) => {
+      if (current && activeLevels.some((name) => name.toLowerCase() === current.toLowerCase())) {
+        return current;
+      }
+      return activeLevels[0] || "";
+    });
+  }, [activeLevels]);
 
   /** Quét MediaPipe: video phải có người + chuyển động rõ ràng mới được gửi. */
   const videoScan = useVideoSafetyScan({ file: videoFile });
@@ -644,104 +663,43 @@ export default function CreatePersonalExercisePage() {
         <div>
           <label className="block text-xs text-slate-400 mb-2">{t("member.personal.level")}</label>
           <div id="exercise-level" tabIndex={-1} className={`grid grid-cols-1 md:grid-cols-3 gap-4 rounded-xl ${showFieldError("level") && validationErrors.level ? "ring-1 ring-rose-500" : ""}`}>
-            {/* Beginner */}
-            <div
-              tabIndex={0}
-              onBlur={() => markFieldTouched("level")}
-              onClick={() => {
-                setLevel("Beginner");
-              }}
-              className={`rounded-xl p-3.5 flex items-start justify-between cursor-pointer transition-all select-none ${
-                level === "Beginner"
-                  ? "border border-[#8b6cff] bg-[#2a1d5d] shadow-md shadow-purple-900/40"
-                  : "border border-[#493b79] bg-[#0c0820] hover:border-[#8b6cff]"
-              }`}
-            >
-              <div>
-                <h3 className="text-xs font-semibold text-white">{t("member.catalog.beginner")}</h3>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  {t("member.personal.levelBeginnerDesc")}
-                </p>
-              </div>
+            {/* Level do Content Manager cấu hình động nên danh sách lấy từ hệ thống. */}
+            {levelChoices.map((choice) => (
               <div
-                className={`w-4 h-4 self-center rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
-                  level === "Beginner"
-                    ? "bg-[#643bf6] border-2 border-[#c4b5fd] shadow-[0_0_0_3px_rgba(100,59,246,0.2)]"
-                    : "border-2 border-[#8b7ab8] bg-[#17112f]"
+                key={choice.name}
+                tabIndex={0}
+                onBlur={() => markFieldTouched("level")}
+                onClick={() => {
+                  setLevel(choice.name);
+                }}
+                className={`rounded-xl p-3.5 flex items-start justify-between cursor-pointer transition-all select-none ${
+                  level === choice.name
+                    ? "border border-[#8b6cff] bg-[#2a1d5d] shadow-md shadow-purple-900/40"
+                    : "border border-[#493b79] bg-[#0c0820] hover:border-[#8b6cff]"
                 }`}
               >
-                {level === "Beginner" && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                )}
+                <div>
+                  <h3 className="text-xs font-semibold text-white">{choice.label}</h3>
+                  {choice.description && (
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      {choice.description}
+                    </p>
+                  )}
+                </div>
+                <div
+                  className={`w-4 h-4 self-center rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+                    level === choice.name
+                      ? "bg-[#643bf6] border-2 border-[#c4b5fd] shadow-[0_0_0_3px_rgba(100,59,246,0.2)]"
+                      : "border-2 border-[#8b7ab8] bg-[#17112f]"
+                  }`}
+                >
+                  {level === choice.name && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                  )}
+                </div>
               </div>
-            </div>
-
-            {/* Intermediate */}
-            <div
-              tabIndex={0}
-              onBlur={() => markFieldTouched("level")}
-              onClick={() => {
-                setLevel("Intermediate");
-              }}
-              className={`rounded-xl p-3.5 flex items-start justify-between cursor-pointer transition-all select-none ${
-                level === "Intermediate"
-                  ? "border border-[#8b6cff] bg-[#2a1d5d] shadow-md shadow-purple-900/40"
-                  : "border border-[#493b79] bg-[#0c0820] hover:border-[#8b6cff]"
-              }`}
-            >
-              <div>
-                <h3 className="text-xs font-semibold text-white">
-                  {t("member.catalog.intermediate")}
-                </h3>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  {t("member.personal.levelIntermediateDesc")}
-                </p>
-              </div>
-              <div
-                className={`w-4 h-4 self-center rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
-                  level === "Intermediate"
-                    ? "bg-[#643bf6] border-2 border-[#c4b5fd] shadow-[0_0_0_3px_rgba(100,59,246,0.2)]"
-                    : "border-2 border-[#8b7ab8] bg-[#17112f]"
-                }`}
-              >
-                {level === "Intermediate" && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                )}
-              </div>
-            </div>
-
-            {/* Advanced */}
-            <div
-              tabIndex={0}
-              onBlur={() => markFieldTouched("level")}
-              onClick={() => {
-                setLevel("Advanced");
-              }}
-              className={`rounded-xl p-3.5 flex items-start justify-between cursor-pointer transition-all select-none ${
-                level === "Advanced"
-                  ? "border border-[#8b6cff] bg-[#2a1d5d] shadow-md shadow-purple-900/40"
-                  : "border border-[#493b79] bg-[#0c0820] hover:border-[#8b6cff]"
-              }`}
-            >
-              <div>
-                <h3 className="text-xs font-semibold text-white">{t("member.catalog.advanced")}</h3>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  {t("member.personal.levelAdvancedDesc")}
-                </p>
-              </div>
-              {showFieldError("level") && validationErrors.level && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.level}</p>}
-              <div
-                className={`w-4 h-4 self-center rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
-                  level === "Advanced"
-                    ? "bg-[#643bf6] border-2 border-[#c4b5fd] shadow-[0_0_0_3px_rgba(100,59,246,0.2)]"
-                    : "border-2 border-[#8b7ab8] bg-[#17112f]"
-                }`}
-              >
-                {level === "Advanced" && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                )}
-              </div>
-            </div>
+            ))}
+            {showFieldError("level") && validationErrors.level && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.level}</p>}
           </div>
         </div>
       </section>

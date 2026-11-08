@@ -4,7 +4,6 @@ const t = (key, options) => i18n.t(key, options);
 
 const VIDEO_MAX_SIZE = 50 * 1024 * 1024;
 const VIDEO_EXTENSIONS = new Set(["mp4", "mov", "webm"]);
-const WORKOUT_LEVELS = new Set(["Beginner", "Intermediate", "Advanced"]);
 
 export function validatePersonalExercise({
   title,
@@ -25,7 +24,9 @@ export function validatePersonalExercise({
     errors.description = t("member.validation.descriptionTooLong");
   }
 
-  if (!WORKOUT_LEVELS.has(level)) errors.level = t("member.validation.invalidLevel");
+  // Level do Content Manager cấu hình động nên chỉ kiểm tra level đã được chọn; việc level có
+  // tồn tại trong hệ thống hay không thuộc về server (đối chiếu bảng fitness_levels).
+  if (!level || !String(level).trim()) errors.level = t("member.validation.invalidLevel");
   if (steps.length === 0) errors.steps = t("member.validation.stepsRequired");
   steps.forEach((step, index) => {
     if (!step.trim()) errors[`step-${index}`] = t("member.validation.stepEmpty");

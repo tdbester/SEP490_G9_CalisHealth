@@ -990,6 +990,7 @@ export default {
     noteOptional: "Ghi chú (không bắt buộc)",
     notePlaceholder: "Bất cứ điều gì bạn muốn nhớ về workout này",
     level: "Cấp độ",
+    pleaseSelectLevel: "Vui lòng chọn cấp độ",
     type: "Loại",
     acceptedExercises: "Bài tập đã được duyệt",
     acceptedNotice: "Chỉ những bài tập đã được hệ thống duyệt mới có thể thêm. Bài đang chờ hoặc bị từ chối sẽ không khả dụng cho đến khi vượt qua kiểm tra.",

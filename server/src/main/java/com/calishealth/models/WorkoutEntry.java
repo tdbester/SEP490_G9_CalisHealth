@@ -40,8 +40,9 @@ public class WorkoutEntry {
     @Column(name = "is_shared_with_community", nullable = false)
     private boolean sharedWithCommunity;
 
-    @Column(nullable = false, length = 20)
-    private String status = "ACCEPTED";
+    /** Trạng thái duyệt nội dung: ACTIVE (đã duyệt) / PENDING / REJECTED. */
+    @Column(name = "moderation_status", nullable = false, length = 20)
+    private String moderationStatus = "ACTIVE";
 
     @Column(name = "save_count", nullable = false)
     private Integer saveCount = 0;
@@ -61,11 +62,14 @@ public class WorkoutEntry {
     @Column(name = "day_sequence", nullable = false)
     private int daySequence = 1;
 
+    /** Trạng thái publish của template: DRAFT / PUBLISHED / ARCHIVED. */
     @Column(name = "template_status", nullable = false, length = 20)
     private String templateStatus = "DRAFT";
 
-    @Column(nullable = false)
-    private boolean active = true;
+    /** Template đang publish (nguồn sự thật duy nhất, thay cho cột active trùng lặp trước đây). */
+    public boolean isActive() {
+        return "PUBLISHED".equalsIgnoreCase(templateStatus);
+    }
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
