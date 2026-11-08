@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import HelpOutlineRoundedIcon from "@mui/icons-material/HelpOutlineRounded";
 import ModalShell from "./ModalShell";
@@ -11,13 +12,14 @@ export default function ConfirmDialog({
   open,
   title,
   message,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel,
+  cancelLabel,
   tone = "default",
   busy = false,
   onConfirm,
   onCancel,
 }) {
+  const { t } = useTranslation();
   const Icon = tone === "danger" ? WarningAmberRoundedIcon : HelpOutlineRoundedIcon;
   const close = busy ? () => {} : onCancel;
 
@@ -30,10 +32,10 @@ export default function ConfirmDialog({
       {message && <p className="confirm-dialog-message">{message}</p>}
       <div className="confirm-dialog-actions">
         <button type="button" className="confirm-dialog-cancel" onClick={close} disabled={busy}>
-          {cancelLabel}
+          {cancelLabel || t("common.ui.cancel")}
         </button>
         <button type="button" className="confirm-dialog-confirm" onClick={onConfirm} disabled={busy} autoFocus>
-          {busy ? "Working…" : confirmLabel}
+          {busy ? t("common.ui.working") : confirmLabel || t("common.ui.confirm")}
         </button>
       </div>
     </ModalShell>

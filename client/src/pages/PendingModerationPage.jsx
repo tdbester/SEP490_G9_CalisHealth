@@ -7,6 +7,7 @@ import {
   Tooltip, Typography,
 } from "@mui/material";
 import { keyframes } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
@@ -38,15 +39,16 @@ function FitnessIconSmall() {
   );
 }
 
-function relativeAge(value) {
+function relativeAge(value, t) {
   if (!value) return "—";
   const days = Math.floor((Date.now() - new Date(value).getTime()) / 86400000);
-  if (days <= 0) return "Today";
-  if (days === 1) return "1 day ago";
-  return `${days} days ago`;
+  if (days <= 0) return t("admin.moderation.today");
+  if (days === 1) return t("admin.moderation.oneDayAgo");
+  return t("admin.moderation.daysAgo", { count: days });
 }
 
 export default function PendingModerationPage() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const query = useApiQuery(() => contentManagerApi.pendingExercises());
@@ -131,41 +133,47 @@ export default function PendingModerationPage() {
     <Box sx={{ maxWidth: 1280, mx: "auto", px: { xs: 2, sm: 3 }, py: { xs: 2.5, sm: 3 } }}>
       <ContentPageHeader
         breadcrumb={[
-          { label: "Content manager", to: CONTENT_PATHS.dashboard },
-          { label: "Exercise & workout", to: CONTENT_PATHS.exercises },
-          { label: "Pending moderation" },
+          { labelKey: "nav.contentManagerRole", to: CONTENT_PATHS.dashboard },
+          { labelKey: "nav.exerciseAndWorkout", to: CONTENT_PATHS.exercises },
+          { labelKey: "nav.pendingModerationCrumb" },
         ]}
-        title="Pending exercise moderation"
-        description="Review custom exercises submitted by members. Approved exercises become active and appear in the exercise list."
+        title={t("admin.moderation.pendingTitle")}
+        description={t("admin.moderation.pendingDescription")}
         action={
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-            <Button component={RouterLink} to={CONTENT_PATHS.exerciseApprovalHistory} variant="outlined">Approval history</Button>
-            <Button component={RouterLink} to={CONTENT_PATHS.exercises} variant="outlined" startIcon={<ArrowBackRoundedIcon />}>Back to exercise list</Button>
+            <Button component={RouterLink} to={CONTENT_PATHS.exerciseApprovalHistory} variant="outlined">{t("admin.moderation.approvalHistory")}</Button>
+            <Button component={RouterLink} to={CONTENT_PATHS.exercises} variant="outlined" startIcon={<ArrowBackRoundedIcon />}>{t("admin.moderation.backToExerciseList")}</Button>
           </Stack>
         }
       />
 
-      <Box component="section" aria-label="Moderation summary" sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" } }}>
-        <Box sx={enter(0)}><SummaryCard label="Pending review" count={rows.length} detail="exercises" /></Box>
-        <Box sx={enter(80)}><SummaryCard label="Waiting over 3 days" tone="warning" count={waitingOverThreeDays} detail="exercises" /></Box>
-        <Box sx={enter(160)}><SummaryCard label="Reviewed this week" tone="success" count={reviewedThisWeek} detail="exercises" /></Box>
+      <Box component="section" aria-label={t("admin.moderation.summary")} sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" } }}>
+        <Box sx={enter(0)}><SummaryCard label={t("admin.moderation.pendingReview")} count={rows.length} detail={t("admin.moderation.exercises")} /></Box>
+        <Box sx={enter(80)}><SummaryCard label={t("admin.moderation.waitingOverThreeDays")} tone="warning" count={waitingOverThreeDays} detail={t("admin.moderation.exercises")} /></Box>
+        <Box sx={enter(160)}><SummaryCard label={t("admin.moderation.reviewedThisWeek")} tone="success" count={reviewedThisWeek} detail={t("admin.moderation.exercises")} /></Box>
       </Box>
 
       {successNotice && <Alert severity="success" sx={{ mt: 2 }} onClose={() => setSuccessNotice("")}>{successNotice}</Alert>}
-      {(approve.error || reject.error) && <Alert severity="error" sx={{ mt: 2 }}>{reject.error ? `Could not reject this exercise. ${reject.error.message}` : `Could not approve this exercise. ${approve.error.message}`}</Alert>}
+      {(approve.error || reject.error) && (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {reject.error
+            ? t("admin.moderation.rejectFailed", { message: reject.error.message })
+            : t("admin.moderation.approveFailed", { message: approve.error.message })}
+        </Alert>
+      )}
 
       <Card sx={{ mt: 2.5, overflow: "hidden", ...enter(220) }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ xs: "stretch", md: "center" }} sx={{ p: 1.5, borderBottom: `1px solid ${CM.border}` }}>
-          <TextField size="small" fullWidth value={search} onChange={resetPage(setSearch)} placeholder="Search exercise or submitter" inputProps={{ "aria-label": "Search exercise or submitter" }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" color="disabled" /></InputAdornment> }} sx={{ flex: 1, minWidth: 200 }} />
-          <TextField select size="small" value={level} onChange={resetPage(setLevel)} SelectProps={{ SelectDisplayProps: { "aria-label": "Filter by level" } }} sx={{ minWidth: 150 }}>
-            <MenuItem value="all">All levels</MenuItem>{levelNames.map((name) => <MenuItem key={name} value={name.toLowerCase()}>{name}</MenuItem>)}
+          <TextField size="small" fullWidth value={search} onChange={resetPage(setSearch)} placeholder={t("admin.moderation.searchPlaceholder")} inputProps={{ "aria-label": t("admin.moderation.searchPlaceholder") }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" color="disabled" /></InputAdornment> }} sx={{ flex: 1, minWidth: 200 }} />
+          <TextField select size="small" value={level} onChange={resetPage(setLevel)} SelectProps={{ SelectDisplayProps: { "aria-label": t("admin.moderation.filterByLevel") } }} sx={{ minWidth: 150 }}>
+            <MenuItem value="all">{t("admin.moderation.allLevels")}</MenuItem>{levelNames.map((name) => <MenuItem key={name} value={name.toLowerCase()}>{name}</MenuItem>)}
           </TextField>
-          <TextField select size="small" value={sort} onChange={resetPage(setSort)} SelectProps={{ SelectDisplayProps: { "aria-label": "Sort submissions" } }} sx={{ minWidth: 145 }}>
-            <MenuItem value="oldest">Oldest first</MenuItem><MenuItem value="newest">Newest first</MenuItem>
+          <TextField select size="small" value={sort} onChange={resetPage(setSort)} SelectProps={{ SelectDisplayProps: { "aria-label": t("admin.moderation.sortSubmissions") } }} sx={{ minWidth: 145 }}>
+            <MenuItem value="oldest">{t("admin.moderation.oldestFirst")}</MenuItem><MenuItem value="newest">{t("admin.moderation.newestFirst")}</MenuItem>
           </TextField>
-          <Tooltip title="Refresh">
+          <Tooltip title={t("admin.moderation.refresh")}>
             <span>
-              <Button onClick={() => query.refetch()} disabled={query.isFetching} variant="outlined" aria-label="Refresh pending exercises" sx={{ minWidth: 40, width: 40, px: 0, transition: "all .2s ease", "&:hover": { borderColor: CM.violetBright, bgcolor: "rgba(139,92,246,0.1)" } }}>
+              <Button onClick={() => query.refetch()} disabled={query.isFetching} variant="outlined" aria-label={t("admin.moderation.refreshAria")} sx={{ minWidth: 40, width: 40, px: 0, transition: "all .2s ease", "&:hover": { borderColor: CM.violetBright, bgcolor: "rgba(139,92,246,0.1)" } }}>
                 {query.isFetching ? <CircularProgress size={18} /> : <RefreshRoundedIcon />}
               </Button>
             </span>
@@ -173,15 +181,15 @@ export default function PendingModerationPage() {
         </Stack>
 
         {(query.isLoading || query.error) ? (
-          <ContentDataCard query={query} title="pending exercises"><EmptyState message="Could not display pending submissions." /></ContentDataCard>
+          <ContentDataCard query={query} title={t("admin.moderation.pendingTitle")}><EmptyState message={t("admin.moderation.displayFailed")} /></ContentDataCard>
         ) : filteredRows.length === 0 ? (
-          <EmptyState message={rows.length ? "No submissions match these filters." : "No custom exercises are waiting for review."} />
+          <EmptyState message={rows.length ? t("admin.moderation.noMatch") : t("admin.moderation.empty")} />
         ) : (
           <>
             <TableContainer>
               <Table size="small" sx={{ minWidth: 900 }}>
                 <TableHead><TableRow sx={HEAD_ROW_SX}>
-                  <TableCell sx={{ textAlign: "left !important", pl: 3 }}>Exercise</TableCell><TableCell>Uploaded by</TableCell><TableCell>Muscle group</TableCell><TableCell>Level</TableCell><TableCell>Submitted</TableCell><TableCell align="center">Action</TableCell>
+                  <TableCell sx={{ textAlign: "left !important", pl: 3 }}>{t("admin.moderation.colExercise")}</TableCell><TableCell>{t("admin.moderation.colUploadedBy")}</TableCell><TableCell>{t("admin.moderation.colMuscleGroup")}</TableCell><TableCell>{t("admin.moderation.colLevel")}</TableCell><TableCell>{t("admin.moderation.colSubmitted")}</TableCell><TableCell align="center">{t("admin.moderation.colAction")}</TableCell>
                 </TableRow></TableHead>
                 <TableBody>{visibleRows.map((row, idx) => {
                   return (
@@ -191,22 +199,22 @@ export default function PendingModerationPage() {
                       ...enter(240 + idx * 25),
                     }}>
                       <TableCell sx={{ textAlign: "left !important", pl: 3, "& > .MuiStack-root": { justifyContent: "flex-start" } }}><Stack direction="row" spacing={1.25} alignItems="center"><Box sx={{ width: 32, height: 32, borderRadius: 1.5, display: "grid", placeItems: "center", flexShrink: 0, bgcolor: "rgba(168,155,208,0.14)", color: CM.textMuted }}><FitnessIconSmall /></Box><Box sx={{ minWidth: 0, textAlign: "left" }}><Typography variant="body2" fontWeight={600} sx={{ color: "#fff" }}>{row.name}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>{row.code}</Typography></Box></Stack></TableCell>
-                      <TableCell><Stack direction="row" spacing={1} alignItems="center"><Avatar sx={{ width: 28, height: 28, fontSize: 11, fontWeight: 700, bgcolor: "rgba(65,201,173,0.2)", color: "#8dd8c5" }}>{initials(row.createdByName)}</Avatar><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.createdByName || "Unknown"}</Typography></Stack></TableCell>
+                      <TableCell><Stack direction="row" spacing={1} alignItems="center"><Avatar sx={{ width: 28, height: 28, fontSize: 11, fontWeight: 700, bgcolor: "rgba(65,201,173,0.2)", color: "#8dd8c5" }}>{initials(row.createdByName)}</Avatar><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.createdByName || t("admin.moderation.unknown")}</Typography></Stack></TableCell>
                       <TableCell><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.muscleGroup || "—"}</Typography></TableCell>
                       <TableCell><DarkPill tone={levelTone(row.level)}>{row.level || "—"}</DarkPill></TableCell>
-                      <TableCell sx={{ whiteSpace: "nowrap" }}><Typography variant="caption" sx={{ color: CM.textDim }}>{relativeAge(row.submittedAt)}</Typography></TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap" }}><Typography variant="caption" sx={{ color: CM.textDim }}>{relativeAge(row.submittedAt, t)}</Typography></TableCell>
                       <TableCell align="center"><Stack direction="row" spacing={0.75} justifyContent="center" alignItems="center">
-                        <Button size="small" variant="outlined" component={RouterLink} to={`${CONTENT_PATHS.exercises}/moderation/${encodeURIComponent(row.code)}`} sx={{ py: 0.25, px: 1.25, fontSize: 11.5, minWidth: 0 }}>Review</Button>
-                        <Button size="small" variant="contained" disabled={busyCode === row.code} onClick={() => handleApprove(row)} sx={{ py: 0.25, px: 1.5, fontSize: 11.5, minWidth: 0 }}>{approve.isPending && busyCode === row.code ? "Approving…" : "Approve"}</Button>
-                        <Button size="small" variant="contained" color="error" disabled={busyCode === row.code} onClick={() => handleReject(row)} sx={{ py: 0.25, px: 1.25, fontSize: 11.5, minWidth: 0 }}>{reject.isPending && busyCode === row.code ? "Rejecting…" : "Reject"}</Button>
+                        <Button size="small" variant="outlined" component={RouterLink} to={`${CONTENT_PATHS.exercises}/moderation/${encodeURIComponent(row.code)}`} sx={{ py: 0.25, px: 1.25, fontSize: 11.5, minWidth: 0 }}>{t("admin.moderation.review")}</Button>
+                        <Button size="small" variant="contained" disabled={busyCode === row.code} onClick={() => handleApprove(row)} sx={{ py: 0.25, px: 1.5, fontSize: 11.5, minWidth: 0 }}>{approve.isPending && busyCode === row.code ? t("admin.moderation.approving") : t("admin.moderation.approve")}</Button>
+                        <Button size="small" variant="contained" color="error" disabled={busyCode === row.code} onClick={() => handleReject(row)} sx={{ py: 0.25, px: 1.25, fontSize: 11.5, minWidth: 0 }}>{reject.isPending && busyCode === row.code ? t("admin.moderation.rejecting") : t("admin.moderation.reject")}</Button>
                       </Stack></TableCell>
                     </TableRow>
                   );
                 })}</TableBody>
               </Table>
             </TableContainer>
-            <TablePagination component="div" count={filteredRows.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(event) => { setRowsPerPage(parseInt(event.target.value, 10)); setPage(0); }} rowsPerPageOptions={[10, 20, 50]} labelDisplayedRows={({ from, to, count }) => `Showing ${from}-${to} of ${count}`} />
-            <Box sx={{ px: 2, py: 1.5 }}><DbSourceNote>{filteredRows.length} custom submissions awaiting approval</DbSourceNote></Box>
+            <TablePagination component="div" count={filteredRows.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(event) => { setRowsPerPage(parseInt(event.target.value, 10)); setPage(0); }} rowsPerPageOptions={[10, 20, 50]} labelDisplayedRows={({ from, to, count }) => t("admin.moderation.showingRows", { from, to, count })} />
+            <Box sx={{ px: 2, py: 1.5 }}><DbSourceNote>{t("admin.moderation.awaitingApproval", { count: filteredRows.length })}</DbSourceNote></Box>
           </>
         )}
       </Card>
@@ -218,12 +226,12 @@ export default function PendingModerationPage() {
         fullWidth
         PaperProps={{ sx: { fontFamily: "Arial, sans-serif", "& *": { fontFamily: "Arial, sans-serif" } } }}
       >
-        <DialogTitle>{confirmAction?.type === "approve" ? "Approve exercise?" : "Reject exercise?"}</DialogTitle>
+        <DialogTitle>{confirmAction?.type === "approve" ? t("admin.moderation.approveTitle") : t("admin.moderation.rejectTitle")}</DialogTitle>
         <DialogContent>
           <DialogContentText>
             {confirmAction?.type === "approve"
-              ? `Approve “${confirmAction?.row.name}” and add it to the active exercise list?`
-              : `Reject “${confirmAction?.row.name}”? Please provide the reason. The status will change to rejected immediately.`}
+              ? t("admin.moderation.approveMessage", { name: confirmAction?.row.name })
+              : t("admin.moderation.rejectMessage", { name: confirmAction?.row.name })}
           </DialogContentText>
           {confirmAction?.type === "reject" && (
             <TextField
@@ -233,19 +241,19 @@ export default function PendingModerationPage() {
               multiline
               minRows={3}
               margin="dense"
-              label="Rejection reason"
-              placeholder="Explain why this exercise is rejected"
+              label={t("admin.moderation.rejectionReason")}
+              placeholder={t("admin.moderation.rejectionReasonPlaceholder")}
               value={rejectionReason}
               onChange={(event) => setRejectionReason(event.target.value)}
               error={!rejectionReason.trim()}
-              helperText={!rejectionReason.trim() ? "A rejection reason is required." : ""}
+              helperText={!rejectionReason.trim() ? t("admin.moderation.rejectionReasonRequired") : ""}
             />
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeConfirm}>Cancel</Button>
+          <Button onClick={closeConfirm}>{t("admin.moderation.cancel")}</Button>
           <Button color={confirmAction?.type === "reject" ? "error" : "primary"} variant="contained" onClick={confirmModerationAction}>
-            {confirmAction?.type === "reject" ? "Reject" : "Approve"}
+            {confirmAction?.type === "reject" ? t("admin.moderation.reject") : t("admin.moderation.approve")}
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Box, CircularProgress } from "@mui/material";
 import api, { getStoredAuthToken } from "../api/client";
 import AdminLayout from "./layout/AdminLayout";
@@ -24,6 +25,7 @@ function clearAuthState() {
  * không có trường role.
  */
 export default function RoleHomeRoute() {
+  const { t } = useTranslation();
   const [state, setState] = useState({ status: "loading", role: null, maintenanceActive: false });
 
   useEffect(() => {
@@ -102,7 +104,7 @@ export default function RoleHomeRoute() {
   if (state.status === "loading") {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-        <CircularProgress size={28} aria-label="Loading" />
+        <CircularProgress size={28} aria-label={t("common.ui.loadingAria")} />
       </Box>
     );
   }

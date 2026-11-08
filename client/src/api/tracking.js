@@ -33,6 +33,14 @@ export const trackingApi = {
    */
   getAnalytics: (range = "1M") =>
     api.get("/member/tracking/analytics", { params: { range } }).then((res) => res.data),
+
+  /**
+   * Gửi kết quả đếm reps của buổi tập (MediaPipe chạy ở client).
+   * Server tự tính % clean và mở khóa bài tiếp theo theo progression rules.
+   * @param {{ exerciseCode: string, sets: Array<{ totalReps: number, cleanReps: number, totalSeconds: number, cleanSeconds: number }> }} data
+   */
+  submitExerciseResult: (data) =>
+    api.post("/member/progression/results", data).then((res) => res.data),
 };
 
 export default trackingApi;

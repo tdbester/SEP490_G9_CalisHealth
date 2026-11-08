@@ -4,6 +4,7 @@ import { surveyApi, surveyErrorMessage } from "../../api/survey";
 import QuestionField from "../../components/survey/QuestionField";
 import SurveyProgress from "../../components/survey/SurveyProgress";
 import { ArrowLeft, ArrowRight, ArrowRightLarge } from "../../components/survey/SurveyIcons";
+import { useTranslation } from "react-i18next";
 import { answerValues, isApplicable, prepareStep, serverFieldErrors, stepCopy, stepSlug } from "../../utils/survey";
 import { useCurrentStep, useSurveyFlow } from "./SurveyFlow";
 
@@ -16,15 +17,21 @@ import { useCurrentStep, useSurveyFlow } from "./SurveyFlow";
  */
 export default function SurveyStepPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation("member");
   const { step, index, steps } = useCurrentStep();
   const { definition, session, setSession, formValues, setValue, errors, setErrors } = useSurveyFlow();
   const [busy, setBusy] = useState(null); // null | "save" | "skip"
   const [formError, setFormError] = useState("");
 
   useEffect(() => {
-    if (step) document.title = `CalisHealth · Survey – ${step.stepName}`;
+    const stepTitle = step ? t(`survey.stepTitles.${step.stepCode}.title`) : "";
+    if (step) {
+      document.title = stepTitle
+        ? `${t("survey.documentTitlePrefix")} ${stepTitle}`
+        : t("survey.documentTitlePrefix");
+    }
     setFormError("");
-  }, [step]);
+  }, [step, t]);
 
   const values = useMemo(() => answerValues(definition, formValues), [definition, formValues]);
 
@@ -73,7 +80,7 @@ export default function SurveyStepPage() {
       if (otherStep) {
         navigate(`/survey/${stepSlug(otherStep)}`);
       } else {
-        setFormError(surveyErrorMessage(err, "We could not save your answers. Please try again."));
+        setFormError(surveyErrorMessage(err, t("survey.saveFailed")));
         requestAnimationFrame(() => focusFirstError(serverErrors));
       }
     } finally {
@@ -88,14 +95,20 @@ export default function SurveyStepPage() {
       await surveyApi.skip(session.sessionId);
       navigate("/", { replace: true });
     } catch (err) {
-      setFormError(surveyErrorMessage(err, "We could not skip the survey. Please try again."));
+      setFormError(surveyErrorMessage(err, t("survey.skipFailed")));
       setBusy(null);
     }
   };
 
   // Bước Level test là bước cuối trước màn Result -> nút là "Finish" (không phải "See my result").
   const continueLabel =
-    busy === "save" ? "Saving…" : step.stepCode === "LEVEL_TEST" ? "Finish" : isLast ? "See my result" : "Continue";
+    busy === "save"
+      ? t("survey.saving")
+      : step.stepCode === "LEVEL_TEST"
+        ? t("survey.finish")
+        : isLast
+          ? t("survey.seeResult")
+          : t("survey.continue");
 
   return (
     <div className={`survey-page${isFirst ? " survey-page--intro" : ""}`}>
@@ -144,7 +157,7 @@ export default function SurveyStepPage() {
               disabled={Boolean(busy)}
             >
               <ArrowLeft />
-              <span>Back</span>
+              <span>{t("survey.back")}</span>
             </button>
             <button type="submit" className="survey-btn survey-btn--primary" disabled={Boolean(busy)}>
               <span>{continueLabel}</span>
@@ -154,7 +167,7 @@ export default function SurveyStepPage() {
         )}
 
         <button type="button" className="survey-skip" onClick={handleSkip} disabled={Boolean(busy)}>
-          {busy === "skip" ? "Skipping…" : isFirst ? "Skip survey" : "Skip for now"}
+          {busy === "skip" ? t("survey.skipping") : isFirst ? t("survey.skipSurvey") : t("survey.skipForNow")}
         </button>
       </form>
     </div>

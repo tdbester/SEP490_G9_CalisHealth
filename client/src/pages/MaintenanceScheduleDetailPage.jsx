@@ -6,14 +6,15 @@ import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import CheckCircleOutlineRoundedIcon from "@mui/icons-material/CheckCircleOutlineRounded";
 import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsActiveRounded";
 import ScheduleRoundedIcon from "@mui/icons-material/ScheduleRounded";
+import { useTranslation } from "react-i18next";
 import api from "../api/client";
 
-const AREA_LABELS = {
-  MEMBER_APP_ACCESS: "Member App Access",
-  MEMBER_VIDEO_UPLOADS: "Member Video Uploads",
-  AI_POSE_ASSESSMENT: "AI Pose Assessment",
-  SYSTEM_STORAGE_CDN: "System Storage & CDN",
-  ADMIN_MANAGEMENT_PORTAL: "Admin Management Portal",
+const AREA_LABEL_KEYS = {
+  MEMBER_APP_ACCESS: "admin.maintenance.detail.areaMemberApp",
+  MEMBER_VIDEO_UPLOADS: "admin.maintenance.detail.areaVideoUploads",
+  AI_POSE_ASSESSMENT: "admin.maintenance.detail.areaAiPose",
+  SYSTEM_STORAGE_CDN: "admin.maintenance.detail.areaStorage",
+  ADMIN_MANAGEMENT_PORTAL: "admin.maintenance.detail.areaAdminPortal",
 };
 
 const STATUS_STYLES = {
@@ -23,10 +24,17 @@ const STATUS_STYLES = {
   CANCELLED: "border-rose-400/30 bg-rose-400/10 text-rose-200",
 };
 
-function formatDate(value, options = {}) {
+const STATUS_LABEL_KEYS = {
+  UPCOMING: "admin.maintenance.detail.statusUpcoming",
+  ONGOING: "admin.maintenance.detail.statusOngoing",
+  COMPLETED: "admin.maintenance.detail.statusCompleted",
+  CANCELLED: "admin.maintenance.detail.statusCancelled",
+};
+
+function formatDate(value, locale, options = {}) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString("en-US", {
+  return date.toLocaleString(locale || "en-US", {
     month: options.month || "short",
     day: "numeric",
     year: "numeric",
@@ -45,6 +53,7 @@ function formatDuration(startValue, endValue) {
 }
 
 export default function MaintenanceScheduleDetailPage() {
+  const { t, i18n } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const [schedule, setSchedule] = useState(null);
@@ -58,11 +67,11 @@ export default function MaintenanceScheduleDetailPage() {
       })
       .catch((requestError) => {
         if (active) {
-          setError(requestError.response?.data?.message || "Could not load this maintenance schedule.");
+          setError(requestError.response?.data?.message || t("admin.maintenance.detail.loadFailed"));
         }
       });
     return () => { active = false; };
-  }, [id]);
+  }, [id, t]);
 
   if (error) {
     return (
@@ -75,7 +84,7 @@ export default function MaintenanceScheduleDetailPage() {
             className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-[#51456f] px-3 py-2 text-sm text-[#d8d1e8] transition hover:bg-[#231b40]"
             style={{ backgroundColor: "#17112d" }}
           >
-            <ArrowBackRoundedIcon sx={{ fontSize: 17 }} /> Back to schedules
+            <ArrowBackRoundedIcon sx={{ fontSize: 17 }} /> {t("admin.maintenance.detail.backToSchedules")}
           </button>
         </div>
       </section>
@@ -85,7 +94,7 @@ export default function MaintenanceScheduleDetailPage() {
   if (!schedule) {
     return (
       <div className="mx-auto flex min-h-64 max-w-[980px] items-center justify-center px-6 font-[Arial,sans-serif] text-sm text-[#a89bd0]" role="status">
-        Loading schedule…
+        {t("admin.maintenance.detail.loading")}
       </div>
     );
   }
@@ -93,6 +102,9 @@ export default function MaintenanceScheduleDetailPage() {
   const affectedAreas = schedule.affectedAreas || [];
   const notificationPublished = Boolean(schedule.notificationSent);
   const statusClass = STATUS_STYLES[schedule.status] || STATUS_STYLES.UPCOMING;
+  const statusLabel = STATUS_LABEL_KEYS[schedule.status]
+    ? t(STATUS_LABEL_KEYS[schedule.status])
+    : schedule.status;
 
   return (
     <section className="mx-auto w-full max-w-[980px] px-4 py-5 font-[Arial,sans-serif] text-slate-100 sm:px-7 sm:py-7">
@@ -101,7 +113,7 @@ export default function MaintenanceScheduleDetailPage() {
         onClick={() => navigate("/admin/maintenance")}
         className="mb-4 inline-flex items-center gap-1.5 rounded-lg border border-[#342a55] bg-[#15112f] px-3 py-2 text-xs font-medium text-[#c5bdd7] transition hover:border-[#514579] hover:text-white"
       >
-        <ArrowBackRoundedIcon sx={{ fontSize: 16 }} /> Maintenance schedules
+        <ArrowBackRoundedIcon sx={{ fontSize: 16 }} /> {t("admin.maintenance.detail.backLabel")}
       </button>
 
       <header className="relative overflow-hidden rounded-2xl border border-[#342a55] bg-[#15112f] p-5 sm:p-7">
@@ -116,20 +128,20 @@ export default function MaintenanceScheduleDetailPage() {
                 {schedule.title}
               </h1>
               <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold tracking-wide ${statusClass}`}>
-                {schedule.status}
+                {statusLabel}
               </span>
             </div>
             <p className="mt-2 text-sm leading-6 text-[#a89bd0]">
-              Maintenance window details and member notification status.
+              {t("admin.maintenance.detail.headerDescription")}
             </p>
             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-[#b8b0cf]">
               <span className="inline-flex items-center gap-1.5">
                 <CalendarMonthRoundedIcon sx={{ fontSize: 15, color: "#9b87f5" }} />
-                {formatDate(schedule.startsAt, { month: "long" })}
+                {formatDate(schedule.startsAt, i18n.language, { month: "long" })}
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <ScheduleRoundedIcon sx={{ fontSize: 15, color: "#9b87f5" }} />
-                Duration {formatDuration(schedule.startsAt, schedule.endsAt)}
+                {t("admin.maintenance.detail.duration", { duration: formatDuration(schedule.startsAt, schedule.endsAt) })}
               </span>
             </div>
           </div>
@@ -140,25 +152,25 @@ export default function MaintenanceScheduleDetailPage() {
         <section className="rounded-2xl border border-[#342a55] bg-[#15112f] p-5 sm:p-6">
           <div className="flex items-center gap-2">
             <CalendarMonthRoundedIcon sx={{ fontSize: 18, color: "#a995ff" }} />
-            <h2 className="text-sm font-bold text-white">Schedule window</h2>
+            <h2 className="text-sm font-bold text-white">{t("admin.maintenance.detail.scheduleWindow")}</h2>
           </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-[#302650] bg-[#100d26] p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#857ba3]">Starts</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#857ba3]">{t("admin.maintenance.detail.starts")}</p>
               <p className="mt-2 text-sm font-semibold text-[#eeeaf7]">
-                {formatDate(schedule.startsAt, { month: "long" })}
+                {formatDate(schedule.startsAt, i18n.language, { month: "long" })}
               </p>
             </div>
             <div className="rounded-xl border border-[#302650] bg-[#100d26] p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#857ba3]">Ends</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#857ba3]">{t("admin.maintenance.detail.ends")}</p>
               <p className="mt-2 text-sm font-semibold text-[#eeeaf7]">
-                {formatDate(schedule.endsAt, { month: "long" })}
+                {formatDate(schedule.endsAt, i18n.language, { month: "long" })}
               </p>
             </div>
           </div>
 
           <div className="mt-5 border-t border-[#302650] pt-4">
-            <h3 className="text-xs font-semibold text-[#d8d1e8]">Affected areas</h3>
+            <h3 className="text-xs font-semibold text-[#d8d1e8]">{t("admin.maintenance.detail.affectedAreas")}</h3>
             {affectedAreas.length ? (
               <div className="mt-3 flex flex-wrap gap-2">
                 {affectedAreas.map((area) => (
@@ -167,12 +179,12 @@ export default function MaintenanceScheduleDetailPage() {
                     className="inline-flex items-center gap-1.5 rounded-full border border-[#44366f] bg-[#211941] px-3 py-1.5 text-xs font-medium text-[#ddd5f1]"
                   >
                     <span className="h-1.5 w-1.5 rounded-full bg-violet-300" />
-                    {AREA_LABELS[area] || area}
+                    {AREA_LABEL_KEYS[area] ? t(AREA_LABEL_KEYS[area]) : area}
                   </span>
                 ))}
               </div>
             ) : (
-              <p className="mt-2 text-xs text-[#857ba3]">No affected areas specified.</p>
+              <p className="mt-2 text-xs text-[#857ba3]">{t("admin.maintenance.detail.noAffectedAreas")}</p>
             )}
           </div>
         </section>
@@ -180,7 +192,7 @@ export default function MaintenanceScheduleDetailPage() {
         <section className="rounded-2xl border border-[#342a55] bg-[#15112f] p-5 sm:p-6">
           <div className="flex items-center gap-2">
             <NotificationsActiveRoundedIcon sx={{ fontSize: 18, color: "#a995ff" }} />
-            <h2 className="text-sm font-bold text-white">Member notification</h2>
+            <h2 className="text-sm font-bold text-white">{t("admin.maintenance.detail.memberNotification")}</h2>
           </div>
           <div className={`mt-4 rounded-xl border p-4 ${
             notificationPublished
@@ -197,38 +209,40 @@ export default function MaintenanceScheduleDetailPage() {
               />
               <div>
                 <p className="text-xs font-semibold text-[#eeeaf7]">
-                  {notificationPublished ? "Published to members" : "Not sent"}
+                  {notificationPublished ? t("admin.maintenance.detail.publishedToMembers") : t("admin.maintenance.detail.notSent")}
                 </p>
                 <p className="mt-1 text-[11px] leading-5 text-[#a89bd0]">
                   {notificationPublished
-                    ? "This maintenance notice is available in member notifications."
-                    : "No notification was published for this schedule."}
+                    ? t("admin.maintenance.detail.publishedHint")
+                    : t("admin.maintenance.detail.notSentHint")}
                 </p>
               </div>
             </div>
             {schedule.notificationId && (
               <p className="mt-3 border-t border-white/[0.06] pt-3 text-[10px] text-[#857ba3]">
-                Notification ID <span className="font-semibold text-[#c5bdd7]">#{schedule.notificationId}</span>
+                {t("admin.maintenance.detail.notificationId")} <span className="font-semibold text-[#c5bdd7]">#{schedule.notificationId}</span>
               </p>
             )}
           </div>
           <div className="mt-4 rounded-xl border border-[#302650] bg-[#100d26] px-4 py-3">
-            <p className="text-[11px] text-[#857ba3]">Reminder</p>
+            <p className="text-[11px] text-[#857ba3]">{t("admin.maintenance.detail.reminder")}</p>
             <p className="mt-1 text-xs font-medium text-[#d8d1e8]">
-              {schedule.notifyMembers ? `${schedule.reminderHours} hours before` : "Reminders disabled"}
+              {schedule.notifyMembers
+                ? t("admin.maintenance.detail.hoursBefore", { hours: schedule.reminderHours })
+                : t("admin.maintenance.detail.remindersDisabled")}
             </p>
           </div>
         </section>
       </div>
 
       <section className="mt-4 rounded-2xl border border-[#342a55] bg-[#15112f] p-5 sm:p-6">
-        <h2 className="text-sm font-bold text-white">Message to users</h2>
+        <h2 className="text-sm font-bold text-white">{t("admin.maintenance.detail.messageToUsers")}</h2>
         {schedule.message ? (
           <p className="mt-3 whitespace-pre-wrap break-words rounded-xl border border-[#302650] bg-[#100d26] p-4 text-sm leading-6 text-[#c5bdd7]">
             {schedule.message}
           </p>
         ) : (
-          <p className="mt-2 text-xs text-[#857ba3]">No additional message was provided.</p>
+          <p className="mt-2 text-xs text-[#857ba3]">{t("admin.maintenance.detail.noMessage")}</p>
         )}
       </section>
     </section>

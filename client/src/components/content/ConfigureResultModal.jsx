@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ModalShell from "../common/ModalShell";
 import { contentSurveyApi } from "../../api/contentSurvey";
@@ -8,14 +9,14 @@ import "./ContentSurvey.css";
 
 /** Các ô số của kế hoạch gợi ý; khoảng giống ràng buộc của ResultConfig (BE). */
 const NUMBER_FIELDS = [
-  { key: "planDurationWeeks", label: "Plan length", unit: "weeks", min: 1, max: 52 },
-  { key: "sessionsPerWeek", label: "Sessions per week", unit: "sessions", min: 1, max: 7 },
-  { key: "minutesPerSession", label: "Minutes per session", unit: "min", min: 10, max: 180 },
+  { key: "planDurationWeeks", labelKey: "contentManager.survey.planLength", unitKey: "contentManager.survey.unitWeeks", min: 1, max: 52 },
+  { key: "sessionsPerWeek", labelKey: "contentManager.survey.sessionsPerWeek", unitKey: "contentManager.survey.unitSessions", min: 1, max: 7 },
+  { key: "minutesPerSession", labelKey: "contentManager.survey.minutesPerSession", unitKey: "contentManager.survey.unitMin", min: 10, max: 180 },
 ];
 
 const TOGGLES = [
-  { key: "showLevelBreakdown", label: "Show level breakdown", hint: "How the level test scores placed the member." },
-  { key: "showPlanPreview", label: "Show training plan preview", hint: "Lets members open the weekly plan." },
+  { key: "showLevelBreakdown", labelKey: "contentManager.survey.showLevelBreakdown", hintKey: "contentManager.survey.showLevelBreakdownHint" },
+  { key: "showPlanPreview", labelKey: "contentManager.survey.showPlanPreview", hintKey: "contentManager.survey.showPlanPreviewHint" },
 ];
 
 /**
@@ -23,6 +24,7 @@ const TOGGLES = [
  * bố cục với Update step. Nội dung kế hoạch theo level nằm ở bộ luật level (Level criteria).
  */
 export default function ConfigureResultModal({ open, stepId, onClose, onSaved }) {
+  const { t } = useTranslation();
   const [state, setState] = useState({ status: "idle" });
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -45,7 +47,7 @@ export default function ConfigureResultModal({ open, stepId, onClose, onSaved })
         });
         setState({ status: "ready", fitnessLevels });
       })
-      .catch((err) => setState({ status: "error", message: surveyErrorMessage(err, "We could not load this step.") }));
+      .catch((err) => setState({ status: "error", message: surveyErrorMessage(err, t("contentManager.survey.couldNotLoadStep")) }));
   }, [stepId]);
 
   useEffect(() => {
@@ -61,8 +63,16 @@ export default function ConfigureResultModal({ open, stepId, onClose, onSaved })
       const n = Number(form[key]);
       return !Number.isInteger(n) || n < min || n > max;
     });
-    if (!form.stepName.trim()) return setError({ text: "Step name is required." });
-    if (invalid) return setError({ text: `${invalid.label} must be a whole number from ${invalid.min} to ${invalid.max}.` });
+    if (!form.stepName.trim()) return setError({ text: t("contentManager.survey.stepNameRequired") });
+    if (invalid) {
+      return setError({
+        text: t("contentManager.survey.numberRangeError", {
+          label: t(invalid.labelKey),
+          min: invalid.min,
+          max: invalid.max,
+        }),
+      });
+    }
 
     setSaving(true);
     setError(null);
@@ -79,9 +89,9 @@ export default function ConfigureResultModal({ open, stepId, onClose, onSaved })
           fallbackFitnessLevelId: form.fallbackFitnessLevelId ?? null,
         },
       });
-      onSaved(`"${form.stepName.trim()}" was saved.`);
+      onSaved(t("contentManager.survey.stepSavedMessage", { name: form.stepName.trim() }));
     } catch (err) {
-      setError({ text: surveyErrorMessage(err, "We could not save this step."), details: errorDetails(err) });
+      setError({ text: surveyErrorMessage(err, t("contentManager.survey.couldNotSaveStep")), details: errorDetails(err) });
     } finally {
       setSaving(false);
     }
@@ -99,20 +109,20 @@ export default function ConfigureResultModal({ open, stepId, onClose, onSaved })
     >
       <div className="cs-modal-head">
         <div>
-          <h2 id="result-config-title">Configure result</h2>
-          <p className="cs-muted">System output · Uses the level criteria</p>
+          <h2 id="result-config-title">{t("contentManager.survey.configureResult")}</h2>
+          <p className="cs-muted">{t("contentManager.survey.configureResultCaption")}</p>
         </div>
-        <button type="button" className="modal-close" aria-label="Close" onClick={onClose}>
+        <button type="button" className="modal-close" aria-label={t("common.ui.closeAria")} onClick={onClose}>
           <CloseRoundedIcon />
         </button>
       </div>
 
-      {state.status === "loading" && <p className="cs-muted cs-pad">Loading configuration…</p>}
+      {state.status === "loading" && <p className="cs-muted cs-pad">{t("contentManager.survey.loadingConfiguration")}</p>}
       {state.status === "error" && (
         <div className="cs-alert error" role="alert">
           <p>{state.message}</p>
           <button type="button" className="cs-text-btn" onClick={load}>
-            Try again
+            {t("contentManager.detail.tryAgain")}
           </button>
         </div>
       )}
@@ -120,12 +130,12 @@ export default function ConfigureResultModal({ open, stepId, onClose, onSaved })
       {state.status === "ready" && form && (
         <>
           <label className="cs-field">
-            <span className="cs-label">Step name</span>
+            <span className="cs-label">{t("contentManager.survey.stepName")}</span>
             <input className="cs-input" value={form.stepName} maxLength={255} onChange={(e) => set("stepName", e.target.value)} />
           </label>
 
           <label className="cs-field">
-            <span className="cs-label">Description</span>
+            <span className="cs-label">{t("contentManager.survey.description")}</span>
             <textarea
               className="cs-input cs-textarea"
               rows={3}
@@ -139,11 +149,11 @@ export default function ConfigureResultModal({ open, stepId, onClose, onSaved })
           </label>
 
           <div className="cs-field">
-            <span className="cs-label cs-label--lg">Recommended plan</span>
+            <span className="cs-label cs-label--lg">{t("contentManager.survey.recommendedPlan")}</span>
             <div className="cs-number-grid">
-              {NUMBER_FIELDS.map(({ key, label, unit, min, max }) => (
+              {NUMBER_FIELDS.map(({ key, labelKey, unitKey, min, max }) => (
                 <label key={key} className="cs-number">
-                  <span className="cs-label">{label}</span>
+                  <span className="cs-label">{t(labelKey)}</span>
                   <span className="cs-input cs-input--unit">
                     <input
                       type="number"
@@ -154,7 +164,7 @@ export default function ConfigureResultModal({ open, stepId, onClose, onSaved })
                       value={form[key]}
                       onChange={(e) => set(key, e.target.value)}
                     />
-                    <small>{unit}</small>
+                    <small>{t(unitKey)}</small>
                   </span>
                 </label>
               ))}
@@ -162,12 +172,12 @@ export default function ConfigureResultModal({ open, stepId, onClose, onSaved })
           </div>
 
           <div className="cs-field">
-            <span className="cs-label cs-label--lg">Result screen</span>
-            {TOGGLES.map(({ key, label, hint }) => (
+            <span className="cs-label cs-label--lg">{t("contentManager.survey.resultScreen")}</span>
+            {TOGGLES.map(({ key, labelKey, hintKey }) => (
               <label key={key} className="cs-toggle-row">
                 <span>
-                  <strong>{label}</strong>
-                  <small>{hint}</small>
+                  <strong>{t(labelKey)}</strong>
+                  <small>{t(hintKey)}</small>
                 </span>
                 <span className="cs-switch">
                   <input type="checkbox" checked={Boolean(form[key])} onChange={(e) => set(key, e.target.checked)} />
@@ -178,20 +188,20 @@ export default function ConfigureResultModal({ open, stepId, onClose, onSaved })
           </div>
 
           <label className="cs-field">
-            <span className="cs-label">Fallback level</span>
+            <span className="cs-label">{t("contentManager.survey.fallbackLevel")}</span>
             <select
               className="cs-input"
               value={form.fallbackFitnessLevelId ?? ""}
               onChange={(e) => set("fallbackFitnessLevelId", e.target.value ? Number(e.target.value) : null)}
             >
-              <option value="">No level</option>
+              <option value="">{t("contentManager.survey.noLevel")}</option>
               {state.fitnessLevels.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.name}
                 </option>
               ))}
             </select>
-            <span className="cs-muted">Used when a member skips the level test or matches no criteria.</span>
+            <span className="cs-muted">{t("contentManager.survey.fallbackLevelHint")}</span>
           </label>
 
           {error && (
@@ -209,10 +219,10 @@ export default function ConfigureResultModal({ open, stepId, onClose, onSaved })
 
           <div className="cs-modal-actions">
             <button type="button" className="cs-ghost-btn" onClick={onClose}>
-              Cancel
+              {t("common.ui.close")}
             </button>
             <button type="submit" className="cs-primary-btn" disabled={saving}>
-              {saving ? "Saving…" : "Save changes"}
+              {saving ? t("contentManager.detail.saving") : t("contentManager.survey.saveChanges")}
             </button>
           </div>
         </>

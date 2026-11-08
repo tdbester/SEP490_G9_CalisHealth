@@ -1,8 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useTranslation } from "react-i18next";
 import { createMemberExercise, getMemberExerciseList } from "../api/library";
+import { FAVORITE_ITEM_TYPES } from "../api/favorites";
+import FavoriteButton from "../components/favorites/FavoriteButton";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { getLevelLabel } from "../utils/levelLabel";
+import { localizeSeed } from "../utils/seedText";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 
 // Mock data matching mockup 100%
@@ -200,15 +205,16 @@ function ChevronDownIcon({ className = "w-4 h-4" }) {
 }
 
 export default function CommunityExerciseListPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   // Document title: CalisHealth - Library
   useEffect(() => {
-    document.title = "CalisHealth - Library";
+    document.title = t("member.library.documentTitle");
     return () => {
       document.title = "CalisHealth";
     };
-  }, []);
+  }, [t]);
 
   const [exercises, setExercises] = useState([]);
   const [searchInput, setSearchInput] = useState("");
@@ -271,7 +277,7 @@ export default function CommunityExerciseListPage() {
           setExercises([]);
           setTotalPages(0);
           setTotalElements(0);
-          setLoadError("Unable to load member exercises. Please try again.");
+          setLoadError(t("member.catalog.loadFailed"));
         }
       })
       .finally(() => {
@@ -316,7 +322,7 @@ export default function CommunityExerciseListPage() {
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     if (!createForm.title.trim()) {
-      toast.warning("Please fill in all required fields correctly.");
+      toast.warning(t("member.customExercise.requiredFields"));
       return;
     }
 
@@ -331,8 +337,8 @@ export default function CommunityExerciseListPage() {
         description: createForm.description,
         demoVideoUrl: createForm.videoUrl,
       });
-      setFormSuccess("Exercise submitted and is pending review.");
-      toast.success("Exercise created successfully!");
+      setFormSuccess(t("member.customExercise.createdSuccess"));
+      toast.success(t("member.customExercise.createdSuccess"));
       setTimeout(() => {
         setFormSuccess(null);
         setShowCreateModal(false);
@@ -348,7 +354,7 @@ export default function CommunityExerciseListPage() {
       }, 1200);
     } catch (error) {
       console.error("Failed to submit member exercise:", error);
-      toast.error("Failed to create. Please try again.");
+      toast.error(t("member.customExercise.createFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -368,10 +374,10 @@ export default function CommunityExerciseListPage() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">
-            Member-provided exercise list
+            {t("member.catalog.communityTitle")}
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Browse exercises shared by other members for reference.
+            {t("member.catalog.communitySubtitle")}
           </p>
         </div>
 
@@ -381,7 +387,7 @@ export default function CommunityExerciseListPage() {
           className="mt-1 rounded-xl bg-[#643bf6] hover:bg-[#522cd9] text-white text-xs font-semibold px-5 py-2.5 shadow-md active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
         >
           <span className="text-sm font-bold leading-none">+</span>
-          <span>Create exercise</span>
+          <span>{t("member.catalog.createExercise")}</span>
         </button>
       </div>
 
@@ -404,12 +410,12 @@ export default function CommunityExerciseListPage() {
               clipRule="evenodd"
             />
           </svg>
-          <span>My exercise list →</span>
+          <span>{t("member.catalog.myExerciseList")}</span>
         </button>
 
         {/* Thông báo hệ thống (System Notice) */}
         <div className="w-full rounded-xl border border-[#231b46] bg-[#120d29]/80 px-5 py-2.5 mt-3 text-xs text-slate-300 shadow-sm flex items-center justify-between flex-wrap gap-2">
-          <span>Only exercises that passed the automatic checks are shown here.</span>
+          <span>{t("member.catalog.autoCheckNotice")}</span>
         </div>
       </div>
 
@@ -423,7 +429,7 @@ export default function CommunityExerciseListPage() {
           <input
             type="text"
             className="w-full rounded-xl bg-[#120d29] border border-[#231b46] pl-10 pr-4 py-2.5 text-xs md:text-sm text-white placeholder-slate-500 outline-none focus:border-[#6340f1] transition-all"
-            placeholder="Search by title or member"
+            placeholder={t("member.catalog.searchByTitleOrMember")}
             value={searchInput}
             onChange={(e) => {
               setSearchInput(e.target.value);
@@ -443,16 +449,16 @@ export default function CommunityExerciseListPage() {
             }}
           >
             <option value="All levels" className="bg-[#120d29] text-white">
-              All levels
+              {t("member.catalog.allLevels")}
             </option>
             <option value="Beginner" className="bg-[#120d29] text-white">
-              Beginner
+              {t("member.catalog.beginner")}
             </option>
             <option value="Intermediate" className="bg-[#120d29] text-white">
-              Intermediate
+              {t("member.catalog.intermediate")}
             </option>
             <option value="Advanced" className="bg-[#120d29] text-white">
-              Advanced
+              {t("member.catalog.advanced")}
             </option>
           </select>
           <div className="absolute right-3.5 pointer-events-none text-slate-400 flex items-center justify-center">
@@ -471,13 +477,13 @@ export default function CommunityExerciseListPage() {
             }}
           >
             <option value="Newest" className="bg-[#120d29] text-white">
-              Newest
+              {t("member.catalog.sortNewest")}
             </option>
             <option value="Most saved" className="bg-[#120d29] text-white">
-              Most saved
+              {t("member.catalog.sortMostSaved")}
             </option>
             <option value="Oldest" className="bg-[#120d29] text-white">
-              Oldest
+              {t("member.catalog.sortOldest")}
             </option>
           </select>
           <div className="absolute right-3.5 pointer-events-none text-slate-400 flex items-center justify-center">
@@ -489,7 +495,7 @@ export default function CommunityExerciseListPage() {
       {/* D. DANH SÁCH CARD BÀI TẬP CỘNG ĐỒNG (FULL-WIDTH LIST) */}
       <div className="w-full space-y-2 mt-3">
         {loading ? (
-          <div className="text-center py-12 text-sm text-slate-400">Loading exercises...</div>
+          <div className="text-center py-12 text-sm text-slate-400">{t("member.catalog.loadingExercises")}</div>
         ) : loadError ? (
           <div role="alert" className="text-center py-12 text-sm text-rose-300">{loadError}</div>
         ) : filteredExercises.length === 0 ? (
@@ -498,10 +504,10 @@ export default function CommunityExerciseListPage() {
               <BarbellIcon className="h-6 w-6 text-[#9d7aff]" />
             </div>
             <h3 className="text-base font-bold text-white mb-1">
-              No exercises found
+              {t("member.catalog.noExercisesFound")}
             </h3>
             <p className="text-xs text-slate-400 mb-3">
-              Try adjusting your search query, filter level, or clear your search.
+              {t("member.catalog.adjustFilters")}
             </p>
             <button
               type="button"
@@ -513,7 +519,7 @@ export default function CommunityExerciseListPage() {
               }}
               className="bg-[#643bf6] hover:bg-[#522cd9] text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all cursor-pointer"
             >
-              Reset filters
+              {t("member.catalog.resetFilters")}
             </button>
           </div>
         ) : (
@@ -535,18 +541,18 @@ export default function CommunityExerciseListPage() {
                     {/* Hàng 1: Tên bài tập + Badge Level bo tròn pill */}
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <h3 className="text-sm font-semibold text-white tracking-tight truncate group-hover:text-purple-300 transition-colors">
-                        {item.title}
+                        {localizeSeed(item.title)}
                       </h3>
                       <span
                         className={`px-3 py-0.5 text-[11px] font-medium rounded-full border capitalize ${getLevelBadgeStyle(item.level || item.difficultyLevel)}`}
                       >
-                        {item.level || item.difficultyLevel || "Intermediate"}
+                        {getLevelLabel(item.level || item.difficultyLevel || "Intermediate")}
                       </span>
                     </div>
 
                     {/* Hàng 2: Nhóm cơ & Reps */}
                     <p className="text-[10px] text-slate-400 mt-0.5 truncate">
-                      {item.muscles} · {item.setsReps}
+                      {localizeSeed(item.muscles)} · {localizeSeed(item.setsReps)}
                     </p>
 
                     {/* Hàng 3 (Metadata tác giả): Avatar tròn + Tên + Thời gian + Saves */}
@@ -559,20 +565,25 @@ export default function CommunityExerciseListPage() {
                         {item.author.initials}
                       </div>
                       <span className="truncate">
-                        {item.author.name} · {item.postedTime} · {item.savesCount} saved
+                        {item.author.name} · {localizeSeed(item.postedTime)} · {t("member.catalog.savedCount", { count: item.savesCount })}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Cụm bên phải: Nút "View" */}
-                <div className="flex items-center flex-shrink-0">
+                {/* Cụm bên phải: Nút sao + nút "View" */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <FavoriteButton
+                    itemType={FAVORITE_ITEM_TYPES.MEMBER_EXERCISE}
+                    itemId={item.id}
+                    label={item.title}
+                  />
                   <button
                     type="button"
                     onClick={() => handleView(item)}
                     className="rounded-lg border border-[#8b72e8] bg-[#643bf6] hover:bg-[#7553ff] text-white text-xs font-bold px-5 py-2 transition-all active:scale-95 cursor-pointer shadow-md shadow-purple-950/40"
                   >
-                    View
+                    {t("member.catalog.view")}
                   </button>
                 </div>
               </div>
@@ -583,7 +594,7 @@ export default function CommunityExerciseListPage() {
       {totalPages > 0 && (
         <div className="mt-5 flex items-center justify-between border-t border-[#1f193f] pt-4">
           <p className="text-xs text-slate-400">
-            Showing {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, totalElements)} of {totalElements} exercises
+            {t("member.catalog.showingRows", { from: currentPage * pageSize + 1, to: Math.min((currentPage + 1) * pageSize, totalElements), count: totalElements, unit: t("member.catalog.exercises") })}
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -592,7 +603,7 @@ export default function CommunityExerciseListPage() {
               disabled={currentPage === 0 || loading}
               className="rounded-md border border-[#22184c] bg-[#130d2e] px-3 py-1.5 text-xs font-medium text-[#8a82af] hover:border-[#382672] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 transition-all"
             >
-              Previous
+              {t("member.catalog.previous")}
             </button>
             <span className="text-xs text-slate-400">{currentPage + 1} / {totalPages}</span>
             <button
@@ -601,7 +612,7 @@ export default function CommunityExerciseListPage() {
               disabled={currentPage + 1 >= totalPages || loading}
               className="rounded-md border border-[#22184c] bg-[#130d2e] px-3 py-1.5 text-xs font-medium text-[#8a82af] hover:border-[#382672] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 transition-all"
             >
-              Next
+              {t("member.catalog.next")}
             </button>
           </div>
         </div>
@@ -613,13 +624,13 @@ export default function CommunityExerciseListPage() {
           <div className="w-full max-w-lg rounded-2xl border border-[#2b2257] bg-[#120d29] p-6 shadow-2xl relative">
             <div className="flex items-center justify-between pb-4 border-b border-[#231b46]">
               <h2 className="text-lg font-bold text-white tracking-tight">
-                Create community exercise
+                {t("member.customExercise.modalTitle")}
               </h2>
               <button
                 type="button"
                 onClick={() => setConfirmCancel(true)}
                 className="w-8 h-8 rounded-full bg-[#1e1548] text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
-                aria-label="Close modal"
+                aria-label={t("common.common.close")}
               >
                 ✕
               </button>
@@ -634,12 +645,12 @@ export default function CommunityExerciseListPage() {
             <form onSubmit={handleCreateSubmit} className="mt-4 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Exercise title *
+                  {t("member.customExercise.fieldName")}
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Archer push-up"
+                  placeholder={t("member.customExercise.namePlaceholder")}
                   value={createForm.title}
                   onChange={(e) =>
                     setCreateForm((p) => ({ ...p, title: e.target.value }))
@@ -651,7 +662,7 @@ export default function CommunityExerciseListPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Difficulty level
+                    {t("member.customExercise.fieldLevel")}
                   </label>
                   <select
                     value={createForm.level}
@@ -660,19 +671,19 @@ export default function CommunityExerciseListPage() {
                     }
                     className="w-full rounded-xl bg-[#1a123d] border border-[#2b2257] px-3.5 py-2 text-xs text-white outline-none focus:border-[#643bf6] cursor-pointer"
                   >
-                    <option value="Beginner">Beginner</option>
-                    <option value="Intermediate">Intermediate</option>
-                    <option value="Advanced">Advanced</option>
+                    <option value="Beginner">{t("member.catalog.beginner")}</option>
+                    <option value="Intermediate">{t("member.catalog.intermediate")}</option>
+                    <option value="Advanced">{t("member.catalog.advanced")}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Target muscles
+                    {t("member.customExercise.fieldMuscleGroup")}
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Chest, triceps"
+                    placeholder={t("member.customExercise.fieldTarget")}
                     value={createForm.muscles}
                     onChange={(e) =>
                       setCreateForm((p) => ({ ...p, muscles: e.target.value }))
@@ -685,7 +696,7 @@ export default function CommunityExerciseListPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Sets
+                    {t("member.catalog.sets")}
                   </label>
                   <input
                     type="number"
@@ -701,11 +712,11 @@ export default function CommunityExerciseListPage() {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Reps or Duration
+                    {t("member.customExercise.fieldTarget")}
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. 8 reps / 30 sec"
+                    placeholder={t("member.customExercise.targetPlaceholder")}
                     value={createForm.repsOrDuration}
                     onChange={(e) =>
                       setCreateForm((p) => ({
@@ -720,11 +731,11 @@ export default function CommunityExerciseListPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Description &amp; cues
+                  {t("member.customExercise.fieldInstructions")}
                 </label>
                 <textarea
                   rows="3"
-                  placeholder="Key form cues and instructions..."
+                  placeholder={t("member.customExercise.instructionsPlaceholder")}
                   value={createForm.description}
                   onChange={(e) =>
                     setCreateForm((p) => ({ ...p, description: e.target.value }))
@@ -735,11 +746,11 @@ export default function CommunityExerciseListPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Demo video URL (optional)
+                  {t("member.library.demoVideo")} (URL)
                 </label>
                 <input
                   type="url"
-                  placeholder="https://..."
+                  placeholder={t("member.library.placeholder.videoUrlPlaceholder")}
                   value={createForm.videoUrl}
                   onChange={(e) =>
                     setCreateForm((p) => ({ ...p, videoUrl: e.target.value }))
@@ -754,14 +765,14 @@ export default function CommunityExerciseListPage() {
                   onClick={() => setConfirmCancel(true)}
                   className="rounded-xl border border-[#2b2257] bg-[#161133] hover:bg-[#20174a] text-slate-300 text-xs font-semibold px-4 py-2 transition-all cursor-pointer"
                 >
-                  Cancel
+                  {t("member.customExercise.cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
                   className="rounded-xl bg-[#643bf6] hover:bg-[#522cd9] text-white text-xs font-semibold px-5 py-2 transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50"
                 >
-                  {submitting ? "Publishing..." : "Publish exercise"}
+                  {submitting ? t("common.common.saving") : t("member.customExercise.saveExercise")}
                 </button>
               </div>
             </form>
@@ -770,9 +781,9 @@ export default function CommunityExerciseListPage() {
       )}
       <ConfirmDialog
         open={confirmCancel}
-        title="Discard this exercise?"
-        message="Are you sure you want to close the form? Your unsaved exercise details will be lost."
-        confirmLabel="Discard"
+        title={t("member.customExercise.discardTitle")}
+        message={t("member.customExercise.discardMessage")}
+        confirmLabel={t("member.customExercise.discardConfirm")}
         onCancel={() => setConfirmCancel(false)}
         onConfirm={() => {
           setConfirmCancel(false);

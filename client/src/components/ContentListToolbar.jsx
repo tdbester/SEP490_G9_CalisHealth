@@ -1,4 +1,5 @@
 import { Link as RouterLink, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Box, Tab, Tabs } from "@mui/material";
 import { CONTENT_PATHS } from "./ContentShared";
 import { CM } from "../theme-content";
@@ -8,6 +9,7 @@ import { CM } from "../theme-content";
  * active: 'exercises' | 'workouts'
  */
 export default function ContentListToolbar({ active }) {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const value = active ?? (pathname.startsWith(CONTENT_PATHS.workouts) ? "workouts" : "exercises");
 
@@ -23,18 +25,18 @@ export default function ContentListToolbar({ active }) {
     >
       <Tabs
         value={value}
-        aria-label="Exercise and workout lists"
+        aria-label={t("member.toolbar.listsAria")}
         sx={{ minHeight: 38, "& .MuiTab-root": { minHeight: 38, py: 0.5, px: 2, fontSize: 13 } }}
       >
         <Tab
           value="exercises"
-          label="Exercise List"
+          label={t("member.toolbar.exerciseList")}
           component={RouterLink}
           to={CONTENT_PATHS.exercises}
         />
         <Tab
           value="workouts"
-          label="Workout List"
+          label={t("member.toolbar.workoutList")}
           component={RouterLink}
           to={CONTENT_PATHS.workouts}
         />

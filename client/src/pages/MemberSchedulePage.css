@@ -1,0 +1,985 @@
+/* MemberSchedulePage.css — màn "Workout schedule" theo Figma node 1015:5.
+   Bảng màu lấy trực tiếp từ file thiết kế:
+     nền trang        #05030F
+     panel            #150F33   viền #2A2150
+     header ô ngày    #1B1340
+     card / input     #1B1340   viền #302660
+     chip event       #261C58 (Skill) / #14302F (Health)
+     Health           #5FBF80
+     Skill            #8B6CEB
+     hôm nay          #6C2FD6, viền #A78BFA
+     chữ phụ          #B7ACE0 / #8C80C0
+*/
+
+.schedule-page {
+  --panel: #150f33;
+  --panel-border: #2a2150;
+  --cell-bg: #0f0a24;
+  --head-row: #1b1340;
+  --field: #1b1340;
+  --field-border: #302660;
+  --text: #ffffff;
+  --text-muted: #b7ace0;
+  --text-dim: #8c80c0;
+  --accent: #5b2ed6;
+  --today: #6c2fd6;
+  --today-ring: #a78bfa;
+  /* Tuần đang chứa hôm nay: nền sáng hơn ô thường một bậc. */
+  --week-bg: #341f78;
+  --week-bg-outside: #1d1348;
+  --health: #5fbf80;
+  --health-bg: #14302f;
+  --skill: #8b6ceb;
+  --skill-bg: #261c58;
+
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+  width: 100%;
+  max-width: 1080px;
+  padding-bottom: 1.5rem;
+  color: var(--text);
+  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+}
+
+/* --------------------------------------------------------------- header */
+
+.schedule-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.schedule-head__left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.schedule-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 14px;
+  background: #1e1646;
+  border: 1px solid #3a2f70;
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  width: fit-content;
+  transition: background 0.15s ease;
+}
+
+.schedule-back:hover {
+  background: #271d59;
+}
+
+.schedule-title {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.schedule-save {
+  height: 38px;
+  padding: 0 26px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7c3aed 0%, #c13fd0 60%, #e07ab5 100%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: filter 0.15s ease, opacity 0.15s ease;
+}
+
+.schedule-save:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.schedule-save:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.schedule-alert {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(224, 122, 181, 0.12);
+  border: 1px solid #e07ab5;
+  color: #f6c7e0;
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------------- week banner */
+
+.schedule-week-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: linear-gradient(
+    90deg,
+    rgba(108, 47, 214, 0.28) 0%,
+    rgba(21, 15, 51, 0.4) 100%
+  );
+  border: 1px solid rgba(167, 139, 250, 0.4);
+  font-size: 12.5px;
+}
+
+.schedule-week-banner__label {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 10px;
+  color: var(--today-ring);
+}
+
+.schedule-week-banner__range {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.schedule-week-banner__count {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(95, 191, 128, 0.14);
+  border: 1px solid rgba(95, 191, 128, 0.42);
+  color: #86e3a0;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.schedule-week-banner__count.is-full {
+  background: rgba(224, 122, 181, 0.16);
+  border-color: #e07ab5;
+  color: #f6c7e0;
+}
+
+.schedule-week-banner__jump {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #1e1646;
+  border: 1px solid #3a2f70;
+  color: #fff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.schedule-week-banner__jump:hover {
+  background: #271d59;
+}
+
+.schedule-notice {
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: rgba(139, 108, 235, 0.12);
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  color: #c9bff0;
+  font-size: 12.5px;
+}
+
+/* Cảnh báo: lịch vượt hạn mức ngày tập của template. */
+.schedule-notice.is-warning {
+  background: rgba(255, 170, 60, 0.12);
+  border-color: rgba(255, 170, 60, 0.4);
+  color: #ffd08a;
+}
+
+/* ------------------------------------------------- kế hoạch của Content Manager */
+
+.schedule-plan {
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+}
+
+.schedule-plan__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.schedule-plan__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a78bfa;
+}
+
+.schedule-plan__name {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.schedule-plan__meta {
+  margin-left: auto;
+  font-size: 12px;
+  color: #8b82b8;
+}
+
+.schedule-plan__days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.schedule-plan__day {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  font-size: 12.5px;
+}
+
+.schedule-plan__daynum {
+  font-weight: 700;
+  color: #c4b5fd;
+  white-space: nowrap;
+}
+
+.schedule-plan__workout {
+  color: #d6d1f0;
+}
+
+/* --------------------------------------------------------------- layout */
+
+.schedule-body {
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+}
+
+.schedule-panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  height: 512px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------- sidebar */
+
+.schedule-library {
+  width: 232px;
+  flex: 0 0 232px;
+  padding: 15px 14px 0;
+}
+
+.schedule-library__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.schedule-library__subtitle {
+  margin: 3px 0 0;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.schedule-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  margin-top: 13px;
+  padding: 0 10px;
+  background: #1e1646;
+  border: 1px solid #2f2560;
+  border-radius: 8px;
+  color: var(--text-dim);
+}
+
+.schedule-search input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.schedule-search input::placeholder {
+  color: var(--text-dim);
+}
+
+.schedule-filters {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.schedule-filter {
+  height: 24px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: var(--field);
+  border: 1px solid var(--field-border);
+  color: #c9bff0;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.schedule-filter:hover {
+  background: #241a55;
+}
+
+.schedule-filter.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.schedule-library__list {
+  flex: 1;
+  min-height: 0;
+  margin-top: 8px;
+  padding-bottom: 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: #3a2f70 transparent;
+}
+
+.schedule-library__list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.schedule-library__list::-webkit-scrollbar-thumb {
+  background: #3a2f70;
+  border-radius: 3px;
+}
+
+.schedule-library__list.is-drop-remove {
+  outline: 2px dashed #e07ab5;
+  outline-offset: -4px;
+  border-radius: 10px;
+}
+
+.schedule-library__empty {
+  margin: 0;
+  font-size: 12px;
+  color: #6e648b;
+  line-height: 1.5;
+}
+
+/* workout card */
+.workout-chipcard {
+  position: relative;
+  flex: 0 0 auto;
+  height: 82px;
+  padding: 11px 12px 10px 22px;
+  background: var(--field);
+  border: 1px solid #302660;
+  border-radius: 10px;
+  cursor: grab;
+  user-select: none;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.workout-chipcard:hover {
+  border-color: #4a3b8f;
+  transform: translateY(-1px);
+}
+
+.workout-chipcard:active {
+  cursor: grabbing;
+}
+
+.workout-chipcard.is-dragging {
+  opacity: 0.45;
+}
+
+/* Workout đã xếp trong tuần này: làm mờ + khoá kéo (chỉ được đổi ngày). */
+.workout-chipcard.is-used {
+  opacity: 0.42;
+  cursor: not-allowed;
+  filter: grayscale(0.55);
+}
+
+.workout-chipcard.is-used:hover {
+  border-color: #302660;
+  transform: none;
+}
+
+.workout-chipcard__used {
+  margin-left: auto;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(95, 191, 128, 0.16);
+  border: 1px solid rgba(95, 191, 128, 0.45);
+  color: #86e3a0;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.workout-chipcard__grip {
+  position: absolute;
+  left: 8px;
+  top: 24px;
+  display: grid;
+  grid-template-columns: repeat(2, 3.4px);
+  gap: 4.6px;
+}
+
+.workout-chipcard__grip span {
+  width: 3.4px;
+  height: 3.4px;
+  border-radius: 50%;
+  background: #7d6fb8;
+}
+
+.workout-chipcard__name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workout-chipcard__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.workout-badge {
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.workout-badge--health {
+  background: var(--health-bg);
+  border: 1px solid var(--health);
+  color: #86e3a0;
+}
+
+.workout-badge--skill {
+  background: var(--skill-bg);
+  border: 1px solid #8b6ceb;
+  color: #c9bff0;
+}
+
+.workout-chipcard__level {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.workout-chipcard__foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #a79bd6;
+}
+
+.workout-chipcard__foot svg {
+  flex: 0 0 auto;
+  color: #a79bd6;
+}
+
+/* --------------------------------------------------------------- calendar */
+
+.schedule-calendar {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.calendar-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 52px;
+  padding: 0 14px 0 20px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.calendar-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.calendar-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.calendar-legend__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.calendar-legend__dot--health {
+  background: var(--health);
+}
+
+.calendar-legend__dot--skill {
+  background: var(--skill);
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.calendar-nav__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  background: #1e1646;
+  border: 1px solid #3a2f70;
+  border-radius: 6px;
+  color: #fff;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.calendar-nav__btn:hover {
+  background: #271d59;
+}
+
+.calendar-nav__btn--today {
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.calendar-nav__btn--arrow {
+  width: 30px;
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  height: 28px;
+  background: var(--head-row);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.calendar-weekdays span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-rows: 72px;
+  flex: 1;
+  min-height: 0;
+}
+
+.calendar-cell {
+  position: relative;
+  padding: 5px 4px 4px;
+  background: var(--cell-bg);
+  border-right: 1px solid var(--panel-border);
+  border-bottom: 1px solid var(--panel-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.calendar-cell:nth-child(7n) {
+  border-right: none;
+}
+
+.calendar-cell.is-outside-month {
+  opacity: 0.55;
+}
+
+/* Ô ngoài tuần hiện tại: bị khoá, không nhận drop. */
+.calendar-cell.is-locked {
+  opacity: 0.35;
+  filter: grayscale(0.6);
+  cursor: not-allowed;
+}
+
+.calendar-cell.is-locked .event-chip {
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Ngày đã trôi qua trong tuần hiện tại: vẫn xem được lịch đã tập nhưng
+   không thay đổi được (không kéo ra sidebar, không đổi ngày, không xoá). */
+.calendar-cell.is-past {
+  cursor: default;
+  filter: grayscale(0.35);
+}
+
+.calendar-cell.is-past .event-chip {
+  cursor: default;
+  pointer-events: none;
+}
+
+.calendar-cell.is-past .calendar-cell__date {
+  color: #8f86b8;
+}
+
+/* Ô thuộc tuần hiện tại nhưng rơi sang tháng kề (vd tuần 30/11 – 06/12):
+   phải nổi bật như ô trong tháng, không mờ như ô ngoài tháng. */
+.calendar-cell.is-week-cell.is-outside-month {
+  opacity: 1;
+  background: var(--week-bg-outside);
+}
+
+.calendar-cell.is-week-cell.is-outside-month .calendar-cell__date {
+  color: #c9bff0;
+}
+
+/* Tuần đang chứa hôm nay — nền sáng hơn + viền trên/dưới để tách khỏi tuần khác. */
+.calendar-cell.is-current-week {
+  background: var(--week-bg);
+  box-shadow:
+    inset 0 2px 0 rgba(167, 139, 250, 0.45),
+    inset 0 -2px 0 rgba(167, 139, 250, 0.45);
+}
+
+.calendar-cell.is-current-week.is-outside-month {
+  background: var(--week-bg-outside);
+}
+
+/* Nổi bật mạnh nhất: hôm nay. */
+.calendar-cell.is-today {
+  background: linear-gradient(
+    160deg,
+    rgba(108, 47, 214, 0.55) 0%,
+    rgba(108, 47, 214, 0.26) 100%
+  );
+  box-shadow:
+    inset 0 0 0 1.5px var(--today-ring),
+    0 0 14px -4px rgba(139, 108, 235, 0.75);
+  z-index: 1;
+}
+
+.calendar-cell.is-today.is-outside-month {
+  opacity: 1;
+}
+
+.calendar-cell.is-drop-target {
+  background: rgba(108, 79, 230, 0.3);
+}
+
+.calendar-cell__date {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  margin-right: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #c9bff0;
+  border-radius: 6px;
+}
+
+.calendar-cell.is-current-week .calendar-cell__date {
+  color: #e2dbff;
+}
+
+.calendar-cell.is-outside-month .calendar-cell__date {
+  color: #70649f;
+}
+
+.calendar-cell.is-today .calendar-cell__date {
+  background: var(--today);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 0 0 1.5px rgba(167, 139, 250, 0.65);
+}
+
+/* Nhãn "Today" chỉ hiện ở màn đủ rộng, ô hẹp thì ẩn để không tràn. */
+.calendar-cell__today-tag {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #e9e3ff;
+}
+
+/* Nhãn "Past" cho ngày đã trôi qua — bất biến, không kéo thả được. */
+.calendar-cell__past-tag {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8f86b8;
+}
+
+@media (max-width: 900px) {
+  .calendar-cell__today-tag {
+    display: none;
+  }
+}
+
+.calendar-cell__chips {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+  /* Chốt chặn cuối: chip không bao giờ vẽ tràn ra ngoài ô 72px. */
+  overflow: hidden;
+}
+.event-chip {
+  position: relative;
+  flex: 0 0 auto; /* Không co lại khi dropzone/other chips chiếm chỗ */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  /* Chiều cao phải nằm gọn trong vùng chip của ô (ô 72px - hàng ngày 27px
+     còn ~40px), nếu không dòng "19 min" sẽ bị cắt ở đáy ô. */
+  min-height: 0;
+  border-radius: 5px;
+  padding: 2px 4px 2px 7px;
+  border-left: 3px solid;
+  cursor: grab;
+  user-select: none;
+  overflow: hidden;
+}
+
+.event-chip:active {
+  cursor: grabbing;
+}
+
+.event-chip.is-dragging {
+  opacity: 0.4;
+}
+
+/* Chip nằm ở ô ngoài tuần hiện tại — không kéo được. */
+.event-chip.is-locked {
+  cursor: default;
+}
+
+.event-chip--health {
+  background: var(--health-bg);
+  border-left-color: var(--health);
+}
+
+.event-chip--skill {
+  background: var(--skill-bg);
+  border-left-color: var(--skill);
+}
+
+.event-chip__name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #fff;
+  word-break: break-word;
+}
+
+.event-chip__time {
+  font-size: 9px;
+  color: var(--text-muted);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+/* Ô chứa từ 2 bài trở lên: không đủ chỗ cho 2 dòng tên + thời lượng mỗi chip,
+   nên gộp thành 1 hàng "tên … thời lượng". Tên dài tự cắt bằng dấu ba chấm. */
+.calendar-cell__chips.is-compact {
+  gap: 3px;
+}
+
+.calendar-cell__chips.is-compact .event-chip {
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px 1px 6px;
+}
+
+.calendar-cell__chips.is-compact .event-chip__name {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  -webkit-line-clamp: unset;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 9.5px;
+  font-weight: 500;
+}
+
+.calendar-cell__chips.is-compact .event-chip__time {
+  flex: 0 0 auto;
+  font-size: 8.5px;
+}
+
+.event-chip__remove {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 14px;
+  height: 14px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: rgba(5, 3, 15, 0.75);
+  color: #fff;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.event-chip:hover .event-chip__remove {
+  display: flex;
+}
+
+.calendar-cell__more {
+  font-size: 9.5px;
+  color: #a79bd6;
+  padding-left: 3px;
+}
+
+.calendar-dropzone {
+  /* Overlay tuyệt đối: không tham gia flex nên không ép chip co lại hay
+     đẩy layout khi vừa hiện ra (nguyên nhân làm ô nhấp nháy lúc kéo vào). */
+  position: absolute;
+  inset: 2px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed var(--today-ring);
+  border-radius: 6px;
+  background: rgba(21, 15, 51, 0.86);
+  font-size: 9.5px;
+  color: #c9bff0;
+  text-align: center;
+  line-height: 1.2;
+  /* Con trỏ đang ở trên nó → nếu nó nhận drag event thì dragleave/dragenter
+     đảo liên tục giữa nó và ô cha, gây nhấp nháy. */
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------- footer */
+
+.schedule-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.schedule-foot__tip {
+  margin: 0;
+  color: var(--text-dim);
+}
+
+.schedule-foot__count {
+  margin: 0;
+  font-weight: 500;
+}
+
+.schedule-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  color: #c9bff0;
+  font-size: 14px;
+}
+
+/* --------------------------------------------------------------- responsive */
+
+@media (max-width: 1000px) {
+  .schedule-body {
+    flex-direction: column;
+  }
+
+  .schedule-panel {
+    height: auto;
+  }
+
+  .schedule-library {
+    width: 100%;
+    flex: 0 0 auto;
+  }
+
+  .schedule-library__list {
+    max-height: 260px;
+  }
+
+  .schedule-calendar {
+    height: auto;
+  }
+
+  .calendar-grid {
+    /* Giữ 72px như desktop: ô 64px không đủ chỗ cho chip 2 dòng + thời lượng
+       (cần ~40px, chỉ còn 64 - 27 = 37px) nên dòng "19 min" bị cắt mất. */
+    grid-auto-rows: 72px;
+  }
+}

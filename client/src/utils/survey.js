@@ -1,3 +1,14 @@
+import i18n from "../i18n";
+
+/**
+ * Dịch 1 key của namespace member.
+ *
+ * @param {string} key
+ * @param {object} [options]
+ * @returns {string}
+ */
+const t = (key, options) => i18n.t(key, options);
+
 /*
  * Logic khảo sát dùng chung cho các màn onboarding. Mọi câu hỏi, lựa chọn, ràng buộc và điều kiện
  * hiển thị đều đến từ GET /api/surveys/{code}; file này chỉ diễn giải chúng giống hệt backend
@@ -6,27 +17,16 @@
  */
 
 /** Tiêu đề lớn / mô tả của từng bước theo Figma; bước khác dùng tên + mô tả từ backend. */
-const STEP_COPY = {
-  BODY_INFORMATION: {
-    title: "Your body stats",
-    subtitle: "We'll use this to tailor your workout plan.",
-  },
-  GOALS_AND_MOTIVATION: {
-    title: "Why do you train?",
-    subtitle: "Pick the path that fits you best.",
-  },
-  CURRENT_TRAINING_ROUTINE: {
-    title: "How do you train now?",
-    subtitle: "This helps us pick the right intensity.",
-  },
-  LEVEL_TEST: {
-    title: "Test your level",
-    subtitle: "Do each move with good form and stop when it breaks.",
-  },
+const STEP_COPY_KEYS = {
+  BODY_INFORMATION: "BODY_INFORMATION",
+  GOALS_AND_MOTIVATION: "GOALS_AND_MOTIVATION",
+  CURRENT_TRAINING_ROUTINE: "CURRENT_TRAINING_ROUTINE",
+  LEVEL_TEST: "LEVEL_TEST",
 };
 
 export function stepCopy(step) {
-  const copy = STEP_COPY[step.stepCode];
+  const key = STEP_COPY_KEYS[step.stepCode];
+  const copy = key ? t(`member:survey.stepTitles.${key}`) : null;
   return {
     label: step.stepName,
     title: copy?.title ?? step.stepName,
@@ -153,8 +153,11 @@ function decimals(number) {
 
 function rangeMessage(min, max, unit) {
   const suffix = unit ? ` ${unit}` : "";
-  if (min !== undefined && max !== undefined) return `Please enter a value between ${min} and ${max}${suffix}`;
-  return min !== undefined ? `Please enter at least ${min}${suffix}` : `Please enter at most ${max}${suffix}`;
+  if (min !== undefined && max !== undefined) {
+    return t("member:survey.validation.rangeBetween", { min, max, unit: suffix });
+  }
+  if (min !== undefined) return t("member:survey.validation.rangeAtLeast", { min, unit: suffix });
+  return t("member:survey.validation.rangeAtMost", { max, unit: suffix });
 }
 
 /** Thông báo lỗi, hoặc null nếu hợp lệ. Chỉ gọi cho câu đang áp dụng. */
@@ -165,15 +168,21 @@ export function validateAnswer(question, formValue) {
 
   if (value === null) {
     if (!question.required) return null;
-    return isSelect ? "Please choose an option" : "This field is required";
+    return isSelect
+      ? t("member:survey.validation.chooseOption")
+      : t("member:survey.validation.required");
   }
 
   switch (question.questionType) {
     case "NUMBER": {
-      if (typeof value !== "number" || !Number.isFinite(value)) return "Please enter a valid number";
-      if (rules.integerOnly && !Number.isInteger(value)) return "Please use whole numbers only";
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        return t("member:survey.validation.validNumber");
+      }
+      if (rules.integerOnly && !Number.isInteger(value)) {
+        return t("member:survey.validation.wholeNumbersOnly");
+      }
       if (rules.maxDecimals !== undefined && decimals(value) > rules.maxDecimals) {
-        return `Use at most ${rules.maxDecimals} decimal place(s)`;
+        return t("member:survey.validation.decimalPlaces", { count: rules.maxDecimals });
       }
       if ((rules.min !== undefined && value < rules.min) || (rules.max !== undefined && value > rules.max)) {
         return rangeMessage(rules.min, rules.max, question.unit);
@@ -182,21 +191,23 @@ export function validateAnswer(question, formValue) {
     }
     case "MULTIPLE_SELECT": {
       const min = rules.minSelections ?? 1;
-      if (value.length < min) return `Select at least ${min} option${min > 1 ? "s" : ""}`;
+      if (value.length < min) return t("member:survey.validation.minSelections", { count: min });
       if (rules.maxSelections !== undefined && value.length > rules.maxSelections) {
-        return `Select at most ${rules.maxSelections} options`;
+        return t("member:survey.validation.maxSelections", { count: rules.maxSelections });
       }
       return null;
     }
     case "TEXT":
     case "TEXTAREA": {
       if (rules.minLength !== undefined && value.length < rules.minLength) {
-        return `Enter at least ${rules.minLength} characters`;
+        return t("member:survey.validation.minLength", { count: rules.minLength });
       }
       if (rules.maxLength !== undefined && value.length > rules.maxLength) {
-        return `Enter at most ${rules.maxLength} characters`;
+        return t("member:survey.validation.maxLength", { count: rules.maxLength });
       }
-      if (rules.pattern && !new RegExp(`^(?:${rules.pattern})$`).test(value)) return "Invalid format";
+      if (rules.pattern && !new RegExp(`^(?:${rules.pattern})$`).test(value)) {
+        return t("member:survey.validation.invalidFormat");
+      }
       return null;
     }
     default:

@@ -1,0 +1,394 @@
+/* Màn "Rest between sets" — Figma 551:1344. Cùng tone tối với màn AI Pose Tracking. */
+.rc-page {
+  min-height: 100vh;
+  background: #0d0b1a;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ------------------------------------------------------------------ body */
+.rc-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 476px;
+  gap: 24px;
+  padding: 24px 40px 40px;
+  align-items: start;
+}
+
+/* ------------------------------------------------------------------ stage */
+.rc-stage {
+  border: 1px solid #3a3060;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #2a165f 0%, #1a103f 50%, #120b2e 100%);
+}
+
+.rc-stage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 0;
+}
+
+.rc-rest-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #b4aedb;
+}
+
+.rc-rest-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #38bdf8;
+}
+
+.rc-stage-meta {
+  font-size: 0.75rem;
+  color: #b4aedb;
+}
+
+.rc-stage-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 24px 56px;
+}
+
+.rc-title {
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.rc-subtitle {
+  margin: 10px 0 0;
+  font-size: 1rem;
+  color: #a78bfa;
+}
+
+/* ------------------------------------------------------------------ timer */
+.rc-timer-wrap {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  margin: 40px 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rc-ring {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+
+.rc-ring-track {
+  fill: #0d0b1a;
+  stroke: #1f1c38;
+  stroke-width: 18;
+}
+
+.rc-ring-fill {
+  fill: none;
+  stroke: url(#rc-ring-gradient);
+  stroke-width: 18;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 900ms linear;
+}
+
+.rc-ring-fill.is-urgent {
+  stroke: #fb7185;
+}
+
+.rc-timer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.rc-timer-value {
+  font-size: 6rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-timer-label {
+  font-size: 0.9375rem;
+  color: #b4aedb;
+}
+
+/* ------------------------------------------------------------------ adjust */
+.rc-adjust {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.rc-adjust-btn {
+  min-width: 90px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid #4a4070;
+  background: #1a1233;
+  color: #e6e1ff;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.rc-adjust-btn:hover:not(:disabled) {
+  border-color: #7c5dfa;
+  background: #241a45;
+}
+
+.rc-adjust-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rc-tip {
+  margin: 24px 0 0;
+  font-size: 0.8125rem;
+  color: #8b85b8;
+}
+
+/* ------------------------------------------------------------------ panel */
+.rc-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rc-panel-label {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #8b85b8;
+}
+
+/* Last set summary */
+.rc-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid #241d45;
+  border-radius: 12px;
+  background: #111024;
+}
+
+.rc-summary-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.rc-summary-value {
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+}
+
+.rc-summary-value.is-good {
+  color: #34d399;
+}
+
+.rc-summary-value.is-warn {
+  color: #fbbf24;
+}
+
+.rc-summary-value.is-bad {
+  color: #fb7185;
+}
+
+.rc-summary-label {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #8b85b8;
+}
+
+.rc-summary-divider {
+  width: 1px;
+  align-self: stretch;
+  background: #2f2a55;
+}
+
+/* AI tip */
+.rc-tip-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px solid #3a3060;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1a1233 0%, #211545 100%);
+}
+
+.rc-tip-icon {
+  flex: 0 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+  color: #a78bfa;
+}
+
+.rc-tip-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.rc-tip-text {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #fff;
+}
+
+/* Up next */
+.rc-next {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid #4a4070;
+  border-radius: 12px;
+  background: #1a1233;
+}
+
+.rc-next-icon {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #6d3df0 0%, #4b8bf0 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.rc-next-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.rc-next-label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #a78bfa;
+}
+
+.rc-next-title {
+  margin: 4px 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.rc-next-sub {
+  margin: 4px 0 0;
+  font-size: 0.8125rem;
+  color: #b4aedb;
+}
+
+/* Skip rest */
+.rc-skip-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 68px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(
+    90deg,
+    #7c3aed 0%,
+    #c026d3 55%,
+    #f472b6 100%
+  );
+  color: #fff;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 150ms ease;
+}
+
+.rc-skip-btn:hover {
+  filter: brightness(1.1);
+}
+
+.rc-skip-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* End workout */
+.rc-end-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 64px;
+  border: 1px solid #6b2a45;
+  border-radius: 12px;
+  background: #190d1f;
+  color: #fda4af;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 150ms ease;
+}
+
+.rc-end-btn:hover {
+  border-color: #fb7185;
+}
+
+.rc-end-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fb7185;
+}
+
+/* ------------------------------------------------------------------ responsive */
+@media (max-width: 1080px) {
+  .rc-body {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
+  }
+
+  .rc-timer-wrap {
+    width: 240px;
+    height: 240px;
+  }
+
+  .rc-timer-value {
+    font-size: 5rem;
+  }
+}

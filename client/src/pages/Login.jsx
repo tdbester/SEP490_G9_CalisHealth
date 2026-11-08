@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { markOnboardingPrompted, needsOnboarding } from "../api/survey";
+import { useTranslation } from "react-i18next";
 import "./Login.css";
 import AuthLogo from "../components/AuthLogo";
 import ImeNotice from "../components/ImeNotice";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import { hasNonAscii } from "../utils/authInput";
+import { notifyAuthSessionChanged } from "../utils/authSession";
 
 function MailIcon() {
   return (
@@ -46,6 +49,7 @@ function EyeOffIcon() {
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const [existingRole, setExistingRole] = useState(null);
   const [email, setEmail] = useState("");
 
@@ -137,6 +141,7 @@ export default function Login() {
           role: res.data.role,
         }),
       );
+      notifyAuthSessionChanged();
       if (res.data.mustChangePassword) {
         navigate("/change-password", { replace: true });
         return;
@@ -166,11 +171,11 @@ export default function Login() {
         err.response?.data?.message ||
         err.response?.data?.detail ||
         (err.response?.status === 401
-          ? "Incorrect email or password."
+          ? t("common.auth.login.credentialsError")
           : err.response?.status === 403
-            ? "This account has not been verified or is not allowed to sign in."
-            : "Could not sign in. Please try again.");
-      setError(typeof msg === "string" ? msg : "Could not sign in. Please try again.");
+            ? t("common.auth.login.notVerified")
+            : t("common.auth.login.signInFailed"));
+      setError(typeof msg === "string" ? msg : t("common.auth.login.signInFailed"));
     } finally {
       setLoading(false);
     }
@@ -180,17 +185,20 @@ export default function Login() {
     <div className="login">
       <div className="login-card">
         <button type="button" className="login-back" onClick={() => navigate("/")}>
-          &larr; Home
+          &larr; {t("nav.home")}
         </button>
-        <AuthLogo />
+        <div className="login-header">
+          <AuthLogo />
+          <LanguageSwitcher variant="select" className="login-lang" />
+        </div>
 
-        <h1 className="login-title">Login</h1>
+        <h1 className="login-title">{t("auth.login.title")}</h1>
 
         <form className="login-form" onSubmit={handleSubmit} autoComplete="on">
           {error && <div className="login-error">{error}</div>}
 
           <div className="login-field">
-            <label className="login-label" htmlFor="login-email">Email</label>
+            <label className="login-label" htmlFor="login-email">{t("auth.login.email")}</label>
             <div className="login-input-wrap">
               <MailIcon />
               <input
@@ -198,7 +206,7 @@ export default function Login() {
                 name="email"
                 className="login-input"
                 type="email"
-                placeholder="Email"
+                placeholder={t("auth.login.email")}
                 defaultValue=""
                 onChange={handleChange}
                 autoComplete="email"
@@ -209,7 +217,7 @@ export default function Login() {
           </div>
 
           <div className="login-field">
-            <label className="login-label" htmlFor="login-password">Password</label>
+            <label className="login-label" htmlFor="login-password">{t("auth.login.password")}</label>
             <div className="login-input-wrap">
               <LockIcon />
               <input
@@ -217,7 +225,7 @@ export default function Login() {
                 name="password"
                 className="login-input"
                 type={showPassword ? "text" : "password"}
-                placeholder="Password"
+                placeholder={t("auth.login.password")}
                 defaultValue=""
                 onChange={handleChange}
                 autoComplete="current-password"
@@ -227,7 +235,7 @@ export default function Login() {
                 type="button"
                 className="login-toggle-pw"
                 onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? t("auth.login.hidePassword") : t("auth.login.showPassword")}
               >
                 {showPassword ? <EyeOffIcon /> : <EyeOpenIcon />}
               </button>
@@ -237,17 +245,17 @@ export default function Login() {
 
           <button type="submit" className="login-submit" disabled={loading}>
             <span className="login-submit-text">
-              {loading ? "Signing in..." : "Login"}
+              {loading ? t("auth.login.submitting") : t("auth.login.submit")}
             </span>
           </button>
         </form>
 
         <div className="login-links">
           <button type="button" className="login-link" onClick={() => navigate("/register")}>
-            You don&apos;t have account? Register
+            {t("auth.login.noAccount")}
           </button>
           <button type="button" className="login-link" onClick={() => navigate("/forgot-password")}>
-            Forgot Password?
+            {t("auth.login.forgotPassword")}
           </button>
         </div>
       </div>

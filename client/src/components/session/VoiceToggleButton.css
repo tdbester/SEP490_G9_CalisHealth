@@ -1,0 +1,30 @@
+/* Nút bật/tắt giọng điều khiển — dùng chung giữa màn tracking và màn nghỉ. */
+
+.vt-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  border: 1px solid #4b3d80;
+  background: #2a2050;
+  color: #c4b5fd;
+  cursor: pointer;
+}
+
+.vt-icon-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+/* Tắt voice coach -> icon bị gạch chéo và mờ đi để dễ phân biệt. */
+.vt-icon-btn.is-muted {
+  color: #8b83ad;
+  background: #221b42;
+}
+
+.vt-icon-btn.is-muted svg {
+  opacity: 0.75;
+}

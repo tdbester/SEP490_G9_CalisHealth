@@ -86,7 +86,8 @@ public class MemberNotificationService {
                     || "ALL_USERS".equals(audience)
                     || "GLOBAL".equals(audience)
                     || "ALL_ROLES".equals(audience);
-            case ADMIN -> "SYSTEM_WIDE".equals(audience)
+            case ADMIN -> "ADMIN".equals(audience)
+                    || "SYSTEM_WIDE".equals(audience)
                     || "ALL_USERS".equals(audience)
                     || "GLOBAL".equals(audience)
                     || "ALL_ROLES".equals(audience);

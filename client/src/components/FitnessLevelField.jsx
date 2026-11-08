@@ -16,6 +16,7 @@ import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import TrendingDownRoundedIcon from "@mui/icons-material/TrendingDownRounded";
 import ReportProblemOutlinedIcon from "@mui/icons-material/ReportProblemOutlined";
+import { useTranslation } from "react-i18next";
 import { CM } from "../theme-content";
 import { TONE_STYLES } from "./ContentShared";
 import { FieldLabel } from "./ProfileSections";
@@ -31,6 +32,7 @@ import { buildLevelToneMap } from "../useLevelNames";
  * the confirm button inside that warning arms the change for the next save.
  */
 export default function FitnessLevelField({ value, options = [], currentLevel, disabled, onChange }) {
+  const { t } = useTranslation("member");
   const [anchor, setAnchor] = useState(null);
   const [pending, setPending] = useState(null);
 
@@ -67,7 +69,7 @@ export default function FitnessLevelField({ value, options = [], currentLevel, d
 
   return (
     <Box sx={{ gridColumn: { xs: "auto", sm: "1 / -1" } }}>
-      <FieldLabel>Fitness level</FieldLabel>
+      <FieldLabel>{t("fitnessLevel.label")}</FieldLabel>
 
       <Box
         sx={{
@@ -100,12 +102,12 @@ export default function FitnessLevelField({ value, options = [], currentLevel, d
 
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography variant="body2" sx={{ color: "#fff", fontWeight: 700 }} noWrap>
-            {currentLevel || "Not assessed yet"}
+            {currentLevel || t("fitnessLevel.notAssessed")}
           </Typography>
           <Typography variant="caption" sx={{ display: "block", color: CM.textMuted }}>
             {currentRank
-              ? `Level ${currentRank} of ${options.length} on the CalisHealth ladder`
-              : "Complete the onboarding level test to be placed on the ladder"}
+              ? t("fitnessLevel.levelOf", { rank: currentRank, total: options.length })
+              : t("fitnessLevel.completeTest")}
           </Typography>
         </Box>
 
@@ -116,29 +118,27 @@ export default function FitnessLevelField({ value, options = [], currentLevel, d
           onClick={(event) => setAnchor(event.currentTarget)}
           endIcon={<ExpandMoreRoundedIcon sx={{ fontSize: 18 }} />}
           aria-haspopup="listbox"
-          aria-label="Change fitness level"
+          aria-label={t("fitnessLevel.changeAria")}
           sx={{ flexShrink: 0 }}
         >
-          {currentChanges ? `Change to ${value}` : "Change level"}
+          {currentChanges ? t("fitnessLevel.changeTo", { level: value }) : t("fitnessLevel.changeLevel")}
         </Button>
       </Box>
 
       <Typography sx={{ display: "block", mt: 0.75, fontSize: 11.5, lineHeight: 1.45, color: CM.textDim }}>
-        {disabled
-          ? "Fitness level is available for members."
-          : "Your daily training plan and recommended exercises follow this level."}
+        {disabled ? t("fitnessLevel.memberOnly") : t("fitnessLevel.followLevel")}
       </Typography>
 
       <Menu
         anchorEl={anchor}
         open={Boolean(anchor)}
         onClose={() => setAnchor(null)}
-        MenuListProps={{ "aria-label": "System fitness levels", dense: true }}
+        MenuListProps={{ "aria-label": t("fitnessLevel.systemLevelsAria"), dense: true }}
         slotProps={{ paper: { sx: { minWidth: 300, mt: 0.75 } } }}
       >
         <Box sx={{ px: 1.75, pt: 0.75, pb: 1 }}>
           <Typography variant="caption" sx={{ color: CM.textDim, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", fontSize: 10 }}>
-            Levels in the system
+            {t("fitnessLevel.levelsInSystem")}
           </Typography>
         </Box>
         {options.map((level, index) => {
@@ -175,14 +175,14 @@ export default function FitnessLevelField({ value, options = [], currentLevel, d
                 </Typography>
                 {isCurrent && (
                   <Typography variant="caption" sx={{ color: CM.textDim }}>
-                    Your current level
+                    {t("fitnessLevel.currentLevel")}
                   </Typography>
                 )}
               </Box>
               {isCurrent && <CheckRoundedIcon sx={{ fontSize: 16, color: tone.color }} />}
               {isPicked && (
                 <Typography variant="caption" sx={{ color: CM.amber, fontWeight: 700 }}>
-                  Selected
+                  {t("fitnessLevel.selected")}
                 </Typography>
               )}
             </MenuItem>
@@ -207,15 +207,15 @@ export default function FitnessLevelField({ value, options = [], currentLevel, d
           >
             <ReportProblemOutlinedIcon sx={{ fontSize: 18 }} />
           </Box>
-          Change fitness level?
+          {t("fitnessLevel.changeTitle")}
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ color: CM.textMuted }}>
-            You are switching from{" "}
+            {t("fitnessLevel.switchingFrom")}{" "}
             <Box component="span" sx={{ color: "#fff", fontWeight: 700 }}>
-              {currentLevel || "no level"}
+              {currentLevel || t("fitnessLevel.noLevel")}
             </Box>{" "}
-            to{" "}
+            {t("fitnessLevel.to")}{" "}
             <Box component="span" sx={{ color: "#fff", fontWeight: 700 }}>
               {pending}
             </Box>
@@ -233,13 +233,24 @@ export default function FitnessLevelField({ value, options = [], currentLevel, d
               </Box>
               <Typography variant="body2" sx={{ color: CM.textMuted }}>
                 <Box component="span" sx={{ color: "#fff", fontWeight: 600 }}>
-                  Exercise difficulty.{" "}
+                  {t("fitnessLevel.difficultyTitle")}{" "}
                 </Box>
-                The exercises offered to you will be the ones rated{" "}
-                <Box component="span" sx={{ color: "#fff", fontWeight: 600 }}>
-                  {pending}
-                </Box>
-                , so they become {direction < 0 ? "easier" : "harder"} than your current set.
+                {t("fitnessLevel.difficultyBody", {
+                  level: pending,
+                  easier: t("fitnessLevel.easier"),
+                  harder: t("fitnessLevel.harder"),
+                })
+                  .split(pending)
+                  .reduce((acc, part, index) => {
+                    if (index === 0) return part;
+                    return [
+                      ...acc,
+                      <Box key={index} component="span" sx={{ color: "#fff", fontWeight: 600 }}>
+                        {pending}
+                      </Box>,
+                      part,
+                    ];
+                  }, [])}
               </Typography>
             </Box>
 
@@ -249,25 +260,25 @@ export default function FitnessLevelField({ value, options = [], currentLevel, d
               </Box>
               <Typography variant="body2" sx={{ color: CM.textMuted }}>
                 <Box component="span" sx={{ color: "#fff", fontWeight: 600 }}>
-                  Daily training plan.{" "}
+                  {t("fitnessLevel.planTitle")}{" "}
                 </Box>
-                A daily training plan belongs to a single level, so today and the following days will
-                follow the {pending} plan with its own workouts and targets instead of your current one.
-                Only sessions you have already completed keep their original result.
+                {t("fitnessLevel.planBody", { level: pending })}
               </Typography>
             </Box>
           </Stack>
 
           <Typography variant="caption" sx={{ display: "block", mt: 2, color: CM.textDim }}>
-            Nothing changes until you press “Save changes” on this page.
+            {t("fitnessLevel.nothingChanges")}
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button size="small" onClick={() => setPending(null)} sx={{ color: CM.textMuted }}>
-            Keep {currentLevel || "current level"}
+            {currentLevel
+              ? t("fitnessLevel.keep", { level: currentLevel })
+              : t("fitnessLevel.keepCurrent")}
           </Button>
           <Button size="small" variant="contained" onClick={confirm}>
-            Switch to {pending}
+            {t("fitnessLevel.switchTo", { level: pending })}
           </Button>
         </DialogActions>
       </Dialog>

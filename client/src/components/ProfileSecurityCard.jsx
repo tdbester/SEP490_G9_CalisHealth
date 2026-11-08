@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Box,
@@ -15,7 +16,7 @@ import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import { CM } from "../theme-content";
 import { profileApi } from "../api/profile";
 import { formatProfileDate } from "../api/profile";
-import { PASSWORD_RULE_MESSAGE, hasNonAscii, isStrongPassword } from "../utils/authInput";
+import { hasNonAscii, isStrongPassword } from "../utils/authInput";
 import { SectionCard, StatePill } from "./ProfileSections";
 
 const EMPTY = { currentPassword: "", newPassword: "", confirmNewPassword: "" };
@@ -24,7 +25,7 @@ const EMPTY = { currentPassword: "", newPassword: "", confirmNewPassword: "" };
  * Password input. Pass `visible` + `onToggle` to render the show/hide eye; without them the value
  * stays masked and no toggle is offered (the confirmation field works this way).
  */
-function PasswordField({ label, value, onChange, autoComplete, visible, onToggle }) {
+function PasswordField({ label, value, onChange, autoComplete, visible, onToggle, showLabel, hideLabel }) {
   const canToggle = typeof onToggle === "function";
   return (
     <TextField
@@ -44,7 +45,7 @@ function PasswordField({ label, value, onChange, autoComplete, visible, onToggle
                     size="small"
                     edge="end"
                     onClick={onToggle}
-                    aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+                    aria-label={visible ? hideLabel : showLabel}
                     sx={{ color: CM.textDim }}
                   >
                     {visible ? (
@@ -72,6 +73,7 @@ function PasswordField({ label, value, onChange, autoComplete, visible, onToggle
  * temporary-password warning without another request.
  */
 export default function SecurityCard({ security, onChanged, delay = 0 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [visible, setVisible] = useState({ currentPassword: false, newPassword: false });
@@ -105,28 +107,28 @@ export default function SecurityCard({ security, onChanged, delay = 0 }) {
     setError("");
 
     if (hasNonAscii(form.currentPassword) || hasNonAscii(form.newPassword)) {
-      setError("Use English characters only for passwords.");
+      setError(t("common.security.asciiOnly"));
       return;
     }
     if (!isStrongPassword(form.newPassword)) {
-      setError(PASSWORD_RULE_MESSAGE);
+      setError(t("common.passwordRule"));
       return;
     }
     if (form.newPassword !== form.confirmNewPassword) {
-      setError("The confirmation password does not match");
+      setError(t("common.security.mismatch"));
       return;
     }
 
     setSaving(true);
     try {
       const updated = await profileApi.changePassword(form);
-      onChanged?.(updated, "Your password has been changed.");
+      onChanged?.(updated, t("common.security.changed"));
       setForm(EMPTY);
       setOpen(false);
     } catch (requestError) {
       setError(
         requestError?.response?.data?.message ||
-          "Could not change your password. Please check your current password and try again.",
+          t("common.security.changeFailed"),
       );
     } finally {
       setSaving(false);
@@ -136,13 +138,13 @@ export default function SecurityCard({ security, onChanged, delay = 0 }) {
   return (
     <SectionCard
       icon={<LockRoundedIcon />}
-      title="Security & sign-in"
-      description="Manage the password you use to sign in to your account."
+      title={t("common.security.title")}
+      description={t("common.security.description")}
       aside={
         <StatePill
           tone={temporary ? "warning" : "success"}
           icon={<LockRoundedIcon />}
-          label={temporary ? "Temporary password" : "Password protected"}
+          label={temporary ? t("common.security.temporaryPassword") : t("common.security.passwordProtected")}
         />
       }
       delay={delay}
@@ -177,17 +179,17 @@ export default function SecurityCard({ security, onChanged, delay = 0 }) {
           </Box>
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="body2" sx={{ color: "#fff", fontWeight: 600 }}>
-              Password
+              {t("common.security.password")}
             </Typography>
             <Typography variant="caption" sx={{ color: CM.textMuted, display: "block" }}>
-              Last changed{" "}
+              {t("common.security.lastChanged")}{" "}
               <Box component="span" sx={{ color: CM.text, fontWeight: 600 }}>
                 {formatProfileDate(security?.passwordChangedAt) || "—"}
               </Box>
             </Typography>
             {temporary && (
               <Typography variant="caption" sx={{ color: CM.amber, display: "block", mt: 0.25 }}>
-                You are still using the temporary password issued by an administrator.
+                {t("common.security.temporaryNotice")}
               </Typography>
             )}
           </Box>
@@ -195,7 +197,7 @@ export default function SecurityCard({ security, onChanged, delay = 0 }) {
 
         {!open && (
           <Button variant="outlined" size="small" onClick={handleOpen} sx={{ flexShrink: 0 }}>
-            Change password
+            {t("common.security.changePassword")}
           </Button>
         )}
       </Stack>
@@ -214,10 +216,10 @@ export default function SecurityCard({ security, onChanged, delay = 0 }) {
           }}
         >
           <Typography variant="body2" sx={{ color: "#fff", fontWeight: 700 }}>
-            Change password
+            {t("common.security.changePassword")}
           </Typography>
           <Typography variant="caption" sx={{ color: CM.textDim, display: "block", mt: 0.25, mb: 2 }}>
-            {PASSWORD_RULE_MESSAGE}.
+            {t("common.passwordRule")}.
           </Typography>
 
           {error && (
@@ -228,23 +230,27 @@ export default function SecurityCard({ security, onChanged, delay = 0 }) {
 
           <Stack spacing={1.75}>
             <PasswordField
-              label="Current password"
+              label={t("common.security.currentPassword")}
               value={form.currentPassword}
               onChange={set("currentPassword")}
               visible={visible.currentPassword}
               onToggle={toggle("currentPassword")}
               autoComplete="current-password"
+              showLabel={t("common.security.show", { field: t("common.security.currentPassword") })}
+              hideLabel={t("common.security.hide", { field: t("common.security.currentPassword") })}
             />
             <PasswordField
-              label="New password"
+              label={t("common.security.newPassword")}
               value={form.newPassword}
               onChange={set("newPassword")}
               visible={visible.newPassword}
               onToggle={toggle("newPassword")}
               autoComplete="new-password"
+              showLabel={t("common.security.show", { field: t("common.security.newPassword") })}
+              hideLabel={t("common.security.hide", { field: t("common.security.newPassword") })}
             />
             <PasswordField
-              label="Confirm new password"
+              label={t("common.security.confirmNewPassword")}
               value={form.confirmNewPassword}
               onChange={set("confirmNewPassword")}
               autoComplete="new-password"
@@ -253,10 +259,10 @@ export default function SecurityCard({ security, onChanged, delay = 0 }) {
 
           <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 2 }}>
             <Button size="small" onClick={handleCancel} disabled={saving} sx={{ color: CM.textMuted }}>
-              Cancel
+              {t("common.security.cancel")}
             </Button>
             <Button type="submit" variant="contained" size="small" disabled={saving}>
-              {saving ? "Saving…" : "Update password"}
+              {saving ? t("common.security.saving") : t("common.security.updatePassword")}
             </Button>
           </Stack>
         </Box>

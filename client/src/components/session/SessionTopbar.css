@@ -1,0 +1,102 @@
+/* Topbar dùng chung cho màn tracking và màn nghỉ giữa các set. */
+.sb-topbar {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: #1a1230;
+  border-bottom: 1px solid #2d2550;
+}
+
+.sb-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  border: 1px solid #3b2a6b;
+  background: #241a3d;
+  color: #e6e1ff;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.sb-back:hover {
+  border-color: #7c5dfa;
+  background: #2e2250;
+}
+
+.sb-back svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Logo trên topbar: bấm để về dashboard. Reset nền/viền mặc định của button. */
+.sb-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 9px;
+  transition: opacity 150ms ease;
+}
+
+.sb-brand:hover {
+  opacity: 0.82;
+}
+
+.sb-brand:focus-visible {
+  outline: 2px solid #7c5dfa;
+  outline-offset: 2px;
+}
+
+.sb-brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background-color: #1a1230;
+  border: 1px solid #3b2a6b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sb-brand-text {
+  font-size: 16.8px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.sb-brand-text-accent {
+  background: linear-gradient(to right, #9d4edd, #ff007f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.sb-topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 768px) {
+  .sb-brand-text {
+    font-size: 14px;
+  }
+
+  .sb-brand-icon {
+    width: 30px;
+    height: 30px;
+  }
+}

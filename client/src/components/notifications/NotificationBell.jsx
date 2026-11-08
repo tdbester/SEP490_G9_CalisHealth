@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import NotificationsNoneRoundedIcon from "@mui/icons-material/NotificationsNoneRounded";
 import notificationToast from "../../utils/notificationToast";
 import NotificationDetailModal from "./NotificationDetailModal";
@@ -10,6 +11,7 @@ export default function NotificationBell({
   onOpen,
   ariaLabel = "Notifications",
 }) {
+  const { t } = useTranslation();
   const bellRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -32,7 +34,7 @@ export default function NotificationBell({
       setNotificationError("");
     } catch (error) {
       console.error("Could not load notifications:", error);
-      setNotificationError("Could not load notifications. Please retry.");
+      setNotificationError(t("common.ui.notificationsLoadFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -93,7 +95,7 @@ export default function NotificationBell({
       await apiClient.post(`/notifications/${notification.id}/read`);
     } catch (error) {
       console.error("Could not mark notification as read:", error);
-      notificationToast.error("Could not update notification status. Please try again.");
+      notificationToast.error(t("common.ui.notificationsUpdateFailed"));
       void loadNotifications();
     }
   };
@@ -104,7 +106,7 @@ export default function NotificationBell({
         <button
           type="button"
           className="notification-bell-trigger"
-          aria-label={`${ariaLabel}${unreadCount ? `, ${unreadCount} unread` : ""}`}
+          aria-label={`${ariaLabel}${unreadCount ? t("common.ui.unreadCount", { count: unreadCount }) : ""}`}
           aria-expanded={isOpen}
           aria-haspopup="menu"
           onClick={togglePopover}
@@ -120,9 +122,9 @@ export default function NotificationBell({
           <section
             className="notification-bell-popover"
             role="menu"
-            aria-label="Notifications"
+            aria-label={t("common.ui.notifications")}
           >
-            <div className="notification-bell-heading">Notifications</div>
+            <div className="notification-bell-heading">{t("common.ui.notifications")}</div>
             {notificationError ? (
               <div className="notification-bell-empty" role="alert">
                 <p>{notificationError}</p>
@@ -132,15 +134,15 @@ export default function NotificationBell({
                   onClick={() => void loadNotifications()}
                   disabled={isLoading}
                 >
-                  {isLoading ? "Retrying…" : "Retry"}
+                  {isLoading ? t("common.ui.retrying") : t("common.ui.retry")}
                 </button>
               </div>
             ) : isLoading && notifications.length === 0 ? (
               <p className="notification-bell-empty" role="status">
-                Loading notifications…
+                {t("common.ui.loadingNotifications")}
               </p>
             ) : notifications.length === 0 ? (
-              <p className="notification-bell-empty">No notifications yet.</p>
+              <p className="notification-bell-empty">{t("common.ui.noNotifications")}</p>
             ) : (
               <div className="notification-popover-list">
                 {notifications.map((notification) => (

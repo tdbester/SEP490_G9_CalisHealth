@@ -6,7 +6,9 @@ import {
   getPersonalExercises,
 } from "../api/library";
 import useUndoDelete from "../hooks/useUndoDelete";
+import { useTranslation } from "react-i18next";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { getLevelLabel } from "../utils/levelLabel";
 
 /* -------------------- ICONS -------------------- */
 function BarbellIcon({ className = "h-5 w-5 text-[#9d7aff]" }) {
@@ -61,12 +63,13 @@ function XCircleIcon({ className = "w-3.5 h-3.5" }) {
 function LevelBadge({ level }) {
   const displayLevel = level || "Intermediate";
   return (
-    <span className={`px-3 py-1 text-xs font-bold rounded-full border capitalize ${getLevelBadgeStyle(displayLevel)}`}>{displayLevel}</span>
+    <span className={`px-3 py-1 text-xs font-bold rounded-full border capitalize ${getLevelBadgeStyle(displayLevel)}`}>{getLevelLabel(displayLevel)}</span>
   );
 }
 
 /* -------------------- CARD COMPONENT -------------------- */
 function ExerciseCard({ item, activeTab, onCancelPending, onDeleteRejected, onDeleteAccepted, navigate }) {
+  const { t } = useTranslation();
   const openDetail = () => navigate(`/library/community/${item.slug || item.id}`);
   const handleCardKeyDown = (event) => {
     if (activeTab === "accepted" && (event.key === "Enter" || event.key === " ")) {
@@ -105,25 +108,25 @@ function ExerciseCard({ item, activeTab, onCancelPending, onDeleteRejected, onDe
           {activeTab === "pending" && (
             <>
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950/50 text-amber-400 border border-amber-800/60 text-xs font-semibold">
-                <GearIcon className="w-4 h-4" /> Pending
+                <GearIcon className="w-4 h-4" /> {t("member.catalog.tabPending")}
               </span>
               <button
                 type="button"
                 onClick={() => onCancelPending(item)}
                 className="mt-6 px-4 py-1.5 rounded-xl border border-[#44366f] bg-[#1a1435] text-xs font-medium text-slate-300 hover:border-rose-500 hover:text-rose-400 transition-all cursor-pointer"
               >
-                Cancel
+                {t("member.catalog.cancel")}
               </button>
             </>
           )}
           {activeTab === "rejected" && (
             <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold text-rose-200 bg-rose-950/70 border border-rose-600/70">
-              <XCircleIcon className="w-4 h-4" /> Rejected
+              <XCircleIcon className="w-4 h-4" /> {t("member.catalog.tabRejected")}
             </span>
           )}
           {activeTab === "accepted" && (
             <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold text-emerald-200 bg-emerald-950/70 border border-emerald-600/70">
-              <CheckCircleIcon className="w-4 h-4" /> Accepted
+              <CheckCircleIcon className="w-4 h-4" /> {t("member.catalog.tabAccepted")}
             </span>
           )}
         </div>
@@ -138,20 +141,20 @@ function ExerciseCard({ item, activeTab, onCancelPending, onDeleteRejected, onDe
         {activeTab === "rejected" && (
           <>
             <button type="button" onClick={(event) => { event.stopPropagation(); onDeleteRejected(item); }} className="rounded-xl border border-[#59477f] bg-[#201a3b] hover:bg-[#30245b] text-slate-100 text-sm font-semibold px-5 py-2.5 transition-colors active:scale-95">
-              Delete
+              {t("member.catalog.delete")}
             </button>
             <button type="button" onClick={(event) => { event.stopPropagation(); navigate(`/library/personal/${item.id}/edit`, { state: { exercise: item } }); }} className="rounded-xl border border-[#8065ff] bg-[#643bf6] hover:bg-[#7554ff] text-white text-sm font-semibold px-5 py-2.5 transition-colors active:scale-95">
-              Edit &amp; resubmit
+              {t("member.catalog.editResubmit")}
             </button>
           </>
         )}
         {activeTab === "accepted" && (
           <>
             <button type="button" onClick={(event) => { event.stopPropagation(); onDeleteAccepted(item); }} className="rounded-xl border border-[#59477f] bg-[#201a3b] hover:bg-[#30245b] text-slate-100 text-sm font-semibold px-5 py-2.5 transition-colors active:scale-95">
-              Delete
+              {t("member.catalog.delete")}
             </button>
             <button type="button" onClick={(event) => { event.stopPropagation(); navigate(`/library/personal/${item.id}/edit`, { state: { exercise: item } }); }} className="rounded-xl border border-[#8065ff] bg-[#643bf6] hover:bg-[#7554ff] text-white text-sm font-semibold px-5 py-2.5 transition-colors active:scale-95">
-              Edit
+              {t("member.catalog.edit")}
             </button>
           </>
         )}
@@ -163,11 +166,12 @@ function ExerciseCard({ item, activeTab, onCancelPending, onDeleteRejected, onDe
 
 /* -------------------- MAIN PAGE -------------------- */
 export default function MyExerciseListPage() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { requestDelete, confirmationModal } = useUndoDelete();
 
-  useEffect(() => { document.title = "CalisHealth - Library"; return () => { document.title = "CalisHealth"; }; }, []);
+  useEffect(() => { document.title = t("member.library.documentTitle"); return () => { document.title = "CalisHealth"; }; }, [t]);
 
   const paramStatus = searchParams.get("status")?.toLowerCase();
   const [activeTab, setActiveTab] = useState([
@@ -234,19 +238,28 @@ export default function MyExerciseListPage() {
             ? `${item.defaultDuration} sec`
             : item.defaultReps != null
               ? `${item.defaultReps} reps`
-              : "Not specified";
+              : t("member.catalog.notSpecified");
           const status = (item.status || activeTab).toLowerCase();
           return {
             ...item,
             slug: item.id,
             level: item.level || "Intermediate",
-            meta: `${item.targetMuscle || "Full body"} · ${item.defaultSets ?? 3} sets · ${repetitions} · Submitted ${item.createdAt ? new Date(item.createdAt).toLocaleString() : "recently"}`,
+            meta: t("member.catalog.submittedMeta", {
+              muscle: item.targetMuscle || "Full body",
+              sets: item.defaultSets ?? 3,
+              reps: repetitions,
+              submitted: item.createdAt
+                ? t("member.catalog.submittedAt", {
+                    value: new Date(item.createdAt).toLocaleString(),
+                  })
+                : t("member.catalog.submittedRecently"),
+            }),
             status,
-            scanText: status === "pending" ? "Waiting for review" : undefined,
+            scanText: status === "pending" ? t("member.catalog.waitingForReview") : undefined,
             reason: item.rejectionReason
               ? (item.rejectionReason.startsWith("Reason:")
                 ? item.rejectionReason
-                : `Reason: ${item.rejectionReason}`)
+                : `${t("member.catalog.reasonPrefix")}${item.rejectionReason}`)
               : undefined,
           };
         });
@@ -269,7 +282,7 @@ export default function MyExerciseListPage() {
           setTotalElements(0);
           setTotalPages(0);
           setStatusCounts({ pending: 0, rejected: 0, accepted: 0 });
-          setLoadError("Unable to load your exercises. Please try again.");
+          setLoadError(t("member.catalog.loadFailed"));
         }
       })
       .finally(() => {
@@ -304,7 +317,7 @@ export default function MyExerciseListPage() {
         await deletePersonalExercise(item.id);
         setRefreshKey((value) => value + 1);
       },
-      successMessage: "Deleted successfully",
+      successMessage: t("member.catalog.deletedSuccessfully"),
     });
   };
   const handleCancelPending = handleDeleteExercise;
@@ -317,19 +330,19 @@ export default function MyExerciseListPage() {
     <div className="my-ex-list w-full max-w-5xl mx-auto text-white pb-16">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">My exercise list</h1>
-          <p className="text-xs text-slate-400 mt-1">Exercises you created. Each one is checked automatically before it joins your library.</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{t("member.catalog.myExerciseTitle")}</h1>
+          <p className="text-xs text-slate-400 mt-1">{t("member.catalog.myExerciseSubtitle")}</p>
         </div>
         <button type="button" onClick={() => navigate("/library/personal/new")} className="rounded-xl border border-[#8065ff] bg-[#643bf6] hover:bg-[#7554ff] hover:border-[#a08cff] text-white text-sm font-semibold px-5 py-2.5 shadow-lg shadow-purple-950/50 active:scale-95 flex items-center gap-1.5 cursor-pointer transition-colors">
           <span className="text-base font-bold leading-none">+</span>
-          <span>Create exercise</span>
+          <span>{t("member.catalog.createExercise")}</span>
         </button>
       </div>
       <div className="flex items-center gap-2 mt-6 border-b border-[#2a224b] select-none">
         {[
-          { key: "pending", label: "Pending", count: statusCounts.pending, pill: "bg-amber-400/15 text-amber-300" },
-          { key: "rejected", label: "Rejected", count: statusCounts.rejected, pill: "bg-rose-400/15 text-rose-300" },
-          { key: "accepted", label: "Accepted", count: statusCounts.accepted, pill: "bg-emerald-400/15 text-emerald-300" },
+          { key: "pending", label: t("member.catalog.tabPending"), count: statusCounts.pending, pill: "bg-amber-400/15 text-amber-300" },
+          { key: "rejected", label: t("member.catalog.tabRejected"), count: statusCounts.rejected, pill: "bg-rose-400/15 text-rose-300" },
+          { key: "accepted", label: t("member.catalog.tabAccepted"), count: statusCounts.accepted, pill: "bg-emerald-400/15 text-emerald-300" },
         ].map(({ key, label, count, pill }) => (
           <button
             key={key}
@@ -348,28 +361,32 @@ export default function MyExerciseListPage() {
       </div>
       {activeTab === "pending" && (
         <div className="rounded-xl border border-amber-700/50 bg-[#2b200f] px-5 py-3.5 mt-4 shadow-sm shadow-amber-950/30">
-          <p className="text-[13px] font-medium text-amber-100">Waiting for the automatic checks. This usually takes a few minutes, and you will get a notification when it is done.</p>
+          <p className="text-[13px] font-medium text-amber-100">{t("member.catalog.pendingNotice")}</p>
         </div>
       )}
       {activeTab === "rejected" && (
         <div className="rounded-xl border border-rose-700/50 bg-[#2b111a] px-5 py-3.5 mt-4 shadow-sm shadow-rose-950/30">
-          <p className="text-[13px] font-medium text-rose-100">These exercises did not pass the checks. Fix the reason shown and resubmit, or delete them.</p>
+          <p className="text-[13px] font-medium text-rose-100">{t("member.catalog.rejectedNotice")}</p>
         </div>
       )}
       {activeTab === "accepted" && (
         <div className="rounded-xl border border-emerald-700/50 bg-[#10281d] px-5 py-3.5 mt-4 shadow-sm shadow-emerald-950/30">
-          <p className="text-[13px] font-medium text-emerald-100">These exercises passed the checks and are in your library.</p>
+          <p className="text-[13px] font-medium text-emerald-100">{t("member.catalog.acceptedNotice")}</p>
         </div>
       )}
       <div className="flex items-center gap-3 mt-5 flex-wrap md:flex-nowrap">
         <div className="flex-1 min-w-[220px] relative flex items-center">
           <div className="absolute left-3.5 pointer-events-none text-slate-400"><SearchIcon className="w-4 h-4" /></div>
-          <input type="text" className="w-full rounded-xl bg-[#120d29] border border-[#231b46] pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-[#6340f1] outline-none transition-all" placeholder="Search by title" value={searchInput} onChange={(e) => { setSearchInput(e.target.value); setCurrentPage(1); }} />
+          <input type="text" className="w-full rounded-xl bg-[#120d29] border border-[#231b46] pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-[#6340f1] outline-none transition-all" placeholder={t("member.catalog.searchByTitle")} value={searchInput} onChange={(e) => { setSearchInput(e.target.value); setCurrentPage(1); }} />
         </div>
         <div className="w-44 flex-shrink-0 relative flex items-center">
           <select className="w-full appearance-none rounded-xl bg-[#120d29] border border-[#231b46] px-4 py-2.5 pr-9 text-sm text-slate-300 outline-none focus:border-[#6340f1] cursor-pointer" value={selectedLevel} onChange={(e) => { setSelectedLevel(e.target.value); setCurrentPage(1); }}>
             {['All levels', 'Beginner', 'Intermediate', 'Advanced'].map((lvl) => (
-              <option key={lvl} value={lvl} className="bg-[#120d29] text-white">{lvl}</option>
+              <option key={lvl} value={lvl} className="bg-[#120d29] text-white">
+                {lvl === "All levels"
+                  ? t("member.catalog.allLevels")
+                  : t(`member.catalog.${lvl.toLowerCase()}`)}
+              </option>
             ))}
           </select>
           <div className="absolute right-3 pointer-events-none text-slate-400"><ChevronDownIcon className="w-4 h-4" /></div>
@@ -377,14 +394,14 @@ export default function MyExerciseListPage() {
       </div>
       <div className="space-y-4 mt-5">
         {loading ? (
-          <div className="text-center py-14 text-sm text-slate-400">Loading exercises...</div>
+          <div className="text-center py-14 text-sm text-slate-400">{t("member.catalog.loadingExercises")}</div>
         ) : loadError ? (
           <div role="alert" className="text-center py-14 text-sm text-rose-300">{loadError}</div>
         ) : activeItems.length === 0 ? (
           <div className="text-center py-14 px-4 rounded-2xl border border-dashed border-[#231b46] bg-[#120d29]">
             <div className="w-10 h-10 mx-auto mb-3 flex items-center justify-center"><BarbellIcon className="h-6 w-6 text-[#9d7aff]" /></div>
-            <h3 className="text-base font-bold text-white mb-1">No exercises in this list</h3>
-            <p className="text-xs text-slate-400">Try adjusting your search or create a new exercise.</p>
+            <h3 className="text-base font-bold text-white mb-1">{t("member.catalog.noExercisesInList")}</h3>
+            <p className="text-xs text-slate-400">{t("member.catalog.adjustOrCreate")}</p>
           </div>
         ) : (
           activeItems.map((it) => (
@@ -395,7 +412,7 @@ export default function MyExerciseListPage() {
       {totalPages > 0 && (
         <div className="mt-5 flex items-center justify-between border-t border-[#1f193f] pt-4">
           <p className="text-xs text-slate-400">
-            Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, totalElements)} of {totalElements} exercises
+            {t("member.catalog.showingRows", { from: ((currentPage - 1) * pageSize) + 1, to: Math.min(currentPage * pageSize, totalElements), count: totalElements, unit: t("member.catalog.exercises") })}
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -404,7 +421,7 @@ export default function MyExerciseListPage() {
               disabled={currentPage === 1}
               className="rounded-md border border-[#22184c] bg-[#130d2e] px-3 py-1.5 text-xs font-medium text-[#8a82af] hover:border-[#382672] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 transition-all"
             >
-              Previous
+              {t("member.catalog.previous")}
             </button>
             {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
               <button
@@ -427,7 +444,7 @@ export default function MyExerciseListPage() {
               disabled={currentPage === totalPages}
               className="rounded-md border border-[#22184c] bg-[#130d2e] px-3 py-1.5 text-xs font-medium text-[#8a82af] hover:border-[#382672] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 transition-all"
             >
-              Next
+              {t("member.catalog.next")}
             </button>
           </div>
         </div>

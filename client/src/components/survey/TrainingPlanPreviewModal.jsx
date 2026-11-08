@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import ModalShell from "../common/ModalShell";
 import { DumbbellGlyph } from "./SurveyIcons";
+import { useTranslation } from "react-i18next";
 import {
-  WEEKDAY_INITIALS,
-  WEEKDAY_NAMES,
   buildMonthCalendar,
   defaultSelectedDay,
-  durationRange,
   findDay,
-  scheduleNote,
   sessionForWeekday,
+  weekdayInitials,
 } from "../../utils/planCalendar";
 import "./TrainingPlanPreviewModal.css";
 
@@ -18,6 +16,7 @@ import "./TrainingPlanPreviewModal.css";
  * Đóng (Close / Esc / bấm nền) chỉ quay về màn Result.
  */
 export default function TrainingPlanPreviewModal({ open, onClose, plan }) {
+  const { t } = useTranslation("member");
   const calendar = useMemo(() => buildMonthCalendar(plan), [plan]);
   const [selectedDay, setSelectedDay] = useState(() => defaultSelectedDay(calendar));
 
@@ -34,24 +33,24 @@ export default function TrainingPlanPreviewModal({ open, onClose, plan }) {
       <header className="plan-preview-head">
         <div>
           <h2 className="plan-preview-title" id="plan-preview-title">
-            Preview training plan
+            {t("survey.planPreview.title")}
           </h2>
           <p className="plan-preview-sub">
-            30-day month view for the {plan.name} program
+            {t("survey.planPreview.caption", { name: plan.name })}
           </p>
         </div>
         <button type="button" className="plan-preview-close" onClick={onClose}>
-          Close
+          {t("survey.planPreview.close")}
         </button>
       </header>
 
       <div className="plan-preview-body">
         <section className="plan-preview-calendar">
-          <h3 className="plan-preview-heading">Month calendar</h3>
+          <h3 className="plan-preview-heading">{t("survey.planPreview.monthCalendar")}</h3>
           <p className="plan-preview-sub">{calendar.label}</p>
 
           <div className="plan-preview-grid plan-preview-weekdays">
-            {WEEKDAY_INITIALS.map((initial, i) => (
+            {weekdayInitials().map((initial, i) => (
               <span key={`${initial}-${i}`}>{initial}</span>
             ))}
           </div>
@@ -70,7 +69,7 @@ export default function TrainingPlanPreviewModal({ open, onClose, plan }) {
                         cell.hasSession ? "has-session" : "",
                         cell.day === selectedDay ? "is-active" : "",
                       ].join(" ")}
-                      aria-label={`Day ${cell.day}${cell.hasSession ? ", training day" : ""}`}
+                      aria-label={`${t("survey.planPreview.dayAria", { day: cell.day })}${cell.hasSession ? t("survey.planPreview.trainingDayAria") : ""}`}
                       aria-pressed={cell.day === selectedDay}
                       onClick={() => setSelectedDay(cell.day)}
                     >
@@ -84,14 +83,21 @@ export default function TrainingPlanPreviewModal({ open, onClose, plan }) {
         </section>
 
         <section className="plan-preview-detail">
-          <h3 className="plan-preview-heading">Selected day</h3>
+          <h3 className="plan-preview-heading">{t("survey.planPreview.selectedDay")}</h3>
           <p className="plan-preview-sub">
             {selected
-              ? `${WEEKDAY_NAMES[selected.weekday]}, ${calendar.monthName} ${selected.day} • ${slot?.name ?? "Recovery day"}`
+              ? `${t(`survey.weekdays.${calendar.weekdayKeys[selected.weekday]}`)}, ${calendar.monthName} ${selected.day} • ${slot?.name ?? t("survey.planPreview.recoveryDay")}`
               : " "}
           </p>
 
-          {slot && <p className="plan-preview-duration">{durationRange(plan.minutesPerSession)}</p>}
+          {slot && (
+            <p className="plan-preview-duration">
+              {t("survey.planPreview.durationRange", {
+                min: Math.max(10, plan.minutesPerSession - 5),
+                max: plan.minutesPerSession,
+              })}
+            </p>
+          )}
 
           <ul className="plan-preview-exercises">
             {(slot?.exercises ?? []).map((exercise) => (
@@ -107,7 +113,21 @@ export default function TrainingPlanPreviewModal({ open, onClose, plan }) {
             ))}
           </ul>
 
-          <p className="plan-preview-note">{scheduleNote(calendar)}</p>
+          <p className="plan-preview-note">
+            {t("survey.planPreview.note", {
+              month: calendar.monthName,
+              planLength: calendar.planLength,
+              sessions: calendar.sessionDays.length,
+              recovery:
+                calendar.daysInMonth > calendar.planLength
+                  ? t("survey.planPreview.recoveryLeft", {
+                      month: calendar.monthName,
+                      from: calendar.planLength + 1,
+                      to: calendar.daysInMonth,
+                    })
+                  : t("survey.planPreview.recoveryNone"),
+            })}
+          </p>
         </section>
       </div>
     </ModalShell>

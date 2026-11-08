@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import "./Sidebar.css";
 
 // SVG Icons matching Figma design
@@ -30,6 +31,22 @@ function TrackingIcon({ isActive }) {
   );
 }
 
+/** Ngôi sao — mục Favorites của member. */
+function FavoriteIcon({ isActive }) {
+  const color = isActive ? "#fbbf24" : "#A89BD0";
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <polygon
+        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+        fill={isActive ? color : "none"}
+        stroke={color}
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function SurveyIcon({ isActive }) {
   const color = isActive ? "#c4b5fd" : "#A89BD0";
   return (
@@ -51,18 +68,49 @@ function LeaderboardIcon({ isActive }) {
   );
 }
 
+/** Bóng nói chuyện — mục Góp ý & Khiếu nại của member. */
+function FeedbackIcon({ isActive }) {
+  const color = isActive ? "#c4b5fd" : "#A89BD0";
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"
+        stroke={color}
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Các URL độc lập — mục cha ("/library") không được sáng khi đang ở các URL này.
+ * Ví dụ "/library/favorites" là mục riêng nên không sáng đè lên mục "Thư viện".
+ */
+const EXCLUSIVE_PATHS = new Set([
+  "/library/favorites",
+  "/favorites",
+  "/library/feedback",
+  "/feedback",
+  "/leaderboard",
+]);
+
+/** Các mục điều hướng của member — nhãn lấy từ file i18n. */
 const NAV_ITEMS = [
-  { label: "Dashboard", path: "/",           icon: DashboardIcon },
-  { label: "Library",   path: "/library",    icon: LibraryIcon },
-  { label: "Leaderboard", path: "/leaderboard", icon: LeaderboardIcon },
-  { label: "Health & Progress", path: "/tracking", icon: TrackingIcon },
+  { labelKey: "nav.dashboard", path: "/",        icon: DashboardIcon },
+  { labelKey: "nav.library",   path: "/library", icon: LibraryIcon },
+  { labelKey: "nav.leaderboard", path: "/leaderboard", icon: LeaderboardIcon },
+  { labelKey: "nav.favorites", path: "/library/favorites", icon: FavoriteIcon },
+  { labelKey: "nav.feedback",  path: "/library/feedback", icon: FeedbackIcon },
+  { labelKey: "nav.tracking",  path: "/tracking", icon: TrackingIcon },
 ];
 
 // Figma content_manager_dashboard: Dashboard, Survey, Library (Progression rules / Level criteria chưa có màn)
 const CONTENT_MANAGER_NAV = [
-  { label: "Dashboard", path: "/dashboard", icon: DashboardIcon },
-  { label: "Daily Training Plans", path: "/content/daily-training-plans", icon: SurveyIcon },
-  { label: "Library", path: "/library", icon: LibraryIcon },
+  { labelKey: "nav.dashboard", path: "/dashboard", icon: DashboardIcon },
+  { labelKey: "nav.dailyTrainingPlans", path: "/content/daily-training-plans", icon: SurveyIcon },
+  { labelKey: "nav.contentLibrary", path: "/library", icon: LibraryIcon },
 ];
 
 function currentRole() {
@@ -76,15 +124,27 @@ function currentRole() {
 export default function Sidebar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const items = currentRole() === "CONTENT_MANAGER" ? CONTENT_MANAGER_NAV : NAV_ITEMS;
+  const { t } = useTranslation();
+  const role = currentRole();
+  const isMember = role === "MEMBER";
+  const baseItems = role === "CONTENT_MANAGER" ? CONTENT_MANAGER_NAV : NAV_ITEMS;
+  // Favorites là tính năng riêng của MEMBER — các role khác không gọi được API.
+  const items = isMember
+    ? baseItems
+    : baseItems.filter((item) => item.labelKey !== "nav.favorites");
 
   return (
     <aside className="sidebar">
       <nav className="sidebar-nav">
         {items.map((item) => {
+          // "/library" là tiền tố của "/library/favorites", nên phải so khớp chính xác
+          // để không làm sáng cả hai mục cùng lúc.
           const isActive = item.path === "/"
             ? pathname === "/"
-            : pathname.startsWith(item.path);
+            : pathname === item.path
+              || (!EXCLUSIVE_PATHS.has(item.path)
+                && pathname.startsWith(`${item.path}/`)
+                && !EXCLUSIVE_PATHS.has(pathname));
           const Icon = item.icon;
 
           return (
@@ -94,7 +154,7 @@ export default function Sidebar() {
               onClick={() => navigate(item.path)}
             >
               <Icon isActive={isActive} />
-              <span>{item.label}</span>
+              <span>{t(item.labelKey)}</span>
             </div>
           );
         })}
