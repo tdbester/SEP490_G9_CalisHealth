@@ -1,8 +1,9 @@
 import api from "./client";
 
 /*
- * Admin > Media storage & infrastructure (backend: AdminStorageController, /api/admin/storage):
+ * Admin > Storage (backend: AdminStorageController, /api/admin/storage):
  *   GET    /admin/storage/overview                     -> capacity, breakdowns, 6-month history, top members, auto-cleanup
+ *   GET    /admin/storage/quota                        -> { provider, plan, planLimitBytes, quotaEditable }
  *   GET    /admin/storage/media?view&status&source&type&sort&page&size
  *          view=inactive (ORPHANED / REJECTED) | trash (TRASHED; status then filters previousStatus)
  *          -> { items, page, size, totalElements, totalPages, summary }
@@ -14,9 +15,12 @@ import api from "./client";
  *   DELETE /admin/storage/trash                        -> { deleted, freedBytes, skipped }   (empty trash)
  *   GET    /admin/storage/settings                     -> settings
  *   PUT    /admin/storage/settings body settings        -> settings
+ *   POST   /admin/storage/usage/refresh                  -> overview (reads the provider right now)
  */
 export const adminStorageApi = {
   overview: () => api.get("/admin/storage/overview").then((res) => res.data),
+  quota: () => api.get("/admin/storage/quota").then((res) => res.data),
+  refreshUsage: () => api.post("/admin/storage/usage/refresh").then((res) => res.data),
   media: ({ view, status, source, type, sort, page, size } = {}) =>
     api
       .get("/admin/storage/media", {

@@ -129,7 +129,7 @@ export default {
       library: "Thư viện",
       leaderboard: "Bảng xếp hạng",
       favorites: "Yêu thích",
-    feedback: "Góp ý & Khiếu nại",
+    feedback: "Góp ý",
     tracking: "Sức khỏe & Tiến độ",
     dailyTrainingPlans: "Kế hoạch tập hằng ngày",
     healthProgress: "Sức khỏe & Tiến độ",

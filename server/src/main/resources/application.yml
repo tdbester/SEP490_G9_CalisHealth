@@ -50,12 +50,16 @@ app:
     exercise-video-dir: ${EXERCISE_VIDEO_DIR:${user.home}/calishealth/uploads/exercise-videos}
     exercise-anatomy-dir: ${EXERCISE_ANATOMY_DIR:${user.home}/calishealth/uploads/exercise-anatomy}
     profile-avatar-dir: ${PROFILE_AVATAR_DIR:${user.home}/calishealth/uploads/profile-avatars}
+    # Job ghi lại mức dùng thật của Cloudinary vào storage_usage_daily mỗi ngày (Admin > Storage).
+    usage-cron: ${STORAGE_USAGE_CRON:0 15 3 * * *}
   cloudinary:
     cloud-name: ${CLOUDINARY_CLOUD_NAME:u9vojlr2}
     api-key: ${CLOUDINARY_API_KEY:722157934773437}
     api-secret: ${CLOUDINARY_API_SECRET:RCWUbVn9XT46SYBFmwN_f46vcl4}
     secure: true
     folder: ${CLOUDINARY_FOLDER:calishealth} # blank cloud-name = store uploads on the local disk instead
+    # Ngày trong tháng mà bộ đếm của gói Cloudinary được reset (mặc định là ngày 1).
+    usage-reset-day: ${CLOUDINARY_USAGE_RESET_DAY:1}
   jwt:
     secret: clh-demo-secret-key-please-change-this-32-chars-min
     expiration-ms: 86400000

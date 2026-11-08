@@ -29,7 +29,7 @@ export const CONTENT_LINKS = [
   { to: CONTENT_PATHS.templates, label: "Daily Training Plans", labelKey: "nav.dailyTrainingPlans", icon: EventNoteRoundedIcon },
   { to: CONTENT_PATHS.progressionRules, label: "Progression Rules", labelKey: "nav.progressionRules", icon: TrendingUpRoundedIcon },
   { to: CONTENT_PATHS.levelCriteria, label: "Level Criteria", labelKey: "nav.levelCriteria", icon: RuleRoundedIcon },
-  { to: CONTENT_PATHS.feedback, label: "Feedback & Complaints", labelKey: "nav.feedback", icon: SupportAgentRoundedIcon },
+  { to: CONTENT_PATHS.feedback, label: "Feedback", labelKey: "nav.feedback", icon: SupportAgentRoundedIcon },
 ];
 
 /**

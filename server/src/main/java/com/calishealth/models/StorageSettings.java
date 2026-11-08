@@ -34,9 +34,6 @@ public class StorageSettings {
     @Column(name = "image_formats", nullable = false, length = 100)
     private String imageFormats;
 
-    @Column(name = "form_check_max_seconds", nullable = false)
-    private int formCheckMaxSeconds;
-
     @Column(name = "demo_max_seconds", nullable = false)
     private int demoMaxSeconds;
 
@@ -45,9 +42,6 @@ public class StorageSettings {
 
     @Column(name = "uploads_per_day", nullable = false)
     private int uploadsPerDay;
-
-    @Column(name = "form_check_retention_days", nullable = false)
-    private int formCheckRetentionDays;
 
     @Column(name = "rejected_retention_days", nullable = false)
     private int rejectedRetentionDays;

@@ -9,7 +9,7 @@ const TABS = [
   { value: STORAGE_PATHS.settings, label: "Upload limits" },
 ];
 
-/** Admin > Media storage & infrastructure: shared header + tab bar, each tab is a child route. */
+/** Admin > Storage: shared header + tab bar, each tab is a child route. */
 export default function AdminStoragePage() {
   const { pathname } = useLocation();
   const current = TABS.find((t) => t.value !== STORAGE_PATHS.capacity && pathname.startsWith(t.value))?.value
@@ -17,9 +17,9 @@ export default function AdminStoragePage() {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3.5 } }}>
-      <Typography sx={{ fontSize: 13, color: CM.textMuted }}>Admin / Media storage</Typography>
+      <Typography sx={{ fontSize: 13, color: CM.textMuted }}>Admin / Storage</Typography>
       <Typography component="h1" sx={{ mt: 1, fontSize: 34, fontWeight: 700, lineHeight: 1.2 }}>
-        Media storage & infrastructure
+        Storage
       </Typography>
       <Typography sx={{ mt: 0.75, fontSize: 14, color: CM.textMuted, maxWidth: 720 }}>
         Monitor storage usage, clean up inactive media and configure upload limits.

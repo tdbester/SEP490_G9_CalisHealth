@@ -87,12 +87,12 @@ export default {
     removeAria: "Xoá {title} khỏi yêu thích",
   },
 
-  /** Màn Góp ý & Khiếu nại: member gửi phiếu và theo dõi trạng thái xử lý. */
+  /** Màn Góp ý: member gửi phiếu và theo dõi trạng thái xử lý. */
   feedback: {
-    title: "Góp ý & Khiếu nại",
+    title: "Góp ý",
     subtitle:
       "Gửi góp ý hoặc khiếu nại của bạn. Mọi đơn đều được chuyển tới quản lý nội dung xử lý; nếu thuộc về hệ thống, đơn sẽ được chuyển tiếp lên ban quản trị.",
-    pageTitle: "Góp ý & Khiếu nại",
+    pageTitle: "Góp ý",
     createTitle: "Gửi góp ý mới",
     createNew: "Gửi góp ý mới",
     backToList: "Về danh sách đơn",

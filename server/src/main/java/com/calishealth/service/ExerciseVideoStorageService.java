@@ -155,16 +155,19 @@ public class ExerciseVideoStorageService {
         }
 
         if (cloudinaryEnabled()) {
-            String url;
+            CloudUpload upload;
             try {
-                url = uploadToCloudinary(temp, category);
+                upload = uploadFile(temp, category);
             } catch (IOException | RuntimeException exception) {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Could not upload the file to cloud storage", exception);
             } finally {
                 deleteQuietly(temp);
             }
+            String url = upload.url();
             try {
-                registry.register(url, file.getOriginalFilename(), file.getSize(), category, extension, hash, uploader, LocalDateTime.now());
+                checkVideoDuration(url, upload.durationSeconds(), category);
+                registry.register(url, file.getOriginalFilename(), file.getSize(), category, extension, hash, uploader,
+                        LocalDateTime.now(), upload.durationSeconds());
                 return url;
             } catch (RuntimeException exception) {
                 deleteFile(url);
@@ -194,6 +197,18 @@ public class ExerciseVideoStorageService {
 
     /** Uploads the file into {folder}/exercise-demos or {folder}/exercise-anatomy and returns its HTTPS URL. */
     private String uploadToCloudinary(Path file, String category) throws IOException {
+        return uploadFile(file, category).url();
+    }
+
+    /** The uploaded file: its URL and, for videos, how long it is. */
+    private record CloudUpload(String url, Integer durationSeconds) {}
+
+    /**
+     * Uploads the file and reads its length from the answer of Cloudinary. The length is what the
+     * admin limit ({@code demo_max_seconds}) is checked against, so the server decides and not only
+     * the browser.
+     */
+    private CloudUpload uploadFile(Path file, String category) throws IOException {
         boolean video = !MediaFile.ANATOMY_IMAGE.equals(category);
         Map<?, ?> options = ObjectUtils.asMap(
                 "folder", cloudinaryFolder + (video ? "/exercise-demos" : "/exercise-anatomy"),
@@ -207,7 +222,27 @@ public class ExerciseVideoStorageService {
                 : cloudinary.uploader().upload(file.toFile(), options);
         Object url = result.get("secure_url");
         if (url == null) throw new IOException("Cloudinary did not return a URL");
-        return url.toString();
+        return new CloudUpload(url.toString(), durationOf(result));
+    }
+
+    /** The length of an uploaded video in whole seconds; null when Cloudinary did not report it. */
+    private static Integer durationOf(Map<?, ?> result) {
+        Object duration = result.get("duration");
+        if (duration instanceof Number number) return number.intValue();
+        return null;
+    }
+
+    /**
+     * Rejects a video that is longer than the admin allows and removes it from Cloudinary again, so
+     * a rejected upload does not cost storage.
+     */
+    private void checkVideoDuration(String url, Integer durationSeconds, String category) {
+        if (durationSeconds == null) return;
+        int maxSeconds = registry.settings().getDemoMaxSeconds();
+        if (durationSeconds <= maxSeconds) return;
+        deleteFile(url);
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Video is too long: it is " + durationSeconds + " seconds, the limit is " + maxSeconds + " seconds");
     }
 
     /** Resource type and public id of a file on this app's Cloudinary account. */
@@ -233,7 +268,8 @@ public class ExerciseVideoStorageService {
     }
 
     /** A file found in the app's Cloudinary folders by {@link #listCloudinaryFiles()}. */
-    public record CloudFile(String key, String url, long sizeBytes, String format, String category, LocalDateTime uploadedAt) {}
+    public record CloudFile(String key, String url, long sizeBytes, String format, String category,
+                            LocalDateTime uploadedAt, Integer durationSeconds) {}
 
     /**
      * Every file in the app's Cloudinary folders, by key (see {@link #cloudinaryKey}). Empty when
@@ -266,8 +302,9 @@ public class ExerciseVideoStorageService {
                     String key = resourceType + "/" + item.get("public_id");
                     long bytes = item.get("bytes") instanceof Number number ? number.longValue() : 0;
                     String format = item.get("format") == null ? "" : item.get("format").toString();
+                    Integer duration = item.get("duration") instanceof Number seconds ? seconds.intValue() : null;
                     files.put(key, new CloudFile(key, item.get("secure_url").toString(), bytes, format, category,
-                            parseCloudinaryTime(item.get("created_at"))));
+                            parseCloudinaryTime(item.get("created_at")), duration));
                 }
             }
             Object next = page.get("next_cursor");
@@ -341,8 +378,7 @@ public class ExerciseVideoStorageService {
             }
         }
         Optional<Path> file = resolve(mediaUrl);
-        if (file.isEmpty()) return true;
-        try {
+        if (file.isEmpty()) return true;        try {
             Files.deleteIfExists(file.get());
             return true;
         } catch (IOException exception) {

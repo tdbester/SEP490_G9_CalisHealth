@@ -39,12 +39,12 @@ export default {
     previewFullBodyC: "Toàn thân C",
   },
 
-  /** Màn Góp ý & Khiếu nại: content manager tiếp nhận và xử lý đơn của member. */
+  /** Màn Góp ý: content manager tiếp nhận và xử lý đơn của member. */
   feedback: {
-    title: "Góp ý & Khiếu nại",
+    title: "Góp ý",
     description:
       "Tiếp nhận mọi đơn góp ý của thành viên. Tự giải quyết được thì duyệt và trả kết quả; thuộc về hệ thống thì chuyển tiếp lên quản trị.",
-    crumb: "Góp ý & Khiếu nại",
+    crumb: "Góp ý",
     summary: "Tổng quan đơn góp ý",
     feedbacks: "đơn",
     pending: "Chờ tiếp nhận",

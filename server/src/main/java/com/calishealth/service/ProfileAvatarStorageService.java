@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -42,6 +43,25 @@ public class ProfileAvatarStorageService {
 
     public Path getStorageDirectory() {
         return storageDirectory;
+    }
+
+    /** The size of a stored photo in bytes; 0 when the file is gone or the URL is not ours. */
+    public long sizeOf(String avatarUrl) {
+        Optional<Path> file = resolve(avatarUrl);
+        if (file.isEmpty()) return 0;
+        try {
+            return Files.size(file.get());
+        } catch (IOException exception) {
+            logger.warn("Could not read the size of profile photo {}", file, exception);
+            return 0;
+        }
+    }
+
+    /** The disk path of a stored photo; empty for a foreign URL or a path traversal. */
+    public Optional<Path> resolve(String avatarUrl) {
+        if (avatarUrl == null || !avatarUrl.startsWith(URL_PREFIX)) return Optional.empty();
+        Path file = storageDirectory.resolve(avatarUrl.substring(URL_PREFIX.length())).normalize();
+        return file.startsWith(storageDirectory) ? Optional.of(file) : Optional.empty();
     }
 
     /** Saves the image and returns the public URL to store on the account. */

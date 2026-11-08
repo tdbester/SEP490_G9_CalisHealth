@@ -89,10 +89,10 @@ export default {
 
   /** Feedback & complaints screen: members submit tickets and track their status. */
   feedback: {
-    title: "Feedback & Complaints",
+    title: "Feedback",
     subtitle:
       "Send your feedback or complaint. Every ticket goes to the content team first; system-level issues are escalated to the administrators.",
-    pageTitle: "Feedback & Complaints",
+    pageTitle: "Feedback",
     createTitle: "Submit new feedback",
     createNew: "Submit new feedback",
     backToList: "Back to ticket list",

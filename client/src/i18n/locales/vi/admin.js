@@ -419,7 +419,7 @@ export default {
     memberApp: "Truy cập ứng dụng thành viên",
     videoUploads: "Tải video của thành viên",
     aiPose: "Đánh giá tư thế bằng AI",
-    storage: "Lưu trữ hệ thống / CDN",
+    storage: "Lưu trữ",
     adminPortal: "Cổng quản trị",
     underMaintenance: "Dịch vụ này đang bảo trì.",
     headerDescription:
@@ -732,12 +732,12 @@ export default {
   },
 
   feedback: {
-    title: "Góp ý & Khiếu nại",
-    navLabel: "Góp ý & Khiếu nại",
-    pageTitle: "Góp ý & Khiếu nại",
+    title: "Góp ý",
+    navLabel: "Góp ý",
+    pageTitle: "Góp ý",
     description:
       "Các đơn đã được quản lý nội dung chuyển tiếp lên do thuộc về vấn đề hệ thống. Quyết định cuối cùng sẽ được gửi về thành viên.",
-    breadcrumb: "Quản trị / Góp ý & Khiếu nại",
+    breadcrumb: "Quản trị / Góp ý",
     escalated: "Đang chờ quyết định",
     resolved: "Đã xử lý",
     statusEscalated: "Chuyển tiếp lên admin",

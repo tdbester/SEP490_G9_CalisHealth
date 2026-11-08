@@ -42,10 +42,10 @@ export default {
 
   /** Feedback & complaints screen: content manager receives and resolves member tickets. */
   feedback: {
-    title: "Feedback & Complaints",
+    title: "Feedback",
     description:
       "Receive every member feedback ticket. Resolve what you can and return the result; escalate system-level issues to the administrators.",
-    crumb: "Feedback & Complaints",
+    crumb: "Feedback",
     summary: "Feedback overview",
     feedbacks: "tickets",
     pending: "Awaiting review",

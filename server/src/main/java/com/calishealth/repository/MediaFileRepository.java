@@ -34,7 +34,12 @@ public interface MediaFileRepository extends JpaRepository<MediaFile, Long>, Jpa
             + "and m.category is not null and m.status in ('ACTIVE', 'ORPHANED', 'REJECTED')")
     long sumMemberBytes(@Param("userId") Long userId);
 
-    @Query("select count(m) from MediaFile m where m.uploadedBy.id = :userId and m.category is not null and m.uploadedAt >= :since")
+    /**
+     * How many files a member uploaded today. A profile photo does not count: it is not exercise
+     * media and would eat one of the daily uploads.
+     */
+    @Query("select count(m) from MediaFile m where m.uploadedBy.id = :userId and m.category is not null "
+            + "and m.category <> 'PROFILE_AVATAR' and m.uploadedAt >= :since")
     long countUploadsSince(@Param("userId") Long userId, @Param("since") LocalDateTime since);
 
     /** Storage used at a past moment: uploaded before it and not purged yet at that time. */
@@ -45,9 +50,6 @@ public interface MediaFileRepository extends JpaRepository<MediaFile, Long>, Jpa
     /** ORPHANED / REJECTED files whose grace or retention period ends before {@code until}. */
     @Query("select m from MediaFile m where m.category is not null and m.status in ('ORPHANED', 'REJECTED') and m.deletableAt <= :until")
     List<MediaFile> findExpiredInactive(@Param("until") LocalDateTime until);
-
-    @Query("select m from MediaFile m where m.category = 'FORM_CHECK_VIDEO' and m.status = 'ACTIVE' and m.expiresAt <= :until")
-    List<MediaFile> findExpiredFormChecks(@Param("until") LocalDateTime until);
 
     @Query("select m from MediaFile m where m.status = 'TRASHED' and m.purgeAt <= :until")
     List<MediaFile> findTrashDue(@Param("until") LocalDateTime until);
@@ -84,8 +86,7 @@ public interface MediaFileRepository extends JpaRepository<MediaFile, Long>, Jpa
     long sumTrashDue(@Param("until") LocalDateTime until);
 
     @Query("select coalesce(sum(m.sizeBytes), 0L) from MediaFile m where m.category is not null and "
-            + "((m.status in ('ORPHANED', 'REJECTED') and m.deletableAt <= :until) "
-            + "or (m.category = 'FORM_CHECK_VIDEO' and m.status = 'ACTIVE' and m.expiresAt <= :until))")
+            + "m.status in ('ORPHANED', 'REJECTED') and m.deletableAt <= :until")
     long sumExpiringBy(@Param("until") LocalDateTime until);
 
     List<MediaFile> findAllByIdIn(Collection<Long> ids);

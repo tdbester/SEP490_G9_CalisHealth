@@ -63,6 +63,22 @@ public class AdminStorageController {
         return service.settings();
     }
 
+    /** Where the quota comes from: the Cloudinary plan, or the local disk when there is no account. */
+    @GetMapping("/quota")
+    public QuotaInfo quota() {
+        return service.quotaInfo();
+    }
+
+    /**
+     * Reads the usage of the provider right now and stores it as the snapshot of the day.
+     * The daily job does this at night; the button lets an admin refresh the numbers without
+     * waiting for it.
+     */
+    @PostMapping("/usage/refresh")
+    public Overview refreshUsage(Authentication a) {
+        return service.refreshUsage(a.getName());
+    }
+
     @PutMapping("/settings")
     public Settings updateSettings(Authentication a, @Valid @RequestBody UpdateSettingsRequest r) {
         return service.updateSettings(a.getName(), r);

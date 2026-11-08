@@ -44,6 +44,7 @@ public class MediaCleanupService {
     private final StorageSettingsRepository settingsRepository;
     private final MediaRegistryService registry;
     private final ExerciseVideoStorageService storage;
+    private final ProfileAvatarStorageService avatars;
     private final ExerciseRepository exercises;
     private final UserRepository users;
     private final JdbcTemplate jdbc;
@@ -95,8 +96,8 @@ public class MediaCleanupService {
             file.setTrashedBy(null);
             file.setPurgeAt(null);
             if (MediaFile.ACTIVE.equals(previous)) {
-                // An expired form-check video: give it a new expiry instead of re-trashing it tonight.
-                file.setExpiresAt(later(file.getExpiresAt(), keepUntil));
+                // The file was already active before it went to the trash: nothing expires on its own.
+                file.setDeletableAt(null);
             } else {
                 file.setDeletableAt(later(file.getDeletableAt(), keepUntil));
             }
@@ -149,7 +150,6 @@ public class MediaCleanupService {
         }
         LocalDateTime now = LocalDateTime.now();
         List<MediaFile> expired = new ArrayList<>(media.findExpiredInactive(now));
-        expired.addAll(media.findExpiredFormChecks(now));
 
         int trashed = 0;
         List<MediaFile> toPurge = new ArrayList<>(media.findTrashDue(now));
@@ -218,7 +218,7 @@ public class MediaCleanupService {
             for (CloudFile cloud : cloudFiles.get().values()) {
                 if (knownKeys.contains(cloud.key()) || cloud.uploadedAt().isAfter(now.minusMinutes(10))) continue;
                 MediaFile file = registry.register(cloud.url(), null, cloud.sizeBytes(), cloud.category(),
-                        cloud.format(), null, null, cloud.uploadedAt());
+                        cloud.format(), null, null, cloud.uploadedAt(), cloud.durationSeconds());
                 rows.put(cloud.url(), file);
             }
         }
@@ -270,6 +270,21 @@ public class MediaCleanupService {
      * A file a live exercise uses again is reactivated instead of deleted.
      */
     private PurgeOutcome purgeAll(List<MediaFile> files, LocalDateTime now) {
+        PurgeOutcome outcome = purgeAll(files, now, this::removeFile);
+        return outcome;
+    }
+
+    /** Removes a managed file: a Cloudinary asset, an exercise file on disk or a profile photo. */
+    private boolean removeFile(String mediaUrl) {
+        if (mediaUrl != null && mediaUrl.startsWith(ProfileAvatarStorageService.URL_PREFIX)) {
+            avatars.delete(mediaUrl);
+            return true;
+        }
+        return storage.deleteFile(mediaUrl);
+    }
+
+    /** Same as {@link #purgeAll(List, LocalDateTime)}, but the caller decides how a file is removed. */
+    PurgeOutcome purgeAll(List<MediaFile> files, LocalDateTime now, Function<String, Boolean> remover) {
         List<MediaFile> purged = new ArrayList<>();
         long freed = 0;
         for (MediaFile file : files) {
@@ -277,7 +292,7 @@ public class MediaCleanupService {
                 registry.activate(file);
                 continue;
             }
-            if (!storage.deleteFile(file.getFileUrl())) continue;
+            if (!Boolean.TRUE.equals(remover.apply(file.getFileUrl()))) continue;
             if (!MediaFile.TRASHED.equals(file.getStatus())) file.setPreviousStatus(file.getStatus());
             file.setStatus(MediaFile.PURGED);
             file.setPurgedAt(now);

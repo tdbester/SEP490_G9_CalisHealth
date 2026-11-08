@@ -129,7 +129,7 @@ export default {
       library: "Library",
       leaderboard: "Leaderboard",
       favorites: "Favorites",
-    feedback: "Feedback & Complaints",
+    feedback: "Feedback",
     tracking: "Health & Progress",
     dailyTrainingPlans: "Daily Training Plans",
     healthProgress: "Health & Progress",

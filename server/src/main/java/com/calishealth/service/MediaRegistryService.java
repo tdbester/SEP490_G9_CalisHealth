@@ -9,6 +9,7 @@ import com.calishealth.repository.MediaFileRepository;
 import com.calishealth.repository.StorageSettingsRepository;
 import com.calishealth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,7 @@ import java.util.Optional;
  * files, and the ACTIVE / ORPHANED / REJECTED transitions that follow exercise changes.
  * Physical deletion (trash / purge) lives in {@link MediaCleanupService}.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MediaRegistryService {
@@ -41,6 +43,7 @@ public class MediaRegistryService {
     private final StorageSettingsRepository settingsRepository;
     private final ExerciseRepository exercises;
     private final UserRepository users;
+    private final CloudinaryUsageService cloudinary;
 
     @Transactional(readOnly = true)
     public StorageSettings settings() {
@@ -71,10 +74,7 @@ public class MediaRegistryService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     (video ? "Video" : "Image") + " must be " + maxMb + " MB or smaller");
         }
-        if (media.sumBytesOnDisk() + sizeBytes > s.getQuotaGb() * GB) {
-            throw new ResponseStatusException(HttpStatus.INSUFFICIENT_STORAGE,
-                    "Storage is full. Ask an administrator to free up space or raise the storage quota");
-        }
+        checkTotalQuota(sizeBytes);
 
         User uploader = uploaderEmail == null ? null : users.findByEmail(uploaderEmail).orElse(null);
         if (uploader != null && uploader.getRole() == UserRole.MEMBER) {
@@ -90,10 +90,49 @@ public class MediaRegistryService {
         return uploader;
     }
 
+    /**
+     * Rejects the upload when the account has no room left.
+     * <p>
+     * With Cloudinary the real limit of the account decides, not the quota the admin typed: the
+     * plan gives the space and the provider refuses the upload when it is full. A plan without a
+     * byte limit (the free plan counts credits instead) is not checked here: the credits are read
+     * by the daily job and the admins are warned before the account runs out.
+     * The registry sum is only used when there is no Cloudinary account (the local disk).
+     */
+    private void checkTotalQuota(long sizeBytes) {
+        StorageSettings s = settings();
+        long used = media.sumBytesOnDisk();
+        long limit = s.getQuotaGb() * GB;
+        String source = "the storage quota";
+
+        var cloudUsage = cloudinary.usage();
+        if (cloudUsage.isPresent()) {
+            long planLimit = cloudUsage.get().storageLimitBytes();
+            if (planLimit > 0) {
+                used = cloudUsage.get().storageUsedBytes();
+                limit = planLimit;
+                source = "the plan limit";
+            }
+        }
+        if (used + sizeBytes > limit) {
+            throw new ResponseStatusException(HttpStatus.INSUFFICIENT_STORAGE,
+                    "Storage is full: this upload would exceed " + source
+                            + ". Ask an administrator to free up space or raise the limit");
+        }
+    }
+
     /** JPEG is accepted under the "JPG" setting. */
     static String normalizeFormat(String extension) {
         String upper = extension == null ? "" : extension.trim().toUpperCase(Locale.ROOT);
         return "JPEG".equals(upper) ? "JPG" : upper;
+    }
+
+    /** The file extension of a URL, in upper case. */
+    static String extensionOf(String url) {
+        if (url == null) return "";
+        int dot = url.lastIndexOf('.');
+        int slash = url.lastIndexOf('/');
+        return dot > slash ? url.substring(dot + 1) : "";
     }
 
     /** An earlier upload with the same content that is still on disk, so the new upload can reuse it. */
@@ -113,6 +152,12 @@ public class MediaRegistryService {
     @Transactional
     public MediaFile register(String url, String originalName, long sizeBytes, String category, String format,
                               String contentHash, User uploader, LocalDateTime uploadedAt) {
+        return register(url, originalName, sizeBytes, category, format, contentHash, uploader, uploadedAt, null);
+    }
+
+    @Transactional
+    public MediaFile register(String url, String originalName, long sizeBytes, String category, String format,
+                              String contentHash, User uploader, LocalDateTime uploadedAt, Integer durationSeconds) {
         MediaFile file = new MediaFile();
         file.setFileUrl(url);
         file.setOriginalName(originalName == null || originalName.isBlank() ? fileNameOf(url) : truncate(originalName, 255));
@@ -121,21 +166,62 @@ public class MediaRegistryService {
         file.setCategory(category);
         file.setFileType(MediaFile.ANATOMY_IMAGE.equals(category) ? MediaFile.TYPE_IMAGE : MediaFile.TYPE_VIDEO);
         file.setFormat(normalizeFormat(format));
-        file.setPurpose(category);
         file.setContentHash(contentHash);
         file.setSource(uploader != null && uploader.getRole() == UserRole.MEMBER ? MediaFile.SOURCE_MEMBER : MediaFile.SOURCE_SYSTEM);
         file.setUploadedBy(uploader);
         file.setUploadedAt(uploadedAt);
+        file.setDurationSeconds(durationSeconds);
         file.setStatus(MediaFile.ACTIVE);
-        if (MediaFile.FORM_CHECK_VIDEO.equals(category)) {
-            file.setExpiresAt(uploadedAt.plusDays(settings().getFormCheckRetentionDays()));
-        }
         return media.save(file);
     }
 
     // ---------------------------------------------------------------------------------
     // Status changes driven by exercises
     // ---------------------------------------------------------------------------------
+
+    /**
+     * Writes a profile photo into the registry, so it counts toward the storage of the system like
+     * every other media file. The photo itself lives on the local disk.
+     */
+    @Transactional
+    public void registerAvatar(String url, String originalName, long sizeBytes, User owner) {
+        if (url == null) return;
+        media.findFirstByFileUrlAndStatusNotOrderByIdDesc(url, MediaFile.PURGED).ifPresentOrElse(
+                existing -> {
+                    // The same photo is uploaded again: refresh its size and owner.
+                    existing.setSizeBytes(sizeBytes);
+                    existing.setStatus(MediaFile.ACTIVE);
+                    existing.setUploadedAt(LocalDateTime.now());
+                    media.save(existing);
+                },
+                () -> {
+                    MediaFile file = new MediaFile();
+                    file.setFileUrl(url);
+                    file.setOriginalName(truncate(originalName, 255));
+                    file.setSizeBytes(sizeBytes);
+                    file.setSizeMb(BigDecimal.valueOf(sizeBytes).divide(BigDecimal.valueOf(MB), 2, RoundingMode.HALF_UP));
+                    file.setCategory(MediaFile.PROFILE_AVATAR);
+                    file.setFileType(MediaFile.TYPE_IMAGE);
+                    file.setFormat(normalizeFormat(extensionOf(url)));
+                    file.setSource(owner != null && owner.getRole() == UserRole.MEMBER
+                            ? MediaFile.SOURCE_MEMBER : MediaFile.SOURCE_SYSTEM);
+                    file.setUploadedBy(owner);
+                    file.setUploadedAt(LocalDateTime.now());
+                    file.setStatus(MediaFile.ACTIVE);
+                    media.save(file);
+                });
+    }
+
+    /** Marks a removed profile photo as PURGED, so it stops counting toward the storage. */
+    @Transactional
+    public void purgeAvatar(String url) {
+        if (url == null) return;
+        media.findFirstByFileUrlAndStatusNotOrderByIdDesc(url, MediaFile.PURGED).ifPresent(file -> {
+            file.setStatus(MediaFile.PURGED);
+            file.setReason("Profile photo removed");
+            file.setPurgedAt(LocalDateTime.now());
+        });
+    }
 
     /**
      * Call after an exercise stops using a file (replaced, deleted, upload not saved).
@@ -191,12 +277,15 @@ public class MediaRegistryService {
     /**
      * Moves an ACTIVE / ORPHANED / REJECTED file to the status its references call for. Files that are
      * already in the requested state keep their dates, so the grace period is not restarted.
-     * Trashed, purged and form-check files are left alone.
+     * Trashed and purged files are left alone.
+     * <p>
+     * A profile photo is not linked to an exercise, so it would always end up as ORPHANED. Its life
+     * is decided by the profile screen instead (a new photo replaces the old one), so it stays ACTIVE.
      */
     public void applyReferenceState(MediaFile file, String state, String orphanReason, LocalDateTime now) {
         String status = file.getStatus();
         if (MediaFile.TRASHED.equals(status) || MediaFile.PURGED.equals(status)
-                || MediaFile.FORM_CHECK_VIDEO.equals(file.getCategory())) {
+                || MediaFile.PROFILE_AVATAR.equals(file.getCategory())) {
             return;
         }
         StorageSettings s = settings();

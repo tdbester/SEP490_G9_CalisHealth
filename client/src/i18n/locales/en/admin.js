@@ -423,7 +423,7 @@ export default {
     memberApp: "Member app access",
     videoUploads: "Member video uploads",
     aiPose: "AI pose assessment",
-    storage: "System storage / CDN",
+    storage: "Storage",
     adminPortal: "Admin management portal",
     underMaintenance: "This service is under maintenance.",
     headerDescription:
@@ -737,12 +737,12 @@ export default {
   },
 
   feedback: {
-    title: "Feedback & Complaints",
-    navLabel: "Feedback & Complaints",
-    pageTitle: "Feedback & Complaints",
+    title: "Feedback",
+    navLabel: "Feedback",
+    pageTitle: "Feedback",
     description:
       "Tickets that the content manager forwarded because they are system-level issues. Your final decision is returned to the member.",
-    breadcrumb: "Admin / Feedback & Complaints",
+    breadcrumb: "Admin / Feedback",
     escalated: "Awaiting decision",
     resolved: "Handled",
     statusEscalated: "Escalated to admin",

@@ -46,9 +46,9 @@ export const ADMIN_LINKS = [
   { to: ADMIN_PATHS.users, label: "Users", labelKey: "nav.users", icon: PeopleAltRoundedIcon },
   { to: ADMIN_PATHS.surveys, label: "Survey Management", labelKey: "nav.survey", icon: MenuBookRoundedIcon },
   { to: ADMIN_PATHS.notifications, label: "Notifications", labelKey: "nav.notifications_admin", icon: NotificationsNoneRoundedIcon },
-  { to: ADMIN_PATHS.storage, label: "Media storage & infrastructure", labelKey: "admin.maintenance.storage", icon: StorageRoundedIcon },
+  { to: ADMIN_PATHS.storage, label: "Storage", labelKey: "admin.maintenance.storage", icon: StorageRoundedIcon },
   { to: ADMIN_PATHS.maintenance, label: "Maintenance schedules", labelKey: "nav.maintenance", icon: BuildRoundedIcon },
-  { to: ADMIN_PATHS.feedback, label: "Feedback & Complaints", labelKey: "admin.feedback.navLabel", icon: SupportAgentRoundedIcon },
+  { to: ADMIN_PATHS.feedback, label: "Feedback", labelKey: "admin.feedback.navLabel", icon: SupportAgentRoundedIcon },
 ];
 
 /**
