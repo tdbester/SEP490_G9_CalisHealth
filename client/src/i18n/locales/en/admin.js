@@ -461,9 +461,8 @@ export default {
     searchPlaceholder: "Search by title",
     filtersTitle: "Filters",
     filterStartDate: "Start date",
-    filterEndDate: "End date",
-    filterFrom: "From",
-    filterTo: "To",
+    filterStartDateHint:
+      "Shows the schedules that start on this day, even when the maintenance runs past midnight.",
     applyFilters: "Apply filters",
     clearFilters: "Clear filters",
     filtersApplied: "{{count}} schedule(s) match your filters.",

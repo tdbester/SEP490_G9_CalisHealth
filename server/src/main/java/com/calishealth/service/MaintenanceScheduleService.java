@@ -106,17 +106,13 @@ public class MaintenanceScheduleService {
             int page,
             String title,
             LocalDateTime startsFrom,
-            LocalDateTime startsTo,
-            LocalDateTime endsFrom,
-            LocalDateTime endsTo
+            LocalDateTime startsBefore
     ) {
         String normalizedTitle = title == null || title.isBlank() ? null : title.trim();
         return schedules.searchSchedules(
                         normalizedTitle,
                         startsFrom,
-                        startsTo,
-                        endsFrom,
-                        endsTo,
+                        startsBefore,
                         LocalDateTime.now().plusMinutes(MaintenanceScheduleService.DUE_WINDOW_MINUTES),
                         org.springframework.data.domain.PageRequest.of(
                                 Math.max(0, page),

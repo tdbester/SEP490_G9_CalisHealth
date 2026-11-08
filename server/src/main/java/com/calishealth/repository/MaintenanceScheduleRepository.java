@@ -43,6 +43,9 @@ public interface MaintenanceScheduleRepository extends JpaRepository<Maintenance
     /**
      * Lists schedules with the optional admin filters applied.
      *
+     * <p>The date filter matches the day the maintenance <b>starts</b>: a schedule that
+     * starts at 11pm on the 20th and ends at 2am on the 21st is returned for the 20th.
+     *
      * <p>The order keeps the schedules that need attention on top:
      * <ol>
      *   <li>đang thực hiện — admin đã bấm bắt đầu bảo trì,</li>
@@ -55,9 +58,7 @@ public interface MaintenanceScheduleRepository extends JpaRepository<Maintenance
             select schedule from MaintenanceSchedule schedule
             where (:title is null or lower(schedule.title) like lower(concat('%', :title, '%')))
               and (:startsFrom is null or schedule.startsAt >= :startsFrom)
-              and (:startsTo is null or schedule.startsAt <= :startsTo)
-              and (:endsFrom is null or schedule.endsAt >= :endsFrom)
-              and (:endsTo is null or schedule.endsAt <= :endsTo)
+              and (:startsBefore is null or schedule.startsAt < :startsBefore)
             order by
               case when schedule.cancelled = false
                     and schedule.startedAt is not null
@@ -74,16 +75,12 @@ public interface MaintenanceScheduleRepository extends JpaRepository<Maintenance
             select count(schedule) from MaintenanceSchedule schedule
             where (:title is null or lower(schedule.title) like lower(concat('%', :title, '%')))
               and (:startsFrom is null or schedule.startsAt >= :startsFrom)
-              and (:startsTo is null or schedule.startsAt <= :startsTo)
-              and (:endsFrom is null or schedule.endsAt >= :endsFrom)
-              and (:endsTo is null or schedule.endsAt <= :endsTo)
+              and (:startsBefore is null or schedule.startsAt < :startsBefore)
             """)
     Page<MaintenanceSchedule> searchSchedules(
             @Param("title") String title,
             @Param("startsFrom") LocalDateTime startsFrom,
-            @Param("startsTo") LocalDateTime startsTo,
-            @Param("endsFrom") LocalDateTime endsFrom,
-            @Param("endsTo") LocalDateTime endsTo,
+            @Param("startsBefore") LocalDateTime startsBefore,
             @Param("readyBefore") LocalDateTime readyBefore,
             Pageable pageable
     );

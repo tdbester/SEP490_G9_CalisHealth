@@ -46,12 +46,10 @@ public class AdminMaintenanceScheduleController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(required = false) String title,
             @RequestParam(required = false) LocalDateTime startsFrom,
-            @RequestParam(required = false) LocalDateTime startsTo,
-            @RequestParam(required = false) LocalDateTime endsFrom,
-            @RequestParam(required = false) LocalDateTime endsTo
+            @RequestParam(required = false) LocalDateTime startsBefore
     ) {
         return ResponseEntity.ok(
-                schedules.getSchedules(page, title, startsFrom, startsTo, endsFrom, endsTo)
+                schedules.getSchedules(page, title, startsFrom, startsBefore)
         );
     }
 

@@ -74,6 +74,18 @@ function toApiDateTime(value, endOfDay = false) {
   return endOfDay ? `${value}T23:59:59` : `${value}T00:00:00`;
 }
 
+/**
+ * The date filter matches the day the maintenance starts, so a window that
+ * starts at 11pm on the 20th and ends at 2am on the 21st belongs to the 20th.
+ */
+function toStartDateRange(value) {
+  if (!value) return { startsFrom: null, startsBefore: null };
+  return {
+    startsFrom: toApiDateTime(value),
+    startsBefore: toApiDateTime(value, true),
+  };
+}
+
 export default function MaintenanceScheduleListPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -87,10 +99,7 @@ export default function MaintenanceScheduleListPage() {
 
   const [searchText, setSearchText] = useState("");
   const [titleFilter, setTitleFilter] = useState("");
-  const [startFrom, setStartFrom] = useState("");
-  const [startTo, setStartTo] = useState("");
-  const [endFrom, setEndFrom] = useState("");
-  const [endTo, setEndTo] = useState("");
+  const [startDate, setStartDate] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [busyId, setBusyId] = useState(null);
   const [lockBusyArea, setLockBusyArea] = useState(null);
@@ -102,14 +111,9 @@ export default function MaintenanceScheduleListPage() {
     try {
       const params = { page };
       if (titleFilter.trim()) params.title = titleFilter.trim();
-      const startsFrom = toApiDateTime(startFrom);
-      const startsTo = toApiDateTime(startTo, true);
-      const endsFrom = toApiDateTime(endFrom);
-      const endsTo = toApiDateTime(endTo, true);
+      const { startsFrom, startsBefore } = toStartDateRange(startDate);
       if (startsFrom) params.startsFrom = startsFrom;
-      if (startsTo) params.startsTo = startsTo;
-      if (endsFrom) params.endsFrom = endsFrom;
-      if (endsTo) params.endsTo = endsTo;
+      if (startsBefore) params.startsBefore = startsBefore;
 
       const { data } = await api.get("/admin/maintenance", { params });
       setSchedules(Array.isArray(data.content) ? data.content : []);
@@ -121,7 +125,7 @@ export default function MaintenanceScheduleListPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, titleFilter, startFrom, startTo, endFrom, endTo, t]);
+  }, [page, titleFilter, startDate, t]);
 
   const loadLocks = useCallback(async () => {
     try {
@@ -143,12 +147,9 @@ export default function MaintenanceScheduleListPage() {
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (titleFilter.trim()) count += 1;
-    if (startFrom) count += 1;
-    if (startTo) count += 1;
-    if (endFrom) count += 1;
-    if (endTo) count += 1;
+    if (startDate) count += 1;
     return count;
-  }, [titleFilter, startFrom, startTo, endFrom, endTo]);
+  }, [titleFilter, startDate]);
 
   const handleSearch = (event) => {
     event.preventDefault();
@@ -159,10 +160,7 @@ export default function MaintenanceScheduleListPage() {
   const clearFilters = () => {
     setSearchText("");
     setTitleFilter("");
-    setStartFrom("");
-    setStartTo("");
-    setEndFrom("");
-    setEndTo("");
+    setStartDate("");
     setPage(0);
   };
 
@@ -320,52 +318,17 @@ export default function MaintenanceScheduleListPage() {
         {filtersOpen ? (
           <div className="mt-4 grid gap-3 border-t border-[#29204d] pt-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="filter-start-from" className="text-xs font-semibold text-[#e2ddef]">
-                {t("admin.maintenance.filterStartDate")} — {t("admin.maintenance.filterFrom")}
+              <label htmlFor="filter-start-date" className="text-xs font-semibold text-[#e2ddef]">
+                {t("admin.maintenance.filterStartDate")}
               </label>
               <input
-                id="filter-start-from"
+                id="filter-start-date"
                 type="date"
-                value={startFrom}
-                onChange={(event) => { setStartFrom(event.target.value); setPage(0); }}
+                value={startDate}
+                onChange={(event) => { setStartDate(event.target.value); setPage(0); }}
                 className="mt-2 w-full rounded-lg border border-[#51456f] bg-[#17112d] px-3 py-2 text-sm text-white outline-none [color-scheme:dark]"
               />
-            </div>
-            <div>
-              <label htmlFor="filter-start-to" className="text-xs font-semibold text-[#e2ddef]">
-                {t("admin.maintenance.filterStartDate")} — {t("admin.maintenance.filterTo")}
-              </label>
-              <input
-                id="filter-start-to"
-                type="date"
-                value={startTo}
-                onChange={(event) => { setStartTo(event.target.value); setPage(0); }}
-                className="mt-2 w-full rounded-lg border border-[#51456f] bg-[#17112d] px-3 py-2 text-sm text-white outline-none [color-scheme:dark]"
-              />
-            </div>
-            <div>
-              <label htmlFor="filter-end-from" className="text-xs font-semibold text-[#e2ddef]">
-                {t("admin.maintenance.filterEndDate")} — {t("admin.maintenance.filterFrom")}
-              </label>
-              <input
-                id="filter-end-from"
-                type="date"
-                value={endFrom}
-                onChange={(event) => { setEndFrom(event.target.value); setPage(0); }}
-                className="mt-2 w-full rounded-lg border border-[#51456f] bg-[#17112d] px-3 py-2 text-sm text-white outline-none [color-scheme:dark]"
-              />
-            </div>
-            <div>
-              <label htmlFor="filter-end-to" className="text-xs font-semibold text-[#e2ddef]">
-                {t("admin.maintenance.filterEndDate")} — {t("admin.maintenance.filterTo")}
-              </label>
-              <input
-                id="filter-end-to"
-                type="date"
-                value={endTo}
-                onChange={(event) => { setEndTo(event.target.value); setPage(0); }}
-                className="mt-2 w-full rounded-lg border border-[#51456f] bg-[#17112d] px-3 py-2 text-sm text-white outline-none [color-scheme:dark]"
-              />
+              <p className="mt-1 text-[11px] text-[#857ba3]">{t("admin.maintenance.filterStartDateHint")}</p>
             </div>
             {activeFilterCount > 0 ? (
               <div className="sm:col-span-2">

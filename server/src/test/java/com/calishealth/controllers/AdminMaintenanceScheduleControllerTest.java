@@ -7,13 +7,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -94,5 +101,22 @@ class AdminMaintenanceScheduleControllerTest {
                                 }
                                 """))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void filtersTheListByTheDayTheMaintenanceStarts() throws Exception {
+        when(schedules.getSchedules(0, "upgrade", LocalDateTime.of(2026, 11, 20, 0, 0),
+                LocalDateTime.of(2026, 11, 20, 23, 59, 59)))
+                .thenReturn(Page.empty(PageRequest.of(0, 5)));
+
+        mockMvc.perform(get("/api/admin/maintenance")
+                        .with(SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN"))
+                        .param("title", "upgrade")
+                        .param("startsFrom", "2026-11-20T00:00:00")
+                        .param("startsBefore", "2026-11-20T23:59:59"))
+                .andExpect(status().isOk());
+
+        verify(schedules).getSchedules(0, "upgrade", LocalDateTime.of(2026, 11, 20, 0, 0),
+                LocalDateTime.of(2026, 11, 20, 23, 59, 59));
     }
 }

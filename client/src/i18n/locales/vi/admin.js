@@ -457,9 +457,8 @@ export default {
     searchPlaceholder: "Tìm theo tiêu đề",
     filtersTitle: "Bộ lọc",
     filterStartDate: "Ngày bắt đầu",
-    filterEndDate: "Ngày kết thúc",
-    filterFrom: "Từ",
-    filterTo: "Đến",
+    filterStartDateHint:
+      "Hiển thị các lịch bắt đầu trong ngày này, kể cả khi bảo trì kéo dài sang ngày hôm sau.",
     applyFilters: "Áp dụng bộ lọc",
     clearFilters: "Xoá bộ lọc",
     filtersApplied: "{{count}} lịch khớp với bộ lọc.",

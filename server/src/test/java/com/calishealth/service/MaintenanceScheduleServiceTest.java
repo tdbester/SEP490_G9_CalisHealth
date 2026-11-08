@@ -173,14 +173,14 @@ class MaintenanceScheduleServiceTest {
     @Test
     void listsMaintenanceSchedulesInPagesOfFive() {
         when(schedules.searchSchedules(
-                isNull(), isNull(), isNull(), isNull(), isNull(), any(), any(Pageable.class)
+                isNull(), isNull(), isNull(), any(), any(Pageable.class)
         )).thenReturn(new PageImpl<>(List.of(), Pageable.ofSize(5), 0));
 
-        service.getSchedules(2, null, null, null, null, null);
+        service.getSchedules(2, null, null, null);
 
         org.mockito.ArgumentCaptor<Pageable> pageableCaptor = forClass(Pageable.class);
         verify(schedules).searchSchedules(
-                isNull(), isNull(), isNull(), isNull(), isNull(), any(), pageableCaptor.capture()
+                isNull(), isNull(), isNull(), any(), pageableCaptor.capture()
         );
         assertEquals(2, pageableCaptor.getValue().getPageNumber());
         assertEquals(5, pageableCaptor.getValue().getPageSize());
@@ -189,19 +189,17 @@ class MaintenanceScheduleServiceTest {
     @Test
     void forwardsTheAdminFiltersToTheRepository() {
         LocalDateTime startsFrom = LocalDateTime.now().minusDays(3);
-        LocalDateTime endsTo = LocalDateTime.now().plusDays(3);
+        LocalDateTime startsBefore = LocalDateTime.now().plusDays(3);
         when(schedules.searchSchedules(
-                any(), any(), any(), any(), any(), any(), any(Pageable.class)
+                any(), any(), any(), any(), any(Pageable.class)
         )).thenReturn(new PageImpl<>(List.of(), Pageable.ofSize(5), 0));
 
-        service.getSchedules(0, "upgrade", startsFrom, null, null, endsTo);
+        service.getSchedules(0, "upgrade", startsFrom, startsBefore);
 
         verify(schedules).searchSchedules(
                 eq("upgrade"),
                 eq(startsFrom),
-                isNull(),
-                isNull(),
-                eq(endsTo),
+                eq(startsBefore),
                 any(),
                 any(Pageable.class)
         );
