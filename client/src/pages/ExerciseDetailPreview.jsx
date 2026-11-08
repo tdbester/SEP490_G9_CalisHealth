@@ -7,7 +7,7 @@ import VideoDemoModal from "../components/exercise/VideoDemoModal";
 import CameraCheckModal from "../components/exercise/CameraCheckModal";
 import UploadVideoModal from "../components/exercise/UploadVideoModal";
 import { startWorkoutSession } from "../utils/workoutResults";
-import { resolveExerciseCategory } from "../utils/libraryWorkout";
+import { normalizeExercisePayload, resolveExerciseCategory } from "../utils/libraryWorkout";
 import "./ExerciseDetailPreview.css";
 
 // Exercise has no rest field yet; the plan can pass one through route state.
@@ -39,6 +39,13 @@ export default function ExerciseDetailPreview() {
   const closeModal = () => setActiveModal(null);
 
   /**
+   * Dữ liệu bài tập đi kèm khi mở từ thư viện (route state). Dùng làm
+   * fallback khi API public không trả về bài (bài custom của member) và làm
+   * nguồn dữ liệu chính để truyền tiếp sang màn tập.
+   */
+  const routedExercise = state?.exercise ?? null;
+
+  /**
    * Member mở bài từ thư viện (không có `index` trong route state) -> đây là
    * buổi tập lẻ, bắt đầu phiên tích lũy kết quả mới.
    */
@@ -53,20 +60,32 @@ export default function ExerciseDetailPreview() {
     setError("");
     libraryApi
       .exercise(code)
-      .then((data) => !cancelled && setExercise(data))
+      .then((data) => {
+        if (cancelled) return;
+        // Gộp dữ liệu từ route state để không mất thông tin bài tập khi API
+        // public trả về bản rút gọn (thiếu anatomy, nhóm cơ, cấu hình tập).
+        setExercise(routedExercise ? { ...routedExercise, ...data } : data);
+      })
       .catch((err) => {
         if (cancelled) return;
-        setExercise(null);
-        setError(
-          err.response?.status === 404
-            ? t("member.preview.notAvailable")
-            : t("member.preview.loadFailed"),
-        );
+        if (routedExercise) {
+          // Bài custom / bài member tự tạo không có trong API public -> dùng dữ liệu đã mang theo.
+          setExercise(routedExercise);
+          setError("");
+        } else {
+          setExercise(null);
+          setError(
+            err.response?.status === 404
+              ? t("member.preview.notAvailable")
+              : t("member.preview.loadFailed"),
+          );
+        }
       })
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code]);
 
   const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate("/plan"));
@@ -228,6 +247,9 @@ export default function ExerciseDetailPreview() {
               state: {
                 exerciseCode: code,
                 exerciseName: exercise.name,
+                // Mang theo thông tin bài tập để màn tracking hiển thị được
+                // ảnh giải phẫu và nhóm cơ mục tiêu.
+                exercise: normalizeExercisePayload(exercise),
                 category,
                 sets,
                 reps,
@@ -253,6 +275,7 @@ export default function ExerciseDetailPreview() {
               state: {
                 exerciseCode: code,
                 exerciseName: exercise.name,
+                exercise: normalizeExercisePayload(exercise),
                 category,
                 sets,
                 reps,

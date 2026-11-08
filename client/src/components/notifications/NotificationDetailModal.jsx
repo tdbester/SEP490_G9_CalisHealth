@@ -34,7 +34,6 @@ const TYPE_LABEL_KEYS = {
 /** Key i18n của nhãn trạng thái. */
 const STATUS_LABEL_KEYS = {
   PUBLISHED: "admin.notifications.statusPublished",
-  DRAFT: "admin.notifications.statusDraft",
   READ: "admin.notifications.statusRead",
   UNREAD: "admin.notifications.statusUnread",
 };
@@ -95,11 +94,7 @@ export default function NotificationDetailModal({ notification, onClose }) {
     borderColor: "rgba(196, 181, 253, 0.3)",
     bgcolor: "rgba(139, 92, 246, 0.12)",
   };
-  const statusColor = status === "PUBLISHED"
-    ? "#6ee7b7"
-    : status === "DRAFT"
-      ? "#cbd5e1"
-      : "#c4b5fd";
+  const statusColor = status === "PUBLISHED" ? "#6ee7b7" : "#c4b5fd";
 
   return (
     <Dialog

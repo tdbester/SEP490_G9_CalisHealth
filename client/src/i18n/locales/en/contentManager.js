@@ -69,6 +69,7 @@ export default {
     colCategory: "CATEGORY",
     colStatus: "STATUS",
     colSubmitted: "SUBMITTED",
+    colProcessed: "PROCESSED AT",
     colAction: "ACTION",
     take: "Take",
     approve: "Resolve",
@@ -101,9 +102,7 @@ export default {
     detailNotFoundMessage: "This feedback ticket no longer exists.",
     detailMeta: "Submitted by {{member}}",
     detailContent: "Message",
-    detailLastUpdated: "Last updated",
     detailEscalatedAt: "Escalated at",
-    detailResolvedAt: "Resolved at",
     detailActions: "Handle this ticket",
     detailActionsHint:
       "The resolution note is sent back to the member together with the ticket status.",

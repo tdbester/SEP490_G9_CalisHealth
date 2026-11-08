@@ -17,6 +17,8 @@ public record MemberExerciseDetailResponseDTO(
         String category,
         String equipment,
         String videoUrl,
+        /** Ảnh giải phẫu do Member/Content Manager tải lên — dùng ở màn chi tiết và màn tập. */
+        String anatomyImageUrl,
         List<String> guideSteps,
         String authorName,
         String postedTimeAgo,

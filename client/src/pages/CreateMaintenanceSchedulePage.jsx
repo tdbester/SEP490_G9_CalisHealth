@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import notificationToast from "../utils/notificationToast";
+import "./CreateMaintenanceSchedulePage.css";
 
 const AREAS = [
   { value: "MEMBER_APP_ACCESS", labelKey: "admin.maintenance.createForm.areaMemberApp" },
@@ -186,7 +187,7 @@ export default function CreateMaintenanceSchedulePage() {
   };
 
   return (
-    <section className="mx-auto w-full max-w-[1080px] px-4 py-5 font-[Arial,sans-serif] text-slate-100 sm:px-7 sm:py-6">
+    <section className="maintenance-create-form mx-auto w-full max-w-[1080px] px-4 py-5 font-[Arial,sans-serif] text-slate-100 sm:px-7 sm:py-6">
       <header className="mb-5">
         <h1 className="text-[22px] font-bold tracking-tight text-white">
           {t("admin.maintenance.createForm.title")}
@@ -385,6 +386,9 @@ export default function CreateMaintenanceSchedulePage() {
                 <BuildRoundedIcon sx={{ fontSize: 14 }} />
               </span>
               <h3 className="text-xs font-bold leading-4 text-white">{t("admin.maintenance.createForm.previewTitle")}</h3>
+              <span className="ml-auto inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+                {t("admin.maintenance.createForm.notifyAudienceAllUsers")}
+              </span>
             </div>
             <div className="mt-1">
               <p className="mt-0.5 text-[11px] leading-4 text-[#a89dbd]">{previewMessage}</p>

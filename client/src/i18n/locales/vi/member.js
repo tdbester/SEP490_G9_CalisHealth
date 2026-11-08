@@ -93,6 +93,14 @@ export default {
     subtitle:
       "Gửi góp ý hoặc khiếu nại của bạn. Mọi đơn đều được chuyển tới quản lý nội dung xử lý; nếu thuộc về hệ thống, đơn sẽ được chuyển tiếp lên ban quản trị.",
     pageTitle: "Góp ý & Khiếu nại",
+    createTitle: "Gửi góp ý mới",
+    createNew: "Gửi góp ý mới",
+    backToList: "Về danh sách đơn",
+    cancel: "Huỷ",
+    discard: "Bỏ",
+    discardTitle: "Bỏ đơn góp ý này?",
+    discardMessage:
+      "Bạn có chắc muốn huỷ? Tiêu đề và nội dung đang nhập sẽ bị mất.",
     formTitle: "Gửi góp ý mới",
     formHint:
       "Mô tả rõ vấn đề để chúng tôi xử lý nhanh hơn. Bạn sẽ nhận được thông báo khi đơn được xử lý.",
@@ -124,7 +132,7 @@ export default {
     resolutionTitle: "Kết quả xử lý",
     emptyTitle: "Bạn chưa gửi đơn nào",
     emptyDesc:
-      "Dùng ô bên trên để gửi góp ý hoặc khiếu nại của bạn tới ban quản lý.",
+      "Bấm “Gửi góp ý mới” để gửi góp ý hoặc khiếu nại của bạn tới ban quản lý.",
     loadFailed: "Không tải được danh sách đơn góp ý.",
   },
 
@@ -301,6 +309,8 @@ export default {
     restFor: "Nghỉ {{seconds}} giây.",
     restHintContinue: "Nghỉ {{seconds}} giây, rồi tiếp tục",
     restHintNextSet: "Nghỉ {{seconds}} giây, rồi bắt đầu set {{set}}",
+    anatomyTitle: "Giải phẫu cơ",
+    anatomyAlt: "Giải phẫu cơ cho {{name}}",
   },
 
   healthTracking: {
@@ -729,6 +739,8 @@ export default {
     nextLabel: "Sau",
     none: "Không có",
     viewExercise: "Xem bài tập",
+    back: "Quay lại",
+    backAria: "Quay lại trang trước",
     documentTitle: "CalisHealth - Khám phá",
   },
 
@@ -1269,6 +1281,140 @@ export default {
       LEVEL_TEST: {
         title: "Kiểm tra trình độ",
         subtitle: "Thực hiện mỗi động tác đúng dạng và dừng khi dạng bị hỏng.",
+      },
+    },
+    /** Nhãn bước (dòng nhỏ trên tiêu đề) — theo mã bước trong backend. */
+    steps: {
+      BODY_INFORMATION: { label: "Thông tin cơ thể" },
+      GOALS_AND_MOTIVATION: { label: "Mục tiêu & động lực" },
+      CURRENT_TRAINING_ROUTINE: { label: "Thói quen tập hiện tại" },
+      LEVEL_TEST: { label: "Kiểm tra trình độ" },
+    },
+    /** Đơn vị đo (theo `unit` của câu hỏi trong backend). */
+    units: {
+      years: "tuổi",
+      cm: "cm",
+      kg: "kg",
+      days: "ngày",
+      reps: "lần",
+      seconds: "giây",
+      sec: "giây",
+    },
+    /**
+     * Bản dịch câu hỏi / lựa chọn của khảo sát.
+     *
+     * Key theo mã câu hỏi (question_code) và mã lựa chọn (option_code) trong
+     * backend; khi chưa có bản dịch thì giao diện dùng luôn nội dung gốc do
+     * Content Manager soạn.
+     */
+    questions: {
+      GENDER: {
+        label: "Giới tính của bạn là gì?",
+        placeholder: "Chọn giới tính",
+        options: {
+          MALE: "Nam",
+          FEMALE: "Nữ",
+          OTHER: "Khác",
+        },
+      },
+      AGE: {
+        label: "Bạn bao nhiêu tuổi?",
+        placeholder: "22",
+      },
+      HEIGHT: {
+        label: "Chiều cao của bạn là bao nhiêu?",
+        placeholder: "170",
+      },
+      WEIGHT: {
+        label: "Cân nặng của bạn là bao nhiêu?",
+        placeholder: "65",
+      },
+      GOAL_TYPE: {
+        label: "Bạn tập để làm gì?",
+        options: {
+          HEALTH: "Để khỏe mạnh",
+          SKILLS: "Để học kỹ năng",
+        },
+      },
+      HEALTH_GOAL: {
+        label: "Mục tiêu sức khỏe nào phù hợp với bạn nhất?",
+        options: {
+          LOSE_WEIGHT: "Giảm cân",
+          BUILD_MUSCLE: "Tăng cơ",
+          STAY_FIT: "Duy trì thể lực",
+        },
+      },
+      TRAINING_SKILLS: {
+        label: "Bạn muốn học những kỹ năng nào?",
+        description: "Chọn tối đa 3 kỹ năng.",
+        options: {
+          MUSCLE_UP: "Muscle-up",
+          HANDSTAND: "Trồng chân",
+          PLANCHE: "Planche",
+          FRONT_LEVER: "Front lever",
+          HUMAN_FLAG: "Human flag",
+          L_SIT: "L-sit",
+        },
+      },
+      MOTIVATIONS: {
+        label: "Điều gì thúc đẩy bạn tập?",
+        description: "Chọn tối đa 3 đáp án.",
+        options: {
+          HEALTH: "Sức khỏe",
+          ENERGY: "Thêm năng lượng",
+          CONFIDENCE: "Tự tin hơn",
+          APPEARANCE: "Ngoại hình",
+          STRESS_RELIEF: "Giảm căng thẳng",
+        },
+      },
+      TRAINING_EXPERIENCE: {
+        label: "Bạn đã tập được bao lâu?",
+        options: {
+          NONE: "Chưa từng tập",
+          NEVER: "Chưa từng tập",
+          UNDER_6_MONTHS: "Dưới 6 tháng",
+          MONTHS_6_TO_12: "6–12 tháng",
+          OVER_1_YEAR: "Trên 1 năm",
+        },
+      },
+      TRAINING_DAYS_PER_WEEK: {
+        label: "Mỗi tuần bạn tập mấy ngày?",
+      },
+      HOW_MANY_DAYS_PER_WEEK_DO_YOU_WANT_TO_TRAIN_WITH_CALISHE: {
+        label: "Mỗi tuần bạn muốn tập với CalisHealth mấy ngày?",
+      },
+      TRAINING_MINUTES_PER_SESSION: {
+        label: "Mỗi buổi tập kéo dài bao lâu?",
+        options: {
+          MIN_15: "Khoảng 15 phút",
+          MIN_30: "Khoảng 30 phút",
+          MIN_45: "Khoảng 45 phút",
+          MIN_60_PLUS: "60 phút trở lên",
+        },
+      },
+      PUSH_UP_MAX_REPS: {
+        label: "Hít đất",
+        hint: "Số lần tối đa liên tiếp",
+      },
+      SQUAT_MAX_REPS: {
+        label: "Squat",
+        hint: "Số lần tối đa liên tiếp",
+      },
+      PLANK_MAX_SECONDS: {
+        label: "Plank",
+        hint: "Thời gian giữ tối đa",
+      },
+      BURPEE_MAX_REPS: {
+        label: "Burpee",
+        hint: "Số lần tối đa liên tiếp",
+      },
+      DIPS_MAX_REPS: {
+        label: "Dip",
+        hint: "Số lần tối đa liên tiếp",
+      },
+      PULL_UP_MAX_REPS: {
+        label: "Pull-up",
+        hint: "Số lần tối đa liên tiếp",
       },
     },
     validation: {

@@ -40,7 +40,8 @@ public class AdminNotificationService {
         notification.setTitle(request.title().trim());
         notification.setMessage(request.message().trim());
         notification.setType(request.type());
-        notification.setStatus(request.status());
+        // Module Admin Notification không còn trạng thái nháp — thông báo luôn phát hành.
+        notification.setStatus("PUBLISHED");
         notification.setTargetAudience(normalizeAudience(request.targetAudience()));
         notification.setCreatedBy(admin.getId());
 

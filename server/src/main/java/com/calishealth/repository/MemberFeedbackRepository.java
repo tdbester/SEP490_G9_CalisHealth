@@ -19,5 +19,14 @@ public interface MemberFeedbackRepository extends JpaRepository<MemberFeedback, 
     /** Đơn đã chuyển tiếp lên Admin. */
     List<MemberFeedback> findAllByStatusOrderByCreatedAtDesc(MemberFeedback.Status status);
 
+    /**
+     * Đơn đã được Content Manager chuyển tiếp lên Admin — có dấu vết thời điểm
+     * chuyển tiếp ({@code escalatedAt}).
+     */
+    List<MemberFeedback> findAllByEscalatedAtIsNotNullOrderByCreatedAtDesc();
+
+    /** Đơn đã chuyển tiếp lên Admin, lọc thêm theo trạng thái hiện tại. */
+    List<MemberFeedback> findAllByEscalatedAtIsNotNullAndStatusOrderByCreatedAtDesc(MemberFeedback.Status status);
+
     long countByStatus(MemberFeedback.Status status);
 }

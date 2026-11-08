@@ -74,8 +74,10 @@ const CATEGORIES = [
  *
  * Theme (`theme-content.js`) mặc định canh giữa mọi ô và ép mọi `Stack` bên
  * trong ô về `justifyContent: center` — với bảng nhiều cột sẽ khiến tiêu đề
- * cột lệch khỏi nội dung. Ở đây ta ghi đè lại: mọi cột đều canh trái, chiều
- * rộng cố định theo `colgroup` nên tiêu đề luôn nằm đúng trên dữ liệu.
+ * cột lệch khỏi nội dung. Ở đây ta ghi đè lại: cột nội dung chữ (feedback)
+ * canh trái, các cột dữ liệu ngắn (member / category / status / thời gian)
+ * canh giữa để thành hàng lề đều. Chiều rộng cố định theo `colgroup` nên
+ * tiêu đề luôn nằm đúng trên dữ liệu.
  */
 const HEAD_CELL_SX = {
   textAlign: "left",
@@ -92,6 +94,9 @@ const HEAD_CELL_SX = {
   borderBottom: `1px solid ${CM.border}`,
 };
 
+/** Ô chứa dữ liệu ngắn — canh giữa cho khớp với tiêu đề cột. */
+const HEAD_CELL_CENTER_SX = { ...HEAD_CELL_SX, textAlign: "center" };
+
 const BODY_CELL_SX = {
   textAlign: "left",
   verticalAlign: "middle",
@@ -102,14 +107,23 @@ const BODY_CELL_SX = {
   "& > .MuiStack-root": { justifyContent: "flex-start", alignItems: "flex-start" },
 };
 
-/** Chiều rộng cột — dùng chung cho `colgroup` để header và body khớp tuyệt đối. */
+/** Ô chứa dữ liệu ngắn — canh giữa cho khớp với tiêu đề cột. */
+const BODY_CELL_CENTER_SX = { ...BODY_CELL_SX, textAlign: "center" };
+
+/**
+ * Chiều rộng cột — dùng chung cho `colgroup` để header và body khớp tuyệt đối.
+ *
+ * Cột "Feedback" là nội dung chữ nên căn trái; các cột còn lại là dữ liệu ngắn
+ * (member / category / status / thời gian) nên căn giữa để nhìn thành hàng lề
+ * đều. Cột action để đủ chỗ cho nút hành động không bị bó.
+ */
 const COL_SIZES = [
-  { key: "feedback", width: "32%" },
-  { key: "member", width: "20%" },
-  { key: "category", width: "14%" },
-  { key: "status", width: "15%" },
-  { key: "submitted", width: "12%" },
-  { key: "action", width: "7%" },
+  { key: "feedback", width: "36%" },
+  { key: "member", width: "17%" },
+  { key: "category", width: "13%" },
+  { key: "status", width: "13%" },
+  { key: "processed", width: "13%" },
+  { key: "action", width: "8%" },
 ];
 
 const dateFilterSx = {
@@ -393,7 +407,7 @@ export default function AdminFeedbackPage() {
           <Table
             aria-label={t("admin.feedback.tableAria")}
             sx={{
-              minWidth: 900,
+              minWidth: { xs: 720, md: 880 },
               tableLayout: "fixed",
               "& .MuiTableCell-root": { borderBottom: `1px solid ${CM.border}` },
             }}
@@ -406,11 +420,11 @@ export default function AdminFeedbackPage() {
             <TableHead>
               <TableRow>
                 <TableCell sx={HEAD_CELL_SX}>{t("admin.feedback.colFeedback")}</TableCell>
-                <TableCell sx={HEAD_CELL_SX}>{t("admin.feedback.colMember")}</TableCell>
-                <TableCell sx={HEAD_CELL_SX}>{t("admin.feedback.colCategory")}</TableCell>
-                <TableCell sx={HEAD_CELL_SX}>{t("admin.feedback.colStatus")}</TableCell>
-                <TableCell sx={HEAD_CELL_SX}>{t("admin.feedback.colSubmitted")}</TableCell>
-                <TableCell sx={{ ...HEAD_CELL_SX, textAlign: "right" }}>
+                <TableCell sx={HEAD_CELL_CENTER_SX}>{t("admin.feedback.colMember")}</TableCell>
+                <TableCell sx={HEAD_CELL_CENTER_SX}>{t("admin.feedback.colCategory")}</TableCell>
+                <TableCell sx={HEAD_CELL_CENTER_SX}>{t("admin.feedback.colStatus")}</TableCell>
+                <TableCell sx={HEAD_CELL_CENTER_SX}>{t("admin.feedback.colProcessed")}</TableCell>
+                <TableCell sx={{ ...HEAD_CELL_CENTER_SX, textAlign: "center" }}>
                   {t("admin.feedback.colAction")}
                 </TableCell>
               </TableRow>
@@ -474,7 +488,7 @@ export default function AdminFeedbackPage() {
                           </Box>
                         </Stack>
                       </TableCell>
-                      <TableCell sx={BODY_CELL_SX}>
+                      <TableCell sx={BODY_CELL_CENTER_SX}>
                         <Typography
                           sx={{
                             fontSize: 13,
@@ -499,15 +513,15 @@ export default function AdminFeedbackPage() {
                           {row.memberEmail}
                         </Typography>
                       </TableCell>
-                      <TableCell sx={BODY_CELL_SX}>
+                      <TableCell sx={BODY_CELL_CENTER_SX}>
                         <DarkPill tone="neutral">
                           {t(CATEGORY_LABEL[row.category] || CATEGORY_LABEL.OTHER)}
                         </DarkPill>
                       </TableCell>
-                      <TableCell sx={BODY_CELL_SX}>
+                      <TableCell sx={BODY_CELL_CENTER_SX}>
                         <DarkPill tone={meta.tone}>{t(meta.labelKey)}</DarkPill>
                       </TableCell>
-                      <TableCell sx={BODY_CELL_SX}>
+                      <TableCell sx={BODY_CELL_CENTER_SX}>
                         <Typography
                           sx={{
                             fontSize: 12,
@@ -515,16 +529,16 @@ export default function AdminFeedbackPage() {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {formatDateTime(row.createdAt)}
+                          {formatDateTime(row.resolvedAt)}
                         </Typography>
                       </TableCell>
-                      <TableCell sx={{ ...BODY_CELL_SX, textAlign: "right" }}>
+                      <TableCell sx={{ ...BODY_CELL_CENTER_SX, textAlign: "center" }}>
                         <Button
                           component={RouterLink}
                           to={`/admin/feedback/${encodeURIComponent(row.id)}`}
                           size="small"
                           variant="outlined"
-                          sx={{ py: 0.25, px: 1.25, fontSize: 11.5, minWidth: 0 }}
+                          sx={{ py: 0.25, px: 1.25, fontSize: 11.5, minWidth: 0, whiteSpace: "nowrap" }}
                         >
                           {t("admin.feedback.view")}
                         </Button>

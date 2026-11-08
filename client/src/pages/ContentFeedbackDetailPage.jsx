@@ -233,7 +233,7 @@ export default function ContentFeedbackDetailPage() {
         breadcrumb={breadcrumb}
         title={feedback.title}
         description={t("contentManager.feedback.detailMeta", {
-          member: feedback.memberName || feedback.memberEmail || t("contentManager.feedback.unknown"),
+          member: feedback.memberEmail || t("contentManager.feedback.unknown"),
         })}
         action={
           <Button
@@ -296,27 +296,11 @@ export default function ContentFeedbackDetailPage() {
           <Grid container spacing={1.5}>
             <DetailField
               label={t("contentManager.feedback.colMember")}
-              value={
-                feedback.memberName
-                  ? `${feedback.memberName}\n${feedback.memberEmail || ""}`
-                  : feedback.memberEmail
-              }
+              value={feedback.memberEmail}
             />
             <DetailField
               label={t("contentManager.feedback.colSubmitted")}
               value={formatDateTime(feedback.createdAt)}
-            />
-            <DetailField
-              label={t("contentManager.feedback.detailLastUpdated")}
-              value={formatDateTime(feedback.updatedAt)}
-            />
-            <DetailField
-              label={t("contentManager.feedback.detailEscalatedAt")}
-              value={formatDateTime(feedback.escalatedAt)}
-            />
-            <DetailField
-              label={t("contentManager.feedback.detailResolvedAt")}
-              value={formatDateTime(feedback.resolvedAt)}
             />
           </Grid>
 

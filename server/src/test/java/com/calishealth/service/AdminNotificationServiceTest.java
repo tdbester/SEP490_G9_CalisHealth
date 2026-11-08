@@ -111,9 +111,22 @@ class AdminNotificationServiceTest {
         assertCreatesNotificationWithStatus("PUBLISHED");
     }
 
+    /** Module Admin Notification không còn trạng thái nháp — luôn phát hành. */
     @Test
-    void createsDraftNotificationAndUsesAuthenticatedAdminId() {
-        assertCreatesNotificationWithStatus("DRAFT");
+    void alwaysPublishesNotificationsRegardlessOfRequestedStatus() {
+        User admin = new User();
+        admin.setId(42L);
+        admin.setEmail("admin@example.com");
+        when(users.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(notifications.save(any(Notification.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.createNotification(
+                new CreateNotificationRequestDto("New update", "Message body", "UPDATE", "PUBLISHED"),
+                "admin@example.com");
+
+        assertEquals("PUBLISHED", response.status());
+        verify(notifications).save(org.mockito.ArgumentMatchers.argThat(saved ->
+                "PUBLISHED".equals(saved.getStatus())));
     }
 
     @Test
@@ -135,7 +148,7 @@ class AdminNotificationServiceTest {
 
     @Test
     void loadsNotificationById() {
-        Notification item = notification(15L, "Existing title", "ANNOUNCEMENT", "DRAFT");
+        Notification item = notification(15L, "Existing title", "ANNOUNCEMENT", "PUBLISHED");
         when(notifications.findById(15L)).thenReturn(Optional.of(item));
 
         var response = service.getNotification(15L);
@@ -143,7 +156,7 @@ class AdminNotificationServiceTest {
         assertEquals(15L, response.id());
         assertEquals("Existing title", response.title());
         assertEquals("ANNOUNCEMENT", response.type());
-        assertEquals("DRAFT", response.status());
+        assertEquals("PUBLISHED", response.status());
     }
 
     @Test

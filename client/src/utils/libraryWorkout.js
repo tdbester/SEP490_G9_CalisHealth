@@ -48,6 +48,10 @@ export function toWorkoutQueueItem(item) {
     exerciseCode,
     exerciseName:
       item?.exerciseTitle ?? item?.exerciseName ?? item?.name ?? item?.title ?? "",
+    // Thông tin nhóm cơ / ảnh giải phẫu để màn tracking hiển thị ảnh anatomy
+    // của bài đang tập.
+    muscleGroup: item?.muscleGroup ?? item?.targetMuscle ?? null,
+    anatomyImageUrl: item?.anatomyImageUrl ?? item?.anatomy_image_url ?? null,
     category: isHold ? "HOLD" : "REPS",
     sets: Number(item?.sets) > 0 ? Number(item.sets) : DEFAULT_SETS,
     reps: isHold ? null : reps ?? DEFAULT_REPS,
@@ -133,9 +137,37 @@ export function startLibraryExercise(navigate, exercise) {
       durationSeconds: category === "HOLD" ? duration ?? DEFAULT_HOLD_SECONDS : null,
       restSeconds: LIBRARY_DEFAULT_REST_SECONDS,
       category,
+      // Mang theo toàn bộ thông tin bài tập sang màn tập để màn chi tiết
+      // (và màn tracking) không bị mất dữ liệu khi API public không trả về
+      // đúng bài (bài custom / bài member tự tạo).
+      exercise: normalizeExercisePayload(exercise),
     },
   });
   return true;
+}
+
+/**
+ * Chuẩn hoá bài tập gửi qua route state — chỉ giữ các field an toàn (string/số).
+ *
+ * @param {object} exercise
+ * @returns {object|null}
+ */
+export function normalizeExercisePayload(exercise) {
+  if (!exercise || typeof exercise !== "object") return null;
+  const source = exercise.exercise || exercise;
+  const payload = {
+    code: source.code ?? source.exerciseCode ?? null,
+    id: source.id ?? null,
+    name: source.name ?? source.title ?? source.exerciseTitle ?? null,
+    muscleGroup: source.muscleGroup ?? source.targetMuscle ?? null,
+    anatomyImageUrl: source.anatomyImageUrl ?? source.anatomy_image_url ?? null,
+    videoUrl: source.videoUrl ?? source.demoVideoUrl ?? null,
+    category: source.category ?? null,
+    defaultSets: source.defaultSets ?? source.sets ?? null,
+    defaultReps: source.defaultReps ?? source.reps ?? null,
+    defaultDuration: source.defaultDuration ?? source.duration ?? null,
+  };
+  return payload;
 }
 
 /**

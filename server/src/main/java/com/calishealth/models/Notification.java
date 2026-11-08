@@ -34,7 +34,7 @@ public class Notification {
     private String type;
 
     @Column(nullable = false, length = 50)
-    private String status = "DRAFT";
+    private String status = "PUBLISHED";
 
     @Column(name = "created_by")
     private Long createdBy;

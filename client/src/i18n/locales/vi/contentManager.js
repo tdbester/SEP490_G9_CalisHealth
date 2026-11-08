@@ -68,6 +68,7 @@ export default {
     colCategory: "PHÂN LOẠI",
     colStatus: "TRẠNG THÁI",
     colSubmitted: "NGÀY GỬI",
+    colProcessed: "THỜI GIAN XỬ LÝ",
     colAction: "THAO TÁC",
     take: "Nhận việc",
     approve: "Đã xử lý",
@@ -100,9 +101,7 @@ export default {
     detailNotFoundMessage: "Đơn góp ý này không còn tồn tại.",
     detailMeta: "Gửi bởi {{member}}",
     detailContent: "Nội dung",
-    detailLastUpdated: "Cập nhật lần cuối",
     detailEscalatedAt: "Chuyển quản trị lúc",
-    detailResolvedAt: "Đóng đơn lúc",
     detailActions: "Xử lý đơn này",
     detailActionsHint:
       "Ghi chú xử lý sẽ được gửi lại cho thành viên cùng trạng thái của đơn.",

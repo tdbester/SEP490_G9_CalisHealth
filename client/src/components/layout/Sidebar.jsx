@@ -81,7 +81,9 @@ const EXCLUSIVE_PATHS = new Set([
   "/library/favorites",
   "/favorites",
   "/library/feedback",
+  "/library/feedback/new",
   "/feedback",
+  "/feedback/new",
 ]);
 
 /** Các mục điều hướng của member — nhãn lấy từ file i18n. */
@@ -126,9 +128,13 @@ export default function Sidebar() {
         {items.map((item) => {
           // "/library" là tiền tố của "/library/favorites", nên phải so khớp chính xác
           // để không làm sáng cả hai mục cùng lúc.
+          // Mục "Góp ý" vẫn sáng ở màn tạo đơn ("/library/feedback/new") vì đó là
+          // màn con của cùng một chức năng.
+          const isFeedback = item.labelKey === "nav.feedback";
           const isActive = item.path === "/"
             ? pathname === "/"
             : pathname === item.path
+              || (isFeedback && pathname.startsWith(`${item.path}/`))
               || (!EXCLUSIVE_PATHS.has(item.path)
                 && pathname.startsWith(`${item.path}/`)
                 && !EXCLUSIVE_PATHS.has(pathname));

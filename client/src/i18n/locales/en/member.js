@@ -93,6 +93,14 @@ export default {
     subtitle:
       "Send your feedback or complaint. Every ticket goes to the content team first; system-level issues are escalated to the administrators.",
     pageTitle: "Feedback & Complaints",
+    createTitle: "Submit new feedback",
+    createNew: "Submit new feedback",
+    backToList: "Back to ticket list",
+    cancel: "Cancel",
+    discard: "Discard",
+    discardTitle: "Discard this feedback ticket?",
+    discardMessage:
+      "Are you sure you want to cancel? The title and content you entered will be lost.",
     formTitle: "Submit new feedback",
     formHint:
       "Describe the problem clearly so we can act faster. You will be notified once the ticket is handled.",
@@ -124,7 +132,7 @@ export default {
     resolutionTitle: "Resolution",
     emptyTitle: "You have not submitted any tickets yet",
     emptyDesc:
-      "Use the form above to send your feedback or complaint to the management team.",
+      "Tap “Submit new feedback” to send your feedback or complaint to the management team.",
     loadFailed: "Could not load your feedback tickets.",
   },
 
@@ -301,6 +309,8 @@ export default {
     restFor: "Rest for {{seconds}} seconds.",
     restHintContinue: "Rest {{seconds}}s, then continue",
     restHintNextSet: "Rest {{seconds}}s, then start set {{set}}",
+    anatomyTitle: "Muscle anatomy",
+    anatomyAlt: "Muscle anatomy for {{name}}",
   },
 
   healthTracking: {
@@ -726,6 +736,8 @@ export default {
     nextLabel: "Next",
     none: "None",
     viewExercise: "View exercise",
+    back: "Back",
+    backAria: "Go back to the previous page",
     documentTitle: "CalisHealth - Explore",
   },
 
@@ -1267,6 +1279,140 @@ export default {
       LEVEL_TEST: {
         title: "Test your level",
         subtitle: "Do each move with good form and stop when it breaks.",
+      },
+    },
+    /** Step labels (small line above the title) — keyed by the backend step code. */
+    steps: {
+      BODY_INFORMATION: { label: "Body information" },
+      GOALS_AND_MOTIVATION: { label: "Goals & motivation" },
+      CURRENT_TRAINING_ROUTINE: { label: "Current training routine" },
+      LEVEL_TEST: { label: "Level test" },
+    },
+    /** Units (the `unit` column of a question in the backend). */
+    units: {
+      years: "years",
+      cm: "cm",
+      kg: "kg",
+      days: "days",
+      reps: "reps",
+      seconds: "seconds",
+      sec: "sec",
+    },
+    /**
+     * Survey question / option translations.
+     *
+     * Keys follow the backend `question_code` and `option_code`; when a
+     * translation is missing the UI falls back to the original copy written by
+     * the Content Manager.
+     */
+    questions: {
+      GENDER: {
+        label: "What is your gender?",
+        placeholder: "Select gender",
+        options: {
+          MALE: "Male",
+          FEMALE: "Female",
+          OTHER: "Other",
+        },
+      },
+      AGE: {
+        label: "How old are you?",
+        placeholder: "22",
+      },
+      HEIGHT: {
+        label: "What is your height?",
+        placeholder: "170",
+      },
+      WEIGHT: {
+        label: "What is your weight?",
+        placeholder: "65",
+      },
+      GOAL_TYPE: {
+        label: "What is your main goal?",
+        options: {
+          HEALTH: "For health",
+          SKILLS: "For skills",
+        },
+      },
+      HEALTH_GOAL: {
+        label: "Which health goal fits you best?",
+        options: {
+          LOSE_WEIGHT: "Lose weight",
+          BUILD_MUSCLE: "Build muscle",
+          STAY_FIT: "Stay fit",
+        },
+      },
+      TRAINING_SKILLS: {
+        label: "Which skills do you want to learn?",
+        description: "Pick up to 3 skills.",
+        options: {
+          MUSCLE_UP: "Muscle-up",
+          HANDSTAND: "Handstand",
+          PLANCHE: "Planche",
+          FRONT_LEVER: "Front lever",
+          HUMAN_FLAG: "Human flag",
+          L_SIT: "L-sit",
+        },
+      },
+      MOTIVATIONS: {
+        label: "What motivates you to train?",
+        description: "Pick up to 3 answers.",
+        options: {
+          HEALTH: "Health",
+          ENERGY: "More energy",
+          CONFIDENCE: "More confidence",
+          APPEARANCE: "Look better",
+          STRESS_RELIEF: "Stress relief",
+        },
+      },
+      TRAINING_EXPERIENCE: {
+        label: "How long have you been training?",
+        options: {
+          NONE: "Never",
+          NEVER: "Never",
+          UNDER_6_MONTHS: "Under 6 months",
+          MONTHS_6_TO_12: "6–12 months",
+          OVER_1_YEAR: "Over 1 year",
+        },
+      },
+      TRAINING_DAYS_PER_WEEK: {
+        label: "How many days per week have you trained?",
+      },
+      HOW_MANY_DAYS_PER_WEEK_DO_YOU_WANT_TO_TRAIN_WITH_CALISHE: {
+        label: "How many days per week do you want to train with Calishealth",
+      },
+      TRAINING_MINUTES_PER_SESSION: {
+        label: "How long is each training session?",
+        options: {
+          MIN_15: "About 15 minutes",
+          MIN_30: "About 30 minutes",
+          MIN_45: "About 45 minutes",
+          MIN_60_PLUS: "60 minutes or more",
+        },
+      },
+      PUSH_UP_MAX_REPS: {
+        label: "Push-up",
+        hint: "Max reps in a row",
+      },
+      SQUAT_MAX_REPS: {
+        label: "Squat",
+        hint: "Max reps in a row",
+      },
+      PLANK_MAX_SECONDS: {
+        label: "Plank",
+        hint: "Max hold time",
+      },
+      BURPEE_MAX_REPS: {
+        label: "Burpee",
+        hint: "Max reps in a row",
+      },
+      DIPS_MAX_REPS: {
+        label: "Dips",
+        hint: "Max reps in a row",
+      },
+      PULL_UP_MAX_REPS: {
+        label: "Pull-up",
+        hint: "Max reps in a row",
       },
     },
     validation: {
