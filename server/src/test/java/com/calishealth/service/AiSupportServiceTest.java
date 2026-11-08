@@ -317,7 +317,7 @@ class AiSupportServiceTest {
         when(openAi.isConfigured()).thenReturn(true);
         when(openAi.model()).thenReturn("gpt-4o-mini");
         when(gemini.isConfigured()).thenReturn(true);
-        when(gemini.model()).thenReturn("gemini-2.0-flash");
+        when(gemini.model()).thenReturn("gemini-3.5-flash");
         when(usageRepository.findForUpdate(7L, LocalDate.now())).thenReturn(Optional.of(usage(0)));
         when(sessionRepository.findForUpdate(7L, "session-1")).thenReturn(Optional.of(session(0)));
         when(gemini.chat(anyString(), anyList())).thenReturn(new AiChatProvider.ChatResult("{}", 30));
@@ -333,7 +333,7 @@ class AiSupportServiceTest {
         var response = autoService.ask("member@example.com",
                 new AskQuestionRequest("SQUAT", "Why do my knees cave in?", "session-1", List.of(), 70.0));
 
-        assertEquals("gemini-2.0-flash", response.provider());
+        assertEquals("gemini-3.5-flash", response.provider());
         assertEquals(30, response.totalTokens());
         // OpenAI không được gọi khi đã chọn Gemini.
         verify(openAi, never()).chat(anyString(), anyList());
@@ -366,7 +366,7 @@ class AiSupportServiceTest {
     @Test
     void quotaReportsGeminiModelWhenGeminiIsTheActiveProvider() {
         when(gemini.isConfigured()).thenReturn(true);
-        when(gemini.model()).thenReturn("gemini-2.0-flash");
+        when(gemini.model()).thenReturn("gemini-3.5-flash");
         when(usageRepository.findByUser_IdAndUsageDate(7L, LocalDate.now()))
                 .thenReturn(Optional.of(usage(1)));
         when(sessionRepository.countQuestions(7L, "session-1")).thenReturn(1);
@@ -378,6 +378,6 @@ class AiSupportServiceTest {
         QuotaResponse response = autoService.quota("member@example.com", "session-1");
 
         assertTrue(response.aiEnabled());
-        assertEquals("gemini-2.0-flash", response.model());
+        assertEquals("gemini-3.5-flash", response.model());
     }
 }

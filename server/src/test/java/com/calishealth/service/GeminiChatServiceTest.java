@@ -66,7 +66,7 @@ class GeminiChatServiceTest {
     }
 
     private GeminiChatService service(String apiKey) {
-        return new GeminiChatService(apiKey, "gemini-2.0-flash", baseUrl, 10, true);
+        return new GeminiChatService(apiKey, "gemini-3.5-flash", baseUrl, 10, true);
     }
 
     @Test
@@ -80,7 +80,7 @@ class GeminiChatServiceTest {
     @Test
     void exposesDemoFallbackFlag() {
         assertTrue(service("gemini-test-key").isDemoFallbackEnabled());
-        assertFalse(new GeminiChatService("gemini-test-key", "gemini-2.0-flash", baseUrl, 10, false)
+        assertFalse(new GeminiChatService("gemini-test-key", "gemini-3.5-flash", baseUrl, 10, false)
                 .isDemoFallbackEnabled());
     }
 
@@ -106,9 +106,12 @@ class GeminiChatServiceTest {
         // System prompt nằm riêng trong systemInstruction của Gemini.
         assertTrue(body.contains("systemInstruction"), body);
         assertTrue(body.contains("You are a coach"), body);
+        // Thinking của Gemini 3.x phải tắt, nếu không sẽ ăn hết maxOutputTokens
+        // và cắt cụt JSON trả về.
+        assertTrue(body.contains("\"thinkingBudget\":0"), body);
 
         assertEquals("gemini-test-key", receivedApiKeys.get(0));
-        assertEquals("/v1beta/models/gemini-2.0-flash:generateContent", receivedPaths.get(0));
+        assertEquals("/v1beta/models/gemini-3.5-flash:generateContent", receivedPaths.get(0));
     }
 
     @Test

@@ -45,17 +45,17 @@ public class GeminiChatService implements AiChatProvider {
 
     public GeminiChatService(
             @Value("${app.gemini.api-key:}") String apiKey,
-            @Value("${app.gemini.model:gemini-2.0-flash}") String model,
+            @Value("${app.gemini.model:gemini-3.5-flash}") String model,
             @Value("${app.gemini.base-url:https://generativelanguage.googleapis.com}") String baseUrl,
             @Value("${app.gemini.timeout-seconds:45}") int timeoutSeconds,
             @Value("${app.gemini.demo-fallback:true}") boolean demoFallbackEnabled
     ) {
         this.apiKey = apiKey == null ? "" : apiKey.trim();
-        this.model = (model == null || model.isBlank()) ? "gemini-2.0-flash" : model.trim();
+        this.model = (model == null || model.isBlank()) ? "gemini-3.5-flash" : model.trim();
         this.baseUrl = (baseUrl == null || baseUrl.isBlank())
                 ? "https://generativelanguage.googleapis.com"
                 : baseUrl.trim();
-        this.maxOutputTokens = 700;
+        this.maxOutputTokens = 1024;
         this.demoFallbackEnabled = demoFallbackEnabled;
 
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
@@ -128,6 +128,10 @@ public class GeminiChatService implements AiChatProvider {
         generationConfig.put("temperature", 0.4);
         generationConfig.put("maxOutputTokens", maxOutputTokens);
         generationConfig.put("responseMimeType", "application/json");
+        // Gemini 3.x mặc định bật "thinking" -> thoughtsTokenCount có thể ăn hết
+        // maxOutputTokens và cắt cụt JSON trả về. Tắt thinking để câu trả lời
+        // luôn là JSON đầy đủ, parse được.
+        generationConfig.putObject("thinkingConfig").put("thinkingBudget", 0);
         if (systemPrompt != null && !systemPrompt.isBlank()) {
             ObjectNode instruction = payload.putObject("systemInstruction");
             ArrayNode parts = instruction.putArray("parts");
