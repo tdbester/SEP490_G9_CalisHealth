@@ -31,7 +31,7 @@ class SystemExerciseDetailTest {
                 mock(ExerciseModerationHistoryRepository.class),
                 mock(UserRepository.class),
                 mock(JdbcTemplate.class),
-                mock(ExerciseVideoStorageService.class),
+                mock(MediaRegistryService.class),
                 mock(ExerciseTreeEdgeRepository.class),
                 mock(FitnessLevelRepository.class),
                 mock(ExerciseMuscleGroupCatalog.class),

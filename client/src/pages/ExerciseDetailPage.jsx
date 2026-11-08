@@ -19,10 +19,13 @@ function getUploadedDemoVideoUrl(exercise) {
   try {
     const apiUrl = new URL(import.meta.env.VITE_API_URL || "http://localhost:8080/api", window.location.origin);
     const videoUrl = new URL(value.trim(), apiUrl);
-    if (
-      videoUrl.origin !== apiUrl.origin ||
-      !/^\/media\/exercise-demos\/[^/]+\.(mp4|mov|webm)$/i.test(videoUrl.pathname)
-    ) {
+    const isLocalUpload =
+      videoUrl.origin === apiUrl.origin &&
+      /^\/media\/exercise-demos\/[^/]+\.(mp4|mov|webm)$/i.test(videoUrl.pathname);
+    const isCloudinaryUpload =
+      videoUrl.origin === "https://res.cloudinary.com" &&
+      /\/video\/upload\/.*\/exercise-demos\/[^/]+\.(mp4|mov|webm)$/i.test(videoUrl.pathname);
+    if (!isLocalUpload && !isCloudinaryUpload) {
       return null;
     }
     return videoUrl.href;

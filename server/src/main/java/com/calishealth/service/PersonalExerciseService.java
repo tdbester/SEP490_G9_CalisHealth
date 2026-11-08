@@ -23,8 +23,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -44,6 +42,7 @@ public class PersonalExerciseService {
     private final FitnessLevelRepository fitnessLevels;
     private final ContentModerationService moderation;
     private final ExerciseVideoStorageService videoStorage;
+    private final MediaRegistryService mediaRegistry;
     private final ExerciseMuscleGroupCatalog muscleGroupCatalog;
     private final SystemNotificationService systemNotifications;
 
@@ -91,10 +90,10 @@ public class PersonalExerciseService {
         videoStorage.validateVideoFile(videoFile, true);
         String videoReason = moderation.checkVideo(videoFile);
         ContentModerationService.ModerationResult result = moderation.combine(textReason, videoReason);
-        String videoUrl = videoReason == null ? videoStorage.store(videoFile) : null;
+        String videoUrl = videoReason == null ? videoStorage.store(videoFile, memberEmail) : null;
         String anatomyImageUrl = null;
         try {
-            anatomyImageUrl = storeAnatomyImage(anatomyImageFile);
+            anatomyImageUrl = storeAnatomyImage(anatomyImageFile, memberEmail);
             Exercise exercise = new Exercise();
             exercise.setCode(temporaryExerciseCode());
             exercise.setName(request.title().trim());
@@ -128,8 +127,8 @@ public class PersonalExerciseService {
             }
             return toResponse(saved, result.isPassed() ? null : result.rejectionReason());
         } catch (RuntimeException exception) {
-            videoStorage.delete(videoUrl);
-            videoStorage.deleteAnatomyImage(anatomyImageUrl);
+            mediaRegistry.release(videoUrl, "Upload not saved");
+            mediaRegistry.release(anatomyImageUrl, "Upload not saved");
             throw exception;
         }
     }
@@ -233,11 +232,11 @@ public class PersonalExerciseService {
                 .orElse(null);
         String replacementVideoUrl = null;
         if (hasNewVideo && videoReason == null) {
-            replacementVideoUrl = videoStorage.store(videoFile);
+            replacementVideoUrl = videoStorage.store(videoFile, memberEmail);
         }
 
         String previousVideoUrl = exercise.getVideoUrl();
-        String replacementAnatomyUrl = storeAnatomyImage(anatomyImageFile);
+        String replacementAnatomyUrl = storeAnatomyImage(anatomyImageFile, memberEmail);
         String previousAnatomyUrl = exercise.getAnatomyImageUrl();
         try {
             exercise.setName(request.title().trim());
@@ -268,15 +267,15 @@ public class PersonalExerciseService {
                 systemNotifications.notifyContentManagersPendingApproval(saved.getName());
             }
             if (replacementVideoUrl != null && previousVideoUrl != null) {
-                deleteVideoAfterCommit(previousVideoUrl);
+                mediaRegistry.release(previousVideoUrl, "Replaced by a newer video");
             }
             if (replacementAnatomyUrl != null && previousAnatomyUrl != null) {
-                deleteAnatomyImageAfterCommit(previousAnatomyUrl);
+                mediaRegistry.release(previousAnatomyUrl, "Replaced by a newer image");
             }
             return toResponse(saved, rejectionReason);
         } catch (RuntimeException exception) {
-            videoStorage.delete(replacementVideoUrl);
-            videoStorage.deleteAnatomyImage(replacementAnatomyUrl);
+            mediaRegistry.release(replacementVideoUrl, "Upload not saved");
+            mediaRegistry.release(replacementAnatomyUrl, "Upload not saved");
             throw exception;
         }
     }
@@ -321,11 +320,11 @@ public class PersonalExerciseService {
                 .orElse(null);
         String replacementVideoUrl = null;
         if (hasNewVideo && videoReason == null) {
-            replacementVideoUrl = videoStorage.store(videoFile);
+            replacementVideoUrl = videoStorage.store(videoFile, memberEmail);
         }
 
         String previousVideoUrl = exercise.getVideoUrl();
-        String replacementAnatomyUrl = storeAnatomyImage(anatomyImageFile);
+        String replacementAnatomyUrl = storeAnatomyImage(anatomyImageFile, memberEmail);
         String previousAnatomyUrl = exercise.getAnatomyImageUrl();
         try {
             exercise.setName(request.title().trim());
@@ -354,15 +353,15 @@ public class PersonalExerciseService {
                 recordRejection(saved, rejectionReason);
             }
             if (replacementVideoUrl != null && previousVideoUrl != null) {
-                deleteVideoAfterCommit(previousVideoUrl);
+                mediaRegistry.release(previousVideoUrl, "Replaced by a newer video");
             }
             if (replacementAnatomyUrl != null && previousAnatomyUrl != null) {
-                deleteAnatomyImageAfterCommit(previousAnatomyUrl);
+                mediaRegistry.release(previousAnatomyUrl, "Replaced by a newer image");
             }
             return toResponse(saved, rejectionReason);
         } catch (RuntimeException exception) {
-            videoStorage.delete(replacementVideoUrl);
-            videoStorage.deleteAnatomyImage(replacementAnatomyUrl);
+            mediaRegistry.release(replacementVideoUrl, "Upload not saved");
+            mediaRegistry.release(replacementAnatomyUrl, "Upload not saved");
             throw exception;
         }
     }
@@ -374,10 +373,10 @@ public class PersonalExerciseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Personal exercise not found"));
         exercises.delete(exercise);
         if (exercise.getVideoUrl() != null) {
-            deleteVideoAfterCommit(exercise.getVideoUrl());
+            mediaRegistry.release(exercise.getVideoUrl(), "Exercise was deleted");
         }
         if (exercise.getAnatomyImageUrl() != null) {
-            deleteAnatomyImageAfterCommit(exercise.getAnatomyImageUrl());
+            mediaRegistry.release(exercise.getAnatomyImageUrl(), "Exercise was deleted");
         }
     }
 
@@ -486,35 +485,9 @@ public class PersonalExerciseService {
         return Character.toUpperCase(value.charAt(0)) + value.substring(1);
     }
 
-    private void deleteVideoAfterCommit(String videoUrl) {
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                try {
-                    videoStorage.delete(videoUrl);
-                } catch (RuntimeException exception) {
-                    log.error("Could not remove unused personal exercise video {}", videoUrl, exception);
-                }
-            }
-        });
-    }
-
-    private String storeAnatomyImage(MultipartFile imageFile) {
+    private String storeAnatomyImage(MultipartFile imageFile, String memberEmail) {
         return imageFile == null || imageFile.isEmpty()
                 ? null
-                : videoStorage.storeAnatomyImage(imageFile);
-    }
-
-    private void deleteAnatomyImageAfterCommit(String imageUrl) {
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                try {
-                    videoStorage.deleteAnatomyImage(imageUrl);
-                } catch (RuntimeException exception) {
-                    log.error("Could not remove unused personal exercise anatomy image {}", imageUrl, exception);
-                }
-            }
-        });
+                : videoStorage.storeAnatomyImage(imageFile, memberEmail);
     }
 }
