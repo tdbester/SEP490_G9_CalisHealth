@@ -91,7 +91,7 @@ class OpenAiChatServiceTest {
                 """;
         OpenAiChatService service = service("sk-test-key");
 
-        OpenAiChatService.ChatResult result = service.chat("You are a coach", "Why is my form bad?");
+        AiChatProvider.ChatResult result = service.chat("You are a coach", "Why is my form bad?");
 
         assertEquals(42, result.totalTokens());
         assertTrue(result.content().contains("ok"));
@@ -116,9 +116,9 @@ class OpenAiChatServiceTest {
         OpenAiChatService service = service("sk-test-key");
 
         service.chat("system prompt", List.of(
-                OpenAiChatService.ChatMessage.user("first question"),
-                OpenAiChatService.ChatMessage.assistant("first answer"),
-                OpenAiChatService.ChatMessage.user("second question")));
+                AiChatProvider.ChatMessage.user("first question"),
+                AiChatProvider.ChatMessage.assistant("first answer"),
+                AiChatProvider.ChatMessage.user("second question")));
 
         String body = receivedBodies.get(0);
         assertTrue(body.contains("first question"), body);

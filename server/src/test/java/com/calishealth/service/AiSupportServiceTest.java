@@ -40,7 +40,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Kiểm tra luồng AI Support: quota, gọi API thật và xử lý lỗi.
+ * Kiá»ƒm tra luá»“ng AI Support: quota, gá»i API tháº­t vÃ  xá»­ lÃ½ lá»—i.
  */
 class AiSupportServiceTest {
 
@@ -52,10 +52,11 @@ class AiSupportServiceTest {
     private final FormRuleRepository formRules = mock(FormRuleRepository.class);
     private final ContentModerationService moderation = mock(ContentModerationService.class);
     private final OpenAiChatService openAi = mock(OpenAiChatService.class);
+    private final GeminiChatService gemini = mock(GeminiChatService.class);
 
     private final AiSupportService service = new AiSupportService(
             usageRepository, messageRepository, sessionRepository,
-            users, exercises, formRules, openAi, moderation);
+            users, exercises, formRules, openAi, gemini, moderation, "openai");
 
     private User member;
     private Exercise exercise;
@@ -79,7 +80,7 @@ class AiSupportServiceTest {
                 .thenReturn(List.of());
     }
 
-    /** Tạo bản ghi quota hôm nay với số câu đã dùng cho trước. */
+    /** Táº¡o báº£n ghi quota hÃ´m nay vá»›i sá»‘ cÃ¢u Ä‘Ã£ dÃ¹ng cho trÆ°á»›c. */
     private AiSupportUsage usage(int used) {
         AiSupportUsage usage = new AiSupportUsage();
         usage.setUser(member);
@@ -89,7 +90,7 @@ class AiSupportServiceTest {
         return usage;
     }
 
-    /** Tạo bản ghi phiên chat. */
+    /** Táº¡o báº£n ghi phiÃªn chat. */
     private AiSupportSession session(int used) {
         AiSupportSession session = new AiSupportSession();
         session.setUser(member);
@@ -135,7 +136,7 @@ class AiSupportServiceTest {
         when(sessionRepository.findForUpdate(7L, "session-1")).thenReturn(Optional.of(session(0)));
         when(openAi.isConfigured()).thenReturn(true);
         when(openAi.model()).thenReturn("gpt-4o-mini");
-        when(openAi.chat(anyString(), anyList())).thenReturn(new OpenAiChatService.ChatResult("""
+        when(openAi.chat(anyString(), anyList())).thenReturn(new AiChatProvider.ChatResult("""
                 {"causes":[{"title":"Core fatigue","detail":"Hips drop."}],
                  "tip":"Slow the set down.","followUps":["How do I warm up?"]}
                 """, 120));
@@ -174,7 +175,7 @@ class AiSupportServiceTest {
         when(openAi.isConfigured()).thenReturn(true);
         when(openAi.model()).thenReturn("gpt-4o-mini");
         when(openAi.chat(anyString(), anyList()))
-                .thenReturn(new OpenAiChatService.ChatResult("{}", 10));
+                .thenReturn(new AiChatProvider.ChatResult("{}", 10));
         when(openAi.toAnswer(anyString())).thenReturn(new com.calishealth.dtos.AiSupportDtos.AnswerResponse(
                 List.of(), "", List.of()));
 
@@ -184,7 +185,7 @@ class AiSupportServiceTest {
         var captor = org.mockito.ArgumentCaptor.forClass(List.class);
         verify(openAi).chat(anyString(), captor.capture());
         List<?> sent = captor.getValue();
-        // 1 lượt cũ -> 2 message (hỏi + đáp) + 1 câu hỏi mới.
+        // 1 lÆ°á»£t cÅ© -> 2 message (há»i + Ä‘Ã¡p) + 1 cÃ¢u há»i má»›i.
         assertEquals(3, sent.size());
     }
 
@@ -200,7 +201,7 @@ class AiSupportServiceTest {
         assertThrows(OpenAiException.class, () -> service.ask("member@example.com",
                 new AskQuestionRequest("SQUAT", "Why?", "session-1", List.of(), null)));
 
-        // Không lưu lịch sử khi AI lỗi -> không mất lượt đã hỏi.
+        // KhÃ´ng lÆ°u lá»‹ch sá»­ khi AI lá»—i -> khÃ´ng máº¥t lÆ°á»£t Ä‘Ã£ há»i.
         verify(messageRepository, never()).save(any(AiSupportMessage.class));
     }
 
@@ -220,7 +221,7 @@ class AiSupportServiceTest {
         assertEquals("AI_OUT_OF_CREDITS", response.notice());
         assertEquals(0, response.totalTokens());
         assertEquals(3, response.answer().causes().size());
-        // Lượt vẫn được tính.
+        // LÆ°á»£t váº«n Ä‘Æ°á»£c tÃ­nh.
         assertEquals(1, response.questionCount());
     }
 
@@ -254,7 +255,7 @@ class AiSupportServiceTest {
         assertNotEquals(
                 warmUp.answer().causes().get(0).title(),
                 depth.answer().causes().get(0).title(),
-                "Câu hỏi khác nhau phải cho nguyên nhân khác nhau");
+                "CÃ¢u há»i khÃ¡c nhau pháº£i cho nguyÃªn nhÃ¢n khÃ¡c nhau");
         assertTrue(warmUp.answer().causes().stream()
                 .anyMatch(cause -> cause.title().toLowerCase().contains("warm-up")));
         assertTrue(depth.answer().causes().stream()
@@ -309,5 +310,74 @@ class AiSupportServiceTest {
                         new AskQuestionRequest("SQUAT", "badword", "session-1", List.of(), null)));
 
         assertEquals(400, exception.getStatusCode().value());
+    }
+
+    @Test
+    void autoProviderPrefersGeminiWhenBothAreConfigured() {
+        when(openAi.isConfigured()).thenReturn(true);
+        when(openAi.model()).thenReturn("gpt-4o-mini");
+        when(gemini.isConfigured()).thenReturn(true);
+        when(gemini.model()).thenReturn("gemini-2.0-flash");
+        when(usageRepository.findForUpdate(7L, LocalDate.now())).thenReturn(Optional.of(usage(0)));
+        when(sessionRepository.findForUpdate(7L, "session-1")).thenReturn(Optional.of(session(0)));
+        when(gemini.chat(anyString(), anyList())).thenReturn(new AiChatProvider.ChatResult("{}", 30));
+        when(gemini.toAnswer(anyString())).thenReturn(new com.calishealth.dtos.AiSupportDtos.AnswerResponse(
+                List.of(new com.calishealth.dtos.AiSupportDtos.LikelyCause("Knee valgus", "Knees cave in.")),
+                "Slow down.",
+                List.of()));
+
+        AiSupportService autoService = new AiSupportService(
+                usageRepository, messageRepository, sessionRepository,
+                users, exercises, formRules, openAi, gemini, moderation, "auto");
+
+        var response = autoService.ask("member@example.com",
+                new AskQuestionRequest("SQUAT", "Why do my knees cave in?", "session-1", List.of(), 70.0));
+
+        assertEquals("gemini-2.0-flash", response.provider());
+        assertEquals(30, response.totalTokens());
+        // OpenAI không được gọi khi đã chọn Gemini.
+        verify(openAi, never()).chat(anyString(), anyList());
+    }
+
+    @Test
+    void autoProviderFallsBackToOpenAiWhenGeminiHasNoKey() {
+        when(openAi.isConfigured()).thenReturn(true);
+        when(openAi.model()).thenReturn("gpt-4o-mini");
+        when(gemini.isConfigured()).thenReturn(false);
+        when(usageRepository.findForUpdate(7L, LocalDate.now())).thenReturn(Optional.of(usage(0)));
+        when(sessionRepository.findForUpdate(7L, "session-1")).thenReturn(Optional.of(session(0)));
+        when(openAi.chat(anyString(), anyList())).thenReturn(new AiChatProvider.ChatResult("{}", 55));
+        when(openAi.toAnswer(anyString())).thenReturn(new com.calishealth.dtos.AiSupportDtos.AnswerResponse(
+                List.of(new com.calishealth.dtos.AiSupportDtos.LikelyCause("Depth", "Too shallow.")),
+                "Go deeper.",
+                List.of()));
+
+        AiSupportService autoService = new AiSupportService(
+                usageRepository, messageRepository, sessionRepository,
+                users, exercises, formRules, openAi, gemini, moderation, "auto");
+
+        var response = autoService.ask("member@example.com",
+                new AskQuestionRequest("SQUAT", "Why is my depth low?", "session-1", List.of(), 70.0));
+
+        assertEquals("gpt-4o-mini", response.provider());
+        assertEquals(55, response.totalTokens());
+    }
+
+    @Test
+    void quotaReportsGeminiModelWhenGeminiIsTheActiveProvider() {
+        when(gemini.isConfigured()).thenReturn(true);
+        when(gemini.model()).thenReturn("gemini-2.0-flash");
+        when(usageRepository.findByUser_IdAndUsageDate(7L, LocalDate.now()))
+                .thenReturn(Optional.of(usage(1)));
+        when(sessionRepository.countQuestions(7L, "session-1")).thenReturn(1);
+
+        AiSupportService autoService = new AiSupportService(
+                usageRepository, messageRepository, sessionRepository,
+                users, exercises, formRules, openAi, gemini, moderation, "auto");
+
+        QuotaResponse response = autoService.quota("member@example.com", "session-1");
+
+        assertTrue(response.aiEnabled());
+        assertEquals("gemini-2.0-flash", response.model());
     }
 }

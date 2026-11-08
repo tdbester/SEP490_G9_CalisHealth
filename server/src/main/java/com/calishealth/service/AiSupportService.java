@@ -19,8 +19,8 @@ import com.calishealth.repository.AiSupportUsageRepository;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.FormRuleRepository;
 import com.calishealth.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +43,6 @@ import java.util.Locale;
  * form rules, accuracy và danh sách lỗi form AI đã phát hiện.
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class AiSupportService {
 
@@ -61,7 +60,61 @@ public class AiSupportService {
     private final ExerciseRepository exercises;
     private final FormRuleRepository formRules;
     private final OpenAiChatService openAi;
+    private final GeminiChatService gemini;
     private final ContentModerationService moderation;
+    /**
+     * Provider AI đang dùng: "gemini", "openai" hoặc null (không có API nào).
+     *
+     * Ưu tiên Gemini vì free tier không cần nạp credit; đổi sang OpenAI
+     * bằng cách đặt AI_PROVIDER=openai trong .env.
+     */
+    private final String aiProvider;
+
+    public AiSupportService(
+            AiSupportUsageRepository usageRepository,
+            AiSupportMessageRepository messageRepository,
+            AiSupportSessionRepository sessionRepository,
+            UserRepository users,
+            ExerciseRepository exercises,
+            FormRuleRepository formRules,
+            OpenAiChatService openAi,
+            GeminiChatService gemini,
+            ContentModerationService moderation,
+            @Value("${app.ai.provider:auto}") String aiProvider) {
+        this.usageRepository = usageRepository;
+        this.messageRepository = messageRepository;
+        this.sessionRepository = sessionRepository;
+        this.users = users;
+        this.exercises = exercises;
+        this.formRules = formRules;
+        this.openAi = openAi;
+        this.gemini = gemini;
+        this.moderation = moderation;
+        this.aiProvider = aiProvider == null ? "" : aiProvider.trim().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Provider sẽ dùng cho lượt hỏi tiếp theo.
+     *
+     * "auto" -> ưu tiên Gemini (free tier), fallback sang OpenAI nếu Gemini
+     * chưa có key. Trả null khi không provider nào sẵn sàng.
+     */
+    private AiChatProvider activeProvider() {
+        boolean preferOpenAi = "openai".equals(aiProvider);
+        if (!preferOpenAi && gemini.isConfigured()) {
+            return gemini;
+        }
+        if (preferOpenAi && openAi.isConfigured()) {
+            return openAi;
+        }
+        if (gemini.isConfigured()) {
+            return gemini;
+        }
+        if (openAi.isConfigured()) {
+            return openAi;
+        }
+        return null;
+    }
 
     // ---------------------------------------------------------------- quota
 
@@ -73,15 +126,16 @@ public class AiSupportService {
         int used = usageRepository.findByUser_IdAndUsageDate(user.getId(), LocalDate.now())
                 .map(AiSupportUsage::getQuestionCount)
                 .orElse(0);
+        AiChatProvider provider = activeProvider();
         return new QuotaResponse(
                 used,
                 AiSupportUsage.DAILY_QUESTION_LIMIT,
                 Math.max(0, AiSupportUsage.DAILY_QUESTION_LIMIT - used),
                 AiSupportUsage.SESSION_QUESTION_LIMIT,
                 countSessionQuestions(user.getId(), sessionId),
-                openAi.isConfigured(),
-                openAi.isConfigured() ? openAi.model() : null,
-                openAi.isDemoFallbackEnabled());
+                provider != null,
+                provider == null ? null : provider.model(),
+                provider == null ? openAi.isDemoFallbackEnabled() : provider.isDemoFallbackEnabled());
     }
 
     // ------------------------------------------------------------------ ask
@@ -186,21 +240,22 @@ public class AiSupportService {
         int tokens;
         String provider;
         String notice = null;
-        if (openAi.isConfigured()) {
+        AiChatProvider active = activeProvider();
+        if (active != null) {
             try {
-                List<OpenAiChatService.ChatMessage> chat =
+                List<AiChatProvider.ChatMessage> chat =
                         buildChatHistory(user.getId(), sessionId, question);
-                OpenAiChatService.ChatResult result = openAi.chat(systemPrompt, chat);
-                answer = openAi.toAnswer(result.content());
+                AiChatProvider.ChatResult result = active.chat(systemPrompt, chat);
+                answer = active.toAnswer(result.content());
                 tokens = result.totalTokens();
-                provider = openAi.model();
+                provider = active.model();
             } catch (OpenAiException exception) {
                 // Chế độ demo: API lỗi (hết credit, mạng, rate limit) -> trả lời
                 // bằng rule nội bộ kèm cờ báo rõ, để demo vẫn chạy được.
-                if (!openAi.isDemoFallbackEnabled()) {
+                if (!active.isDemoFallbackEnabled()) {
                     throw exception;
                 }
-                log.warn("OpenAI unavailable, serving the local demo answer: {}", exception.getCode());
+                log.warn("AI provider unavailable, serving the local demo answer: {}", exception.getCode());
                 answer = fallbackAnswer(exercise, rules, request.formIssues(), question);
                 tokens = 0;
                 provider = "local-rules";
@@ -251,22 +306,22 @@ public class AiSupportService {
      * @param sessionId id phiên chat (null/blank -> chỉ gửi câu hỏi mới)
      * @param question  câu hỏi mới của member
      */
-    private List<OpenAiChatService.ChatMessage> buildChatHistory(Long userId, String sessionId, String question) {
-        List<OpenAiChatService.ChatMessage> messages = new ArrayList<>();
+    private List<AiChatProvider.ChatMessage> buildChatHistory(Long userId, String sessionId, String question) {
+        List<AiChatProvider.ChatMessage> messages = new ArrayList<>();
         if (sessionId != null && !sessionId.isBlank()) {
             List<AiSupportMessage> previous = messageRepository
                     .findByUser_IdAndSessionIdOrderByCreatedAtAsc(userId, sessionId);
             // Chỉ giữ N lượt gần nhất -> prompt gọn, giá rẻ.
             int from = Math.max(0, previous.size() - HISTORY_TURNS);
             for (AiSupportMessage item : previous.subList(from, previous.size())) {
-                messages.add(OpenAiChatService.ChatMessage.user(item.getQuestion()));
+                messages.add(AiChatProvider.ChatMessage.user(item.getQuestion()));
                 String answer = item.getAnswer();
                 if (answer != null && !answer.isBlank()) {
-                    messages.add(OpenAiChatService.ChatMessage.assistant(answerAsPlainText(answer)));
+                    messages.add(AiChatProvider.ChatMessage.assistant(answerAsPlainText(answer)));
                 }
             }
         }
-        messages.add(OpenAiChatService.ChatMessage.user(question));
+        messages.add(AiChatProvider.ChatMessage.user(question));
         return messages;
     }
 

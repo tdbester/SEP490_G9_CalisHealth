@@ -60,6 +60,30 @@ app:
     secret: clh-demo-secret-key-please-change-this-32-chars-min
     expiration-ms: 86400000
   # AI Support (màn popup hỏi AI về lỗi form sau buổi tập).
+  #
+  # Chọn nhà cung cấp AI:
+  #   "auto"   -> ưu tiên Gemini (free tier, không cần nạp credit),
+  #               fallback sang OpenAI nếu Gemini chưa có key.
+  #   "gemini" -> chỉ dùng Gemini.
+  #   "openai" -> chỉ dùng OpenAI (cần nạp credit).
+  #
+  # Đặt GEMINI_API_KEY (biến môi trường hoặc file .env) để dùng Gemini thật.
+  # Chưa có key nào thì API vẫn chạy, trả lời bằng rule nội bộ.
+  ai:
+    provider: ${AI_PROVIDER:auto}
+
+  # Gemini — Google Generative Language API (free tier).
+  # Lấy key miễn phí tại https://aistudio.google.com/apikey
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-2.0-flash}
+    base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+    timeout-seconds: ${GEMINI_TIMEOUT_SECONDS:45}
+    # Chế độ demo: khi API lỗi (hết quota, mất mạng) thì trả lời bằng rule
+    # nội bộ kèm cờ báo rõ cho member, thay vì báo lỗi.
+    demo-fallback: ${GEMINI_DEMO_FALLBACK:true}
+
+  # OpenAI Chat Completions (gpt-4o-mini) — cần nạp credit mới dùng được.
   # Đặt OPENAI_API_KEY (biến môi trường hoặc file .env) để dùng API thật.
   # Chưa có key thì API vẫn chạy, trả lời bằng rule nội bộ.
   openai:

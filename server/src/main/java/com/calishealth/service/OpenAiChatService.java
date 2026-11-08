@@ -31,7 +31,7 @@ import java.util.List;
  */
 @Service
 @Slf4j
-public class OpenAiChatService {
+public class OpenAiChatService implements AiChatProvider {
 
     private static final String CHAT_COMPLETIONS_PATH = "/v1/chat/completions";
 
@@ -69,6 +69,7 @@ public class OpenAiChatService {
     }
 
     /** Đã cấu hình API key để gọi AI thật chưa. */
+    @Override
     public boolean isConfigured() {
         return !apiKey.isBlank();
     }
@@ -84,7 +85,7 @@ public class OpenAiChatService {
         return demoFallbackEnabled;
     }
 
-    /** Model đang dùng (để hiển thị/log). */
+    @Override
     public String model() {
         return model;
     }
@@ -101,6 +102,7 @@ public class OpenAiChatService {
      * @param userPrompt    câu hỏi của member
      * @return kết quả gồm nội dung trả lời và số token đã dùng
      */
+    @Override
     public ChatResult chat(String systemPrompt, String userPrompt) {
         return chat(systemPrompt, List.of(new ChatMessage("user", userPrompt)));
     }
@@ -115,6 +117,7 @@ public class OpenAiChatService {
      * @param systemPrompt persona + ngữ cảnh (form rules, accuracy...)
      * @param messages     lịch sử chat (role + content), phần tử cuối là câu hỏi mới
      */
+    @Override
     public ChatResult chat(String systemPrompt, List<ChatMessage> messages) {
         if (!isConfigured()) {
             throw new OpenAiException(
@@ -267,6 +270,7 @@ public class OpenAiChatService {
      * Nếu AI trả về JSON không đúng format, fallback sang phân tích text thuần
      * để member vẫn nhận được câu trả lời.
      */
+    @Override
     public AnswerResponse toAnswer(String rawContent) {
         List<LikelyCause> causes = new ArrayList<>();
         String tip = "";
@@ -301,18 +305,4 @@ public class OpenAiChatService {
         }
         return new AnswerResponse(List.copyOf(causes), tip, List.copyOf(followUps));
     }
-
-    /** Một tin nhắn trong hội thoại (system/user/assistant). */
-    public record ChatMessage(String role, String content) {
-        public static ChatMessage user(String content) {
-            return new ChatMessage("user", content);
-        }
-
-        public static ChatMessage assistant(String content) {
-            return new ChatMessage("assistant", content);
-        }
-    }
-
-    /** Kết quả một lượt gọi AI: nội dung + số token đã dùng. */
-    public record ChatResult(String content, int totalTokens) {}
 }

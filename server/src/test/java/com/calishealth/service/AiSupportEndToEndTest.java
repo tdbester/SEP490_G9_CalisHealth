@@ -128,10 +128,13 @@ class AiSupportEndToEndTest {
             OpenAiChatService chatService = new OpenAiChatService(
                     "sk-real-key", "gpt-4o-mini",
                     "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, true);
+            GeminiChatService geminiService = new GeminiChatService(
+                    "", "gemini-2.0-flash",
+                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, true);
 
             AiSupportService service = new AiSupportService(
                     usageRepository, messageRepository, sessionRepository,
-                    users, exercises, formRules, chatService, moderation);
+                    users, exercises, formRules, chatService, geminiService, moderation, "openai");
 
             var response = service.ask("member@example.com", new AskQuestionRequest(
                     "SQUAT",
@@ -222,10 +225,13 @@ class AiSupportEndToEndTest {
             OpenAiChatService chatService = new OpenAiChatService(
                     "sk-wrong", "gpt-4o-mini",
                     "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, false);
+            GeminiChatService geminiService = new GeminiChatService(
+                    "", "gemini-2.0-flash",
+                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, false);
 
             AiSupportService service = new AiSupportService(
                     usageRepository, messageRepository, sessionRepository,
-                    users, exercises, formRules, chatService, moderation);
+                    users, exercises, formRules, chatService, geminiService, moderation, "openai");
 
             var exception = assertThrows(RuntimeException.class,
                     () -> service.ask("member@example.com", new AskQuestionRequest(
@@ -295,10 +301,13 @@ class AiSupportEndToEndTest {
             OpenAiChatService chatService = new OpenAiChatService(
                     "sk-out-of-credits", "gpt-4o-mini",
                     "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, true);
+            GeminiChatService geminiService = new GeminiChatService(
+                    "", "gemini-2.0-flash",
+                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, true);
 
             AiSupportService service = new AiSupportService(
                     usageRepository, messageRepository, sessionRepository,
-                    users, exercises, formRules, chatService, moderation);
+                    users, exercises, formRules, chatService, geminiService, moderation, "openai");
 
             var response = service.ask("member@example.com", new AskQuestionRequest(
                     "SQUAT", "Why do my knees cave in?", "sess-42", List.of("Knees caved inward"), 68.0));
