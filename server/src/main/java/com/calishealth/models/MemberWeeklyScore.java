@@ -10,7 +10,7 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "member_weekly_scores", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"member_id", "week_start", "fitness_level_id"})
+    @UniqueConstraint(columnNames = {"member_profile_id", "week_start", "fitness_level_id"})
 })
 @Data
 @NoArgsConstructor
@@ -21,7 +21,7 @@ public class MemberWeeklyScore {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id", nullable = false)
+    @JoinColumn(name = "member_profile_id", nullable = false)
     private MemberProfile member;
 
     @Column(name = "week_start", nullable = false)

@@ -17,7 +17,7 @@ public class MemberSavedExercise {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "member_id", nullable = false)
+    @Column(name = "user_id", nullable = false)
     private Long memberId;
 
     @Column(name = "exercise_id", nullable = false)
