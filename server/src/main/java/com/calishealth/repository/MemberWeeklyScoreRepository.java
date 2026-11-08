@@ -14,34 +14,33 @@ import java.util.Optional;
 @Repository
 public interface MemberWeeklyScoreRepository extends JpaRepository<MemberWeeklyScore, Long> {
 
-    @Query("SELECT m FROM MemberWeeklyScore m WHERE m.weekStart = :weekStart ORDER BY m.totalScore DESC")
-    List<MemberWeeklyScore> findLeaderboardForWeek(@Param("weekStart") LocalDate weekStart, Pageable pageable);
-
-    @Query("SELECT m FROM MemberWeeklyScore m WHERE m.weekStart = :weekStart AND m.fitnessLevel.id = :levelId ORDER BY m.totalScore DESC")
+    @Query("SELECT m FROM MemberWeeklyScore m JOIN FETCH m.member mem JOIN FETCH mem.user JOIN FETCH m.fitnessLevel WHERE m.weekStart = :weekStart AND m.fitnessLevel.id = :levelId ORDER BY m.totalScore DESC")
     List<MemberWeeklyScore> findLeaderboardForWeekAndLevel(@Param("weekStart") LocalDate weekStart, @Param("levelId") Long levelId, Pageable pageable);
+
+    /** Tổng số member trong tuần thuộc level đang lọc. */
+    @Query("SELECT COUNT(m) FROM MemberWeeklyScore m WHERE m.weekStart = :weekStart AND m.fitnessLevel.id = :levelId")
+    long countForWeekAndLevel(@Param("weekStart") LocalDate weekStart, @Param("levelId") Long levelId);
 
     @Query("SELECT m FROM MemberWeeklyScore m WHERE m.member.id = :memberId ORDER BY m.weekStart DESC")
     List<MemberWeeklyScore> findRecentWeeksForMember(@Param("memberId") Long memberId, Pageable pageable);
 
     Optional<MemberWeeklyScore> findByMember_IdAndWeekStart(Long memberId, LocalDate weekStart);
 
-    @Query("SELECT m FROM MemberWeeklyScore m WHERE m.member.id = :memberId AND m.weekStart = :weekStart")
-    Optional<MemberWeeklyScore> findForMemberAndWeek(
-        @Param("memberId") Long memberId,
-        @Param("weekStart") LocalDate weekStart
-    );
-
-    @Query("SELECT m FROM MemberWeeklyScore m WHERE m.member.id = :memberId AND m.weekStart = :weekStart AND m.fitnessLevel.id = :levelId")
+    @Query("SELECT m FROM MemberWeeklyScore m JOIN FETCH m.member mem JOIN FETCH mem.user JOIN FETCH m.fitnessLevel WHERE m.member.id = :memberId AND m.weekStart = :weekStart AND m.fitnessLevel.id = :levelId")
     Optional<MemberWeeklyScore> findForMemberAndWeekAndLevel(
         @Param("memberId") Long memberId,
         @Param("weekStart") LocalDate weekStart,
         @Param("levelId") Long levelId
     );
 
+    /**
+     * Số member đứng trên member này trong tuần (cùng phạm vi level).
+     * levelId luôn khác null vì leaderboard chỉ lọc theo level.
+     */
     @Query("""
         SELECT COUNT(m) FROM MemberWeeklyScore m
         WHERE m.weekStart = :weekStart
-          AND (:levelId IS NULL OR m.fitnessLevel.id = :levelId)
+          AND m.fitnessLevel.id = :levelId
           AND (m.totalScore > :totalScore OR (m.totalScore = :totalScore AND m.id < :scoreId))
         """)
     long countScoresAbove(

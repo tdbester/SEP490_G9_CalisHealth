@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -30,25 +31,21 @@ public class LeaderboardController {
     /**
      * GET /api/leaderboard/week/current
      * Lấy top 50 members của 1 level trong tuần hiện tại.
-     * levelId = null → global leaderboard (tất cả levels)
+     * Leaderboard LUÔN lọc theo level — levelId bắt buộc.
      */
     @GetMapping("/week/current")
     public ResponseEntity<LeaderboardResponse> getCurrentWeekLeaderboard(
-        @RequestParam(required = false) Long levelId,
+        @RequestParam Long levelId,
         Authentication authentication
     ) {
         LocalDate weekStart = getMondayOfCurrentWeek();
         Pageable top50 = PageRequest.of(0, 50);
 
-        List<MemberWeeklyScore> entries = levelId == null
-            ? scoreRepository.findLeaderboardForWeek(weekStart, top50)
-            : scoreRepository.findLeaderboardForWeekAndLevel(weekStart, levelId, top50);
+        List<MemberWeeklyScore> entries = scoreRepository.findLeaderboardForWeekAndLevel(weekStart, levelId, top50);
 
         LeaderboardEntryDTO myEntry = memberProfileRepository
             .findByUser_Email(authentication.getName())
-            .flatMap(member -> levelId == null
-                ? scoreRepository.findForMemberAndWeek(member.getId(), weekStart)
-                : scoreRepository.findForMemberAndWeekAndLevel(member.getId(), weekStart, levelId))
+            .flatMap(member -> scoreRepository.findForMemberAndWeekAndLevel(member.getId(), weekStart, levelId))
             .map(score -> LeaderboardEntryDTO.from(
                 score,
                 (int) scoreRepository.countScoresAbove(
@@ -62,7 +59,7 @@ public class LeaderboardController {
             .weekStart(weekStart)
             .weekEnd(weekStart.plusDays(6))
             .levelId(levelId)
-            .totalMembers(entries.size())
+            .totalMembers((int) scoreRepository.countForWeekAndLevel(weekStart, levelId))
             .entries(entries.stream()
                 .map(LeaderboardEntryDTO::from)
                 .collect(Collectors.toList()))
@@ -87,6 +84,41 @@ public class LeaderboardController {
                 .map(s -> new MemberWeekEntryDTO(s.getWeekStart(), s.getRank(), s.getTotalScore(), s.getRankChange()))
                 .collect(Collectors.toList()))
             .build());
+    }
+
+    /**
+     * GET /api/leaderboard/week/breakdown?memberId=42
+     * Chi tiết cách tính điểm tuần của 1 member: số buổi tập, phút tập,
+     * accuracy trung bình, ngày nghỉ và chuỗi tuần — để member hiểu vì sao
+     * điểm của họ là con số đó.
+     */
+    @GetMapping("/week/breakdown")
+    public ResponseEntity<ScoreBreakdownResponse> getScoreBreakdown(
+        @RequestParam Long memberId,
+        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate weekStart
+    ) {
+        LocalDate week = weekStart == null ? getMondayOfCurrentWeek() : weekStart;
+        Map<String, BigDecimal> breakdown = leaderboardService.explainScore(memberId, week);
+
+        MemberWeeklyScore stored = scoreRepository.findByMember_IdAndWeekStart(memberId, week).orElse(null);
+        Integer rank = stored == null ? null : stored.getRank();
+        BigDecimal total = stored == null
+                ? breakdown.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add)
+                : stored.getTotalScore();
+
+        return ResponseEntity.ok(new ScoreBreakdownResponse(
+            memberId,
+            week,
+            week.plusDays(6),
+            rank,
+            total,
+            new ScoreComponentsDTO(
+                breakdown.get("sessionsScore"),
+                breakdown.get("timeScore"),
+                breakdown.get("accuracyScore"),
+                breakdown.get("restDayBonus"),
+                breakdown.get("streakBonus"))
+        ));
     }
 
     /**
@@ -257,5 +289,24 @@ public class LeaderboardController {
         Integer rank,
         java.math.BigDecimal totalScore,
         Integer rankChange
+    ) {}
+
+    /** Chi tiết điểm của 1 member trong 1 tuần. */
+    public record ScoreBreakdownResponse(
+        Long memberId,
+        LocalDate weekStart,
+        LocalDate weekEnd,
+        Integer rank,
+        java.math.BigDecimal totalScore,
+        ScoreComponentsDTO components
+    ) {}
+
+    /** Từng thành phần điểm của tuần. */
+    public record ScoreComponentsDTO(
+        java.math.BigDecimal sessionsScore,
+        java.math.BigDecimal timeScore,
+        java.math.BigDecimal accuracyScore,
+        java.math.BigDecimal restDayBonus,
+        java.math.BigDecimal streakBonus
     ) {}
 }

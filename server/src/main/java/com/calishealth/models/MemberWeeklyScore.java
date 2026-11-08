@@ -49,7 +49,10 @@ public class MemberWeeklyScore {
     @Column(name = "total_score", precision = 10, scale = 2)
     private BigDecimal totalScore = BigDecimal.ZERO;
 
-    @Column(name = "rank")
+    // Cột đặt tên `member_rank` (không phải `rank`) vì `rank` là từ khoá
+    // MySQL 8: Hibernate sinh SQL insert/update không tự escape backtick,
+    // nên tên cột "rank" làm MySQL báo lỗi cú pháp 1064.
+    @Column(name = "member_rank")
     private Integer rank;
 
     @Column(name = "previous_rank")
@@ -76,7 +79,8 @@ public class MemberWeeklyScore {
     }
 
     public void calculateTotalScore() {
-        // Scores are additive; the leaderboard does not impose a maximum total.
+        // Điểm tuần là tổng các thành phần, không có điểm trần: mỗi thành phần
+        // tăng tuyến tính theo hoạt động nên tổng điểm cũng vô hạn theo tuần.
         this.totalScore = (sessionsScore != null ? sessionsScore : BigDecimal.ZERO)
             .add(timeScore != null ? timeScore : BigDecimal.ZERO)
             .add(accuracyScore != null ? accuracyScore : BigDecimal.ZERO)

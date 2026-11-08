@@ -3,6 +3,7 @@ package com.calishealth.service;
 import com.calishealth.models.MemberProfile;
 import com.calishealth.models.MemberWeeklyScore;
 import com.calishealth.models.UserRole;
+import com.calishealth.repository.LeaderboardScoringRepository;
 import com.calishealth.repository.MemberProfileRepository;
 import com.calishealth.repository.MemberWeeklyScoreRepository;
 import lombok.RequiredArgsConstructor;
@@ -11,43 +12,71 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Tính điểm bảng xếp hạng tuần.
+ *
+ * <p>Công thức (không có điểm trần, tổng điểm tăng tuyến tính theo hoạt động):
+ * <pre>
+ *   Weekly Score = Sessions Completed (số buổi tập × 25)
+ *                + Workout Time Logged (tổng phút tập ÷ 6)
+ *                + Exercises Accuracy (accuracy trung bình × 0.30)
+ *                + Rest Day Bonus (số ngày nghỉ × 4)
+ *                + Streak Bonus (số tuần liên tiếp đạt mục tiêu × 5)
+ * </pre>
+ *
+ * <p>Ngày nghỉ (rest day) cũng được điểm: những ngày trong tuần không tập
+ * nhưng vẫn nằm trong kế hoạch tập của member. Điểm nghỉ chỉ được cộng khi
+ * member đạt mục tiêu số buổi/tuần — nghỉ là có chủ đích, không phải bỏ tập.</p>
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class WeeklyLeaderboardService {
     private final MemberWeeklyScoreRepository scoreRepository;
     private final MemberProfileRepository memberProfileRepository;
+    private final LeaderboardScoringRepository scoring;
 
+    /**
+     * Tính và lưu điểm cho 1 tuần.
+     *
+     * @param weekStart ngày bắt đầu tuần (thứ 2)
+     */
     @Transactional
     public void computeScoresForWeek(LocalDate weekStart) {
         log.info("Computing weekly leaderboard scores for week starting {}", weekStart);
 
-        // Get all members (only accounts with role = MEMBER belong on the leaderboard)
+        // Chỉ tài khoản role = MEMBER mới được xếp hạng.
         List<MemberProfile> members = memberProfileRepository.findAllByUser_Role(UserRole.MEMBER);
 
-        // Calculate scores for each member
         List<MemberWeeklyScore> weekScores = members.stream()
-            .map(member -> computeScoreForMember(member, weekStart))
-            .collect(Collectors.toList());
+                .map(member -> computeScoreForMember(member, weekStart))
+                .collect(Collectors.toList());
 
-        // Sort by total score descending
+        // Xếp hạng: tổng điểm giảm dần, id member tăng dần làm tie-breaker.
+        // Lưu ý: dùng id của member chứ không dùng id của score, vì score mới
+        // tạo chưa được persist nên getId() còn null -> NPE.
         weekScores.sort((a, b) -> {
             int cmp = b.getTotalScore().compareTo(a.getTotalScore());
             if (cmp != 0) return cmp;
-            return a.getId().compareTo(b.getId()); // tie-breaker by ID
+            return a.getMember().getId().compareTo(b.getMember().getId());
         });
 
-        // Assign ranks and compare with previous week
+        // Rank lưu theo từng level, vì leaderboard luôn lọc theo level:
+        // thành viên đứng đầu level Beginner phải là #1 của level đó, không
+        // phải #1 toàn bảng.
         LocalDate previousWeek = weekStart.minusWeeks(1);
-        for (int i = 0; i < weekScores.size(); i++) {
-            MemberWeeklyScore score = weekScores.get(i);
-            score.setRank(i + 1);
+        Map<Long, Integer> rankByLevel = new java.util.HashMap<>();
+        for (MemberWeeklyScore score : weekScores) {
+            Long levelId = score.getFitnessLevel() != null ? score.getFitnessLevel().getId() : null;
+            int rankInLevel = rankByLevel.merge(levelId, 1, Integer::sum);
+            score.setRank(rankInLevel);
 
-            // Get previous rank
             var prevScore = scoreRepository.findByMember_IdAndWeekStart(score.getMember().getId(), previousWeek);
             if (prevScore.isPresent()) {
                 Integer prevRank = prevScore.get().getRank();
@@ -56,13 +85,13 @@ public class WeeklyLeaderboardService {
             }
         }
 
-        // Save all scores
         scoreRepository.saveAll(weekScores);
         log.info("Completed: {} member scores computed for week {}", weekScores.size(), weekStart);
     }
 
     private MemberWeeklyScore computeScoreForMember(MemberProfile member, LocalDate weekStart) {
-        // Find existing score or create new
+        LocalDate weekEnd = weekStart.plusDays(LeaderboardScoringRepository.DAYS_PER_WEEK - 1L);
+
         var existing = scoreRepository.findByMember_IdAndWeekStart(member.getId(), weekStart);
         MemberWeeklyScore score = existing.orElse(new MemberWeeklyScore());
 
@@ -70,15 +99,79 @@ public class WeeklyLeaderboardService {
         score.setWeekStart(weekStart);
         score.setFitnessLevel(member.getFitnessLevel());
 
-        // TODO: Replace the demo component values with activity-derived points.
-        // The total is always additive and has no maximum.
-        score.setSessionsScore(BigDecimal.valueOf(Math.random() * 100)); // 0-100
-        score.setTimeScore(BigDecimal.valueOf(Math.random() * 50));      // 0-50
-        score.setAccuracyScore(BigDecimal.valueOf(Math.random() * 30));  // 0-30
-        score.setRestDayBonus(BigDecimal.valueOf(Math.random() * 20));   // 0-20
-        score.setStreakBonus(BigDecimal.valueOf(Math.random() * 20));    // 0-20
+        // --- 1. Sessions Completed: mỗi buổi tập hoàn thành 25 điểm ---
+        int sessions = scoring.countCompletedSessions(member.getId(), weekStart, weekEnd);
+        BigDecimal sessionsScore = points(sessions * (double) LeaderboardScoringRepository.POINTS_PER_SESSION);
 
+        // --- 2. Workout Time Logged: mỗi 6 phút tập 1 điểm ---
+        long minutes = scoring.totalActiveMinutes(member.getId(), weekStart, weekEnd);
+        BigDecimal timeScore = points(
+                (double) minutes / LeaderboardScoringRepository.MINUTES_PER_TIME_POINT);
+
+        // --- 3. Exercises Accuracy: 30% của accuracy trung bình ---
+        // Không có bài nào có số đo -> 0 điểm, không bịa số.
+        BigDecimal averageAccuracy = scoring.findAverageAccuracy(member.getId(), weekStart);
+        BigDecimal accuracyScore = averageAccuracy == null
+                ? BigDecimal.ZERO
+                : points(averageAccuracy.doubleValue() * 0.30);
+
+        // --- 4. Rest Day Bonus: mỗi ngày nghỉ 4 điểm ---
+        int daysPerWeek = member.getDaysPerWeek() > 0 ? member.getDaysPerWeek() : 3;
+        int trainingDays = scoring.countTrainingDays(member.getId(), weekStart, weekEnd);
+        int restDays = Math.max(0, LeaderboardScoringRepository.DAYS_PER_WEEK - trainingDays);
+        BigDecimal restDayBonus = BigDecimal.ZERO;
+        if (trainingDays >= daysPerWeek) {
+            // Đạt mục tiêu -> nghỉ là có chủ đích, được thưởng.
+            restDayBonus = points(restDays * (double) LeaderboardScoringRepository.POINTS_PER_REST_DAY);
+        }
+
+        // --- 5. Streak Bonus: mỗi tuần liên tiếp đạt mục tiêu 5 điểm ---
+        int streakWeeks = scoring.countGoalWeekStreak(member.getId(), daysPerWeek, weekStart);
+        BigDecimal streakBonus = points(
+                streakWeeks * (double) LeaderboardScoringRepository.POINTS_PER_STREAK_WEEK);
+
+        score.setSessionsScore(sessionsScore);
+        score.setTimeScore(timeScore);
+        score.setAccuracyScore(accuracyScore);
+        score.setRestDayBonus(restDayBonus);
+        score.setStreakBonus(streakBonus);
         score.calculateTotalScore();
         return score;
+    }
+
+    /**
+     * Làm tròn 2 chữ số, không chặn trên.
+     */
+    private static BigDecimal points(double raw) {
+        double value = Math.max(0d, raw);
+        return BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Chi tiết điểm của 1 member trong tuần — dùng cho API breakdown.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, BigDecimal> explainScore(Long memberProfileId, LocalDate weekStart) {
+        LocalDate weekEnd = weekStart.plusDays(LeaderboardScoringRepository.DAYS_PER_WEEK - 1L);
+        MemberProfile member = memberProfileRepository.findById(memberProfileId).orElse(null);
+        int daysPerWeek = member != null && member.getDaysPerWeek() > 0 ? member.getDaysPerWeek() : 3;
+
+        int sessions = scoring.countCompletedSessions(memberProfileId, weekStart, weekEnd);
+        long minutes = scoring.totalActiveMinutes(memberProfileId, weekStart, weekEnd);
+        BigDecimal accuracy = scoring.findAverageAccuracy(memberProfileId, weekStart);
+        int trainingDays = scoring.countTrainingDays(memberProfileId, weekStart, weekEnd);
+        int restDays = Math.max(0, LeaderboardScoringRepository.DAYS_PER_WEEK - trainingDays);
+        int streakWeeks = scoring.countGoalWeekStreak(memberProfileId, daysPerWeek, weekStart);
+
+        return Map.of(
+                "sessionsScore", points(sessions * (double) LeaderboardScoringRepository.POINTS_PER_SESSION),
+                "timeScore", points((double) minutes / LeaderboardScoringRepository.MINUTES_PER_TIME_POINT),
+                "accuracyScore", accuracy == null ? BigDecimal.ZERO
+                        : points(accuracy.doubleValue() * 0.30),
+                "restDayBonus", trainingDays >= daysPerWeek
+                        ? points(restDays * (double) LeaderboardScoringRepository.POINTS_PER_REST_DAY)
+                        : BigDecimal.ZERO,
+                "streakBonus", points(streakWeeks * (double) LeaderboardScoringRepository.POINTS_PER_STREAK_WEEK)
+        );
     }
 }

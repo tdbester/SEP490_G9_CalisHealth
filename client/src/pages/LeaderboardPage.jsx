@@ -2,11 +2,10 @@ import { useEffect, useState } from "react";
 import { Alert, Button, CircularProgress } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import client from "../api/client";
-import { avatarUrl } from "../api/profile";
+import { avatarUrl, profileApi } from "../api/profile";
 import "./LeaderboardPage.css";
 
 const LEVELS = [
-  { value: "", label: "All levels" },
   { value: 1, label: "Beginner" },
   { value: 2, label: "Intermediate" },
   { value: 3, label: "Advanced" },
@@ -42,27 +41,51 @@ export default function LeaderboardPage() {
   const navigate = useNavigate();
   const [entries, setEntries] = useState([]);
   const [myEntry, setMyEntry] = useState(null);
+  const [totalMembers, setTotalMembers] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [levelFilter, setLevelFilter] = useState("");
+  // Leaderboard chỉ lọc theo fitness level — không có lựa chọn "tất cả".
+  // Mặc định là level của chính member đang đăng nhập.
+  const [levelFilter, setLevelFilter] = useState(null);
+
+  // Lấy level của member để đặt mặc định cho dropdown.
+  useEffect(() => {
+    let cancelled = false;
+
+    profileApi.get()
+      .then((profile) => {
+        if (cancelled) return;
+        const levelName = profile?.member?.levelName;
+        const match = LEVELS.find((level) => level.label === levelName);
+        if (match) setLevelFilter(match.value);
+        else setLevelFilter(LEVELS[0].value);
+      })
+      .catch(() => {
+        if (!cancelled) setLevelFilter(LEVELS[0].value);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
+    if (levelFilter == null) return undefined;
     let cancelled = false;
 
     async function fetchLeaderboard() {
       setLoading(true);
       try {
-        const params = levelFilter ? { levelId: levelFilter } : {};
-        const response = await client.get("/leaderboard/week/current", { params });
+        const response = await client.get("/leaderboard/week/current", {
+          params: { levelId: levelFilter },
+        });
         if (!cancelled) {
           const nextEntries = response.data?.entries || [];
           const nextMyEntry = response.data?.myEntry || null;
-          setEntries(levelFilter
-            ? nextEntries.map((entry, index) => ({ ...entry, rank: index + 1 }))
-            : nextEntries);
-          setMyEntry(levelFilter && nextMyEntry
-            ? { ...nextMyEntry, rank: nextMyEntry.rank }
-            : nextMyEntry);
+          // Rank xếp theo thứ tự trong danh sách (1, 2, 3...) như cũ.
+          setEntries(nextEntries.map((entry, index) => ({ ...entry, rank: index + 1 })));
+          setMyEntry(nextMyEntry);
+          setTotalMembers(response.data?.totalMembers ?? nextEntries.length);
           setError(null);
         }
       } catch (requestError) {
@@ -77,6 +100,7 @@ export default function LeaderboardPage() {
           setError(message);
           setEntries([]);
           setMyEntry(null);
+          setTotalMembers(0);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -117,7 +141,6 @@ export default function LeaderboardPage() {
 
   const podiumEntries = [entries[1], entries[0], entries[2]];
   const myEntryIsInTop50 = myEntry && entries.some((entry) => entry.memberId === myEntry.memberId);
-
   return (
     <main className="leaderboard-page">
       <header className="leaderboard-hero">
@@ -173,13 +196,16 @@ export default function LeaderboardPage() {
         <div className="leaderboard-list-actions">
           <label className="leaderboard-select">
             <span>Fitness level</span>
-            <select value={levelFilter} onChange={(event) => setLevelFilter(event.target.value)}>
+            <select
+              value={levelFilter ?? ""}
+              onChange={(event) => setLevelFilter(Number(event.target.value))}
+            >
               {LEVELS.map((level) => (
                 <option key={level.value} value={level.value}>{level.label}</option>
               ))}
             </select>
           </label>
-          <span className="leaderboard-count">{entries.length} members</span>
+          <span className="leaderboard-count">{totalMembers} members</span>
         </div>
       </div>
 
