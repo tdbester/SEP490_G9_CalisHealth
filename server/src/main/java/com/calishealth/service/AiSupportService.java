@@ -46,6 +46,13 @@ import java.util.Locale;
 @Slf4j
 public class AiSupportService {
 
+    /**
+     * Số lượt hỏi/đáp cũ (trong cùng phiên chat) được gửi lại cho AI.
+     *
+     * AI nhớ được ngữ cảnh cuộc trò chuyện mà vẫn giữ prompt gọn và rẻ.
+     */
+    private static final int HISTORY_TURNS = 4;
+
     private final AiSupportUsageRepository usageRepository;
     private final AiSupportMessageRepository messageRepository;
     private final AiSupportSessionRepository sessionRepository;
@@ -70,7 +77,9 @@ public class AiSupportService {
                 AiSupportUsage.DAILY_QUESTION_LIMIT,
                 Math.max(0, AiSupportUsage.DAILY_QUESTION_LIMIT - used),
                 AiSupportUsage.SESSION_QUESTION_LIMIT,
-                countSessionQuestions(user.getId(), sessionId));
+                countSessionQuestions(user.getId(), sessionId),
+                openAi.isConfigured(),
+                openAi.isConfigured() ? openAi.model() : null);
     }
 
     // ------------------------------------------------------------------ ask
@@ -170,25 +179,27 @@ public class AiSupportService {
 
         List<FormRule> rules = formRules.findByExerciseCode(exercise.getCode());
         String systemPrompt = buildSystemPrompt(exercise, rules, request.formIssues(), request.accuracy());
-        String userPrompt = buildUserPrompt(question, rules, request.formIssues(), request.accuracy());
 
         AnswerResponse answer;
         int tokens;
+        String provider;
         if (openAi.isConfigured()) {
-            try {
-                OpenAiChatService.ChatResult result = openAi.chat(systemPrompt, userPrompt);
-                answer = openAi.toAnswer(result.content());
-                tokens = result.totalTokens();
-            } catch (Exception exception) {
-                log.error("OpenAI call failed, falling back to local answer", exception);
-                answer = fallbackAnswer(exercise, rules, question);
-                tokens = 0;
-            }
+            // Gọi API thật. Lỗi được ném ra (OpenAiException) để controller trả
+            // đúng mã lỗi cho client — không trả câu trả lời giả cho member.
+            // Lịch sử gửi lại đúng câu hỏi thô (như đã lưu) để AI nhớ ngữ cảnh;
+            // ngữ cảnh bài tập đã nằm trong system prompt.
+            List<OpenAiChatService.ChatMessage> chat =
+                    buildChatHistory(user.getId(), sessionId, question);
+            OpenAiChatService.ChatResult result = openAi.chat(systemPrompt, chat);
+            answer = openAi.toAnswer(result.content());
+            tokens = result.totalTokens();
+            provider = openAi.model();
         } else {
             // Chưa cấu hình API key -> vẫn trả lời được bằng rule nội bộ để
             // member không bị "chết" giữa chừng khi triển khai.
             answer = fallbackAnswer(exercise, rules, question);
             tokens = 0;
+            provider = "local-rules";
         }
 
         // Ghi lại lịch sử + bộ đếm quota.
@@ -211,7 +222,63 @@ public class AiSupportService {
                 AiSupportUsage.DAILY_QUESTION_LIMIT,
                 usage.remaining(),
                 sessionIndex,
-                AiSupportUsage.SESSION_QUESTION_LIMIT);
+                AiSupportUsage.SESSION_QUESTION_LIMIT,
+                provider,
+                tokens);
+    }
+
+    /**
+     * Dựng lịch sử hội thoại để gửi kèm lệnh gọi AI.
+     *
+     * Chỉ lấy các lượt trong cùng phiên chat và giới hạn số lượt gần nhất để
+     * không làm prompt phình to. Mỗi lượt cũ được gửi lại đúng 2 message
+     * (user hỏi + assistant trả lời) để AI nhớ được ngữ cảnh.
+     *
+     * @param userId    id member đang hỏi
+     * @param sessionId id phiên chat (null/blank -> chỉ gửi câu hỏi mới)
+     * @param question  câu hỏi mới của member
+     */
+    private List<OpenAiChatService.ChatMessage> buildChatHistory(Long userId, String sessionId, String question) {
+        List<OpenAiChatService.ChatMessage> messages = new ArrayList<>();
+        if (sessionId != null && !sessionId.isBlank()) {
+            List<AiSupportMessage> previous = messageRepository
+                    .findByUser_IdAndSessionIdOrderByCreatedAtAsc(userId, sessionId);
+            // Chỉ giữ N lượt gần nhất -> prompt gọn, giá rẻ.
+            int from = Math.max(0, previous.size() - HISTORY_TURNS);
+            for (AiSupportMessage item : previous.subList(from, previous.size())) {
+                messages.add(OpenAiChatService.ChatMessage.user(item.getQuestion()));
+                String answer = item.getAnswer();
+                if (answer != null && !answer.isBlank()) {
+                    messages.add(OpenAiChatService.ChatMessage.assistant(answerAsPlainText(answer)));
+                }
+            }
+        }
+        messages.add(OpenAiChatService.ChatMessage.user(question));
+        return messages;
+    }
+
+    /**
+     * Đổi câu trả lời đã lưu (JSON) thành văn bản thuần cho AI đọc.
+     *
+     * Lịch sử chỉ để AI nhớ ngữ cảnh, không cần đúng định dạng JSON đầy đủ —
+     * dạng text dễ đọc hơn và tiết kiệm token.
+     */
+    private String answerAsPlainText(String answerJson) {
+        AnswerResponse answer = openAi.toAnswer(answerJson);
+        StringBuilder builder = new StringBuilder();
+        for (LikelyCause cause : answer.causes()) {
+            if (cause.title() != null && !cause.title().isBlank()) {
+                builder.append("- ").append(cause.title());
+                if (cause.detail() != null && !cause.detail().isBlank()) {
+                    builder.append(": ").append(cause.detail());
+                }
+                builder.append('\n');
+            }
+        }
+        if (answer.tip() != null && !answer.tip().isBlank()) {
+            builder.append("Tip: ").append(answer.tip()).append('\n');
+        }
+        return builder.toString().trim();
     }
 
     /**
@@ -326,7 +393,7 @@ public class AiSupportService {
         return prompt.toString();
     }
 
-    /** User prompt — câu hỏi của member. */
+    /** User prompt — câu hỏi của member kèm ngữ cảnh ngắn gọn. */
     private String buildUserPrompt(String question, List<FormRule> rules,
                                    List<String> formIssues, Double accuracy) {
         StringBuilder prompt = new StringBuilder(question);
@@ -348,6 +415,7 @@ public class AiSupportService {
         }
         return prompt.toString();
     }
+
 
     // ------------------------------------------------------------- fallback
 

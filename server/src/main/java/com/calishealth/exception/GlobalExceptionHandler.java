@@ -153,6 +153,18 @@ public class GlobalExceptionHandler {
         return invalidRequest("The uploaded form data could not be read. Submit JSON in the 'data' part plus optional files.");
     }
 
+    /**
+     * Lỗi khi gọi OpenAI -> 503 để frontend hiện thông báo "AI tạm thời không khả dụng".
+     *
+     * Không trả 500 vì đây không phải lỗi của client: member vẫn có thể thử
+     * lại sau và không mất lượt hỏi (transaction bị rollback).
+     */
+    @ExceptionHandler(OpenAiException.class)
+    public ResponseEntity<Map<String, String>> handleOpenAi(OpenAiException e) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("code", e.getCode(), "message", e.getUserMessage()));
+    }
+
     private static ResponseEntity<Map<String, String>> invalidRequest(String message) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("code", "INVALID_REQUEST", "message", message));
     }

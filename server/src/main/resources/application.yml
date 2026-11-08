@@ -1,4 +1,13 @@
 spring:
+  # Nạp biến môi trường từ file .env ở thư mục gốc dự án (hoặc thư mục cha
+  # của server/). Nhờ vậy chỉ cần điền OPENAI_API_KEY vào .env là AI Support
+  # dùng được API thật, không cần set biến môi trường thủ công.
+  # "optional" -> thiếu file .env thì app vẫn chạy bình thường.
+  config:
+    import:
+      - "optional:file:.env[.properties]"
+      - "optional:file:../.env[.properties]"
+      - "optional:file:../client/.env[.properties]"
   servlet:
     multipart:
       max-file-size: 50MB
@@ -45,11 +54,13 @@ app:
     secret: clh-demo-secret-key-please-change-this-32-chars-min
     expiration-ms: 86400000
   # AI Support (màn popup hỏi AI về lỗi form sau buổi tập).
-  # Chưa có OPENAI_API_KEY thì API vẫn chạy, trả lời bằng rule nội bộ.
+  # Đặt OPENAI_API_KEY (biến môi trường hoặc file .env) để dùng API thật.
+  # Chưa có key thì API vẫn chạy, trả lời bằng rule nội bộ.
   openai:
     api-key: ${OPENAI_API_KEY:}
     model: ${OPENAI_MODEL:gpt-4o-mini}
     base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+    timeout-seconds: ${OPENAI_TIMEOUT_SECONDS:45}
 
 # OpenAPI / Swagger UI
 springdoc:

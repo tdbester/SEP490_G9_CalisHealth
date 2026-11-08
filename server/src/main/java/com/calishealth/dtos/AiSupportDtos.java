@@ -69,6 +69,9 @@ public class AiSupportDtos {
      * @param remaining     số câu còn lại hôm nay
      * @param sessionIndex  số thứ tự câu hỏi trong phiên chat
      * @param sessionLimit  hạn mức câu/phiên chat
+     * @param provider      nguồn câu trả lời ("gpt-4o-mini" khi dùng API thật,
+     *                     "local-rules" khi server chưa cấu hình API key)
+     * @param totalTokens   số token đã dùng cho lượt hỏi này
      */
     public record AskQuestionResponse(
             AnswerResponse answer,
@@ -76,7 +79,9 @@ public class AiSupportDtos {
             int dailyLimit,
             int remaining,
             int sessionIndex,
-            int sessionLimit
+            int sessionLimit,
+            String provider,
+            int totalTokens
     ) {}
 
     /**
@@ -87,13 +92,17 @@ public class AiSupportDtos {
      * @param remaining    số câu còn lại hôm nay
      * @param sessionLimit hạn mức câu/phiên chat
      * @param sessionUsed  số câu đã hỏi trong phiên chat hiện tại
+     * @param aiEnabled    server đã cấu hình API thật (gpt-4o-mini) hay chưa
+     * @param model        model AI đang dùng (null khi chưa cấu hình)
      */
     public record QuotaResponse(
             int questionCount,
             int dailyLimit,
             int remaining,
             int sessionLimit,
-            int sessionUsed
+            int sessionUsed,
+            boolean aiEnabled,
+            String model
     ) {}
 
     /**

@@ -1587,9 +1587,13 @@ export default {
     toastNoExercise: "No exercise selected for AI support.",
     toastRephrase: "Please rephrase your question.",
     toastUnavailable: "AI support is unavailable right now. Please try again.",
+    toastRateLimited: "AI support is busy right now. Please try again in a moment.",
+    toastInvalidKey: "AI support is not configured correctly on the server right now.",
     aiCoachFeedback: "AI coach feedback",
     sourceCamera: "AI camera session",
     sourceVideo: "AI video scan session",
+    poweredBy: "Powered by {model}",
+    offlineNotice: "AI coach is running in offline mode — answers come from built-in rules.",
   },
 
   /** Popup upload / kiểm tra camera. */

@@ -1589,9 +1589,13 @@ export default {
     toastNoExercise: "Chưa chọn bài tập để hỏi hỗ trợ AI.",
     toastRephrase: "Vui lòng diễn đạt lại câu hỏi.",
     toastUnavailable: "Hỗ trợ AI hiện không khả dụng. Vui lòng thử lại sau.",
+    toastRateLimited: "Hỗ trợ AI đang bận. Vui lòng thử lại sau giây lát.",
+    toastInvalidKey: "Hỗ trợ AI chưa được cấu hình đúng trên máy chủ.",
     aiCoachFeedback: "Phản hồi của huấn luyện viên AI",
     sourceCamera: "Buổi tập bằng camera AI",
     sourceVideo: "Buổi quét video AI",
+    poweredBy: "Được hỗ trợ bởi {model}",
+    offlineNotice: "Huấn luyện viên AI đang chạy ở chế độ offline — câu trả lời đến từ quy tắc tích hợp.",
   },
 
   /** Popup upload / kiểm tra camera. */
