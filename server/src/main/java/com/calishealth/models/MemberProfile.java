@@ -42,9 +42,6 @@ public class MemberProfile {
     @Column(columnDefinition = "TEXT")
     private String bio;
 
-    @Column(name = "avatar_url", length = 1000)
-    private String avatarUrl;
-
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
@@ -52,10 +49,6 @@ public class MemberProfile {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "fitness_level_id")
     private FitnessLevel fitnessLevel;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "avatar_media_id")
-    private MediaFile avatarMedia;
 
     /** Target training days per week; the onboarding survey seeds it, 3 until then. */
     @Column(name = "days_per_week", nullable = false, columnDefinition = "int not null default 3")

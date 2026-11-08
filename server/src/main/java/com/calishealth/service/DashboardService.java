@@ -178,15 +178,18 @@ public class DashboardService {
 
         List<MeasurementRow> rows = jdbcTemplate.query(
                 """
-                SELECT bm.weight, bm.height
-                FROM body_measurements bm
-                JOIN member_profiles mp ON mp.id = bm.member_profile_id
+                SELECT mbm.weight_kg, mbm.height_cm, mbm.bmi
+                FROM member_body_metrics mbm
+                JOIN member_profiles mp ON mp.id = mbm.member_profile_id
                 JOIN users u ON u.id = mp.user_id
                 WHERE u.email = ?
-                ORDER BY bm.measured_at DESC, bm.id DESC
+                ORDER BY mbm.recorded_at DESC, mbm.id DESC
                 LIMIT 1
                 """,
-                (rs, rowNum) -> new MeasurementRow(rs.getBigDecimal("weight"), rs.getBigDecimal("height")),
+                (rs, rowNum) -> new MeasurementRow(
+                        rs.getBigDecimal("weight_kg"),
+                        rs.getBigDecimal("height_cm"),
+                        rs.getBigDecimal("bmi")),
                 email
         );
         if (!rows.isEmpty()) {
@@ -194,14 +197,10 @@ public class DashboardService {
             if (measurement.weight() != null) {
                 result.put("weight", measurement.weight());
             }
-            if (measurement.weight() != null && measurement.height() != null) {
-                BigDecimal heightMeters = measurement.height().compareTo(BigDecimal.valueOf(3)) > 0
-                        ? measurement.height().movePointLeft(2) : measurement.height();
-                if (heightMeters.signum() > 0) {
-                    double bmi = measurement.weight().doubleValue() / Math.pow(heightMeters.doubleValue(), 2);
-                    result.put("bmi", Math.round(bmi * 10.0) / 10.0);
-                    result.put("bmiLabel", bmi < 18.5 ? "Underweight" : bmi < 25 ? "Normal" : bmi < 30 ? "Overweight" : "Obesity");
-                }
+            if (measurement.bmi() != null) {
+                double bmi = measurement.bmi().doubleValue();
+                result.put("bmi", Math.round(bmi * 10.0) / 10.0);
+                result.put("bmiLabel", bmi < 18.5 ? "Underweight" : bmi < 25 ? "Normal" : bmi < 30 ? "Overweight" : "Obesity");
             }
         }
 
@@ -227,5 +226,5 @@ public class DashboardService {
     }
 
     private record SkillRow(Long exerciseId, String id, String name, int steps, String level) {}
-    private record MeasurementRow(BigDecimal weight, BigDecimal height) {}
+    private record MeasurementRow(BigDecimal weight, BigDecimal height, BigDecimal bmi) {}
 }
