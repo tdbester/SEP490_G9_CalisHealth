@@ -136,9 +136,10 @@ public class ProfileService {
                 ? memberProfiles.findByUser_Id(u.getId()).orElse(null)
                 : null;
         ProfileResponse base = ProfileResponse.of(u, securityOf(u), memberSummary(u), surveyAge(u));
-        String gender = u.getRole() == UserRole.MEMBER
-                ? (memberProfile == null ? null : normaliseGender(memberProfile.getGender()))
-                : base.gender();
+        // Hồ sơ member lưu giới tính đã chuẩn hoá; member chưa có hồ sơ (hoặc hồ sơ chưa có giới tính)
+        // thì lấy từ users.
+        String memberGender = memberProfile == null ? null : normaliseGender(memberProfile.getGender());
+        String gender = memberGender != null ? memberGender : base.gender();
         List<String> levels = fitnessLevels.findAll(
                         Sort.by(Sort.Order.asc("scoreMin"), Sort.Order.asc("id")))
                 .stream()

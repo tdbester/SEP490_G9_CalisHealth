@@ -26,6 +26,7 @@ import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import { useTranslation } from "react-i18next";
 import { adminUsersApi, apiErrorMessage } from "../api/adminUsers";
+import { useSystemLevels } from "../useSystemLevels";
 import { CM } from "../theme-content";
 
 const PAGE_SIZE = 5;
@@ -354,6 +355,7 @@ const initials = (name) =>
 
 function WorkoutHistory({ userId, levelOptions }) {
   const { t, i18n } = useTranslation();
+  const { levels: systemLevels } = useSystemLevels();
   const [searchInput, setSearchInput] = useState("");
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
@@ -370,7 +372,7 @@ function WorkoutHistory({ userId, levelOptions }) {
     (page) => adminUsersApi.workoutActivity(userId, { q, type, level, status, date, page, size: PAGE_SIZE }),
     [userId, q, type, level, status, date],
   );
-  const levels = (levelOptions?.length ? levelOptions : ["Beginner", "Intermediate", "Advanced"]).map((l) => ({
+  const levels = (levelOptions?.length ? levelOptions : systemLevels).map((l) => ({
     value: l,
     label: l,
   }));

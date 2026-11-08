@@ -15,7 +15,11 @@ public class MemberExerciseFilterRequestDTO {
 
     private String search;
 
-    private Exercise.EntryLevel level;
+    /**
+     * Tên level lấy động từ bảng fitness_levels (Content Manager tạo/đổi tên level trong
+     * Level & Benchmark Criteria), nên không dùng enum cố định ở đây.
+     */
+    private String level;
 
     private Exercise.EntryStatus status;
 

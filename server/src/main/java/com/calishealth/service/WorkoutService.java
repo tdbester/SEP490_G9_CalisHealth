@@ -66,7 +66,8 @@ public class WorkoutService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Level " + workout.getLevel() + " is inactive, so its workouts stay inactive. Activate the level first");
         }
-        workout.setActive(active);
+        // `active` is only the published/draft switch; the row keeps template_status as the source of truth.
+        workout.setTemplateStatus(active ? "PUBLISHED" : "DRAFT");
         return toResponse(workouts.saveAndFlush(workout));
     }
 
@@ -107,8 +108,6 @@ public class WorkoutService {
         workout.setLevel(requestedLevel);
         workout.setType(resolveWorkoutType(request.type()));
         applyTemplateMetadata(workout, request);
-        // Publish makes the template available to the Daily Workout Plan; Draft/Archived hides it.
-        workout.setActive("PUBLISHED".equals(workout.getTemplateStatus()));
         workout.getExercises().clear();
         workout.getExercises().addAll(buildExerciseItems(requestedItems, exercisesByCode));
         return toResponse(workout);
@@ -144,7 +143,6 @@ public class WorkoutService {
         copy.setDaysPerWeek(source.getDaysPerWeek());
         copy.setDaySequence(source.getDaySequence());
         copy.setTemplateStatus("DRAFT");
-        copy.setActive(false);
         copy.setCreatedBy(users.findByEmail(creatorEmail)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Creator account not found")));
         copy.setExercises(new java.util.ArrayList<>(source.getExercises().stream().map(item -> {
@@ -217,7 +215,6 @@ public class WorkoutService {
         workout.setSource("SYSTEM");
         workout.setLevel(resolveActiveLevelName(request.level()));
         applyTemplateMetadata(workout, request);
-        workout.setActive("PUBLISHED".equals(workout.getTemplateStatus()));
         workout.setCreatedBy(users.findByEmail(creatorEmail)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Creator account not found")));
         workout.setExercises(new java.util.ArrayList<>(buildExerciseItems(requestedItems, exercisesByCode)));

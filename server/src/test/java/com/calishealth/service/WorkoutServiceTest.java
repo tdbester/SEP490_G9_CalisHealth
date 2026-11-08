@@ -45,7 +45,7 @@ class WorkoutServiceTest {
         exercise.setCode("PUSH_UP");
         exercise.setName("Push-up");
         exercise.setType(Exercise.EntryType.HEALTH);
-        exercise.setLevel(Exercise.EntryLevel.BEGINNER);
+        exercise.setLevel("Beginner");
         exercise.setMuscleGroup("Chest");
         when(exercises.findAllByCodeIn(List.of("PUSH_UP"))).thenReturn(List.of(exercise));
         when(workouts.save(any(WorkoutEntry.class)))

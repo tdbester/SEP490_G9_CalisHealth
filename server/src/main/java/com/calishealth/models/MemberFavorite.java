@@ -45,7 +45,7 @@ public class MemberFavorite {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "member_id", nullable = false)
+    @Column(name = "user_id", nullable = false)
     private Long memberId;
 
     @Enumerated(EnumType.STRING)

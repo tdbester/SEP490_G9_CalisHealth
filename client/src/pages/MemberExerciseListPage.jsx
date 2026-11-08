@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
@@ -7,6 +7,7 @@ import { FAVORITE_ITEM_TYPES } from "../api/favorites";
 import FavoriteButton from "../components/favorites/FavoriteButton";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { getLevelLabel } from "../utils/levelLabel";
+import { useSystemLevels } from "../useSystemLevels";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import "./MemberExerciseListPage.css";
 
@@ -87,16 +88,14 @@ const MUSCLE_GROUPS = [
   { value: "Full body", labelKey: "member.customExercise.muscleFullBody" },
 ];
 
-const LEVEL_OPTIONS = [
-  { value: "All levels", labelKey: "member.customExercise.levelAll" },
-  { value: "Beginner", labelKey: "member.customExercise.levelBeginner" },
-  { value: "Intermediate", labelKey: "member.customExercise.levelIntermediate" },
-  { value: "Advanced", labelKey: "member.customExercise.levelAdvanced" },
-];
-
 export default function MemberExerciseListPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { levels: systemLevels, activeLevels } = useSystemLevels();
+  const levelOptions = useMemo(
+    () => ["All levels", ...systemLevels],
+    [systemLevels]
+  );
 
   // Search & Filter States
   const [searchInput, setSearchInput] = useState("");
@@ -119,12 +118,18 @@ export default function MemberExerciseListPage() {
   const [createForm, setCreateForm] = useState({
     name: "",
     muscleGroup: "Full body",
-    level: "Intermediate",
+    level: "",
     equipment: "Bodyweight",
     sets: 3,
     repsOrDuration: "10 reps",
     description: "",
   });
+
+  // Level mặc định của form = level đang ACTIVE thấp nhất (lấy động từ fitness_levels).
+  useEffect(() => {
+    if (createForm.level || activeLevels.length === 0) return;
+    setCreateForm((form) => ({ ...form, level: activeLevels[0] }));
+  }, [activeLevels, createForm.level]);
 
   // Debounce search input (300ms)
   useEffect(() => {
@@ -213,7 +218,7 @@ export default function MemberExerciseListPage() {
       setCreateForm({
         name: "",
         muscleGroup: "Full body",
-        level: "Intermediate",
+        level: activeLevels[0] || "",
         equipment: "Bodyweight",
         sets: 3,
         repsOrDuration: "10 reps",
@@ -286,9 +291,9 @@ export default function MemberExerciseListPage() {
                 setCurrentPage(1);
               }}
             >
-              {LEVEL_OPTIONS.map((lvl) => (
-                <option key={lvl.value} value={lvl.value}>
-                  {t(lvl.labelKey)}
+              {levelOptions.map((value) => (
+                <option key={value} value={value}>
+                  {value === "All levels" ? t("member.customExercise.levelAll") : getLevelLabel(value)}
                 </option>
               ))}
             </select>
@@ -352,7 +357,7 @@ export default function MemberExerciseListPage() {
           </div>
         ) : (
           exercises.map((item) => {
-            const level = item.level || item.difficultyLevel || "Intermediate";
+            const level = item.level || item.difficultyLevel || activeLevels[0] || "";
 
             const detailText =
               item.details ||
@@ -499,9 +504,9 @@ export default function MemberExerciseListPage() {
                     value={createForm.level}
                     onChange={(e) => setCreateForm({ ...createForm, level: e.target.value })}
                   >
-                    {LEVEL_OPTIONS.filter((l) => l.value !== "All levels").map((l) => (
-                      <option key={l.value} value={l.value}>
-                        {t(l.labelKey)}
+                    {activeLevels.map((value) => (
+                      <option key={value} value={value}>
+                        {getLevelLabel(value)}
                       </option>
                     ))}
                   </select>
@@ -602,7 +607,7 @@ export default function MemberExerciseListPage() {
                   <span
                     className={`level-badge ${getLevelBadgeStyle(selectedExercise.level || selectedExercise.difficultyLevel)}`}
                   >
-                    {getLevelLabel(selectedExercise.level || selectedExercise.difficultyLevel || "Intermediate")}
+                    {getLevelLabel(selectedExercise.level || selectedExercise.difficultyLevel)}
                   </span>
                   <span className="member-badge-pill">{t("member.customExercise.customAddedPill")}</span>
                 </div>

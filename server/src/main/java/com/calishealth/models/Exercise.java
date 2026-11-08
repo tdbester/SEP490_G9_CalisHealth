@@ -16,7 +16,6 @@ import java.util.List;
 @NoArgsConstructor
 public class Exercise {
     public enum EntryType { HEALTH, SKILL }
-    public enum EntryLevel { BEGINNER, INTERMEDIATE, ADVANCED }
     public enum EntryStatus { ACCEPTED, PENDING, REJECTED }
     public enum EntryGoal { LOSE_WEIGHT, BUILD_MUSCLE, STAY_FIT }
     public enum EntryTargetSkill { HANDSTAND, MUSCLE_UP, FRONT_LEVER, PLANCHE }
@@ -185,10 +184,6 @@ public class Exercise {
 
     public String getLevel() {
         return difficultyLevel;
-    }
-
-    public void setLevel(EntryLevel level) {
-        this.difficultyLevel = level == null ? null : level.name();
     }
 
     public void setLevel(String level) {

@@ -17,8 +17,8 @@ public record CreatePersonalExerciseRequestDTO(
         String title,
         @Size(max = 300, message = "Description must not exceed 300 characters")
         String description,
-        @NotNull(message = "Please select an exercise level")
-        Exercise.EntryLevel level,
+        @NotBlank(message = "Please select an exercise level")
+        String level,
         @NotEmpty(message = "Add at least one instruction step")
         List<@NotBlank(message = "Instruction steps cannot be blank") @Size(max = 250) String> guideSteps,
         @NotBlank @Size(max = 120) String targetMuscle,

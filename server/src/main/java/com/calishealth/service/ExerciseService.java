@@ -73,7 +73,7 @@ public class ExerciseService {
                         exercise.getId(),
                         exercise.getName(),
                         ExerciseFilterRequestDTO.ExerciseType.valueOf(exercise.getType().toUpperCase(Locale.ROOT)),
-                        enumValue(ExerciseFilterRequestDTO.ExerciseLevel.class, exercise.getLevel()),
+                        exercise.getLevel(),
                         exercise.getMuscleGroup(),
                         exercise.getDefaultSets(),
                         exercise.getDefaultReps(),
@@ -167,17 +167,6 @@ public class ExerciseService {
                 exercise.getMovementGroup() == null ? null : exercise.getMovementGroup().name(),
                 previous,
                 next);
-    }
-
-    private static <T extends Enum<T>> T enumValue(Class<T> enumType, String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        try {
-            return Enum.valueOf(enumType, value.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException ignored) {
-            return null;
-        }
     }
 
     private static String label(String value) {

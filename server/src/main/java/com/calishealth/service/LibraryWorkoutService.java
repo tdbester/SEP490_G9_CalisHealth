@@ -4,10 +4,12 @@ import com.calishealth.dtos.*;
 import com.calishealth.exception.ResourceNotFoundException;
 import com.calishealth.exception.RequestValidationException;
 import com.calishealth.models.Exercise;
+import com.calishealth.models.FitnessLevel;
 import com.calishealth.models.User;
 import com.calishealth.models.WorkoutEntry;
 import com.calishealth.models.WorkoutExerciseItem;
 import com.calishealth.repository.ExerciseRepository;
+import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.UserRepository;
 import com.calishealth.repository.WorkoutRepository;
 import com.calishealth.specification.WorkoutSpecification;
@@ -35,6 +37,7 @@ public class LibraryWorkoutService {
     private final WorkoutRepository workouts;
     private final ExerciseRepository exercises;
     private final UserRepository users;
+    private final FitnessLevelRepository fitnessLevels;
 
     @Transactional(readOnly = true)
     public PageResponseDTO<WorkoutListItemDTO> getCommunityWorkouts(String memberEmail, WorkoutFilterRequestDTO filter) {
@@ -79,7 +82,7 @@ public class LibraryWorkoutService {
         WorkoutEntry workout = workouts.findById(workoutId)
                 .filter(entry -> entry.isSystem()
                         && entry.isActive()
-                        && "ACCEPTED".equalsIgnoreCase(entry.getStatus())
+                        && "ACTIVE".equalsIgnoreCase(entry.getModerationStatus())
                         && Set.of("HEALTH", "SKILL").contains(
                                 entry.getType() == null ? "" : entry.getType().toUpperCase(Locale.ROOT)))
                 .orElseThrow(() -> new ResourceNotFoundException("System workout not found"));
@@ -122,7 +125,7 @@ public class LibraryWorkoutService {
         WorkoutEntry workout = workouts.findById(workoutId)
                 .filter(entry -> !entry.isSystem()
                         && entry.isSharedWithCommunity()
-                        && "ACCEPTED".equalsIgnoreCase(entry.getStatus()))
+                        && "ACTIVE".equalsIgnoreCase(entry.getModerationStatus()))
                 .orElseThrow(() -> new ResourceNotFoundException("Community workout not found"));
         return toDetail(workout);
     }
@@ -142,7 +145,7 @@ public class LibraryWorkoutService {
         workout.setSystem(false);
         workout.setCreatedBy(member);
         workout.setSharedWithCommunity(Boolean.TRUE.equals(request.isSharedWithCommunity()));
-        workout.setStatus("ACCEPTED");
+        workout.setModerationStatus("ACTIVE");
         workouts.saveAndFlush(workout);
         populateWorkout(workout, request.items(), selectedExercises, request.level());
         return toDetail(workouts.saveAndFlush(workout));
@@ -214,7 +217,7 @@ public class LibraryWorkoutService {
                             builder.isTrue(root.get("shareWithCommunity"))));
             return builder.and(
                     builder.isTrue(root.get("active")),
-                    builder.equal(root.get("status"), "ACCEPTED"),
+                    builder.upper(root.get("moderationStatus")).in("ACTIVE", "ACCEPTED"),
                     builder.or(system, memberExercise));
         };
     }
@@ -250,7 +253,7 @@ public class LibraryWorkoutService {
 
         int totalSets = ordered.stream().mapToInt(WorkoutItemDTO::sets).sum();
         long totalSeconds = 0;
-        int maximumLevel = 0;
+        String highestLevel = null;
         for (int index = 0; index < ordered.size(); index++) {
             WorkoutItemDTO item = ordered.get(index);
             Exercise exercise = selectedExercises.get(index);
@@ -260,19 +263,71 @@ public class LibraryWorkoutService {
                     : (long) item.reps() * 3;
             totalSeconds += effortSeconds * item.sets()
                     + (long) item.restSeconds() * Math.max(0, item.sets() - 1);
-            maximumLevel = Math.max(maximumLevel, levelRank(exercise.getLevel()));
+            if (isHigherLevel(exercise.getLevel(), highestLevel)) {
+                highestLevel = exercise.getLevel();
+            }
         }
         workout.setTotalSets(totalSets);
         long estimatedMinutes = (long) Math.ceil(totalSeconds / 60.0);
         workout.setEstimatedDuration((int) Math.min(Integer.MAX_VALUE, estimatedMinutes));
-        workout.setLevel(requestedLevel == null || requestedLevel.isBlank()
-                ? switch (maximumLevel) {
-                    case 3 -> "ADVANCED";
-                    case 2 -> "INTERMEDIATE";
-                    default -> "BEGINNER";
-                }
-                : requestedLevel.trim().toUpperCase(Locale.ROOT));
+        workout.setLevel(resolveLevelName(requestedLevel == null || requestedLevel.isBlank()
+                ? highestLevel
+                : requestedLevel));
 
+    }
+
+    /**
+     * Đưa tên level về đúng tên trong bảng fitness_levels (vd "beginner" -> "Beginner") để lọc
+     * theo level khớp giữa workout của hệ thống và workout của member.
+     *
+     * <p>Level do Content Manager quản lý trong Level & Benchmark Criteria nên thứ tự lấy từ
+     * score_min của fitness_levels, không hard-code danh sách level.</p>
+     */
+    private String resolveLevelName(String level) {
+        String normalized = level == null ? "" : level.trim();
+        if (normalized.isEmpty()) {
+            return lowestLevelName();
+        }
+        return fitnessLevels.findByNameIgnoreCase(normalized)
+                .map(FitnessLevel::getName)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Choose a valid workout level"));
+    }
+
+    /** Level thấp nhất đang cấu hình (score_min nhỏ nhất) — dùng khi workout chưa chọn level. */
+    private String lowestLevelName() {
+        return fitnessLevels.findAll().stream()
+                .min(Comparator.comparingInt(FitnessLevel::getScoreMin)
+                        .thenComparing(FitnessLevel::getName, String.CASE_INSENSITIVE_ORDER))
+                .map(FitnessLevel::getName)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "No exercise level is configured"));
+    }
+
+    /** Level này cao hơn level kia không, theo thứ tự score_min của fitness_levels. */
+    private boolean isHigherLevel(String candidate, String current) {
+        if (candidate == null || candidate.isBlank()) {
+            return false;
+        }
+        if (current == null || current.isBlank()) {
+            return true;
+        }
+        int candidateRank = levelRank(candidate);
+        int currentRank = levelRank(current);
+        if (candidateRank == currentRank) {
+            return candidate.compareToIgnoreCase(current) > 0;
+        }
+        return candidateRank > currentRank;
+    }
+
+    /** Thứ hạng của level theo score_min; level không cấu hình thì đứng cuối. */
+    private int levelRank(String level) {
+        if (level == null || level.isBlank()) {
+            return Integer.MIN_VALUE;
+        }
+        return fitnessLevels.findByNameIgnoreCase(level.trim())
+                .map(FitnessLevel::getScoreMin)
+                .orElse(Integer.MIN_VALUE);
     }
 
     private WorkoutDetailResponseDTO toDetail(WorkoutEntry workout) {
@@ -352,9 +407,13 @@ public class LibraryWorkoutService {
         if (filter == null || filter.getPage() < 0 || filter.getSize() < 1 || filter.getSize() > 100) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid page or size");
         }
-        if (filter.getLevel() != null && !filter.getLevel().isBlank()
-                && !Set.of("ALL", "BEGINNER", "INTERMEDIATE", "ADVANCED")
-                .contains(filter.getLevel().trim().toUpperCase(Locale.ROOT))) {
+        String level = filter.getLevel();
+        if (level == null || level.isBlank() || "ALL".equalsIgnoreCase(level.trim())) {
+            return;
+        }
+        // Level lấy từ bảng fitness_levels nên không hard-code danh sách ở đây.
+        boolean known = fitnessLevels.findByNameIgnoreCase(level.trim()).isPresent();
+        if (!known) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid workout level");
         }
     }
@@ -393,15 +452,6 @@ public class LibraryWorkoutService {
             throw new RequestValidationException("items.countBy", "countBy phải là REPS hoặc SECONDS");
         }
         return countBy;
-    }
-
-    private int levelRank(String level) {
-        return switch (level == null ? "" : level.toUpperCase(Locale.ROOT)) {
-            case "BEGINNER" -> 1;
-            case "INTERMEDIATE" -> 2;
-            case "ADVANCED" -> 3;
-            default -> 0;
-        };
     }
 
     private String resolveWorkoutType(String type) {

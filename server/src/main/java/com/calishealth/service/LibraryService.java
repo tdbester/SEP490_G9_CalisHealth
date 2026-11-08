@@ -3,14 +3,17 @@ package com.calishealth.service;
 import com.calishealth.dtos.LibraryDtos.CreateMemberExerciseRequest;
 import com.calishealth.dtos.LibraryDtos.ExerciseCounts;
 import com.calishealth.dtos.LibraryDtos.ExerciseListItem;
+import com.calishealth.dtos.LibraryDtos.FitnessLevelOption;
 import com.calishealth.dtos.LibraryDtos.LibrarySummaryResponse;
 import com.calishealth.dtos.LibraryDtos.PagedExerciseListResponse;
 import com.calishealth.dtos.LibraryDtos.WorkoutCounts;
 import com.calishealth.dtos.LibraryOverviewDTO;
 import com.calishealth.models.Exercise;
+import com.calishealth.models.FitnessLevel;
 import com.calishealth.models.User;
 import com.calishealth.models.UserRole;
 import com.calishealth.repository.ExerciseRepository;
+import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.UserRepository;
 import com.calishealth.repository.WorkoutRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -33,6 +37,7 @@ public class LibraryService {
     private final WorkoutRepository workoutRepository;
     private final UserRepository userRepository;
     private final ExerciseMuscleGroupCatalog muscleGroupCatalog;
+    private final FitnessLevelRepository fitnessLevels;
     private final SystemNotificationService systemNotifications;
 
     // Temporary session cache for member exercises created in memory if DB user record not found
@@ -47,12 +52,44 @@ public class LibraryService {
         return new ExerciseCounts(healthCount, skillCount, memberCount);
     }
 
+    /**
+     * Danh sách level của hệ thống, sắp theo score_min. Level do Content Manager cấu hình động
+     * trong Level & Benchmark Criteria nên client lấy từ đây thay vì hard-code.
+     */
+    @Transactional(readOnly = true)
+    public List<FitnessLevelOption> getFitnessLevels() {
+        return fitnessLevels.findAll().stream()
+                .sorted(Comparator.comparingInt(FitnessLevel::getScoreMin)
+                        .thenComparing(FitnessLevel::getName, String.CASE_INSENSITIVE_ORDER))
+                .map(level -> new FitnessLevelOption(
+                        level.getId(),
+                        level.getName(),
+                        level.getScoreMin(),
+                        level.getScoreMax(),
+                        level.getStatus()))
+                .toList();
+    }
+
     private String entryLevelLabel(String level) {
         if (level == null || level.isBlank()) {
-            return "Beginner";
+            return defaultLevelName();
         }
         String normalized = level.toLowerCase(Locale.ROOT);
         return Character.toUpperCase(normalized.charAt(0)) + normalized.substring(1);
+    }
+
+    /**
+     * Level mặc định khi bài tập chưa gán level: level thấp nhất đang cấu hình trong
+     * `fitness_levels` (theo score_min). Không hard-code "Beginner" vì Content Manager có thể
+     * tạo level mới hoặc đổi tên level cũ.
+     */
+    private String defaultLevelName() {
+        return fitnessLevels.findAll().stream()
+                .filter(level -> "ACTIVE".equalsIgnoreCase(level.getStatus()))
+                .min(Comparator.comparingInt(FitnessLevel::getScoreMin)
+                        .thenComparing(FitnessLevel::getName, String.CASE_INSENSITIVE_ORDER))
+                .map(FitnessLevel::getName)
+                .orElse(null);
     }
 
     @Transactional(readOnly = true)
@@ -61,7 +98,8 @@ public class LibraryService {
         long healthWorkouts = workoutRepository.countSystemWorkoutsByType("HEALTH");
         long skillWorkouts = workoutRepository.countSystemWorkoutsByType("SKILL");
         long customWorkouts = workoutRepository
-                .countBySourceAndActiveTrueAndStatusAndSharedWithCommunityTrue("CUSTOM", "ACCEPTED");
+                .countBySourceAndTemplateStatusAndModerationStatusAndSharedWithCommunityTrue(
+                        "CUSTOM", "PUBLISHED", "ACTIVE");
 
         return new LibrarySummaryResponse(
             exerciseCounts,
@@ -225,7 +263,7 @@ public class LibraryService {
         String name = req.name() != null ? req.name().trim() : "Untitled Custom Exercise";
         String mg = req.muscleGroup() != null && !req.muscleGroup().isBlank() ? req.muscleGroup().trim() : "Full body";
         muscleGroupCatalog.validate(mg);
-        String lvl = req.level() != null && !req.level().isBlank() ? req.level().trim() : "Intermediate";
+        String lvl = resolveLevelName(req.level());
         String equip = req.equipment() != null && !req.equipment().isBlank() ? req.equipment().trim() : "Bodyweight";
         int sets = req.sets() != null && req.sets() > 0 ? req.sets() : 3;
         String reps = req.repsOrDuration() != null && !req.repsOrDuration().isBlank() ? req.repsOrDuration().trim() : "10 reps";
@@ -254,7 +292,7 @@ public class LibraryService {
                 memberEntry.setStatus("PENDING");
                 memberEntry.setActive(false);
                 memberEntry.setCategory(category);
-                memberEntry.setLevel(lvl.toUpperCase(Locale.ROOT));
+                memberEntry.setLevel(lvl);
                 memberEntry.setDefaultSets(sets);
                 memberEntry.setDefaultReps(defaultReps);
                 memberEntry.setDefaultDuration(duration);
@@ -294,6 +332,25 @@ public class LibraryService {
             customSessionExercises.add(0, newItem);
         }
         return newItem;
+    }
+
+    /**
+     * Level do Content Manager quản lý trong Level & Benchmark Criteria nên tên level lấy động
+     * từ bảng fitness_levels; không hard-code danh sách level.
+     */
+    private String resolveLevelName(String level) {
+        if (level == null || level.isBlank()) {
+            return fitnessLevels.findAll().stream()
+                    .min(Comparator.comparingInt(FitnessLevel::getScoreMin)
+                            .thenComparing(FitnessLevel::getName, String.CASE_INSENSITIVE_ORDER))
+                    .map(FitnessLevel::getName)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "No exercise level is configured"));
+        }
+        return fitnessLevels.findByNameIgnoreCase(level.trim())
+                .map(FitnessLevel::getName)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Choose a valid exercise level"));
     }
 
     private Integer parseRepCount(String repsOrDuration) {
@@ -387,7 +444,7 @@ public class LibraryService {
             reps,
             e.getGoal() != null ? e.getGoal().name() : "Strength",
             equip,
-            e.getDifficultyLevel() != null ? e.getDifficultyLevel() : "Beginner",
+            e.getDifficultyLevel() != null ? e.getDifficultyLevel() : defaultLevelName(),
             details,
             desc,
             videoUrl

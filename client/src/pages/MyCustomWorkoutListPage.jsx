@@ -11,6 +11,7 @@ import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { getLevelLabel } from "../utils/levelLabel";
 import { localizeSeed } from "../utils/seedText";
 import { startLibraryWorkout } from "../utils/libraryWorkout";
+import { useSystemLevels } from "../useSystemLevels";
 
 const STORAGE_KEY = "my_custom_workouts";
 const INITIALIZED_KEY = `${STORAGE_KEY}_initialized`;
@@ -92,30 +93,18 @@ function DumbbellIcon() {
 }
 
 function LevelBadge({ level }) {
-  const { t } = useTranslation();
   const displayLevel = level || "Intermediate";
   return (
     <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold capitalize ${getLevelBadgeStyle(displayLevel)}`}>
-      {t(`member.catalog.${levelKey(displayLevel)}`)}
+      {getLevelLabel(displayLevel)}
     </span>
   );
 }
-
-const levelKey = (level) => {
-  const normalized = String(level || "").toLowerCase();
-  if (normalized === "beginner") return "beginner";
-  if (normalized === "intermediate") return "intermediate";
-  if (normalized === "advanced") return "advanced";
-  return "intermediate";
-};
 
 function FilterDropdown({ value, onChange, options, label }) {
   const { t } = useTranslation();
   const labelFor = (option) => {
     if (option.label === "All levels") return t("member.catalog.allLevels");
-    if (option.label === "Beginner") return t("member.catalog.beginner");
-    if (option.label === "Intermediate") return t("member.catalog.intermediate");
-    if (option.label === "Advanced") return t("member.catalog.advanced");
     if (option.label === "Any length") return t("member.catalog.anyLength");
     if (option.label === "Under 10 min") return t("member.catalog.under10");
     if (option.label === "10–15 min") return t("member.catalog.between10and15");
@@ -182,6 +171,8 @@ export default function MyCustomWorkoutListPage() {
   const navigate = useNavigate();
   const { requestDelete, confirmationModal } = useUndoDelete();
   const [searchParams] = useSearchParams();
+  // Level do Content Manager cấu hình động nên danh sách lọc lấy từ hệ thống.
+  const { levels: levelNames } = useSystemLevels();
   const [workouts, setWorkouts] = useState([]);
   const [query, setQuery] = useState("");
   const [level, setLevel] = useState("all");
@@ -336,9 +327,7 @@ export default function MyCustomWorkoutListPage() {
           }}
           options={[
             { value: "all", label: "All levels" },
-            { value: "Beginner", label: "Beginner" },
-            { value: "Intermediate", label: "Intermediate" },
-            { value: "Advanced", label: "Advanced" },
+            ...levelNames.map((name) => ({ value: name, label: name })),
           ]}
         />
         <FilterDropdown

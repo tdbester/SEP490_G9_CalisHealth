@@ -15,7 +15,11 @@ public record CreateUpdateWorkoutRequestDTO(
         String title,
         @Size(max = 200, message = "Description must not exceed 200 characters")
         String description,
-        @Pattern(regexp = "(?i)BEGINNER|INTERMEDIATE|ADVANCED", message = "Please select a valid workout level")
+        /**
+         * Tên level lấy động từ bảng fitness_levels (Content Manager tạo/đổi tên level trong
+         * Level & Benchmark Criteria), nên không validate bằng danh sách cố định.
+         */
+        @NotBlank(message = "Please select a workout level")
         String level,
         @Pattern(regexp = "(?i)HEALTH|SKILL|FLEX", message = "Please select a valid workout type")
         String type,

@@ -96,7 +96,10 @@ class LibraryRequestValidationTest {
     }
 
     @Test
-    void rejectsUnsupportedWorkoutLevel() {
+    void doesNotConstrainWorkoutLevelToAFixedList() {
+        // Level do Content Manager tạo/đổi tên trong Level & Benchmark Criteria nên tên level
+        // không còn bị ràng buộc bởi danh sách cố định; việc kiểm tra level tồn tại thuộc về
+        // service (đối chiếu bảng fitness_levels).
         CreateUpdateWorkoutRequestDTO request = new CreateUpdateWorkoutRequestDTO(
                 "Workout",
                 null,
@@ -107,8 +110,23 @@ class LibraryRequestValidationTest {
         );
 
         assertTrue(validator.validate(request).stream()
+                .noneMatch(violation -> violation.getPropertyPath().toString().equals("level")));
+    }
+
+    @Test
+    void requiresAWorkoutLevel() {
+        CreateUpdateWorkoutRequestDTO request = new CreateUpdateWorkoutRequestDTO(
+                "Workout",
+                null,
+                "  ",
+                null,
+                false,
+                List.of(new WorkoutItemDTO(1L, 0, 3, 10, null, "REPS", 60))
+        );
+
+        assertTrue(validator.validate(request).stream()
                 .anyMatch(violation -> violation.getPropertyPath().toString().equals("level")
-                        && violation.getMessage().equals("Please select a valid workout level")));
+                        && violation.getMessage().equals("Please select a workout level")));
     }
 
     @Test

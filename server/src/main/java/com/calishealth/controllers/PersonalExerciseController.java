@@ -48,7 +48,7 @@ public class PersonalExerciseController {
     public ResponseEntity<PageResponseDTO<PersonalExerciseResponseDTO>> list(
             @RequestParam(defaultValue = "PENDING") Exercise.EntryStatus status,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) Exercise.EntryLevel level,
+            @RequestParam(required = false) String level,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "6") int size,
             Authentication authentication
