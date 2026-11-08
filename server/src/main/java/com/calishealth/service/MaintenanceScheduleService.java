@@ -12,11 +12,10 @@ import com.calishealth.repository.MaintenanceScheduleRepository;
 import com.calishealth.repository.NotificationRepository;
 import com.calishealth.repository.UserRepository;
 import jakarta.transaction.Transactional;
-import org.springframework.http.HttpStatus;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -25,11 +24,15 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
 @Service
 public class MaintenanceScheduleService {
+    /** A schedule turns red this long before its window starts and stays red until the window ends. */
+    public static final int DUE_WINDOW_MINUTES = 30;
+
     private static final Set<String> ALLOWED_AREAS =
             Set.of(
                     "MEMBER_APP_ACCESS",
@@ -47,6 +50,7 @@ public class MaintenanceScheduleService {
                     "ADMIN_MANAGEMENT_PORTAL"
             );
     private static final Set<Integer> ALLOWED_REMINDERS = Set.of(1, 12, 24, 48);
+    private static final int PAGE_SIZE = 5;
     private static final Map<String, String> AREA_LABELS = Map.of(
             "MEMBER_APP_ACCESS", "Member App Access",
             "MEMBER_VIDEO_UPLOADS", "Member Video Uploads",
@@ -60,15 +64,18 @@ public class MaintenanceScheduleService {
     private final MaintenanceScheduleRepository schedules;
     private final NotificationRepository notifications;
     private final UserRepository users;
+    private final MaintenanceAreaLockService areaLocks;
 
     public MaintenanceScheduleService(
             MaintenanceScheduleRepository schedules,
             NotificationRepository notifications,
-            UserRepository users
+            UserRepository users,
+            MaintenanceAreaLockService areaLocks
     ) {
         this.schedules = schedules;
         this.notifications = notifications;
         this.users = users;
+        this.areaLocks = areaLocks;
     }
 
     @Transactional
@@ -93,9 +100,28 @@ public class MaintenanceScheduleService {
     }
 
     @Transactional
-    public Page<MaintenanceScheduleResponseDto> getSchedules(int page) {
-        return schedules.findAll(PageRequest.of(Math.max(0, page), 5, Sort.by("startsAt").ascending()))
-                .map(MaintenanceScheduleService::toResponse);
+    public Page<MaintenanceScheduleResponseDto> getSchedules(
+            int page,
+            String title,
+            LocalDateTime startsFrom,
+            LocalDateTime startsTo,
+            LocalDateTime endsFrom,
+            LocalDateTime endsTo
+    ) {
+        String normalizedTitle = title == null || title.isBlank() ? null : title.trim();
+        return schedules.searchSchedules(
+                        normalizedTitle,
+                        startsFrom,
+                        startsTo,
+                        endsFrom,
+                        endsTo,
+                        LocalDateTime.now().plusMinutes(MaintenanceScheduleService.DUE_WINDOW_MINUTES),
+                        org.springframework.data.domain.PageRequest.of(
+                                Math.max(0, page),
+                                PAGE_SIZE
+                        )
+                )
+                .map(this::toResponse);
     }
 
     @Transactional
@@ -103,18 +129,62 @@ public class MaintenanceScheduleService {
         return toResponse(getScheduleEntity(id));
     }
 
+    /**
+     * Marks the maintenance work as started and locks the affected service areas by hand.
+     */
+    @Transactional
+    public MaintenanceScheduleResponseDto start(Long id, String adminEmail) {
+        MaintenanceSchedule schedule = getScheduleEntity(id);
+        if (schedule.isCancelled()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cancelled schedules cannot be started");
+        }
+        if (schedule.getCompletedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This schedule has already been completed");
+        }
+        User admin = getAdmin(adminEmail);
+        if (schedule.getStartedAt() == null) {
+            schedule.setStartedAt(LocalDateTime.now());
+            schedule.setStartedBy(admin.getId());
+        }
+        areaLocks.lockScheduleAreas(schedule.getId(), List.copyOf(schedule.getAffectedAreas()));
+        return toResponse(schedules.save(schedule));
+    }
+
+    /**
+     * Marks the maintenance work as finished and releases the affected service areas.
+     */
+    @Transactional
+    public MaintenanceScheduleResponseDto complete(Long id, String adminEmail) {
+        MaintenanceSchedule schedule = getScheduleEntity(id);
+        if (schedule.isCancelled()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cancelled schedules cannot be completed");
+        }
+        User admin = getAdmin(adminEmail);
+        if (schedule.getStartedAt() == null) {
+            schedule.setStartedAt(LocalDateTime.now());
+            schedule.setStartedBy(admin.getId());
+        }
+        schedule.setCompletedAt(LocalDateTime.now());
+        schedule.setCompletedBy(admin.getId());
+        areaLocks.unlockScheduleAreas(List.copyOf(schedule.getAffectedAreas()));
+        return toResponse(schedules.save(schedule));
+    }
+
+    /**
+     * The schedule only notifies users, so nothing is locked by a schedule window alone.
+     * A service area is only unavailable while an admin locked it by hand.
+     */
     public boolean isServiceUnderMaintenance(String serviceKey) {
         if (!ALLOWED_AREAS.contains(serviceKey)) {
             throw new IllegalArgumentException("Unsupported maintenance service key: " + serviceKey);
         }
-        return schedules.countActiveSchedulesByArea(serviceKey, LocalDateTime.now()) > 0;
+        return areaLocks.isAreaLocked(serviceKey);
     }
 
     public Map<String, Boolean> getServiceMaintenanceStatus() {
-        Set<String> activeAreas = schedules.findActiveAreas(LocalDateTime.now());
         Map<String, Boolean> status = new LinkedHashMap<>();
         for (String area : AREA_ORDER) {
-            status.put(area, activeAreas.contains(area));
+            status.put(area, areaLocks.isAreaLocked(area));
         }
         return status;
     }
@@ -126,6 +196,7 @@ public class MaintenanceScheduleService {
             return toResponse(schedule);
         }
         schedule.setCancelled(true);
+        areaLocks.unlockScheduleAreas(List.copyOf(schedule.getAffectedAreas()));
         if (schedule.isNotifyMembers()) {
             User admin = getAdmin(adminEmail);
             Notification notification = getLinkedNotification(schedule);
@@ -264,7 +335,13 @@ public class MaintenanceScheduleService {
                 + ", and " + areas.get(areas.size() - 1);
     }
 
-    private static MaintenanceScheduleResponseDto toResponse(MaintenanceSchedule schedule) {
+    private MaintenanceScheduleResponseDto toResponse(MaintenanceSchedule schedule) {
+        return toResponse(schedule, LocalDateTime.now());
+    }
+
+    private MaintenanceScheduleResponseDto toResponse(MaintenanceSchedule schedule, LocalDateTime now) {
+        boolean locked = schedule.getAffectedAreas().stream()
+                .anyMatch(area -> areaLocks.isAreaLocked(area));
         return new MaintenanceScheduleResponseDto(
                 schedule.getId(),
                 schedule.getTitle(),
@@ -276,19 +353,53 @@ public class MaintenanceScheduleService {
                 schedule.isNotifyMembers() && schedule.getNotificationId() != null,
                 schedule.getReminderHours(),
                 schedule.getNotificationId(),
-                getStatus(schedule),
-                schedule.getCreatedAt()
+                getStatus(schedule, now),
+                schedule.getCreatedAt(),
+                schedule.getStartedAt(),
+                schedule.getCompletedAt(),
+                isDueForExecution(schedule, now),
+                locked
         );
     }
 
-    private static String getStatus(MaintenanceSchedule schedule) {
-        return getStatus(schedule, LocalDateTime.now());
+    /**
+     * A schedule turns red from 30 minutes before its window starts and stays red
+     * throughout the whole maintenance window.
+     */
+    private static boolean isDueForExecution(MaintenanceSchedule schedule, LocalDateTime now) {
+        if (schedule.isCancelled() || schedule.getCompletedAt() != null) {
+            return false;
+        }
+        LocalDateTime dueFrom = schedule.getStartsAt().minusMinutes(DUE_WINDOW_MINUTES);
+        return !now.isBefore(dueFrom) && !now.isAfter(schedule.getEndsAt());
     }
 
+    /**
+     * The schedule reached its maintenance time and still waits for the admin to act.
+     */
+    private static boolean isReady(MaintenanceSchedule schedule, LocalDateTime now) {
+        if (schedule.isCancelled() || schedule.getCompletedAt() != null) {
+            return false;
+        }
+        return !now.isBefore(schedule.getStartsAt().minusMinutes(DUE_WINDOW_MINUTES));
+    }
+
+    /**
+     * The lifecycle of a maintenance schedule.
+     *
+     * <ul>
+     *   <li>{@code PENDING} — chưa thực hiện, chưa tới giờ.</li>
+     *   <li>{@code READY} — đã đến giờ, admin cần bấm bắt đầu bảo trì.</li>
+     *   <li>{@code IN_PROGRESS} — đang thực hiện, khu vực đang bị khoá.</li>
+     *   <li>{@code COMPLETED} — đã thực hiện xong.</li>
+     *   <li>{@code CANCELLED} — đã hủy.</li>
+     * </ul>
+     */
     private static String getStatus(MaintenanceSchedule schedule, LocalDateTime now) {
         if (schedule.isCancelled()) return "CANCELLED";
-        if (now.isBefore(schedule.getStartsAt())) return "UPCOMING";
-        if (!now.isAfter(schedule.getEndsAt())) return "ONGOING";
-        return "COMPLETED";
+        if (schedule.getCompletedAt() != null) return "COMPLETED";
+        if (schedule.getStartedAt() != null) return "IN_PROGRESS";
+        if (isReady(schedule, now)) return "READY";
+        return "PENDING";
     }
 }

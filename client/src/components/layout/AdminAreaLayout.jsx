@@ -177,7 +177,7 @@ function AdminShell({ user, children }) {
               "& .MuiAlert-icon": { color: "#fbbf24" },
             }}
           >
-            Admin Management Portal is under scheduled maintenance. Administrative access remains available.
+            {t("admin.maintenance.adminPortalMaintenanceBanner")}
           </Alert>
         ) : null}
 
