@@ -72,6 +72,9 @@ public class AiSupportDtos {
      * @param provider      nguồn câu trả lời ("gpt-4o-mini" khi dùng API thật,
      *                     "local-rules" khi server chưa cấu hình API key)
      * @param totalTokens   số token đã dùng cho lượt hỏi này
+     * @param notice        mã lý do server phải trả lời bằng rule nội bộ
+     *                     (null khi câu trả lời đến từ AI thật) — frontend
+     *                     dùng để hiện cảnh báo demo/offline
      */
     public record AskQuestionResponse(
             AnswerResponse answer,
@@ -81,7 +84,8 @@ public class AiSupportDtos {
             int sessionIndex,
             int sessionLimit,
             String provider,
-            int totalTokens
+            int totalTokens,
+            String notice
     ) {}
 
     /**
@@ -94,6 +98,8 @@ public class AiSupportDtos {
      * @param sessionUsed  số câu đã hỏi trong phiên chat hiện tại
      * @param aiEnabled    server đã cấu hình API thật (gpt-4o-mini) hay chưa
      * @param model        model AI đang dùng (null khi chưa cấu hình)
+     * @param demoFallback server có bật chế độ demo (trả lời bằng rule nội bộ
+     *                    khi API lỗi) hay không
      */
     public record QuotaResponse(
             int questionCount,
@@ -102,7 +108,8 @@ public class AiSupportDtos {
             int sessionLimit,
             int sessionUsed,
             boolean aiEnabled,
-            String model
+            String model,
+            boolean demoFallback
     ) {}
 
     /**

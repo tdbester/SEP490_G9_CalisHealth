@@ -127,7 +127,7 @@ class AiSupportEndToEndTest {
 
             OpenAiChatService chatService = new OpenAiChatService(
                     "sk-real-key", "gpt-4o-mini",
-                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10);
+                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, true);
 
             AiSupportService service = new AiSupportService(
                     usageRepository, messageRepository, sessionRepository,
@@ -173,7 +173,7 @@ class AiSupportEndToEndTest {
     }
 
     @Test
-    void memberGetsClearErrorWhenApiKeyIsInvalid() throws IOException {
+    void memberGetsClearErrorWhenApiKeyIsInvalidAndDemoIsOff() throws IOException {
         HttpServer openAi = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         openAi.createContext("/v1/chat/completions", exchange -> {
             byte[] payload = "{\"error\":{\"message\":\"Incorrect API key provided\"}}"
@@ -218,9 +218,10 @@ class AiSupportEndToEndTest {
             when(messageRepository.findByUser_IdAndSessionIdOrderByCreatedAtAsc(anyLong(), anyString()))
                     .thenReturn(List.of());
 
+            // Demo tắt -> lỗi phải nổi lên, không được giấu bằng câu trả lời giả.
             OpenAiChatService chatService = new OpenAiChatService(
                     "sk-wrong", "gpt-4o-mini",
-                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10);
+                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, false);
 
             AiSupportService service = new AiSupportService(
                     usageRepository, messageRepository, sessionRepository,
@@ -234,6 +235,82 @@ class AiSupportEndToEndTest {
             // Member không mất lượt khi AI lỗi.
             org.mockito.Mockito.verify(messageRepository, org.mockito.Mockito.never())
                     .save(any(AiSupportMessage.class));
+        } finally {
+            openAi.stop(0);
+        }
+    }
+
+    @Test
+    void servesDemoAnswerFlaggedWhenApiFailsAndDemoIsOn() throws IOException {
+        HttpServer openAi = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        openAi.createContext("/v1/chat/completions", exchange -> {
+            byte[] payload = ("{\"error\":{\"message\":\"You have no credits remaining.\","
+                    + "\"type\":\"insufficient_quota\"}}").getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(429, payload.length);
+            exchange.getResponseBody().write(payload);
+            exchange.close();
+        });
+        openAi.start();
+
+        try {
+            AiSupportUsageRepository usageRepository = mock(AiSupportUsageRepository.class);
+            AiSupportMessageRepository messageRepository = mock(AiSupportMessageRepository.class);
+            AiSupportSessionRepository sessionRepository = mock(AiSupportSessionRepository.class);
+            UserRepository users = mock(UserRepository.class);
+            ExerciseRepository exercises = mock(ExerciseRepository.class);
+            FormRuleRepository formRules = mock(FormRuleRepository.class);
+            ContentModerationService moderation = mock(ContentModerationService.class);
+
+            User member = new User();
+            member.setId(11L);
+            Exercise exercise = new Exercise();
+            exercise.setCode("SQUAT");
+            exercise.setName("Bodyweight Squat");
+
+            FormRule rule = new FormRule();
+            rule.setJoint("KNEE");
+            rule.setRomDepth(new BigDecimal("90.000"));
+            rule.setFeedbackMessage("Bring your knees in line with your toes.");
+
+            AiSupportUsage usage = new AiSupportUsage();
+            usage.setUser(member);
+            usage.setUsageDate(LocalDate.now());
+            usage.setQuestionCount(0);
+
+            AiSupportSession session = new AiSupportSession();
+            session.setUser(member);
+            session.setSessionId("sess-42");
+            session.setQuestionCount(0);
+
+            when(users.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+            when(exercises.findByCode("SQUAT")).thenReturn(Optional.of(exercise));
+            when(formRules.findByExerciseCode("SQUAT")).thenReturn(List.of(rule));
+            when(moderation.findFlaggedWords(anyString(), any(), any(), any())).thenReturn(List.of());
+            when(usageRepository.findForUpdate(11L, LocalDate.now())).thenReturn(Optional.of(usage));
+            when(sessionRepository.findForUpdate(11L, "sess-42")).thenReturn(Optional.of(session));
+            when(messageRepository.findByUser_IdAndSessionIdOrderByCreatedAtAsc(anyLong(), anyString()))
+                    .thenReturn(List.of());
+
+            // Demo bật -> trả lời bằng rule nội bộ, gắn cờ để member biết.
+            OpenAiChatService chatService = new OpenAiChatService(
+                    "sk-out-of-credits", "gpt-4o-mini",
+                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, true);
+
+            AiSupportService service = new AiSupportService(
+                    usageRepository, messageRepository, sessionRepository,
+                    users, exercises, formRules, chatService, moderation);
+
+            var response = service.ask("member@example.com", new AskQuestionRequest(
+                    "SQUAT", "Why do my knees cave in?", "sess-42", List.of("Knees caved inward"), 68.0));
+
+            assertEquals("local-rules", response.provider());
+            assertEquals("AI_OUT_OF_CREDITS", response.notice());
+            assertEquals(0, response.totalTokens());
+            // Vẫn có câu trả lời dùng được để demo.
+            assertEquals(3, response.answer().causes().size());
+            assertTrue(response.answer().tip().contains("Bring your knees in line"));
+            // Lượt vẫn được tính như bình thường.
+            assertEquals(1, response.questionCount());
         } finally {
             openAi.stop(0);
         }

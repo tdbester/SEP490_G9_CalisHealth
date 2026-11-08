@@ -1597,6 +1597,9 @@ export default {
     sourceVideo: "Buổi quét video AI",
     poweredBy: "Được hỗ trợ bởi {model}",
     offlineNotice: "Huấn luyện viên AI đang chạy ở chế độ offline — câu trả lời đến từ quy tắc tích hợp.",
+    demoBadge: "Chế độ demo",
+    demoTooltip:
+      "Dịch vụ AI đang không khả dụng, nên câu trả lời này đến từ quy tắc tích hợp thay vì từ mô hình AI.",
   },
 
   /** Popup upload / kiểm tra camera. */

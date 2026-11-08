@@ -281,6 +281,23 @@
   color: #fff;
 }
 
+/* Badge "chế độ demo" — câu trả lời đến từ rule nội bộ, không phải AI thật. */
+.ais-demo-badge {
+  flex-shrink: 0;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: #4a3d1f;
+  border: 1px solid #a68b3d;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: #f5e0a3;
+  cursor: help;
+}
+
 .ais-causes {
   margin: 0;
   padding: 0;

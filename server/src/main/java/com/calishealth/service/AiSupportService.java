@@ -6,6 +6,7 @@ import com.calishealth.dtos.AiSupportDtos.AskQuestionRequest;
 import com.calishealth.dtos.AiSupportDtos.AskQuestionResponse;
 import com.calishealth.dtos.AiSupportDtos.LikelyCause;
 import com.calishealth.dtos.AiSupportDtos.QuotaResponse;
+import com.calishealth.exception.OpenAiException;
 import com.calishealth.models.AiSupportMessage;
 import com.calishealth.models.AiSupportSession;
 import com.calishealth.models.AiSupportUsage;
@@ -79,7 +80,8 @@ public class AiSupportService {
                 AiSupportUsage.SESSION_QUESTION_LIMIT,
                 countSessionQuestions(user.getId(), sessionId),
                 openAi.isConfigured(),
-                openAi.isConfigured() ? openAi.model() : null);
+                openAi.isConfigured() ? openAi.model() : null,
+                openAi.isDemoFallbackEnabled());
     }
 
     // ------------------------------------------------------------------ ask
@@ -183,23 +185,33 @@ public class AiSupportService {
         AnswerResponse answer;
         int tokens;
         String provider;
+        String notice = null;
         if (openAi.isConfigured()) {
-            // Gọi API thật. Lỗi được ném ra (OpenAiException) để controller trả
-            // đúng mã lỗi cho client — không trả câu trả lời giả cho member.
-            // Lịch sử gửi lại đúng câu hỏi thô (như đã lưu) để AI nhớ ngữ cảnh;
-            // ngữ cảnh bài tập đã nằm trong system prompt.
-            List<OpenAiChatService.ChatMessage> chat =
-                    buildChatHistory(user.getId(), sessionId, question);
-            OpenAiChatService.ChatResult result = openAi.chat(systemPrompt, chat);
-            answer = openAi.toAnswer(result.content());
-            tokens = result.totalTokens();
-            provider = openAi.model();
+            try {
+                List<OpenAiChatService.ChatMessage> chat =
+                        buildChatHistory(user.getId(), sessionId, question);
+                OpenAiChatService.ChatResult result = openAi.chat(systemPrompt, chat);
+                answer = openAi.toAnswer(result.content());
+                tokens = result.totalTokens();
+                provider = openAi.model();
+            } catch (OpenAiException exception) {
+                // Chế độ demo: API lỗi (hết credit, mạng, rate limit) -> trả lời
+                // bằng rule nội bộ kèm cờ báo rõ, để demo vẫn chạy được.
+                if (!openAi.isDemoFallbackEnabled()) {
+                    throw exception;
+                }
+                log.warn("OpenAI unavailable, serving the local demo answer: {}", exception.getCode());
+                answer = fallbackAnswer(exercise, rules, question);
+                tokens = 0;
+                provider = "local-rules";
+                notice = exception.getCode();
+            }
         } else {
-            // Chưa cấu hình API key -> vẫn trả lời được bằng rule nội bộ để
-            // member không bị "chết" giữa chừng khi triển khai.
+            // Chưa cấu hình API key -> trả lời bằng rule nội bộ kèm cờ báo rõ.
             answer = fallbackAnswer(exercise, rules, question);
             tokens = 0;
             provider = "local-rules";
+            notice = "AI_NOT_CONFIGURED";
         }
 
         // Ghi lại lịch sử + bộ đếm quota.
@@ -224,7 +236,8 @@ public class AiSupportService {
                 sessionIndex,
                 AiSupportUsage.SESSION_QUESTION_LIMIT,
                 provider,
-                tokens);
+                tokens,
+                notice);
     }
 
     /**

@@ -1595,6 +1595,9 @@ export default {
     sourceVideo: "AI video scan session",
     poweredBy: "Powered by {model}",
     offlineNotice: "AI coach is running in offline mode — answers come from built-in rules.",
+    demoBadge: "Demo mode",
+    demoTooltip:
+      "The AI service is unavailable right now, so this answer comes from the built-in rules instead of the AI model.",
   },
 
   /** Popup upload / kiểm tra camera. */

@@ -40,13 +40,15 @@ public class OpenAiChatService {
     private final String model;
     private final String baseUrl;
     private final int maxOutputTokens;
+    private final boolean demoFallbackEnabled;
     private final ObjectMapper mapper = new ObjectMapper();
 
     public OpenAiChatService(
             @Value("${app.openai.api-key:}") String apiKey,
             @Value("${app.openai.model:gpt-4o-mini}") String model,
             @Value("${app.openai.base-url:https://api.openai.com}") String baseUrl,
-            @Value("${app.openai.timeout-seconds:45}") int timeoutSeconds
+            @Value("${app.openai.timeout-seconds:45}") int timeoutSeconds,
+            @Value("${app.openai.demo-fallback:true}") boolean demoFallbackEnabled
     ) {
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.model = (model == null || model.isBlank()) ? "gpt-4o-mini" : model.trim();
@@ -54,6 +56,7 @@ public class OpenAiChatService {
                 ? "https://api.openai.com"
                 : baseUrl.trim();
         this.maxOutputTokens = 700;
+        this.demoFallbackEnabled = demoFallbackEnabled;
 
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         Duration timeout = Duration.ofSeconds(Math.max(5, timeoutSeconds));
@@ -68,6 +71,17 @@ public class OpenAiChatService {
     /** Đã cấu hình API key để gọi AI thật chưa. */
     public boolean isConfigured() {
         return !apiKey.isBlank();
+    }
+
+    /**
+     * Có bật chế độ demo (tự trả lời bằng rule nội bộ khi API lỗi) không.
+     *
+     * Bật mặc định để demo được khi tài khoản OpenAI chưa nạp credit hoặc
+     * server mất mạng. Câu trả lời fallback luôn được gắn cờ để member
+     * biết đó không phải câu trả lời từ AI thật.
+     */
+    public boolean isDemoFallbackEnabled() {
+        return demoFallbackEnabled;
     }
 
     /** Model đang dùng (để hiển thị/log). */

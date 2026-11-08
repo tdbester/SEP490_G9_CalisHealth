@@ -65,7 +65,7 @@ class OpenAiChatServiceTest {
     }
 
     private OpenAiChatService service(String apiKey) {
-        return new OpenAiChatService(apiKey, "gpt-4o-mini", baseUrl, 10);
+        return new OpenAiChatService(apiKey, "gpt-4o-mini", baseUrl, 10, true);
     }
 
     @Test
@@ -74,6 +74,13 @@ class OpenAiChatServiceTest {
 
         assertFalse(service.isConfigured());
         assertThrows(OpenAiException.class, () -> service.chat("system", "hello"));
+    }
+
+    @Test
+    void exposesDemoFallbackFlag() {
+        assertTrue(service("sk-test-key").isDemoFallbackEnabled());
+        assertFalse(new OpenAiChatService("sk-test-key", "gpt-4o-mini", baseUrl, 10, false)
+                .isDemoFallbackEnabled());
     }
 
     @Test

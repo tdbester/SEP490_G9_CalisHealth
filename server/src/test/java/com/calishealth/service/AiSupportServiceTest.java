@@ -192,6 +192,7 @@ class AiSupportServiceTest {
         when(usageRepository.findForUpdate(7L, LocalDate.now())).thenReturn(Optional.of(usage(0)));
         when(sessionRepository.findForUpdate(7L, "session-1")).thenReturn(Optional.of(session(0)));
         when(openAi.isConfigured()).thenReturn(true);
+        when(openAi.isDemoFallbackEnabled()).thenReturn(false);
         when(openAi.chat(anyString(), anyList()))
                 .thenThrow(new OpenAiException("AI_RATE_LIMITED", "AI Support is busy right now.", null));
 
@@ -200,6 +201,40 @@ class AiSupportServiceTest {
 
         // Không lưu lịch sử khi AI lỗi -> không mất lượt đã hỏi.
         verify(messageRepository, never()).save(any(AiSupportMessage.class));
+    }
+
+    @Test
+    void servesFlaggedDemoAnswerWhenApiFailsAndDemoIsOn() {
+        when(usageRepository.findForUpdate(7L, LocalDate.now())).thenReturn(Optional.of(usage(0)));
+        when(sessionRepository.findForUpdate(7L, "session-1")).thenReturn(Optional.of(session(0)));
+        when(openAi.isConfigured()).thenReturn(true);
+        when(openAi.isDemoFallbackEnabled()).thenReturn(true);
+        when(openAi.chat(anyString(), anyList()))
+                .thenThrow(new OpenAiException("AI_OUT_OF_CREDITS", "Out of credits.", null));
+
+        var response = service.ask("member@example.com",
+                new AskQuestionRequest("SQUAT", "Why?", "session-1", List.of(), null));
+
+        assertEquals("local-rules", response.provider());
+        assertEquals("AI_OUT_OF_CREDITS", response.notice());
+        assertEquals(0, response.totalTokens());
+        assertEquals(3, response.answer().causes().size());
+        // Lượt vẫn được tính.
+        assertEquals(1, response.questionCount());
+    }
+
+    @Test
+    void flagsDemoAnswerWhenApiKeyIsMissing() {
+        when(usageRepository.findForUpdate(7L, LocalDate.now())).thenReturn(Optional.of(usage(0)));
+        when(sessionRepository.findForUpdate(7L, "session-1")).thenReturn(Optional.of(session(0)));
+        when(openAi.isConfigured()).thenReturn(false);
+
+        var response = service.ask("member@example.com",
+                new AskQuestionRequest("SQUAT", "Why?", "session-1", List.of(), null));
+
+        assertEquals("local-rules", response.provider());
+        assertEquals("AI_NOT_CONFIGURED", response.notice());
+        assertEquals(3, response.answer().causes().size());
     }
 
     @Test

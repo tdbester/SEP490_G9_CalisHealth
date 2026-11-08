@@ -61,6 +61,10 @@ app:
     model: ${OPENAI_MODEL:gpt-4o-mini}
     base-url: ${OPENAI_BASE_URL:https://api.openai.com}
     timeout-seconds: ${OPENAI_TIMEOUT_SECONDS:45}
+    # Chế độ demo: khi API lỗi (hết credit, mất mạng, rate limit) thì trả lời
+    # bằng rule nội bộ kèm cờ báo rõ cho member, thay vì báo lỗi.
+    # Đặt false để member thấy lỗi thật (dùng khi đã nạp credit).
+    demo-fallback: ${OPENAI_DEMO_FALLBACK:true}
 
 # OpenAPI / Swagger UI
 springdoc:

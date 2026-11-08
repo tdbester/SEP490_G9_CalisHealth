@@ -258,6 +258,9 @@ export default function AiSupportModal({
             causes: data.answer?.causes ?? [],
             tip: data.answer?.tip ?? "",
             followUps: data.answer?.followUps ?? [],
+            // Cờ báo câu trả lời đến từ rule nội bộ (chế độ demo) thay vì AI thật.
+            demo: data.provider === "local-rules",
+            notice: data.notice ?? null,
           },
         ]);
         setQuota({
@@ -432,6 +435,12 @@ export default function AiSupportModal({
                     <p className="ais-answer-title">
                       {t("member:aiSupport.likelyCauses", { count: item.causes.length })}
                     </p>
+                    {/* Cờ báo câu trả lời đến từ rule nội bộ (chế độ demo). */}
+                    {item.demo ? (
+                      <span className="ais-demo-badge" title={item.notice ?? ""}>
+                        {t("member:aiSupport.demoBadge")}
+                      </span>
+                    ) : null}
                   </header>
 
                   <ul className="ais-causes">
