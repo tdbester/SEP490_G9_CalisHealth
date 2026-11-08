@@ -31,7 +31,7 @@ class SystemExerciseDetailTest {
                 mock(ExerciseModerationHistoryRepository.class),
                 mock(UserRepository.class),
                 mock(JdbcTemplate.class),
-                mock(ExerciseVideoStorageService.class),
+                mock(MediaRegistryService.class),
                 mock(ExerciseTreeEdgeRepository.class),
                 mock(FitnessLevelRepository.class),
                 mock(ExerciseMuscleGroupCatalog.class),
@@ -47,7 +47,7 @@ class SystemExerciseDetailTest {
         exercise.setDemoVideoUrl("/media/exercise-demos/handstand.mp4");
         exercise.setGuide("Place hands on the floor.\nKick up against the wall.\nPush tall through the shoulders.\nBrace the core and hold.");
         exercise.setMuscleGroup("Shoulders, core");
-        exercise.setLevel(Exercise.EntryLevel.BEGINNER);
+        exercise.setLevel("Beginner");
         exercise.setDefaultSets(3);
         exercise.setDefaultDuration(30);
         exercise.setEquipment("Wall");

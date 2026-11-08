@@ -350,7 +350,6 @@ public class LevelAssessmentService {
 
         java.math.BigDecimal weight = null;
         java.math.BigDecimal height = null;
-
         if (answers != null) {
             JsonNode weightNode = answers.get("WEIGHT");
             if (weightNode != null && weightNode.isNumber()) {
@@ -378,7 +377,6 @@ public class LevelAssessmentService {
                 profile.setGoals(goalNode.isTextual() ? goalNode.asText() : goalNode.toString());
             }
 
-            // Số buổi/tuần member muốn tập -> member_profiles.days_per_week (màn Profile đọc cột này).
             Integer daysPerWeek = desiredDaysPerWeek(answers);
             if (daysPerWeek != null) {
                 profile.setDaysPerWeek(daysPerWeek);
@@ -386,19 +384,14 @@ public class LevelAssessmentService {
         }
 
         profiles.save(profile);
-
-        // Tự động ghi bản ghi đo đầu tiên vào member_body_metrics
         if (weight != null && height != null && height.compareTo(java.math.BigDecimal.ZERO) > 0) {
             java.math.BigDecimal bmi = com.calishealth.service.MemberTrackingService.calculateBmi(weight, height);
             if (bmi != null) {
                 trackingRepository.saveBodyMetric(
-                        profile.getId(),
-                        weight,
-                        height,
-                        bmi,
-                        "Initial measurement from onboarding survey"
-                );
+                        profile.getId(), weight, height, bmi,
+                        "Initial measurement from onboarding survey");
             }
         }
     }
+
 }

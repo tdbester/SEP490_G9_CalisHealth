@@ -862,11 +862,14 @@ function LevelDot({ tone }) {
   return <Box component="span" aria-hidden="true" sx={{ display: "inline-block", width: 8, height: 8, mr: 1, borderRadius: "50%", bgcolor: color, flexShrink: 0 }} />;
 }
 
-function ExercisePickerRow({ entry, onAdd, toneOf }) {
+function ExercisePickerRow({ entry, onAdd, toneOf, knownLevels }) {
   const { t } = useTranslation();
   const level = entry.level || entry.difficultyLevel || "Intermediate";
-  const isStandardLevel = ["BEGINNER", "INTERMEDIATE", "ADVANCED"]
-    .includes(String(level).trim().toUpperCase());
+  // Level do Content Manager cấu hình động nên chỉ những level có trong hệ thống mới dùng
+  // badge màu cố định; level ngoài danh sách dùng pill theo tone để không bị gán nhầm màu.
+  const isStandardLevel = knownLevels.some(
+    (name) => String(name).trim().toLowerCase() === String(level).trim().toLowerCase(),
+  );
 
   return (
     <Stack
@@ -1319,6 +1322,7 @@ export function WorkoutFields({
                   key={entry.code}
                   entry={entry}
                   toneOf={levelTone}
+                  knownLevels={LEVELS}
                   onAdd={() => addExercise(entry)}
                 />
               ))

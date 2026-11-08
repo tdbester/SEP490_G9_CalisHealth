@@ -28,10 +28,10 @@ class ExerciseServiceModerationReasonTest {
     private final ExerciseModerationHistoryRepository moderationHistory = mock(ExerciseModerationHistoryRepository.class);
     private final UserRepository users = mock(UserRepository.class);
     private final JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
-    private final ExerciseVideoStorageService videoStorage = mock(ExerciseVideoStorageService.class);
+    private final MediaRegistryService mediaRegistry = mock(MediaRegistryService.class);
     private final SystemNotificationService systemNotifications = mock(SystemNotificationService.class);
     private final ExerciseService service = new ExerciseService(
-            exercises, moderationHistory, users, jdbcTemplate, videoStorage,
+            exercises, moderationHistory, users, jdbcTemplate, mediaRegistry,
             mock(ExerciseTreeEdgeRepository.class),
             mock(FitnessLevelRepository.class),
             mock(ExerciseMuscleGroupCatalog.class),
@@ -61,7 +61,7 @@ class ExerciseServiceModerationReasonTest {
                 eq(exercise.getCode()),
                 eq(exercise.getName()),
                 eq(exercise.getType()),
-                eq(null),
+                eq(null), // muscle group label: the exercise has no muscle groups
                 eq(exercise.getDifficultyLevel()),
                 eq(exercise.getInstructions()),
                 eq(exercise.getCategory()),

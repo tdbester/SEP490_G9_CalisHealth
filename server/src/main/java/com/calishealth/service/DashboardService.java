@@ -68,7 +68,12 @@ public class DashboardService {
                            ROW_NUMBER() OVER (
                                PARTITION BY dedup.target_skill
                                ORDER BY (dedup.guide_text IS NULL),
-                                        FIELD(dedup.difficulty_level, 'BEGINNER', 'INTERMEDIATE', 'ADVANCED'),
+                                        -- Level do Content Manager cấu hình động trong fitness_levels,
+                                        -- nên thứ tự bậc lấy theo score_min thay vì danh sách level cố định.
+                                        COALESCE((SELECT MIN(fl.score_min)
+                                                  FROM fitness_levels fl
+                                                  WHERE UPPER(fl.name) = UPPER(dedup.difficulty_level)),
+                                                 2147483647),
                                         dedup.id
                            ) AS rank_in_skill
                     FROM (
@@ -122,8 +127,8 @@ public class DashboardService {
                 SELECT COUNT(*)
                 FROM workout_entries
                 WHERE source = 'CUSTOM'
-                  AND active = TRUE
-                  AND status = 'ACCEPTED'
+                  AND template_status = 'PUBLISHED'
+                  AND moderation_status = 'ACTIVE'
                   AND is_shared_with_community = TRUE
                 """,
                 Long.class
@@ -146,8 +151,8 @@ public class DashboardService {
                        FROM workout_entries w
                        WHERE w.created_by = u.id
                          AND w.source = 'CUSTOM'
-                         AND w.active = TRUE
-                         AND w.status = 'ACCEPTED'
+                         AND w.template_status = 'PUBLISHED'
+                         AND w.moderation_status = 'ACTIVE'
                          AND w.is_shared_with_community = TRUE
                    )
                 """,
@@ -178,15 +183,18 @@ public class DashboardService {
 
         List<MeasurementRow> rows = jdbcTemplate.query(
                 """
-                SELECT bm.weight, bm.height
-                FROM body_measurements bm
-                JOIN member_profiles mp ON mp.id = bm.member_profile_id
+                SELECT mbm.weight_kg, mbm.height_cm, mbm.bmi
+                FROM member_body_metrics mbm
+                JOIN member_profiles mp ON mp.id = mbm.member_profile_id
                 JOIN users u ON u.id = mp.user_id
                 WHERE u.email = ?
-                ORDER BY bm.measured_at DESC, bm.id DESC
+                ORDER BY mbm.recorded_at DESC, mbm.id DESC
                 LIMIT 1
                 """,
-                (rs, rowNum) -> new MeasurementRow(rs.getBigDecimal("weight"), rs.getBigDecimal("height")),
+                (rs, rowNum) -> new MeasurementRow(
+                        rs.getBigDecimal("weight_kg"),
+                        rs.getBigDecimal("height_cm"),
+                        rs.getBigDecimal("bmi")),
                 email
         );
         if (!rows.isEmpty()) {
@@ -194,14 +202,10 @@ public class DashboardService {
             if (measurement.weight() != null) {
                 result.put("weight", measurement.weight());
             }
-            if (measurement.weight() != null && measurement.height() != null) {
-                BigDecimal heightMeters = measurement.height().compareTo(BigDecimal.valueOf(3)) > 0
-                        ? measurement.height().movePointLeft(2) : measurement.height();
-                if (heightMeters.signum() > 0) {
-                    double bmi = measurement.weight().doubleValue() / Math.pow(heightMeters.doubleValue(), 2);
-                    result.put("bmi", Math.round(bmi * 10.0) / 10.0);
-                    result.put("bmiLabel", bmi < 18.5 ? "Underweight" : bmi < 25 ? "Normal" : bmi < 30 ? "Overweight" : "Obesity");
-                }
+            if (measurement.bmi() != null) {
+                double bmi = measurement.bmi().doubleValue();
+                result.put("bmi", Math.round(bmi * 10.0) / 10.0);
+                result.put("bmiLabel", bmi < 18.5 ? "Underweight" : bmi < 25 ? "Normal" : bmi < 30 ? "Overweight" : "Obesity");
             }
         }
 
@@ -227,5 +231,5 @@ public class DashboardService {
     }
 
     private record SkillRow(Long exerciseId, String id, String name, int steps, String level) {}
-    private record MeasurementRow(BigDecimal weight, BigDecimal height) {}
+    private record MeasurementRow(BigDecimal weight, BigDecimal height, BigDecimal bmi) {}
 }

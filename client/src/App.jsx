@@ -7,10 +7,13 @@ import RoleHomeRoute from "./components/RoleHomeRoute";
 import ContentManagerLayout from "./components/layout/ContentManagerLayout";
 import AdminAreaLayout from "./components/layout/AdminAreaLayout";
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminSectionPage from "./pages/AdminSectionPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminCreateStaffPage from "./pages/AdminCreateStaffPage";
 import AdminUserDetailPage from "./pages/AdminUserDetailPage";
+import AdminStoragePage from "./pages/AdminStoragePage";
+import StorageCapacityTab from "./pages/storage/StorageCapacityTab";
+import MediaCleanupTab from "./pages/storage/MediaCleanupTab";
+import UploadLimitsTab from "./pages/storage/UploadLimitsTab";
 import HealthTracking from "./pages/HealthTracking";
 import WorkoutHistory from "./pages/WorkoutHistory";
 import PerformanceAnalytics from "./pages/PerformanceAnalytics";
@@ -231,7 +234,12 @@ export default function App() {
           <Route path="notifications" element={<NotificationListPage />} />
           <Route path="notifications/new" element={<CreateNotificationPage />} />
           <Route path="notifications/:id" element={<NotificationDetailPage />} />
-          <Route path="storage" element={<AdminSectionPage title={t("admin.maintenance.storage")} />} />
+          <Route path="storage" element={<AdminStoragePage />}>
+            <Route index element={<StorageCapacityTab />} />
+            <Route path="cleanup" element={<MediaCleanupTab />} />
+            <Route path="settings" element={<UploadLimitsTab />} />
+            <Route path="*" element={<Navigate to="/admin/storage" replace />} />
+          </Route>
           <Route path="maintenance" element={<MaintenanceScheduleListPage />} />
           <Route path="maintenance/create" element={<CreateMaintenanceSchedulePage />} />
           <Route path="maintenance/:id" element={<MaintenanceScheduleDetailPage />} />

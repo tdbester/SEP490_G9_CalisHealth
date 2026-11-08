@@ -43,6 +43,15 @@ export const getMemberExerciseList = async (params = {}) => {
   return response.data;
 };
 
+/**
+ * Danh sách level của hệ thống (động). Level do Content Manager tạo/đổi tên trong
+ * Level & Benchmark Criteria nên client không hard-code Beginner / Intermediate / Advanced.
+ */
+export const getFitnessLevels = async () => {
+  const response = await api.get("/library/levels");
+  return response.data || [];
+};
+
 const toPersonalExerciseFormData = (data, videoFile, anatomyImageFile) => {
   const formData = new FormData();
   formData.append("data", new Blob([JSON.stringify(data)], { type: "application/json" }));
@@ -117,8 +126,9 @@ export const deletePersonalExercise = async (id) => {
   await api.delete(`/v1/library/personal-exercises/${id}`);
 };
 
-const displayLevel = (level) =>
-  String(level || "BEGINNER").toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase());
+// Level do Content Manager đặt tên trong bảng fitness_levels nên giữ nguyên tên do hệ thống
+// trả về; không ép về danh sách level cố định.
+const displayLevel = (level) => String(level ?? "").trim();
 
 const timeAgo = (timestamp) => {
   const seconds = Math.max(0, Math.floor((Date.now() - new Date(timestamp).getTime()) / 1000));

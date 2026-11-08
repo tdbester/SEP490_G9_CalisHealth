@@ -6,6 +6,7 @@ import com.calishealth.dtos.ExerciseDtos.ExerciseModerationHistoryResponse;
 import com.calishealth.dtos.ExerciseDtos.ExerciseStatusRequest;
 import com.calishealth.service.ExerciseVideoStorageService;
 import com.calishealth.service.ExerciseService;
+import com.calishealth.service.MediaRegistryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -20,6 +21,7 @@ import java.util.List;
 public class ExerciseController {
     private final ExerciseService exercises;
     private final ExerciseVideoStorageService videoStorage;
+    private final MediaRegistryService mediaRegistry;
 
     @GetMapping
     public List<ExerciseResponse> list() {
@@ -52,14 +54,19 @@ public class ExerciseController {
         String videoUrl = null;
         String anatomyImageUrl = null;
         try {
-            videoUrl = demoVideo == null || demoVideo.isEmpty() ? null : videoStorage.store(demoVideo);
-            anatomyImageUrl = anatomyImage == null || anatomyImage.isEmpty() ? null : videoStorage.storeAnatomyImage(anatomyImage);
+            videoUrl = demoVideo == null || demoVideo.isEmpty() ? null : videoStorage.store(demoVideo, authentication.getName());
+            anatomyImageUrl = anatomyImage == null || anatomyImage.isEmpty() ? null : videoStorage.storeAnatomyImage(anatomyImage, authentication.getName());
             return exercises.create(request, videoUrl, anatomyImageUrl, authentication.getName());
         } catch (RuntimeException exception) {
-            videoStorage.delete(videoUrl);
-            videoStorage.deleteAnatomyImage(anatomyImageUrl);
+            releaseUnsaved(videoUrl, anatomyImageUrl);
             throw exception;
         }
+    }
+
+    /** The exercise was not saved: its new files become orphaned (unless another exercise uses the same content). */
+    private void releaseUnsaved(String videoUrl, String anatomyImageUrl) {
+        mediaRegistry.release(videoUrl, "Upload not saved");
+        mediaRegistry.release(anatomyImageUrl, "Upload not saved");
     }
 
     @PutMapping(value = "/{code}", consumes = "multipart/form-data")
@@ -67,17 +74,17 @@ public class ExerciseController {
             @PathVariable String code,
             @RequestPart("data") CreateExerciseRequest request,
             @RequestPart(value = "demoVideo", required = false) MultipartFile demoVideo,
-            @RequestPart(value = "anatomyImage", required = false) MultipartFile anatomyImage
+            @RequestPart(value = "anatomyImage", required = false) MultipartFile anatomyImage,
+            Authentication authentication
     ) {
         String videoUrl = null;
         String anatomyImageUrl = null;
         try {
-            videoUrl = demoVideo == null || demoVideo.isEmpty() ? null : videoStorage.store(demoVideo);
-            anatomyImageUrl = anatomyImage == null || anatomyImage.isEmpty() ? null : videoStorage.storeAnatomyImage(anatomyImage);
+            videoUrl = demoVideo == null || demoVideo.isEmpty() ? null : videoStorage.store(demoVideo, authentication.getName());
+            anatomyImageUrl = anatomyImage == null || anatomyImage.isEmpty() ? null : videoStorage.storeAnatomyImage(anatomyImage, authentication.getName());
             return exercises.updateSystemExercise(code, request, videoUrl, anatomyImageUrl);
         } catch (RuntimeException exception) {
-            videoStorage.delete(videoUrl);
-            videoStorage.deleteAnatomyImage(anatomyImageUrl);
+            releaseUnsaved(videoUrl, anatomyImageUrl);
             throw exception;
         }
     }

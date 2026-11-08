@@ -1000,6 +1000,7 @@ export default {
     noteOptional: "Note (optional)",
     notePlaceholder: "Anything you want to remember about this workout",
     level: "Level",
+    pleaseSelectLevel: "Please select a level",
     type: "Type",
     acceptedExercises: "Accepted exercises",
     acceptedNotice: "Only exercises accepted by the system can be added. Pending and rejected ones are not available until they pass the checks.",

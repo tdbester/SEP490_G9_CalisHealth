@@ -56,4 +56,22 @@ public class LibraryDtos {
         String repsOrDuration,
         String description
     ) {}
+
+    /**
+     * Một level trong hệ thống. Level do Content Manager cấu hình động (Level & Benchmark
+     * Criteria) nên client phải lấy danh sách này thay vì hard-code.
+     *
+     * @param id       id level
+     * @param name     tên level (dùng làm giá trị level của bài tập / workout)
+     * @param scoreMin điểm tối thiểu của level
+     * @param scoreMax điểm tối đa của level
+     * @param status   ACTIVE | INACTIVE
+     */
+    public record FitnessLevelOption(
+        Long id,
+        String name,
+        int scoreMin,
+        int scoreMax,
+        String status
+    ) {}
 }

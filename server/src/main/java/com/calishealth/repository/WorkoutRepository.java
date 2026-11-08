@@ -10,11 +10,11 @@ import java.util.Optional;
 
 public interface WorkoutRepository extends JpaRepository<WorkoutEntry, Long>, JpaSpecificationExecutor<WorkoutEntry> {
     Optional<WorkoutEntry> findByCode(String code);
-    long countByActive(boolean active);
+    long countByTemplateStatus(String templateStatus);
 
     @Query("""
             SELECT COUNT(w) FROM WorkoutEntry w
-            WHERE w.source = 'SYSTEM' AND w.active = true AND w.status = 'ACCEPTED'
+            WHERE w.source = 'SYSTEM' AND w.templateStatus = 'PUBLISHED' AND w.moderationStatus = 'ACTIVE'
               AND UPPER(w.type) = UPPER(:type)
             """)
     long countSystemWorkoutsByType(@Param("type") String type);
@@ -26,6 +26,7 @@ public interface WorkoutRepository extends JpaRepository<WorkoutEntry, Long>, Jp
     long countCustomWorkoutsByAuthorId(@Param("authorId") Long authorId);
 
     /** Community workout count: published, accepted workouts shared by members. */
-    long countBySourceAndActiveTrueAndStatusAndSharedWithCommunityTrue(String source, String status);
+    long countBySourceAndTemplateStatusAndModerationStatusAndSharedWithCommunityTrue(
+            String source, String templateStatus, String moderationStatus);
     boolean existsByLevelIgnoreCase(String level);
 }

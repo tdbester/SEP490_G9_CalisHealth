@@ -7,6 +7,7 @@ import FavoriteButton from "../components/favorites/FavoriteButton";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { getLevelLabel } from "../utils/levelLabel";
 import { localizeSeed } from "../utils/seedText";
+import { useSystemLevels } from "../useSystemLevels";
 
 const STORAGE_KEY = "custom_workouts";
 const PERSONAL_STORAGE_KEY = "my_custom_workouts";
@@ -187,7 +188,7 @@ function LevelBadge({ level }) {
   const displayLevel = level || "Intermediate";
   return (
     <span className={`rounded-full px-3 py-0.5 text-[11px] font-medium capitalize ${getLevelBadgeStyle(displayLevel)}`}>
-      {t(`member.catalog.${levelKey(displayLevel)}`)}
+      {getLevelLabel(displayLevel)}
     </span>
   );
 }
@@ -231,21 +232,6 @@ function FilterDropdown({ value, onChange, options, widthClass }) {
   );
 }
 
-const levelKey = (level) => {
-  const normalized = String(level || "").toLowerCase();
-  if (normalized === "beginner") return "beginner";
-  if (normalized === "intermediate") return "intermediate";
-  if (normalized === "advanced") return "advanced";
-  return "intermediate";
-};
-
-const LEVEL_OPTIONS = [
-  { value: "all", label: "All levels" },
-  { value: "Beginner", label: "Beginner" },
-  { value: "Intermediate", label: "Intermediate" },
-  { value: "Advanced", label: "Advanced" },
-];
-
 const LENGTH_OPTIONS = [
   { value: "all", label: "Any length" },
   { value: "short", label: "Under 10 min" },
@@ -270,6 +256,16 @@ export default function CustomWorkoutListPage() {
   const [sort, setSort] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
+
+  // Level do Content Manager cấu hình động nên danh sách lọc lấy từ hệ thống.
+  const { levels: levelNames } = useSystemLevels();
+  const levelOptions = useMemo(
+    () => [
+      { value: "all", label: "All levels" },
+      ...levelNames.map((name) => ({ value: name, label: name })),
+    ],
+    [levelNames],
+  );
 
   useEffect(() => {
     let active = true;
@@ -381,7 +377,7 @@ export default function CustomWorkoutListPage() {
             className="h-7 w-full rounded-lg border border-[#302653] bg-[#1b1538] pl-[26px] pr-2 text-[10px] leading-none text-slate-200 placeholder-slate-400 focus:outline-none focus:border-[#6340f1]"
           />
         </div>
-        <FilterDropdown value={level} onChange={(value) => { setLevel(value); setCurrentPage(1); }} options={LEVEL_OPTIONS} widthClass="w-full" />
+        <FilterDropdown value={level} onChange={(value) => { setLevel(value); setCurrentPage(1); }} options={levelOptions} widthClass="w-full" />
         <FilterDropdown value={length} onChange={(value) => { setLength(value); setCurrentPage(1); }} options={LENGTH_OPTIONS} widthClass="w-full" />
         <FilterDropdown value={sort} onChange={(value) => { setSort(value); setCurrentPage(1); }} options={SORT_OPTIONS} widthClass="w-full" />
       </div>

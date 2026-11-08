@@ -51,7 +51,7 @@ class MemberExerciseServiceTest {
         exercise.setId(25L);
         exercise.setSystem(false);
         exercise.setName("Community push-up");
-        exercise.setLevel(Exercise.EntryLevel.INTERMEDIATE);
+        exercise.setLevel("Intermediate");
         exercise.setMuscleGroup("Chest, triceps");
         exercise.setDefaultSets(3);
         exercise.setDefaultReps(8);
@@ -103,7 +103,7 @@ class MemberExerciseServiceTest {
         exercise.setSystem(false);
         exercise.setName("Community push-up");
         exercise.setDescription("A controlled push-up variation.");
-        exercise.setLevel(Exercise.EntryLevel.INTERMEDIATE);
+        exercise.setLevel("Intermediate");
         exercise.setMuscleGroup("Chest, triceps");
         exercise.setDefaultSets(3);
         exercise.setDefaultReps(8);

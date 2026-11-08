@@ -265,7 +265,7 @@ public class UserActivityRepository {
             FROM exercises e
             WHERE e.created_by = ?
             UNION ALL
-            SELECT w.updated_at, 'WORKOUT', w.name, w.code, w.active
+            SELECT w.updated_at, 'WORKOUT', w.name, w.code, w.template_status = 'PUBLISHED'
             FROM workout_entries w
             WHERE w.created_by = ?
             """;
