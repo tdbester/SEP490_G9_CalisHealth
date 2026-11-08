@@ -132,7 +132,13 @@ public class ProfileService {
     // ---------------------------------------------------------------------------------
 
     private ProfileResponse build(User u) {
+        MemberProfile memberProfile = u.getRole() == UserRole.MEMBER
+                ? memberProfiles.findByUser_Id(u.getId()).orElse(null)
+                : null;
         ProfileResponse base = ProfileResponse.of(u, securityOf(u), memberSummary(u), surveyAge(u));
+        String gender = u.getRole() == UserRole.MEMBER
+                ? (memberProfile == null ? null : normaliseGender(memberProfile.getGender()))
+                : base.gender();
         List<String> levels = fitnessLevels.findAll(
                         Sort.by(Sort.Order.asc("scoreMin"), Sort.Order.asc("id")))
                 .stream()
@@ -141,7 +147,7 @@ public class ProfileService {
                 .toList();
         return new ProfileResponse(
                 base.id(), base.userCode(), base.fullName(), base.username(), base.email(), base.phone(),
-                base.gender(), base.dateOfBirth(), base.age(), base.bio(), base.avatarUrl(), base.role(),
+                gender, base.dateOfBirth(), base.age(), base.bio(), base.avatarUrl(), base.role(),
                 base.roleLabel(), base.emailVerified(), base.active(), base.memberSince(), base.security(),
                 base.member(), base.genderOptions(), levels);
     }

@@ -2,6 +2,7 @@ package com.calishealth.service;
 
 import com.calishealth.models.MemberProfile;
 import com.calishealth.models.MemberWeeklyScore;
+import com.calishealth.models.UserRole;
 import com.calishealth.repository.MemberProfileRepository;
 import com.calishealth.repository.MemberWeeklyScoreRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +26,8 @@ public class WeeklyLeaderboardService {
     public void computeScoresForWeek(LocalDate weekStart) {
         log.info("Computing weekly leaderboard scores for week starting {}", weekStart);
 
-        // Get all members
-        List<MemberProfile> members = memberProfileRepository.findAll();
+        // Get all members (only accounts with role = MEMBER belong on the leaderboard)
+        List<MemberProfile> members = memberProfileRepository.findAllByUser_Role(UserRole.MEMBER);
 
         // Calculate scores for each member
         List<MemberWeeklyScore> weekScores = members.stream()
