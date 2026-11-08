@@ -127,6 +127,7 @@ export default {
   nav: {
     dashboard: "Dashboard",
     library: "Library",
+    leaderboard: "Leaderboard",
     favorites: "Favorites",
     feedback: "Feedback & Complaints",
     tracking: "Health & Progress",

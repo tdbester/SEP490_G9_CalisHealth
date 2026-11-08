@@ -136,9 +136,10 @@ public class ProfileService {
                 ? memberProfiles.findByUser_Id(u.getId()).orElse(null)
                 : null;
         ProfileResponse base = ProfileResponse.of(u, securityOf(u), memberSummary(u), surveyAge(u));
-        String profileGender = memberProfile != null && memberProfile.getGender() != null
-                ? memberProfile.getGender()
-                : base.gender();
+        // Hồ sơ member lưu giới tính đã chuẩn hoá; member chưa có hồ sơ (hoặc hồ sơ chưa có giới tính)
+        // thì lấy từ users.
+        String memberGender = memberProfile == null ? null : normaliseGender(memberProfile.getGender());
+        String gender = memberGender != null ? memberGender : base.gender();
         List<String> levels = fitnessLevels.findAll(
                         Sort.by(Sort.Order.asc("scoreMin"), Sort.Order.asc("id")))
                 .stream()
@@ -147,7 +148,7 @@ public class ProfileService {
                 .toList();
         return new ProfileResponse(
                 base.id(), base.userCode(), base.fullName(), base.username(), base.email(), base.phone(),
-                profileGender, base.dateOfBirth(), base.age(), base.bio(), base.avatarUrl(), base.role(),
+                gender, base.dateOfBirth(), base.age(), base.bio(), base.avatarUrl(), base.role(),
                 base.roleLabel(), base.emailVerified(), base.active(), base.memberSince(), base.security(),
                 base.member(), base.genderOptions(), levels);
     }
@@ -193,12 +194,20 @@ public class ProfileService {
             return new MemberSummary(null, null, null, null, null, 0, 0, DEFAULT_DAYS_PER_WEEK);
         }
         MemberSummary base = MemberSummary.of(profile);
-        return new MemberSummary(base.levelName(), levelRank(profile), base.goal(), base.heightCm(),
+        Integer rank = null;
+        try {
+            rank = levelRank(profile);
+        } catch (Exception e) {
+            // Fitness level may not exist or be properly configured
+            rank = null;
+        }
+        return new MemberSummary(base.levelName(), rank, base.goal(), base.heightCm(),
                 base.weightKg(), base.streakDays(), base.longestStreak(), base.daysPerWeek());
     }
 
     /** 1-based position of the member's level in the ordered ladder; null when it has no level yet. */
     private Integer levelRank(MemberProfile profile) {
+        if (profile == null) return null;
         FitnessLevel level = profile.getFitnessLevel();
         if (level == null) return null;
         List<String> names = fitnessLevels
