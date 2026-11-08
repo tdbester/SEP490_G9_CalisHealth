@@ -1,0 +1,431 @@
+/* Real-time AI Pose Tracking — Figma frame 549:683 */
+.pt-page {
+  min-height: 100vh;
+  background: #0d0b1a;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ------------------------------------------------------------------ topbar */
+/* Topbar dùng chung nằm ở components/session/SessionTopbar.css */
+
+.pt-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  border: 1px solid #4b3d80;
+  background: #2a2050;
+  color: #c4b5fd;
+  cursor: pointer;
+}
+
+.pt-icon-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+/* Tắt voice coach -> icon bị gạch chéo và mờ đi để dễ phân biệt. */
+.pt-icon-btn.is-muted {
+  color: #8b83ad;
+  background: #221b42;
+}
+
+.pt-icon-btn.is-muted svg {
+  opacity: 0.75;
+}
+
+/* ------------------------------------------------------------------ body */
+.pt-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 316px;
+  gap: 24px;
+  padding: 24px 40px;
+  align-items: start;
+}
+
+/* ------------------------------------------------------------------ stage */
+.pt-stage {
+  border: 1px solid #3a3060;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #2a165f 0%, #1a103f 50%, #120b2e 100%);
+}
+
+.pt-stage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 8px;
+}
+
+/* Badge LIVE + FPS đè trên video */
+.pt-stage-overlay-head {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  pointer-events: none;
+}
+
+.pt-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #b4aedb;
+}
+
+.pt-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fb7185;
+}
+
+.pt-stage-meta {
+  font-size: 0.75rem;
+  color: #b4aedb;
+}
+
+.pt-video-wrap {
+  position: relative;
+  /* Figma: khung camera 860 x 648 (4:3). */
+  aspect-ratio: 4 / 3;
+  width: 100%;
+}
+
+.pt-video,
+.pt-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pt-canvas {
+  pointer-events: none;
+}
+
+.pt-video {
+  transform: scaleX(-1); /* camera selfie: lật ngược để member thấy giống gương */
+}
+
+.pt-canvas {
+  transform: scaleX(-1);
+}
+
+/* Tooltip góc khớp bám theo đầu gối */
+.pt-joint-tip {
+  position: absolute;
+  transform: translate(-50%, -140%);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #2f2a55;
+  background: rgba(8, 5, 20, 0.9);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.pt-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(9, 7, 20, 0.82);
+  color: #cfc8ef;
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 24px;
+}
+
+.pt-overlay--soft {
+  background: rgba(9, 7, 20, 0.55);
+}
+
+/* ------------------------------------------------------------------ panel */
+.pt-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pt-card {
+  border: 1px solid #241d45;
+  border-radius: 10px;
+  background: #111024;
+  padding: 16px 20px;
+}
+
+.pt-card-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.pt-card-label {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #8b85b8;
+}
+
+.pt-reps {
+  margin: 6px 0 0;
+  font-size: 3.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+}
+
+.pt-reps-total {
+  margin-left: 10px;
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: #b4aedb;
+}
+
+.pt-set {
+  margin: 10px 0 0;
+  font-size: 0.8125rem;
+  color: #b4aedb;
+}
+
+.pt-form-score {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+}
+
+.pt-form-score.is-good,
+.pt-progress-fill.is-good {
+  color: #34d399;
+}
+
+.pt-form-score.is-warn,
+.pt-progress-fill.is-warn {
+  color: #fbbf24;
+}
+
+.pt-form-score.is-bad,
+.pt-progress-fill.is-bad {
+  color: #fb7185;
+}
+
+.pt-progress {
+  position: relative;
+  height: 10px;
+  margin-top: 12px;
+  border-radius: 999px;
+  background: #1d1740;
+  overflow: hidden;
+}
+
+.pt-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #fb7185, #34d399);
+  transition: width 220ms ease;
+}
+
+.pt-tip {
+  margin: 14px 0 0;
+  font-size: 0.8125rem;
+  color: #a78bfa;
+}
+
+.pt-card--voice {
+  border-color: #3a2030;
+  background: #1c0f26;
+}
+
+.pt-voice-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pt-voice-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: #fda4af;
+}
+
+.pt-voice-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.pt-voice-text {
+  margin: 10px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #e6e1ff;
+}
+
+/* ------------------------------------------------------------------ metrics */
+.pt-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.pt-metric {
+  border: 1px solid #241d45;
+  border-radius: 10px;
+  background: #141029;
+  padding: 16px 18px;
+}
+
+.pt-metric-label {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #8b85b8;
+}
+
+.pt-metric-value {
+  margin: 8px 0 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* ------------------------------------------------------------------ actions */
+.pt-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.pt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 56px;
+  border-radius: 10px;
+  border: 1px solid #241d45;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.pt-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.pt-btn--pause {
+  background: #191236;
+}
+
+.pt-btn--pause:hover {
+  border-color: #4b3d80;
+}
+
+.pt-btn--stop {
+  background: #ff4d6d;
+  border-color: #ff4d6d;
+}
+
+.pt-btn--stop:hover {
+  background: #e93b5c;
+}
+
+/* Nút "Continue" -> màn đếm ngược nghỉ ngơi. */
+.pt-continue-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid #7c5dfa;
+  background: #7c5dfa;
+  color: #fff;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.pt-continue-btn:hover {
+  background: #6c47ff;
+}
+
+.pt-continue-btn svg {
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+}
+
+.pt-continue-btn__hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* Nút "Finish" -> kết thúc bài hiện tại, chuyển sang bài tiếp theo. */
+.pt-finish-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(124, 93, 250, 0.45);
+  background: transparent;
+  color: #7c5dfa;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.pt-finish-btn:hover {
+  background: rgba(124, 93, 250, 0.08);
+  border-color: #7c5dfa;
+}
+
+.pt-finish-btn svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------------ responsive */
+@media (max-width: 1080px) {
+  .pt-body {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
+  }
+}

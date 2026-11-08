@@ -1,12 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
+import { useTranslation } from "react-i18next";
 import "react-toastify/dist/ReactToastify.css";
 import AdminLayout from "./components/layout/AdminLayout";
 import RoleHomeRoute from "./components/RoleHomeRoute";
 import ContentManagerLayout from "./components/layout/ContentManagerLayout";
 import AdminAreaLayout from "./components/layout/AdminAreaLayout";
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminSectionPage from "./pages/AdminSectionPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminCreateStaffPage from "./pages/AdminCreateStaffPage";
 import AdminUserDetailPage from "./pages/AdminUserDetailPage";
@@ -18,6 +18,15 @@ import HealthTracking from "./pages/HealthTracking";
 import WorkoutHistory from "./pages/WorkoutHistory";
 import PerformanceAnalytics from "./pages/PerformanceAnalytics";
 import DayStreak from "./pages/DayStreak";
+import DailyWorkoutPlan from "./pages/DailyWorkoutPlan";
+import MemberSchedulePage from "./pages/MemberSchedulePage";
+import ReviewTrainingPlanPage from "./pages/ReviewTrainingPlanPage";
+import ExerciseDetailPreview from "./pages/ExerciseDetailPreview";
+import PoseTrackingPage from "./pages/PoseTrackingPage";
+import RestCountdownPage from "./pages/RestCountdownPage";
+import VideoScanPage from "./pages/VideoScanPage";
+import ExerciseResultPage from "./pages/ExerciseResultPage";
+import FormCorrectionPage from "./pages/FormCorrectionPage";
 import Library from "./pages/Library";
 import LibraryExerciseListPage from "./pages/LibraryExerciseListPage";
 import ExerciseDetailPage from "./pages/ExerciseDetailPage";
@@ -33,6 +42,13 @@ import MyCustomWorkoutListPage from "./pages/MyCustomWorkoutListPage";
 import UpdateMyCustomWorkoutPage from "./pages/UpdateMyCustomWorkoutPage";
 import WorkoutSystemListPage from "./pages/WorkoutSystemListPage";
 import SystemWorkoutDetailPage from "./pages/SystemWorkoutDetailPage";
+import FavoritesPage from "./pages/FavoritesPage";
+import MemberFeedbackPage from "./pages/MemberFeedbackPage";
+import ContentFeedbackPage from "./pages/ContentFeedbackPage";
+import ContentFeedbackDetailPage from "./pages/ContentFeedbackDetailPage";
+import AdminFeedbackPage from "./pages/AdminFeedbackPage";
+import AdminFeedbackDetailPage from "./pages/AdminFeedbackDetailPage";
+import { FavoritesProvider } from "./context/FavoritesContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ContentManagerDashboard from "./pages/ContentManagerDashboard";
 import ExerciseTreePage from "./pages/ExerciseTreePage";
@@ -72,10 +88,12 @@ import ProfilePage from "./pages/ProfilePage";
 import SurveyFlow, { SurveyEntry } from "./pages/survey/SurveyFlow";
 import SurveyStepPage from "./pages/survey/SurveyStepPage";
 import SurveyResult from "./pages/survey/SurveyResult";
+import LeaderboardPage from "./pages/LeaderboardPage";
 import SurveyManagement from "./pages/content/SurveyManagement";
 import { ContentManagementPage } from "./features/content-manager/pages/ContentManagementPage";
 
 export default function App() {
+  const { t } = useTranslation();
   const memberPage = (page) => (
     <ProtectedRoute>
       <AdminLayout>{page}</AdminLayout>
@@ -90,8 +108,9 @@ export default function App() {
         toastClassName="!rounded-xl !border !border-[#3c3063] !bg-[#1a1438] !text-slate-200 !shadow-2xl"
         className="!top-0 !right-0 !z-[9999]"
       />
-      <BrowserRouter>
-        <Routes>
+      <FavoritesProvider>
+        <BrowserRouter>
+          <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -103,6 +122,7 @@ export default function App() {
           <Route path="/" element={<RoleHomeRoute />} />
           <Route path="/dashboard" element={<Navigate to="/" replace />} />
           <Route path="/day-streak" element={memberPage(<DayStreak />)} />
+          <Route path="/leaderboard" element={memberPage(<LeaderboardPage />)} />
           {/* Onboarding survey của member (sau khi đăng nhập); URL theo Figma: /survey/body-information … */}
           <Route
             path="/survey"
@@ -157,6 +177,8 @@ export default function App() {
           <Route path="create" element={<ExerciseFormPage />} />
           <Route path="library" element={<Navigate to="/content/exercises" replace />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="feedback" element={<ContentFeedbackPage />} />
+          <Route path="feedback/:id" element={<ContentFeedbackDetailPage />} />
           <Route path="*" element={<Navigate to="/content/dashboard" replace />} />
         </Route>
 
@@ -191,6 +213,10 @@ export default function App() {
         <Route path="/library/custom-workouts" element={<Navigate to="/library/custom" replace />} />
         <Route path="/library/custom-workouts/:id" element={memberPage(<CustomWorkoutDetailPage />)} />
         <Route path="/library/skills/tree" element={memberPage(<CalisthenicsExerciseTreePage />)} />
+        <Route path="/library/favorites" element={memberPage(<FavoritesPage />)} />
+        <Route path="/favorites" element={memberPage(<FavoritesPage />)} />
+        <Route path="/library/feedback" element={memberPage(<MemberFeedbackPage />)} />
+        <Route path="/feedback" element={memberPage(<MemberFeedbackPage />)} />
         <Route path="/explore" element={memberPage(<CalisthenicsExerciseTreePage />)} />
 
         {/* Admin area (role ADMIN) - the guard reads /auth/me, same pattern as /content. */}
@@ -214,10 +240,65 @@ export default function App() {
           <Route path="maintenance" element={<MaintenanceScheduleListPage />} />
           <Route path="maintenance/create" element={<CreateMaintenanceSchedulePage />} />
           <Route path="maintenance/:id" element={<MaintenanceScheduleDetailPage />} />
+          <Route path="feedback" element={<AdminFeedbackPage />} />
+          <Route path="feedback/:id" element={<AdminFeedbackDetailPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
+        {/* Member daily training flow: schedule → review → daily plan → exercise detail */}
+        <Route path="/plan" element={memberPage(<DailyWorkoutPlan />)} />
+        <Route path="/schedule" element={memberPage(<MemberSchedulePage />)} />
+        <Route path="/schedule/review" element={memberPage(<ReviewTrainingPlanPage />)} />
+        <Route path="/exercises/:code" element={memberPage(<ExerciseDetailPreview />)} />
+        {/* Real-time AI Pose Tracking — mở sau khi member bấm "Ready · Start counting".
+            Màn này fullscreen nên không dùng layout sidebar của member. */}
+        <Route
+          path="/session/tracking"
+          element={
+            <ProtectedRoute>
+              <PoseTrackingPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Đếm ngược nghỉ giữa các set — mở từ nút "Continue" của màn tracking. */}
+        <Route
+          path="/session/rest"
+          element={
+            <ProtectedRoute>
+              <RestCountdownPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Quét video để chấm điểm — mở từ nút "Browse file" ở màn exercise detail.
+            Màn này fullscreen nên không dùng layout sidebar của member. */}
+        <Route
+          path="/session/scan"
+          element={
+            <ProtectedRoute>
+              <VideoScanPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Kết quả CUỐI CÙNG của buổi tập — mở khi bấm "Finish workout" ở bài
+            cuối, hoặc sau khi hệ thống quét xong video member đẩy lên. */}
+        <Route
+          path="/session/result"
+          element={
+            <ProtectedRoute>
+              <ExerciseResultPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Form correction — mở từ nút "View form correction" ở màn kết quả. */}
+        <Route
+          path="/session/correction"
+          element={
+            <ProtectedRoute>
+              <FormCorrectionPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/tracking"
           element={memberPage(<HealthTracking />)}
@@ -244,8 +325,9 @@ export default function App() {
         <Route path="/settings" element={<Navigate to="/" replace />} />
 
         <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </BrowserRouter>
+          </Routes>
+        </BrowserRouter>
+      </FavoritesProvider>
     </>
   );
 }

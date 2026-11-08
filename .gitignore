@@ -72,3 +72,7 @@ mockup-result.png
 calishealth@0.1.0
 /npm
 /cd
+
+# ===== Log chay server local (khong commit) =====
+server/server-run.out
+server/server-run.err

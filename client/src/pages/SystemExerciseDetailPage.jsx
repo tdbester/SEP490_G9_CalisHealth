@@ -13,6 +13,7 @@ import {
   Typography,
 } from "@mui/material";
 import { keyframes } from "@mui/material/styles";
+import { useTranslation, withTranslation } from "react-i18next";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
@@ -90,6 +91,7 @@ function DetailField({ label, value, full, sx }) {
 }
 
 export function GuideSteps({ guide }) {
+  const { t } = useTranslation();
   const steps = String(guide || "")
     .split("\n")
     .map((step) => step.trim())
@@ -97,7 +99,7 @@ export function GuideSteps({ guide }) {
   if (steps.length === 0) {
     return (
       <Typography variant="body2" color="text.secondary">
-        No guide steps yet.
+        {t("contentManager.detail.noGuideSteps")}
       </Typography>
     );
   }
@@ -139,7 +141,6 @@ const MUSCLE_OPTIONS = ["Chest", "Back", "Shoulders", "Arms", "Core", "Legs", "G
 
 class ExerciseDetailErrorBoundary extends Component {
   state = { hasError: false };
-
   static getDerivedStateFromError() {
     return { hasError: true };
   }
@@ -149,27 +150,28 @@ class ExerciseDetailErrorBoundary extends Component {
   }
 
   render() {
+    const { t } = this.props;
     if (this.state.hasError) {
       return (
         <Box sx={{ maxWidth: 960, mx: "auto", px: { xs: 2, sm: 3 }, py: 4 }}>
           <ContentPageHeader
             breadcrumb={[
-              { label: "Content manager", to: CONTENT_PATHS.dashboard },
-              { label: "Exercise & Workout Management", to: CONTENT_PATHS.exercises },
-              { label: "Exercise details" },
+              { labelKey: "nav.contentManagerRole", to: CONTENT_PATHS.dashboard },
+              { labelKey: "nav.exerciseAndWorkout", to: CONTENT_PATHS.exercises },
+              { labelKey: "nav.exerciseDetails" },
             ]}
-            title="Exercise details unavailable"
+            title={t("contentManager.detail.exerciseUnavailable")}
           />
           <Alert
             severity="error"
             sx={{ mt: 2 }}
             action={
               <Button color="inherit" size="small" onClick={() => this.setState({ hasError: false })}>
-                Try again
+                {t("contentManager.detail.tryAgain")}
               </Button>
             }
           >
-            An unexpected error prevented this exercise from being displayed.
+            {t("contentManager.detail.unexpectedError")}
           </Alert>
           <Button
             component={RouterLink}
@@ -177,7 +179,7 @@ class ExerciseDetailErrorBoundary extends Component {
             sx={{ mt: 2 }}
             startIcon={<ArrowBackRoundedIcon />}
           >
-            Back to exercise list
+            {t("contentManager.detail.backToExerciseList")}
           </Button>
         </Box>
       );
@@ -187,7 +189,14 @@ class ExerciseDetailErrorBoundary extends Component {
   }
 }
 
+/**
+ * Error boundary là class component nên không dùng được hook.
+ * Bọc bằng withTranslation để nhận `t` từ props.
+ */
+const TranslatedErrorBoundary = withTranslation()(ExerciseDetailErrorBoundary);
+
 function SystemExerciseDetailContent() {
+  const { t } = useTranslation();
   const { code = "" } = useParams();
   const { levels: LEVEL_OPTIONS } = useLevelNames();
   const { data: entry, isLoading, error, refetch } = useApiQuery(
@@ -273,15 +282,15 @@ function SystemExerciseDetailContent() {
   };
 
   const crumb = [
-    { label: "Content manager", to: CONTENT_PATHS.dashboard },
-    { label: "Exercise & Workout", to: CONTENT_PATHS.exercises },
-    { label: "Exercise details" },
+    { labelKey: "nav.contentManagerRole", to: CONTENT_PATHS.dashboard },
+    { labelKey: "nav.exerciseAndWorkout", to: CONTENT_PATHS.exercises },
+    { labelKey: "nav.exerciseDetails" },
   ];
 
   if (isLoading) {
     return (
       <Box sx={{ maxWidth: 960, mx: "auto", px: { xs: 2, sm: 3 }, py: 4 }}>
-        <ContentPageHeader breadcrumb={crumb} title="Loading exercise…" />
+        <ContentPageHeader breadcrumb={crumb} title={t("contentManager.detail.loadingExercise")} />
         <Box sx={{ py: 8, display: "grid", placeItems: "center" }}>
           <CircularProgress size={24} />
         </Box>
@@ -292,17 +301,17 @@ function SystemExerciseDetailContent() {
   if (error || !entry) {
     return (
       <Box sx={{ maxWidth: 960, mx: "auto", px: { xs: 2, sm: 3 }, py: 4 }}>
-        <ContentPageHeader breadcrumb={crumb} title="Exercise or skill not found" />
+        <ContentPageHeader breadcrumb={crumb} title={t("contentManager.detail.exerciseNotFound")} />
         <Alert
           severity="warning"
           sx={{ mt: 2 }}
           action={
             <Button color="inherit" size="small" onClick={() => refetch()}>
-              Try again
+              {t("contentManager.detail.tryAgain")}
             </Button>
           }
         >
-          {error?.message || "This entry may have been deleted or the link is invalid."}
+          {error?.message || t("contentManager.detail.entryDeleted")}
         </Alert>
         <Button
           component={RouterLink}
@@ -310,7 +319,7 @@ function SystemExerciseDetailContent() {
           sx={{ mt: 2 }}
           startIcon={<ArrowBackRoundedIcon />}
         >
-          Back to exercise list
+          {t("contentManager.detail.backToExerciseList")}
         </Button>
       </Box>
     );
@@ -321,7 +330,7 @@ function SystemExerciseDetailContent() {
       <ContentPageHeader
         breadcrumb={crumb}
         title={entry.name}
-        description={`Exercise / skill details · ${entry.code}`}
+        description={t("contentManager.detail.exerciseDetailsMeta", { code: entry.code })}
         action={
           <Stack direction="row" spacing={1}>
             {entry.source === "SYSTEM" && !editing && (
@@ -352,15 +361,15 @@ function SystemExerciseDetailContent() {
                     transition: "all 150ms ease",
                   }}
                 >
-                  Exercise tree
+                  {t("contentManager.detail.exerciseTree")}
                 </Button>
                 <Button variant="contained" startIcon={<EditRoundedIcon />} onClick={() => setEditing(true)}>
-                  Edit
+                  {t("contentManager.detail.edit")}
                 </Button>
               </>
             )}
             <Button component={RouterLink} to={CONTENT_PATHS.exercises} variant="outlined" startIcon={<ArrowBackRoundedIcon />}>
-              Back to list
+              {t("contentManager.detail.backToList")}
             </Button>
           </Stack>
         }
@@ -381,7 +390,7 @@ function SystemExerciseDetailContent() {
               defaultSets: !Number.isInteger(Number(form.defaultSets)) || Number(form.defaultSets) < 1 || Number(form.defaultSets) > 20,
             };
             if (Object.values(invalid).some(Boolean) || videoError || imageError) {
-              setSaveError("Please correct the highlighted fields before saving this exercise.");
+              setSaveError(t("contentManager.detail.pleaseCorrectBeforeSaving"));
               return;
             }
             saveMutation.mutate({
@@ -423,16 +432,16 @@ function SystemExerciseDetailContent() {
             onAnatomyImageChange={(file) => chooseUpload("image", file)}
             anatomyImagePreview={entry.anatomyImageUrl && !image ? (
               <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                Current image will be kept unless you choose a replacement.
+                {t("contentManager.detail.currentImageKept")}
               </Typography>
             ) : null}
           />
           {saveError && <Alert severity="error" sx={{ mt: 2 }}>{saveError}</Alert>}
           <Divider sx={{ mt: 3 }} />
           <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ pt: 1.5 }}>
-            <Button startIcon={<CloseRoundedIcon />} onClick={() => setConfirmCancel(true)}>Cancel</Button>
+            <Button startIcon={<CloseRoundedIcon />} onClick={() => setConfirmCancel(true)}>{t("contentManager.form.cancel")}</Button>
             <Button type="submit" form="edit-exercise-form" variant="contained" startIcon={<SaveRoundedIcon />} disabled={saveMutation.isPending}>
-              {saveMutation.isPending ? "Saving…" : "Save changes"}
+              {saveMutation.isPending ? t("contentManager.detail.saving") : t("contentManager.detail.saveChanges")}
             </Button>
           </Stack>
         </Box>
@@ -440,7 +449,7 @@ function SystemExerciseDetailContent() {
       <Card sx={{ mt: 2.5, overflow: "hidden", ...enter(150) }}>
         <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
           <Typography variant="subtitle2" fontWeight={700} sx={{ color: "#fff" }}>
-            Demo video
+            {t("contentManager.detail.demoVideo")}
           </Typography>
           {demoVideoUrl ? (
             <MediaWithFallback
@@ -459,7 +468,7 @@ function SystemExerciseDetailContent() {
           ) : (
             <Stack spacing={1} alignItems="flex-start" sx={{ mt: 1 }}>
               <Typography variant="body2" color="text.secondary">
-                No uploaded demo video. Upload a video file using Edit exercise.
+                {t("contentManager.detail.noUploadedDemo")}
               </Typography>
             </Stack>
           )}
@@ -476,7 +485,7 @@ function SystemExerciseDetailContent() {
                 }}
               >
                 <Typography variant="subtitle2" fontWeight={700} sx={{ color: "#fff" }}>
-                  Muscle anatomy
+                  {t("contentManager.detail.muscleAnatomy")}
                 </Typography>
                 {entry.anatomyImageUrl ? (
                   <MediaWithFallback
@@ -501,7 +510,7 @@ function SystemExerciseDetailContent() {
                     }}
                   >
                     <Typography variant="body2" color="text.secondary">
-                      No anatomy image uploaded.
+                      {t("contentManager.detail.noAnatomyImage")}
                     </Typography>
                   </Box>
                 )}
@@ -522,12 +531,12 @@ function SystemExerciseDetailContent() {
                 wrap="nowrap"
                 spacing={0.75}
               >
-                <DetailField label="Muscle group" value={entry.muscleGroup} full />
-                <DetailField label="Type" value={entry.type} full />
-                <DetailField label="Level" value={entry.level} full />
-                <DetailField label="Default sets" value={entry.defaultSets} full />
+                <DetailField label={t("contentManager.detail.muscleGroup")} value={entry.muscleGroup} full />
+                <DetailField label={t("contentManager.detail.type")} value={entry.type} full />
+                <DetailField label={t("contentManager.detail.level")} value={entry.level} full />
+                <DetailField label={t("contentManager.detail.defaultSets")} value={entry.defaultSets} full />
                 <DetailField
-                  label={entry.category === "HOLD" ? "Duration" : "Default reps"}
+                  label={entry.category === "HOLD" ? t("contentManager.detail.duration") : t("contentManager.detail.defaultReps")}
                   value={entry.category === "HOLD"
                     ? (entry.duration == null ? null : `${entry.duration} sec`)
                     : entry.defaultReps}
@@ -539,18 +548,18 @@ function SystemExerciseDetailContent() {
 
           <Divider sx={{ my: 2.5 }} />
           <Grid container spacing={1.5}>
-            <DetailField label="Description" value={entry.description} full />
+            <DetailField label={t("contentManager.detail.description")} value={entry.description} full />
             <Grid item xs={12}>
               <Box sx={{ border: `1px solid ${CM.border}`, bgcolor: "rgba(19,10,39,0.6)", borderRadius: 1.5, p: 1.75 }}>
                 <Typography variant="caption" sx={{ color: CM.textDim, textTransform: "uppercase", fontSize: 10, fontWeight: 700 }}>
-                  Guide
+                  {t("contentManager.detail.guide")}
                 </Typography>
                 <Box sx={{ mt: 1.5 }}>
                   <GuideSteps guide={entry.guide} />
                 </Box>
               </Box>
             </Grid>
-            <DetailField label="Source" value={entry.source === "CUSTOM" ? "Custom" : "System"} />
+            <DetailField label={t("contentManager.detail.source")} value={entry.source === "CUSTOM" ? t("contentManager.detail.sourceCustom") : t("contentManager.detail.sourceSystem")} />
             {entry.source === "SYSTEM" && (
               <Grid item xs={12} sm={4} sx={{ display: "flex", alignItems: "center" }}>
                 <Button
@@ -558,20 +567,20 @@ function SystemExerciseDetailContent() {
                   variant="outlined"
                   startIcon={<AccountTreeRoundedIcon />}
                 >
-                  Calisthenics exercise tree
+                  {t("contentManager.detail.calisthenicsTree")}
                 </Button>
               </Grid>
             )}
-            {entry.source === "CUSTOM" && <DetailField label="Created by" value={entry.createdByName} />}
+            {entry.source === "CUSTOM" && <DetailField label={t("contentManager.detail.createdBy")} value={entry.createdByName} />}
           </Grid>
         </CardContent>
       </Card>
       )}
       <ConfirmDialog
         open={confirmCancel}
-        title="Discard your changes?"
-        message="Are you sure you want to cancel? Any unsaved exercise changes will be lost."
-        confirmLabel="Discard"
+        title={t("contentManager.detail.discardTitle")}
+        message={t("contentManager.detail.discardMessage")}
+        confirmLabel={t("contentManager.detail.discard")}
         onCancel={() => setConfirmCancel(false)}
         onConfirm={() => {
           setConfirmCancel(false);
@@ -586,8 +595,8 @@ export default function SystemExerciseDetailPage() {
   const { code = "" } = useParams();
 
   return (
-    <ExerciseDetailErrorBoundary key={code}>
+    <TranslatedErrorBoundary key={code}>
       <SystemExerciseDetailContent />
-    </ExerciseDetailErrorBoundary>
+    </TranslatedErrorBoundary>
   );
 }

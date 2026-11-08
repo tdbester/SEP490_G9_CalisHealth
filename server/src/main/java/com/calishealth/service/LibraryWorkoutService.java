@@ -280,10 +280,12 @@ public class LibraryWorkoutService {
                 .mapToObj(index -> {
                     WorkoutExerciseItem item = workout.getExercises().get(index);
                     Exercise exercise = item.getExercise();
-                    boolean usesDuration = "HOLD".equalsIgnoreCase(exercise.getCategory());
+                    // Bài đo theo giây khi workout lưu cấu hình duration (bài HOLD).
+                    boolean usesDuration = item.getDurationSeconds() != null;
                     return new WorkoutExerciseItemDTO(
                             null,
                             exercise.getId(),
+                            exercise.getCode(),
                             exercise.getName(),
                             exercise.isSystem(),
                             exercise.getMuscleGroup(),
@@ -293,6 +295,7 @@ public class LibraryWorkoutService {
                             item.getReps(),
                             item.getDurationSeconds(),
                             usesDuration ? "SECONDS" : "REPS",
+                            usesDuration ? "HOLD" : "REPS",
                             item.getRestSeconds());
                 })
                 .toList();

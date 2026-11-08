@@ -1,0 +1,452 @@
+/* Popups cho màn chi tiết bài tập: video demo, căn camera, upload video */
+
+/* ---------- Video demo ---------- */
+.exm-video {
+  position: relative;
+  aspect-ratio: 568 / 290;
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid #3a2f70;
+  background: linear-gradient(135deg, #2a1670 0%, #1a1040 50%, #120b2e 100%);
+}
+
+.exm-video video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.exm-video-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.5rem;
+  color: #b4aedb;
+  font-size: 0.8125rem;
+}
+
+.exm-video-empty p {
+  margin: 0;
+}
+
+.exm-play {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c3aed, #c026d3 55%, #f472b6);
+  box-shadow: 0 0 30px rgba(168, 85, 247, 0.55);
+}
+
+.exm-play svg {
+  width: 24px;
+  height: 24px;
+  fill: #fff;
+}
+
+.exm-angle {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  padding: 0.375rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #2f2a55;
+  background: rgba(8, 6, 20, 0.85);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.exm-notes {
+  margin: 0 0 1rem;
+  color: #b4aedb;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.exm-notes strong {
+  color: #fff;
+}
+
+.exm-joints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  list-style: none;
+}
+
+.exm-joint {
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid #2a5a96;
+  background: #102849;
+  color: #7dd3fc;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+/* ---------- Căn camera ---------- */
+.exm-camera {
+  position: relative;
+  aspect-ratio: 548 / 360;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid #3a2f70;
+  background: linear-gradient(135deg, #2a1670 0%, #1a1040 50%, #120b2e 100%);
+}
+
+.exm-camera video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.exm-camera-msg {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 1rem;
+  text-align: center;
+  color: #b4aedb;
+  font-size: 0.8125rem;
+}
+
+.exm-frame {
+  position: absolute;
+  inset: 14px 20px;
+  border: 2px solid #ec4899;
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.exm-silhouette {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  height: 72%;
+  transform: translate(-50%, -50%);
+  fill: none;
+  stroke: rgba(155, 123, 232, 0.75);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+.exm-distance {
+  position: absolute;
+  right: 12px;
+  top: 8%;
+  bottom: 8%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #38bdf8;
+}
+
+.exm-distance-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #38bdf8;
+}
+
+.exm-distance-line {
+  flex: 1;
+  border-left: 1.6px solid #38bdf8;
+}
+
+.exm-distance-label {
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: #1a1040;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.exm-badge {
+  position: absolute;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.9rem;
+  transform: translateX(-50%);
+  border-radius: 8px;
+  background: rgba(8, 6, 20, 0.9);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.exm-badge--info {
+  top: 22px;
+  border: 1px solid #1f4a73;
+  color: #38bdf8;
+}
+
+.exm-badge--bottom {
+  bottom: 14px;
+}
+
+.exm-badge--warn {
+  border: 1px solid #6b1f3a;
+  color: #fb7185;
+}
+
+.exm-badge--ok {
+  border: 1px solid #1f6b4a;
+  color: #34d399;
+}
+
+.exm-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.exm-checklist {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  list-style: none;
+  color: #e6e1ff;
+  font-size: 0.875rem;
+}
+
+.exm-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.exm-checklist svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: #34d399;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.exm-alt {
+  margin: 1rem 0 0;
+  text-align: center;
+  color: #b4aedb;
+  font-size: 0.8125rem;
+}
+
+.exm-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.exm-link:hover {
+  text-decoration: underline;
+}
+
+.exm-link:focus-visible {
+  outline: 2px solid #c4b5fd;
+  outline-offset: 2px;
+}
+
+.exm-link svg {
+  width: 12px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- Upload video ---------- */
+.exm-dropzone {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  padding: 2rem 1rem 1.5rem;
+  margin-bottom: 1rem;
+  border-radius: 14px;
+  border: 1.5px dashed #6d4fc7;
+  background: linear-gradient(135deg, #2a1670 0%, #1a1040 50%, #120b2e 100%);
+  text-align: center;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.exm-dropzone--active {
+  border-color: #c4b5fd;
+  background: #2a1670;
+}
+
+.exm-dropzone-icon {
+  width: 44px;
+  height: 32px;
+  margin-bottom: 0.75rem;
+  fill: none;
+  stroke: #e6e1ff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.exm-dropzone-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.exm-dropzone-hint {
+  margin: 0;
+  color: #a8a2d0;
+  font-size: 0.8125rem;
+}
+
+.exm-browse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 50px;
+  border-color: #8b6fe0;
+  background: #190f3a;
+}
+
+.exm-browse-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: #fbbf24;
+  stroke: #fbbf24;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+.exm-error {
+  margin: 0.75rem 0 0;
+  color: #fb7185;
+  font-size: 0.8125rem;
+}
+
+.exm-files-label {
+  margin: 1.125rem 0 0.625rem;
+  color: #b4aedb;
+  font-size: 0.8125rem;
+}
+
+.exm-files {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  list-style: none;
+}
+
+.exm-file {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem;
+  border-radius: 12px;
+  border: 1px solid #3a2f70;
+  background: #1a1240;
+}
+
+.exm-file-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6d3df0, #4b8bf5);
+}
+
+.exm-file-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: #e0d7ff;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+
+.exm-file-meta {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 0.125rem;
+}
+
+.exm-file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.exm-file-info {
+  color: #8b85b8;
+  font-size: 0.75rem;
+}
+
+.exm-file-remove {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #34d399;
+  cursor: pointer;
+}
+
+.exm-file-remove:hover {
+  color: #fb7185;
+  background: rgba(251, 113, 133, 0.12);
+}
+
+.exm-file-remove:focus-visible {
+  outline: 2px solid #c4b5fd;
+}
+
+.exm-file-remove svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+@media (max-width: 520px) {
+  .exm-badge {
+    font-size: 0.6875rem;
+    padding: 0.3rem 0.6rem;
+  }
+}

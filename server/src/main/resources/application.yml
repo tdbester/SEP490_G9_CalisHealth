@@ -50,6 +50,12 @@ app:
   jwt:
     secret: clh-demo-secret-key-please-change-this-32-chars-min
     expiration-ms: 86400000
+  # AI Support (màn popup hỏi AI về lỗi form sau buổi tập).
+  # Chưa có OPENAI_API_KEY thì API vẫn chạy, trả lời bằng rule nội bộ.
+  openai:
+    api-key: ${OPENAI_API_KEY:}
+    model: ${OPENAI_MODEL:gpt-4o-mini}
+    base-url: ${OPENAI_BASE_URL:https://api.openai.com}
 
 # OpenAPI / Swagger UI
 springdoc:

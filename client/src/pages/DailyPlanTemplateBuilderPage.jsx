@@ -6,6 +6,7 @@ import {
   Pagination, Stack, Switch, TextField, Typography,
 } from "@mui/material";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import { useTranslation } from "react-i18next";
 import CheckCircleOutlineRoundedIcon from "@mui/icons-material/CheckCircleOutlineRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import EventNoteRoundedIcon from "@mui/icons-material/EventNoteRounded";
@@ -40,25 +41,30 @@ function SectionTitle({ icon: Icon, title, caption }) {
 /** Only regular, system-owned workouts can be scheduled into a daily plan. */
 const isSystemWorkout = (workout) => workout.type !== "DAILY_TRAINING_PLAN" && String(workout.source || "").toUpperCase() === "SYSTEM";
 
-function validate(form) {
+function validate(form, t) {
   const errors = [];
-  if (!form.name.trim()) errors.push("Enter a plan name.");
-  if (!form.level) errors.push("Choose a level.");
+  if (!form.name.trim()) errors.push(t("contentManager.detail.errPlanName"));
+  if (!form.level) errors.push(t("contentManager.detail.errPlanLevel"));
   const missing = DAY_OPTIONS.slice(0, form.daysPerWeek).filter((day) => !form.days[day]);
-  if (missing.length) errors.push(`Assign a workout to ${missing.map((day) => `Day ${day}`).join(", ")}.`);
+  if (missing.length) {
+    errors.push(t("contentManager.detail.errAssignDays", {
+      days: missing.map((day) => t("contentManager.detail.dayNumber", { day })).join(", "),
+    }));
+  }
   return errors;
 }
 
 function WorkoutPreviewDialog({ workout, onClose }) {
+  const { t } = useTranslation();
   const exercises = Array.isArray(workout?.exercises) ? workout.exercises : [];
 
   return (
     <Dialog open={Boolean(workout)} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ pb: 1 }}>{workout?.name || "Workout preview"}</DialogTitle>
+      <DialogTitle sx={{ pb: 1 }}>{workout?.name || t("contentManager.detail.previewWorkout")}</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={0.5}>
           <Typography variant="caption" sx={{ color: CM.textDim }}>
-            {workout?.code} · {workout?.level || "No level"} · {exercises.length} exercises
+            {workout?.code} · {workout?.level || t("contentManager.detail.noLevel")} · {t("contentManager.detail.exercisesCount", { count: exercises.length })}
           </Typography>
           {workout?.description && (
             <Typography variant="body2" sx={{ color: CM.textMuted, whiteSpace: "pre-line", mb: 1 }}>
@@ -86,10 +92,10 @@ function WorkoutPreviewDialog({ workout, onClose }) {
                   </Box>
                   <Box sx={{ minWidth: 0 }}>
                     <Typography variant="body2" sx={{ color: "#fff", fontWeight: 600 }}>
-                      {exercise.name || exercise.code || "Unnamed exercise"}
+                      {exercise.name || exercise.code || t("contentManager.detail.unnamedExercise")}
                     </Typography>
                     <Typography variant="caption" sx={{ color: CM.textDim }}>
-                      {details.join(" · ") || exercise.muscleGroup || exercise.code || "Exercise"}
+                      {details.join(" · ") || exercise.muscleGroup || exercise.code || t("member.catalog.exercises")}
                     </Typography>
                   </Box>
                 </Box>
@@ -98,23 +104,24 @@ function WorkoutPreviewDialog({ workout, onClose }) {
           </Stack>
         ) : (
           <Typography variant="body2" sx={{ mt: 2, color: CM.textMuted }}>
-            This workout has no exercises.
+            {t("contentManager.detail.noExercisesInWorkout")}
           </Typography>
         )}
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 1.5 }}>
-        <Button onClick={onClose}>Close</Button>
+        <Button onClick={onClose}>{t("contentManager.detail.close")}</Button>
       </DialogActions>
     </Dialog>
   );
 }
 
 const BREADCRUMB = [
-  { label: "Content manager", to: CONTENT_PATHS.dashboard },
-  { label: "Daily Training Plans", to: CONTENT_PATHS.templates },
+  { labelKey: "nav.contentManagerRole", to: CONTENT_PATHS.dashboard },
+  { labelKey: "nav.dailyTrainingPlans", to: CONTENT_PATHS.templates },
 ];
 
 export default function DailyPlanTemplateBuilderPage() {
+  const { t } = useTranslation();
   const { code } = useParams();
   const editing = Boolean(code);
   const detailPath = editing ? `${CONTENT_PATHS.templates}/${encodeURIComponent(code)}` : null;
@@ -142,7 +149,7 @@ export default function DailyPlanTemplateBuilderPage() {
 
   const save = useApiMutation(
     (payload) => (editing ? contentManagerApi.updateDailyPlanTemplate(code, payload) : contentManagerApi.createDailyPlanTemplate(payload)),
-    { onSuccess: (saved) => navigate(editing ? detailPath : CONTENT_PATHS.templates, { state: { successMessage: editing ? "Daily training plan updated." : `Plan created: ${saved?.name}.` } }) },
+    { onSuccess: (saved) => navigate(editing ? detailPath : CONTENT_PATHS.templates, { state: { successMessage: editing ? t("contentManager.detail.planUpdated") : t("contentManager.detail.planCreated", { name: saved?.name }) } }) },
   );
 
   const allWorkouts = useMemo(() => (workoutsQuery.data || []).filter(isSystemWorkout), [workoutsQuery.data]);
@@ -166,13 +173,13 @@ export default function DailyPlanTemplateBuilderPage() {
   if (loadError) {
     return (
       <Box sx={{ maxWidth: 960, mx: "auto", p: 3 }}>
-        <ContentPageHeader breadcrumb={BREADCRUMB} title="Daily plan unavailable" description={loadError.message} />
-        <Button component={RouterLink} to={CONTENT_PATHS.templates} variant="outlined" sx={{ mt: 2 }}>Back</Button>
+        <ContentPageHeader breadcrumb={BREADCRUMB} title={t("contentManager.detail.dailyPlanUnavailable")} description={loadError.message} />
+        <Button component={RouterLink} to={CONTENT_PATHS.templates} variant="outlined" sx={{ mt: 2 }}>{t("contentManager.detail.back")}</Button>
       </Box>
     );
   }
 
-  const errors = validate(form);
+  const errors = validate(form, t);
   const assign = (workoutCode) => {
     const next = { ...form.days, [activeDay]: workoutCode };
     const nextEmpty = dayList.find((day) => day > activeDay && !next[day]) ?? dayList.find((day) => !next[day]);
@@ -204,9 +211,9 @@ export default function DailyPlanTemplateBuilderPage() {
   return (
     <Box sx={{ maxWidth: 1240, mx: "auto", px: { xs: 2, sm: 3 }, py: 2.5 }}>
       <ContentPageHeader
-        breadcrumb={[...BREADCRUMB, ...(editing ? [{ label: "Plan details", to: detailPath }, { label: "Edit" }] : [{ label: "Create" }])]}
-        title={editing ? "Update Daily Training Plan Template" : "Create Daily Training Plan Template"}
-        description="Pick workouts that already exist in the system and schedule them onto each training day."
+        breadcrumb={[...BREADCRUMB, ...(editing ? [{ labelKey: "nav.planDetails", to: detailPath }, { labelKey: "nav.edit" }] : [{ labelKey: "nav.create" }])]}
+        title={editing ? t("contentManager.detail.updatePlanTitle") : t("contentManager.detail.createPlanTitle")}
+        description={t("contentManager.detail.planDescription")}
         action={(
           <Button
             component={RouterLink}
@@ -214,7 +221,7 @@ export default function DailyPlanTemplateBuilderPage() {
             variant="outlined"
             startIcon={<ArrowBackRoundedIcon />}
           >
-            Back
+            {t("contentManager.detail.back")}
           </Button>
         )}
       />
@@ -223,23 +230,23 @@ export default function DailyPlanTemplateBuilderPage() {
           {save.error && <Alert severity="error" sx={{ mb: 2 }}>{save.error.message}</Alert>}
           {touched && errors.map((message) => <Alert key={message} severity="error" sx={{ mb: 1.5 }}>{message}</Alert>)}
 
-          <SectionTitle icon={TuneRoundedIcon} title="Plan information" caption="Members whose level and training days match are given this plan." />
+          <SectionTitle icon={TuneRoundedIcon} title={t("contentManager.detail.planInformation")} caption={t("contentManager.detail.planInformationCaption")} />
           <Box sx={{ mt: 2, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "2fr 1fr 1fr" } }}>
-            <TextField size="small" label="Plan name" value={form.name} onChange={(e) => set({ name: e.target.value })} inputProps={{ maxLength: 60 }} />
-            <TextField select size="small" label="Level" value={form.level} onChange={(e) => changeLevel(e.target.value)}>
+            <TextField size="small" label={t("contentManager.detail.planName")} value={form.name} onChange={(e) => set({ name: e.target.value })} inputProps={{ maxLength: 60 }} />
+            <TextField select size="small" label={t("contentManager.detail.level")} value={form.level} onChange={(e) => changeLevel(e.target.value)}>
               {(editing && form.level && !activeLevels.includes(form.level) ? [form.level, ...activeLevels] : activeLevels).map((name) => <MenuItem key={name} value={name}>{name}</MenuItem>)}
             </TextField>
-            <TextField select size="small" label="Days per week" value={form.daysPerWeek} onChange={(e) => changeDays(Number(e.target.value))}>
-              {DAY_OPTIONS.map((value) => <MenuItem key={value} value={value}>{value} {value === 1 ? "day" : "days"}</MenuItem>)}
+            <TextField select size="small" label={t("contentManager.detail.daysPerWeek")} value={form.daysPerWeek} onChange={(e) => changeDays(Number(e.target.value))}>
+              {DAY_OPTIONS.map((value) => <MenuItem key={value} value={value}>{t("contentManager.detail.dayCount", { count: value })}</MenuItem>)}
             </TextField>
           </Box>
-          <TextField size="small" fullWidth multiline minRows={2} label="Description (optional)" value={form.description} onChange={(e) => set({ description: e.target.value })} inputProps={{ maxLength: 300 }} sx={{ mt: 1.5 }} />
+          <TextField size="small" fullWidth multiline minRows={2} label={t("contentManager.detail.descriptionOptional")} value={form.description} onChange={(e) => set({ description: e.target.value })} inputProps={{ maxLength: 300 }} sx={{ mt: 1.5 }} />
 
           <Divider sx={{ borderColor: CM.border, my: 3 }} />
 
           <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "minmax(0, 1fr) minmax(0, 1fr)" }, alignItems: "stretch" }}>
             <Box sx={{ ...panelSx, display: "flex", flexDirection: "column" }}>
-              <SectionTitle icon={EventNoteRoundedIcon} title="Training days" caption="Select a day, then choose its workout on the right." />
+              <SectionTitle icon={EventNoteRoundedIcon} title={t("contentManager.detail.trainingDays")} caption={t("contentManager.detail.trainingDaysCaption")} />
               <Stack spacing={1} sx={{ mt: 2 }}>
                 {dayList.map((day) => {
                   const workout = byCode.get(form.days[day]);
@@ -255,19 +262,19 @@ export default function DailyPlanTemplateBuilderPage() {
                         transition: "border-color .16s ease",
                       }}
                     >
-                      <Typography sx={{ color: selected ? CM.violetBright : CM.textDim, fontWeight: 800, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", minWidth: 48 }}>Day {day}</Typography>
+                      <Typography sx={{ color: selected ? CM.violetBright : CM.textDim, fontWeight: 800, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", minWidth: 48 }}>{t("contentManager.detail.dayNumber", { day })}</Typography>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         {workout ? (
                           <>
                             <Typography variant="body2" noWrap sx={{ color: "#fff", fontWeight: 600 }}>{workout.name}</Typography>
-                            <Typography variant="caption" sx={{ color: CM.textDim }}>{workout.code} · {workout.exercises?.length || 0} exercises</Typography>
+                            <Typography variant="caption" sx={{ color: CM.textDim }}>{workout.code} · {t("contentManager.detail.exercisesCount", { count: workout.exercises?.length || 0 })}</Typography>
                           </>
                         ) : (
-                          <Typography variant="body2" sx={{ color: CM.textDim }}>No workout selected</Typography>
+                          <Typography variant="body2" sx={{ color: CM.textDim }}>{t("contentManager.detail.noWorkoutSelected")}</Typography>
                         )}
                       </Box>
                       {workout && (
-                        <Button size="small" aria-label={`Remove workout from Day ${day}`} onClick={(event) => { event.stopPropagation(); clearDay(day); }} sx={{ minWidth: 0, p: 0.5, color: CM.textMuted }}>
+                        <Button size="small" aria-label={t("contentManager.detail.removeWorkoutFromDay", { day })} onClick={(event) => { event.stopPropagation(); clearDay(day); }} sx={{ minWidth: 0, p: 0.5, color: CM.textMuted }}>
                           <CloseRoundedIcon fontSize="small" />
                         </Button>
                       )}
@@ -278,10 +285,10 @@ export default function DailyPlanTemplateBuilderPage() {
             </Box>
 
             <Box sx={{ ...panelSx, display: "flex", flexDirection: "column" }}>
-              <SectionTitle icon={FitnessCenterRoundedIcon} title={`System workouts for Day ${activeDay}`} caption={`Existing ${form.level || "level"} workouts. Create new ones under Exercise & Workout.`} />
+              <SectionTitle icon={FitnessCenterRoundedIcon} title={t("contentManager.detail.systemWorkoutsForDay", { day: activeDay })} caption={t("contentManager.detail.systemWorkoutsCaption", { level: form.level || t("contentManager.detail.level") })} />
               <TextField
                 size="small" fullWidth value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                placeholder="Search workout" inputProps={{ "aria-label": "Search workout" }}
+                placeholder={t("contentManager.detail.searchWorkout")} inputProps={{ "aria-label": t("contentManager.detail.searchWorkout") }}
                 InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" color="disabled" /></InputAdornment> }}
                 sx={{ mt: 2 }}
               />
@@ -301,19 +308,19 @@ export default function DailyPlanTemplateBuilderPage() {
                     >
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         <Typography variant="body2" noWrap sx={{ color: "#fff", fontWeight: 600 }}>{workout.name}</Typography>
-                        <Typography variant="caption" sx={{ color: CM.textDim }}>{workout.code} · {workout.exercises?.length || 0} exercises</Typography>
+                        <Typography variant="caption" sx={{ color: CM.textDim }}>{workout.code} · {t("contentManager.detail.exercisesCount", { count: workout.exercises?.length || 0 })}</Typography>
                       </Box>
-                      {chosenOn.length > 0 && <DarkPill tone="primary">{chosenOn.map((day) => `Day ${day}`).join(", ")}</DarkPill>}
+                      {chosenOn.length > 0 && <DarkPill tone="primary">{chosenOn.map((day) => t("contentManager.detail.dayNumber", { day })).join(", ")}</DarkPill>}
                       <DarkPill tone={levelTone(workout.level)}>{workout.level}</DarkPill>
                       <Button
                         size="small"
                         variant="outlined"
                         startIcon={<PreviewRoundedIcon sx={{ fontSize: 15 }} />}
-                        aria-label={`Preview ${workout.name}`}
+                        aria-label={t("contentManager.detail.preview")}
                         onClick={(event) => { event.stopPropagation(); setPreviewWorkout(workout); }}
                         sx={{ minWidth: 0, px: 1, py: 0.35, borderRadius: "8px", fontSize: 11.5, flexShrink: 0 }}
                       >
-                        Preview
+                        {t("contentManager.detail.preview")}
                       </Button>
                     </Box>
                   );
@@ -322,8 +329,12 @@ export default function DailyPlanTemplateBuilderPage() {
                   <Box sx={{ py: 5, textAlign: "center" }}>
                     <Typography variant="body2" color="text.secondary">
                       {allWorkouts.length
-                        ? `No ${form.active ? "active " : ""}${form.level || ""} workouts match. ${form.active ? "Switch the plan to Inactive to schedule inactive workouts." : ""}`
-                        : "No system workouts exist yet. Create workouts first under Exercise & Workout."}
+                        ? t("contentManager.detail.noMatchingWorkouts", {
+                            active: form.active ? t("contentManager.detail.activeLabel") : t("contentManager.detail.inactiveLabel"),
+                            level: form.level || "",
+                            hint: form.active ? t("contentManager.detail.switchInactiveHint") : "",
+                          })
+                        : t("contentManager.detail.noSystemWorkouts")}
                     </Typography>
                   </Box>
                 )}
@@ -343,7 +354,7 @@ export default function DailyPlanTemplateBuilderPage() {
                 <Stack direction="row" spacing={1} alignItems="center">
                   <CheckCircleOutlineRoundedIcon sx={{ fontSize: 18, color: form.active ? CM.green : CM.textDim }} />
                   <Typography variant="body2" sx={{ color: form.active ? "#fff" : CM.textMuted, fontWeight: 600 }}>
-                    {form.active ? "Active: members can be given this plan" : "Inactive: the plan is not used"}
+                    {form.active ? t("contentManager.detail.activeLabel") : t("contentManager.detail.inactiveLabel")}
                   </Typography>
                 </Stack>
               }
@@ -363,9 +374,9 @@ export default function DailyPlanTemplateBuilderPage() {
               zIndex: 5,
             }}
           >
-            <Button component={RouterLink} to={editing ? detailPath : CONTENT_PATHS.templates} variant="outlined">Cancel</Button>
+            <Button component={RouterLink} to={editing ? detailPath : CONTENT_PATHS.templates} variant="outlined">{t("contentManager.detail.cancel")}</Button>
             <Button type="submit" variant="contained" disabled={save.isPending} sx={{ minWidth: 140 }}>
-              {save.isPending ? "Saving…" : editing ? "Save changes" : "Create plan"}
+              {save.isPending ? t("contentManager.detail.saving") : editing ? t("contentManager.detail.saveChangesPlan") : t("contentManager.detail.createPlan")}
             </Button>
           </Stack>
         </Box>

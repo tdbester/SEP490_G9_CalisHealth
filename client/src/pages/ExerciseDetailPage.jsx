@@ -1,10 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { getExerciseDetail, getSystemExerciseDetail } from "../api/library";
+import { FAVORITE_ITEM_TYPES } from "../api/favorites";
+import FavoriteButton from "../components/favorites/FavoriteButton";
 import { mockSystemWorkouts } from "./WorkoutSystemListPage";
 import { getAnatomyImage } from "../utils/anatomyImages";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
+import { getLevelLabel } from "../utils/levelLabel";
 import { getExerciseMovementGroup } from "../utils/exerciseMedia";
+import { startLibraryExercise } from "../utils/libraryWorkout";
+import { localizeSeed, localizeSeedDeep } from "../utils/seedText";
 
 function getUploadedDemoVideoUrl(exercise) {
   const value = exercise?.videoUrl || exercise?.demoVideoUrl || exercise?.video_url;
@@ -392,6 +398,7 @@ function inferMuscleGroups(exercise) {
 }
 
 export default function ExerciseDetailPage() {
+  const { t } = useTranslation();
   const { id, exerciseId } = useParams();
   const currentExerciseId = exerciseId || id;
   const navigate = useNavigate();
@@ -422,7 +429,7 @@ export default function ExerciseDetailPage() {
         duration: Number.parseInt(routedExercise.duration, 10) || 84,
         steps: (routedExercise.instructions || routedExercise.guideSteps || []).map((instruction, index) => ({
           step: index + 1,
-          title: `Step ${index + 1}`,
+          title: t("member.exerciseDetail.stepLabel", { number: index + 1 }),
           content: typeof instruction === "string" ? instruction : instruction.content,
         })),
       }
@@ -435,6 +442,8 @@ export default function ExerciseDetailPage() {
 
   const [exercise, setExercise] = useState(catalogItem);
   const [failedAnatomyImageUrl, setFailedAnatomyImageUrl] = useState("");
+  // Chuỗi của dữ liệu mẫu được dịch lúc render để đổi ngôn ngữ không cần tải lại trang.
+  const localizedExercise = localizeSeedDeep(exercise);
   const displayedMemberAuthor = exercise.authorName || memberAuthor;
   const displayedMemberPostedTime = exercise.postedTimeAgo || memberPostedTime;
   const muscleGroups = normalizeMuscleGroups(
@@ -460,6 +469,21 @@ export default function ExerciseDetailPage() {
     String(exercise.isSystem).toLowerCase() === "false" ||
     exercise.authorId != null;
   const hasUploadedDemoVideo = Boolean(demoVideoUrl);
+
+  /**
+   * Exercise Tree (cây progression) chỉ thuộc về bài của hệ thống do Content Manager quản lý.
+   * Bài do Member cung cấp (community / personal) không có cây progression nên không hiện nút này.
+   */
+  const canOpenExerciseTree = isSystemExercise && !isMemberExercise && !isCustomExercise;
+
+  /**
+   * Loại favorite của bài đang xem. Dựa trên URL vì API chi tiết không trả về
+   * `source` / `isSystem` — chỉ đường dẫn mới phân biệt được bài của hệ thống
+   * với bài do Member cung cấp.
+   */
+  const currentFavoriteType = isMemberExercise
+    ? FAVORITE_ITEM_TYPES.MEMBER_EXERCISE
+    : FAVORITE_ITEM_TYPES.SYSTEM_EXERCISE;
 
   // Video player state
   const [videoDuration, setVideoDuration] = useState(null);
@@ -505,7 +529,7 @@ export default function ExerciseDetailPage() {
                   targetMuscle: data.targetMuscle || data.muscleGroup || prev.targetMuscle,
                   steps: (data.guideSteps?.length ? data.guideSteps : prev.steps || []).map((content, index) => ({
                     step: index + 1,
-                    title: typeof content === "string" ? `Step ${index + 1}` : content.title,
+                    title: typeof content === "string" ? t("member.exerciseDetail.stepLabel", { number: index + 1 }) : content.title,
                     content: typeof content === "string" ? content : content.content,
                   })),
                 }
@@ -515,7 +539,7 @@ export default function ExerciseDetailPage() {
                   videoUrl: data.videoUrl || data.demoVideoUrl,
                   steps: (data.guideSteps || []).map((content, index) => ({
                     step: index + 1,
-                    title: `Step ${index + 1}`,
+                    title: t("member.exerciseDetail.stepLabel", { number: index + 1 }),
                     content,
                   })),
                 }),
@@ -648,6 +672,20 @@ export default function ExerciseDetailPage() {
         .exercise-detail-page button.exercise-tree-btn:hover {
           background-color: #6c47ff !important;
         }
+        .exercise-detail-page button.exercise-start-btn {
+          min-width: 150px !important;
+          height: 42px !important;
+          justify-content: center !important;
+          color: #fff !important;
+          background-color: #22c55e !important;
+          border: 0 !important;
+          border-radius: 16px !important;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.18) !important;
+          transition: background-color 150ms ease !important;
+        }
+        .exercise-detail-page button.exercise-start-btn:hover {
+          background-color: #16a34a !important;
+        }
       `}</style>
 
       {/* 1. TOPBAR & NÚT QUAY LẠI */}
@@ -658,7 +696,7 @@ export default function ExerciseDetailPage() {
             type="button"
             onClick={() => navigate(workoutBackPath || -1)}
             className="bg-transparent border-0 p-0 text-xs text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer group outline-none"
-            aria-label="Back to exercise list"
+            aria-label={t("member.exerciseDetail.backToExerciseList")}
           >
             <svg
               className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform"
@@ -672,7 +710,7 @@ export default function ExerciseDetailPage() {
                 clipRule="evenodd"
               />
             </svg>
-            <span>{workoutBackPath ? "Back to workout" : "Back to list"}</span>
+            <span>{workoutBackPath ? t("member.exerciseDetail.backToWorkout") : t("member.exerciseDetail.backToList")}</span>
           </button>
         </div>
 
@@ -681,12 +719,12 @@ export default function ExerciseDetailPage() {
           <div>
             <div className="flex items-center gap-3.5 flex-wrap">
               <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
-                {exercise.name}
+                {localizedExercise.name}
               </h1>
               <span
                 className={`px-4 py-1.5 text-xs font-semibold rounded-full border capitalize ${getLevelBadgeStyle(level)}`}
               >
-                {level}
+                {getLevelLabel(level)}
               </span>
             </div>
             {isMemberExercise && (
@@ -700,38 +738,60 @@ export default function ExerciseDetailPage() {
                     .toUpperCase()}
                 </span>
                 <span>
-                  Shared by <strong className="font-semibold text-slate-200">{displayedMemberAuthor}</strong>
+                  {t("member.exerciseDetail.sharedBy")} <strong className="font-semibold text-slate-200">{displayedMemberAuthor}</strong>
                   {" · "}{displayedMemberPostedTime}
                 </span>
               </p>
             )}
           </div>
-          <button
-              type="button"
-              onClick={() => {
-                const movementGroup = getExerciseMovementGroup(exercise);
-                const params = new URLSearchParams({
-                  highlight: String(exercise.code || exercise.id || ""),
-                  exercise: exercise.name || "",
-                  exerciseId: String(exercise.id || ""),
-                  exerciseName: exercise.name || "",
-                });
-                if (movementGroup) {
-                  params.set("group", movementGroup);
-                }
-                navigate(
-                  { pathname: "/library/skills/tree", search: params.toString() },
-                  {
-                    state: {
-                      selectedExercise: exercise,
+          <div className="flex shrink-0 items-center gap-3">
+            <FavoriteButton
+              itemType={currentFavoriteType}
+              itemId={exercise.id || exercise.code}
+              label={exercise.name}
+              size="lg"
+            />
+            {exercise.code && (
+              <button
+                type="button"
+                onClick={() => startLibraryExercise(navigate, exercise)}
+                className="exercise-start-btn flex items-center gap-2 rounded-2xl bg-[#22c55e] px-5 py-2 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#16a34a]"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                {t("member.catalog.startWorkout")}
+              </button>
+            )}
+            {canOpenExerciseTree && (
+              <button
+                type="button"
+                onClick={() => {
+                  const movementGroup = getExerciseMovementGroup(exercise);
+                  const params = new URLSearchParams({
+                    highlight: String(exercise.code || exercise.id || ""),
+                    exercise: exercise.name || "",
+                    exerciseId: String(exercise.id || ""),
+                    exerciseName: exercise.name || "",
+                  });
+                  if (movementGroup) {
+                    params.set("group", movementGroup);
+                  }
+                  navigate(
+                    { pathname: "/library/skills/tree", search: params.toString() },
+                    {
+                      state: {
+                        selectedExercise: exercise,
+                      },
                     },
-                  },
-                );
-              }}
-              className="exercise-tree-btn shrink-0 flex items-center gap-2 rounded-2xl bg-[#7c5dfa] px-5 py-2 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#6c47ff]"
-            >
-              Exercise tree
-          </button>
+                  );
+                }}
+                className="exercise-tree-btn shrink-0 flex items-center gap-2 rounded-2xl bg-[#7c5dfa] px-5 py-2 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#6c47ff]"
+              >
+                {t("member.exerciseTree.title")}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -741,7 +801,7 @@ export default function ExerciseDetailPage() {
         <div className="w-full lg:w-[62%] flex-shrink-0 min-w-0">
           {/* KHỐI 1 - VIDEO DEMO */}
           <section className="rounded-2xl border border-[#231b46] bg-[#120d29] p-5 shadow-xl">
-            <h2 className="text-sm font-semibold text-white mb-3">Video demo</h2>
+            <h2 className="text-sm font-semibold text-white mb-3">{t("member.exerciseDetail.videoDemo")}</h2>
 
             {/* Khung Video Player 16:9 */}
             <div
@@ -769,7 +829,7 @@ export default function ExerciseDetailPage() {
               ) : (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 p-6 text-center">
                   <p className="text-sm font-semibold text-slate-200">
-                    Demo video is not available yet. The Content Manager must upload a video file.
+                    {t("member.exerciseDetail.noDemoVideo")}
                   </p>
                 </div>
               )}
@@ -788,7 +848,7 @@ export default function ExerciseDetailPage() {
                   className={`center-play-btn h-16 w-16 rounded-full bg-[#643bf6] hover:bg-[#522cd9] text-white flex items-center justify-center shadow-lg transition-transform hover:scale-105 border-0 outline-none pointer-events-auto cursor-pointer ${
                     isPlaying ? "opacity-0 group-hover:opacity-80" : "opacity-100"
                   }`}
-                  aria-label={isPlaying ? "Pause video" : "Play video"}
+                  aria-label={isPlaying ? t("member.exerciseDetail.pauseVideo") : t("member.exerciseDetail.playVideo")}
                 >
                   {isPlaying ? (
                     <svg className="w-7 h-7 fill-white" viewBox="0 0 24 24">
@@ -812,7 +872,7 @@ export default function ExerciseDetailPage() {
                   type="button"
                   onClick={togglePlay}
                   className="bg-transparent border-0 text-slate-300 hover:text-white p-1 flex items-center justify-center cursor-pointer outline-none shadow-none flex-shrink-0"
-                  aria-label={isPlaying ? "Pause" : "Play"}
+                  aria-label={isPlaying ? t("member.exerciseDetail.pause") : t("member.exerciseDetail.play")}
                 >
                   {isPlaying ? (
                     <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24">
@@ -858,7 +918,7 @@ export default function ExerciseDetailPage() {
                   type="button"
                   onClick={toggleMute}
                   className="bg-transparent border-0 text-slate-300 hover:text-white p-1 flex items-center justify-center cursor-pointer outline-none shadow-none flex-shrink-0"
-                  aria-label={isMuted ? "Unmute" : "Mute"}
+                  aria-label={isMuted ? t("member.exerciseDetail.unmute") : t("member.exerciseDetail.mute")}
                 >
                   {isMuted ? (
                     <svg
@@ -895,7 +955,7 @@ export default function ExerciseDetailPage() {
                   type="button"
                   onClick={toggleFullscreen}
                   className="bg-transparent border-0 text-slate-300 hover:text-white p-1 flex items-center justify-center cursor-pointer outline-none shadow-none flex-shrink-0"
-                  aria-label="Toggle Fullscreen"
+                  aria-label={t("member.exerciseDetail.toggleFullscreen")}
                 >
                   <svg
                     className="w-4 h-4"
@@ -917,17 +977,17 @@ export default function ExerciseDetailPage() {
             </div>
             {(isMemberExercise || isCustomExercise) && !hasUploadedDemoVideo && (
               <p className="mt-2 text-xs text-slate-400">
-                Demo video for custom exercise: showing a sample while no video has been uploaded.
+                {t("member.exerciseDetail.customSampleNote")}
               </p>
             )}
           </section>
 
           <section className="rounded-2xl border border-[#382b68] bg-[#171133] p-5 mt-4 shadow-xl">
-            <h2 className="text-sm font-bold text-[#c4b5fd] mb-4">Muscle Anatomy</h2>
+            <h2 className="text-sm font-bold text-[#c4b5fd] mb-4">{t("member.exerciseDetail.muscleAnatomy")}</h2>
             <div className="flex min-h-48 items-center justify-center overflow-hidden rounded-xl border border-[#2d2254] bg-[#100b26] p-3">
               <img
                 src={anatomyImageUrl}
-                alt={`Muscle anatomy for ${exercise?.name || "this exercise"}`}
+                alt={t("member.exerciseDetail.anatomyAlt", { name: exercise?.name || "" })}
                 onError={() => {
                   if (uploadedAnatomyImageUrl && failedAnatomyImageUrl !== uploadedAnatomyImageUrl) {
                     setFailedAnatomyImageUrl(uploadedAnatomyImageUrl);
@@ -937,7 +997,7 @@ export default function ExerciseDetailPage() {
               />
             </div>
             <div className="mt-4">
-              <h3 className="text-xs font-bold text-white mb-2">Muscle Group</h3>
+              <h3 className="text-xs font-bold text-white mb-2">{t("member.exerciseDetail.muscleGroup")}</h3>
               <div className="flex flex-wrap gap-2">
                 {displayedMuscleGroups.map((muscle) => (
                   <span
@@ -953,9 +1013,9 @@ export default function ExerciseDetailPage() {
 
           {/* KHỐI 3 - DESCRIPTION */}
           <section className="rounded-2xl border border-[#231b46] bg-[#120d29] p-5 mt-4 shadow-xl">
-            <h2 className="text-sm font-semibold text-white mb-2">Description</h2>
+            <h2 className="text-sm font-semibold text-white mb-2">{t("member.exerciseDetail.description")}</h2>
             <p className="text-xs text-slate-300 leading-relaxed">
-              {exercise.description}
+              {localizedExercise.description}
             </p>
           </section>
         </div>
@@ -963,12 +1023,12 @@ export default function ExerciseDetailPage() {
         {/* CỘT BÊN PHẢI: GUIDE - HƯỚNG DẪN CÁC BƯỚC */}
         <div className="w-full lg:flex-1 min-w-0">
           <section className="rounded-2xl border border-[#231b46] bg-[#120d29] p-5 shadow-xl">
-            <h2 className="text-sm font-semibold text-white mb-4">Guide</h2>
+            <h2 className="text-sm font-semibold text-white mb-4">{t("member.exerciseDetail.guide")}</h2>
 
             {/* Stepper dạng Timeline dọc (5 bước) */}
             <div className="flex flex-col">
-              {(exercise.steps || []).map((stepItem, idx) => {
-                const isLast = idx === (exercise.steps || []).length - 1;
+              {(localizedExercise.steps || []).map((stepItem, idx) => {
+                const isLast = idx === (localizedExercise.steps || []).length - 1;
                 return (
                   <div
                     key={stepItem.step || idx}
@@ -994,10 +1054,10 @@ export default function ExerciseDetailPage() {
               })}
             </div>
           </section>
-          {exercise.tips && (
+          {localizedExercise.tips && (
             <section className="mt-4 rounded-2xl border border-amber-900/60 bg-amber-950/20 p-5">
-              <h2 className="text-sm font-semibold text-amber-200">Tips &amp; safety</h2>
-              <p className="mt-2 text-xs leading-relaxed text-slate-300">{exercise.tips}</p>
+              <h2 className="text-sm font-semibold text-amber-200">{t("member.exerciseDetail.tipsSafety")}</h2>
+              <p className="mt-2 text-xs leading-relaxed text-slate-300">{localizedExercise.tips}</p>
             </section>
           )}
         </div>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ModalShell from "../common/ModalShell";
 import QuestionField from "../survey/QuestionField";
@@ -12,13 +13,13 @@ import "../../pages/survey/Survey.css";
 import "./ContentSurvey.css";
 
 /** "Between 100 and 250 cm" dưới mỗi ô số (Figma: survey-preview-step). */
-function rangeHint(question) {
+function rangeHint(question, t) {
   if (question.questionType !== "NUMBER") return null;
   const { min, max } = question.validationRules ?? {};
   const unit = question.unit ? ` ${question.unit}` : "";
-  if (min != null && max != null) return `Between ${min} and ${max}${unit}`;
-  if (min != null) return `At least ${min}${unit}`;
-  if (max != null) return `At most ${max}${unit}`;
+  if (min != null && max != null) return t("contentManager.survey.rangeBetween", { min, max, unit });
+  if (min != null) return t("contentManager.survey.rangeAtLeast", { min, unit });
+  if (max != null) return t("contentManager.survey.rangeAtMost", { max, unit });
   return null;
 }
 
@@ -38,12 +39,13 @@ function previewApplicable(question, values, codesInStep) {
 
 /** Bước Result không có câu hỏi: tóm tắt cấu hình kế hoạch gợi ý. */
 function ResultSummary({ config }) {
+  const { t } = useTranslation();
   if (!config) return null;
   const rows = [
-    ["Level breakdown", config.showLevelBreakdown ? "Shown" : "Hidden"],
-    ["Training plan preview", config.showPlanPreview ? "Shown" : "Hidden"],
-    ["Plan length", `${config.planDurationWeeks} weeks`],
-    ["Sessions", `${config.sessionsPerWeek} per week · ${config.minutesPerSession} min each`],
+    [t("contentManager.survey.summaryLevelBreakdown"), config.showLevelBreakdown ? t("contentManager.survey.shown") : t("contentManager.survey.hidden")],
+    [t("contentManager.survey.summaryPlanPreview"), config.showPlanPreview ? t("contentManager.survey.shown") : t("contentManager.survey.hidden")],
+    [t("contentManager.survey.summaryPlanLength"), t("contentManager.survey.weeksUnit", { count: config.planDurationWeeks })],
+    [t("contentManager.survey.summarySessions"), t("contentManager.survey.sessionsSummary", { count: config.sessionsPerWeek, minutes: config.minutesPerSession })],
   ];
   return (
     <dl className="cs-summary">
@@ -62,6 +64,7 @@ function ResultSummary({ config }) {
  * (trên form trước, rồi POST .../preview/check) và không lưu gì.
  */
 export default function PreviewStepModal({ open, stepId, onClose, onEdit }) {
+  const { t } = useTranslation();
   const [state, setState] = useState({ status: "idle" });
   const [values, setValues] = useState({});
   const [errors, setErrors] = useState({});
@@ -78,7 +81,7 @@ export default function PreviewStepModal({ open, stepId, onClose, onEdit }) {
         setValues(Object.fromEntries(questions.map((q) => [q.questionCode, toFormValue(q, q.defaultValue)])));
         setState({ status: "ready", preview: { ...preview, questions } });
       })
-      .catch((err) => setState({ status: "error", message: surveyErrorMessage(err, "We could not load the preview.") }));
+      .catch((err) => setState({ status: "error", message: surveyErrorMessage(err, t("contentManager.survey.couldNotLoadPreview")) }));
   }, [stepId]);
 
   useEffect(() => {
@@ -116,7 +119,7 @@ export default function PreviewStepModal({ open, stepId, onClose, onEdit }) {
     const { errors: fieldErrors, answers } = prepareStep({ steps: [step] }, step, values);
     setErrors(fieldErrors);
     if (Object.keys(fieldErrors).length > 0) {
-      setCheck({ status: "invalid", text: "Some answers would be rejected. Fix the highlighted fields." });
+      setCheck({ status: "invalid", text: t("contentManager.survey.answersRejected") });
       return;
     }
     setCheck({ status: "checking" });
@@ -126,14 +129,14 @@ export default function PreviewStepModal({ open, stepId, onClose, onEdit }) {
         answers.filter((a) => a.value !== null),
       );
       if (res.valid) {
-        setCheck({ status: "valid", text: "These answers are valid. Nothing was saved." });
+        setCheck({ status: "valid", text: t("contentManager.survey.answersValid") });
       } else {
         setErrors(Object.fromEntries(res.errors.filter((e) => e.questionCode).map((e) => [e.questionCode, e.message])));
         const general = res.errors.filter((e) => !e.questionCode).map((e) => e.message);
-        setCheck({ status: "invalid", text: general[0] ?? "Some answers would be rejected." });
+        setCheck({ status: "invalid", text: general[0] ?? t("contentManager.survey.someAnswersRejected") });
       }
     } catch (err) {
-      setCheck({ status: "error", text: surveyErrorMessage(err, "We could not check these answers.") });
+      setCheck({ status: "error", text: surveyErrorMessage(err, t("contentManager.survey.couldNotCheckAnswers")) });
     }
   };
 
@@ -145,24 +148,27 @@ export default function PreviewStepModal({ open, stepId, onClose, onEdit }) {
     <ModalShell open={open} onClose={onClose} labelledBy="preview-step-title" className="cs-modal cs-modal--preview">
       <div className="cs-modal-head">
         <div>
-          <h2 id="preview-step-title">Preview step</h2>
+          <h2 id="preview-step-title">{t("contentManager.survey.previewStep")}</h2>
           {preview && (
             <p className="cs-muted">
-              Step {preview.step.position} · {preview.step.stepName} · This is how members see it. Nothing is saved.
+              {t("contentManager.survey.previewCaption", {
+                position: preview.step.position,
+                name: preview.step.stepName,
+              })}
             </p>
           )}
         </div>
-        <button type="button" className="modal-close" aria-label="Close" onClick={onClose}>
+        <button type="button" className="modal-close" aria-label={t("common.ui.closeAria")} onClick={onClose}>
           <CloseRoundedIcon />
         </button>
       </div>
 
-      {state.status === "loading" && <p className="cs-muted cs-pad">Loading preview…</p>}
+      {state.status === "loading" && <p className="cs-muted cs-pad">{t("contentManager.survey.loadingPreview")}</p>}
       {state.status === "error" && (
         <div className="cs-alert error" role="alert">
           <p>{state.message}</p>
           <button type="button" className="cs-text-btn" onClick={load}>
-            Try again
+            {t("contentManager.detail.tryAgain")}
           </button>
         </div>
       )}
@@ -171,7 +177,7 @@ export default function PreviewStepModal({ open, stepId, onClose, onEdit }) {
         <>
           {!preview.visibleToMembers && (
             <p className="cs-alert warning">
-              This step is {STATUS_LABELS[preview.step.status].toLowerCase()}, so members do not see it yet.
+              {t("contentManager.survey.notVisibleYet", { status: STATUS_LABELS[preview.step.status].toLowerCase() })}
             </p>
           )}
 
@@ -191,7 +197,7 @@ export default function PreviewStepModal({ open, stepId, onClose, onEdit }) {
               {isResult ? (
                 <ResultSummary config={preview.resultConfig} />
               ) : preview.questions.length === 0 ? (
-                <p className="cs-muted cs-pad">This step has no active questions yet.</p>
+                <p className="cs-muted cs-pad">{t("contentManager.survey.noActiveQuestions")}</p>
               ) : (
                 <div className="survey-questions">
                   {preview.questions
@@ -204,7 +210,7 @@ export default function PreviewStepModal({ open, stepId, onClose, onEdit }) {
                           error={errors[q.questionCode]}
                           onChange={(v) => setValue(q.questionCode, v)}
                         />
-                        {!errors[q.questionCode] && rangeHint(q) && <p className="cs-preview-hint">{rangeHint(q)}</p>}
+                        {!errors[q.questionCode] && rangeHint(q, t) && <p className="cs-preview-hint">{rangeHint(q, t)}</p>}
                       </div>
                     ))}
                 </div>
@@ -223,7 +229,7 @@ export default function PreviewStepModal({ open, stepId, onClose, onEdit }) {
                     onClick={handleContinue}
                     disabled={check?.status === "checking"}
                   >
-                    <span>{check?.status === "checking" ? "Checking…" : "Continue"}</span>
+                    <span>{check?.status === "checking" ? t("contentManager.survey.checking") : t("contentManager.survey.continue")}</span>
                     <ArrowRight />
                   </button>
                 </>
@@ -233,10 +239,10 @@ export default function PreviewStepModal({ open, stepId, onClose, onEdit }) {
 
           <div className="cs-modal-actions">
             <button type="button" className="cs-ghost-btn" onClick={onClose}>
-              Close
+              {t("contentManager.detail.close")}
             </button>
             <button type="button" className="cs-primary-btn" onClick={() => onEdit(preview.step)}>
-              {isResult ? "Configure" : "Edit step"}
+              {isResult ? t("contentManager.survey.configure") : t("contentManager.survey.editStep")}
             </button>
           </div>
         </>

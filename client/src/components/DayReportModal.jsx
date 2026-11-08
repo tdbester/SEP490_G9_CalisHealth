@@ -7,6 +7,7 @@ import AccessibilityNewRoundedIcon from "@mui/icons-material/AccessibilityNewRou
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import DirectionsWalkRoundedIcon from "@mui/icons-material/DirectionsWalkRounded";
 import HorizontalRuleRoundedIcon from "@mui/icons-material/HorizontalRuleRounded";
+import { useTranslation } from "react-i18next";
 import "./DayReportModal.css";
 
 function formatReportDate(dayKey) {
@@ -41,6 +42,7 @@ function ExerciseIcon({ icon }) {
 
 /** Ô số liệu: Sets / Reps / Form accuracy. */
 function MetricBox({ label, value, caption, tone, progress }) {
+  const { t } = useTranslation();
   return (
     <div className={`report-metric ${tone ? `is-${tone}` : ""}`}>
       <span className="report-metric-label">{label}</span>
@@ -53,7 +55,7 @@ function MetricBox({ label, value, caption, tone, progress }) {
           aria-valuenow={progress}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label={`${label} ${progress}%`}
+          aria-label={t("member.report.metricProgressAria", { label, progress })}
         >
           <div className="report-metric-fill" style={{ width: `${progress}%` }} />
         </div>
@@ -64,6 +66,7 @@ function MetricBox({ label, value, caption, tone, progress }) {
 
 /** Thẻ một bài tập: header gập/tháng + 3 ô số liệu khi mở rộng. */
 function ExerciseCard({ exercise, expanded, onToggle }) {
+  const { t } = useTranslation();
   return (
     <li className={`report-ex-card ${expanded ? "is-expanded" : ""}`}>
       <button
@@ -81,10 +84,10 @@ function ExerciseCard({ exercise, expanded, onToggle }) {
 
       {expanded && (
         <div className="report-ex-body">
-          <MetricBox label="Sets" value={exercise.sets} caption="completed" />
-          <MetricBox label="Reps" value={exercise.reps} caption="per set" />
+          <MetricBox label={t("member.report.sets")} value={exercise.sets} caption={t("member.report.completed")} />
+          <MetricBox label={t("member.report.reps")} value={exercise.reps} caption={t("member.report.perSet")} />
           <MetricBox
-            label="Form accuracy"
+            label={t("member.report.formAccuracy")}
             value={`${exercise.formAccuracy}%`}
             tone="pink"
             progress={exercise.formAccuracy}
@@ -100,6 +103,7 @@ function ExerciseCard({ exercise, expanded, onToggle }) {
  * Đóng bằng nút "Back to Day Streak", nút X, phím Esc hoặc bấm ra ngoài.
  */
 export default function DayReportModal({ dayKey, report, loading, error, onClose }) {
+  const { t } = useTranslation();
   const [expandedId, setExpandedId] = useState(null);
   const dialogRef = useRef(null);
 
@@ -147,14 +151,14 @@ export default function DayReportModal({ dayKey, report, loading, error, onClose
         <header className="report-head">
           <button type="button" className="report-back" onClick={onClose}>
             <ArrowBackRoundedIcon />
-            Back to Day Streak
+            {t("member.report.backToDayStreak")}
           </button>
 
           <button
             type="button"
             className="report-close"
             onClick={onClose}
-            aria-label="Close day report"
+            aria-label={t("member.report.closeDayReport")}
           >
             <CloseRoundedIcon />
           </button>
@@ -163,18 +167,18 @@ export default function DayReportModal({ dayKey, report, loading, error, onClose
         {/* ── Title & date ──────────────────────────────────────── */}
         <div className="report-title-block">
           <h2 className="report-title" id="report-title">
-            Day Report
+            {t("member.report.dayReport")}
           </h2>
           <p className="report-date">{formatReportDate(dayKey)}</p>
         </div>
 
         {/* ── Completed exercises ───────────────────────────────── */}
-        <h3 className="report-section-title">Completed Exercises</h3>
+        <h3 className="report-section-title">{t("member.report.completedExercises")}</h3>
 
         {loading ? (
-          <p role="status">Loading workout report...</p>
+          <p role="status">{t("member.report.loadingReport")}</p>
         ) : error ? (
-          <p role="alert">No completed workout report is available for this date.</p>
+          <p role="alert">{t("member.report.noReport")}</p>
         ) : report ? (
           <>
             <ul className="report-ex-list">

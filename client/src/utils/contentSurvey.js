@@ -1,35 +1,37 @@
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import i18n from "../i18n";
 import { questionLabel } from "./survey";
 
 dayjs.extend(relativeTime);
 
+/** Dịch 1 key của namespace contentManager. */
+const t = (key, options) => i18n.t(key, options);
+
 /* Hiển thị dữ liệu của Survey management (Content Manager). */
 
-const TYPE_LABELS = {
-  NUMBER: "Numeric input",
-  SINGLE_SELECT: "Single choice",
-  MULTIPLE_SELECT: "Multiple choice",
-  BOOLEAN: "Yes / no",
-  TEXT: "Text",
-  TEXTAREA: "Long text",
-};
-
-export const typeLabel = (type) => TYPE_LABELS[type] ?? type;
+export const typeLabel = (type) => t(`contentManager:survey.typeLabels.${type}`, { defaultValue: type });
 
 /** "Numeric input, single choice" (Figma: chữ hoa ở loại đầu tiên). */
 export function typeSummary(types) {
-  const text = types.map((t) => typeLabel(t).toLowerCase()).join(", ");
+  const text = types.map((type) => typeLabel(type).toLowerCase()).join(", ");
   return text ? text[0].toUpperCase() + text.slice(1) : "";
 }
 
 /** "Updated 2 days ago" */
-export const updatedAgo = (updatedAt) => (updatedAt ? `Updated ${dayjs(updatedAt).fromNow()}` : "");
+export const updatedAgo = (updatedAt) =>
+  updatedAt ? `${t("contentManager:survey.updatedLabel")} ${dayjs(updatedAt).fromNow()}` : "";
 
 /** Dòng tóm tắt dưới mỗi bước trong danh sách. */
 export function stepMeta(step) {
-  if (step.stepType === "RESULT") return ["System output", "Uses the level criteria", updatedAgo(step.updatedAt)];
-  const count = `${step.questionCount} question${step.questionCount === 1 ? "" : "s"}`;
+  if (step.stepType === "RESULT") {
+    return [
+      t("contentManager:survey.systemOutput"),
+      t("contentManager:survey.usesLevelCriteria"),
+      updatedAgo(step.updatedAt),
+    ];
+  }
+  const count = t("contentManager:survey.questionCount", { count: step.questionCount });
   return [count, typeSummary(step.questionTypes), updatedAgo(step.updatedAt)].filter(Boolean);
 }
 
@@ -37,20 +39,30 @@ export function stepMeta(step) {
 export function rangeText(rules, unit) {
   const { min, max } = rules ?? {};
   const suffix = unit ? ` ${unit}` : "";
-  if (min != null && max != null) return `${min} to ${max}${suffix}`;
-  if (min != null) return `At least ${min}${suffix}`;
-  if (max != null) return `At most ${max}${suffix}`;
+  if (min != null && max != null) return t("contentManager:survey.rangeTo", { min, max, unit: suffix });
+  if (min != null) return t("contentManager:survey.rangeAtLeastShort", { min, unit: suffix });
+  if (max != null) return t("contentManager:survey.rangeAtMostShort", { max, unit: suffix });
   return null;
 }
 
-export const STATUS_LABELS = { ACTIVE: "Active", DRAFT: "Draft", INACTIVE: "Inactive" };
+export const STATUS_LABELS = {
+  get ACTIVE() {
+    return t("contentManager:survey.statusLabels.ACTIVE");
+  },
+  get DRAFT() {
+    return t("contentManager:survey.statusLabels.DRAFT");
+  },
+  get INACTIVE() {
+    return t("contentManager:survey.statusLabels.INACTIVE");
+  },
+};
 
 /** Tab lọc của danh sách: key = status gửi lên API (rỗng = All), countKey = field trong counts. */
 export const STATUS_TABS = [
-  { status: "", label: "All", countKey: "all" },
-  { status: "ACTIVE", label: "Active", countKey: "active" },
-  { status: "DRAFT", label: "Draft", countKey: "draft" },
-  { status: "INACTIVE", label: "Inactive", countKey: "inactive" },
+  { status: "", labelKey: "all", countKey: "all" },
+  { status: "ACTIVE", labelKey: "active", countKey: "active" },
+  { status: "DRAFT", labelKey: "draft", countKey: "draft" },
+  { status: "INACTIVE", labelKey: "inactive", countKey: "inactive" },
 ];
 
 export const DESCRIPTION_MAX = 150;
@@ -110,7 +122,7 @@ export function blankRow() {
   return {
     ...questionToRow({ questionCode: null, questionText: "", questionType: "SINGLE_SELECT", required: true }),
     originalTitle: "",
-    options: [newOption("Option 1")],
+    options: [newOption(t("contentManager:survey.optionDefaultLabel", { index: 1 }))],
     dirty: true,
   };
 }
@@ -142,12 +154,11 @@ export function rowRules(row) {
 /** Dòng tóm tắt dưới tên câu hỏi: "0 to 60 reps", "3 options", "Up to 200 characters". */
 export function rowSummary(row) {
   if (isChoiceType(row.questionType)) {
-    const count = row.options.length;
-    return `${count} option${count === 1 ? "" : "s"}`;
+    return t("contentManager:survey.optionCountLabel", { count: row.options.length });
   }
   const rules = rowRules(row);
   if (row.questionType === "NUMBER") return rangeText(rules, row.unit.trim());
-  if (rules.maxLength != null) return `Up to ${rules.maxLength} characters`;
+  if (rules.maxLength != null) return t("contentManager:survey.upToCharacters", { count: rules.maxLength });
   return null;
 }
 
@@ -175,29 +186,32 @@ const isWholeNumber = (text) => /^\d+$/.test(text.trim());
 
 /** Kiểm tra phía client trước khi gửi (BE vẫn kiểm tra lại đầy đủ). */
 export function rowProblems(row, position) {
-  const where = `Question ${position}`;
   const problems = [];
-  if (!row.title.trim()) problems.push(`${where}: enter the question.`);
+  const where = { position };
+  if (!row.title.trim()) problems.push(t("contentManager:survey.problems.enterQuestion", where));
   if (isChoiceType(row.questionType)) {
     const labels = row.options.map((o) => o.label.trim().toLowerCase());
-    if (labels.length === 0) problems.push(`${where}: add at least one option.`);
-    if (labels.some((l) => !l)) problems.push(`${where}: every option needs a label.`);
+    if (labels.length === 0) problems.push(t("contentManager:survey.problems.addOption", where));
+    if (labels.some((l) => !l)) problems.push(t("contentManager:survey.problems.optionLabel", where));
     if (new Set(labels.filter(Boolean)).size !== labels.filter(Boolean).length) {
-      problems.push(`${where}: options must be different.`);
+      problems.push(t("contentManager:survey.problems.optionUnique", where));
     }
     if (row.questionType === "MULTIPLE_SELECT" && row.maxSelections.trim() && !(isWholeNumber(row.maxSelections) && Number(row.maxSelections) >= 1)) {
-      problems.push(`${where}: max selections must be a whole number of at least 1.`);
+      problems.push(t("contentManager:survey.problems.maxSelections", where));
     }
   }
   if (row.questionType === "NUMBER") {
     const min = numberOrNull(row.min);
     const max = numberOrNull(row.max);
-    if (Number.isNaN(min) || Number.isNaN(max)) problems.push(`${where}: min and max must be numbers.`);
-    else if (min != null && max != null && min > max) problems.push(`${where}: min must not be greater than max.`);
+    if (Number.isNaN(min) || Number.isNaN(max)) {
+      problems.push(t("contentManager:survey.problems.numbersOnly", where));
+    } else if (min != null && max != null && min > max) {
+      problems.push(t("contentManager:survey.problems.minNotGreater", where));
+    }
   }
   if ((row.questionType === "TEXT" || row.questionType === "TEXTAREA") && row.maxLength.trim()
     && !(isWholeNumber(row.maxLength) && Number(row.maxLength) >= 1)) {
-    problems.push(`${where}: max length must be a whole number of at least 1.`);
+    problems.push(t("contentManager:survey.problems.maxLength", where));
   }
   return problems;
 }

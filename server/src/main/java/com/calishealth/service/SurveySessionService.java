@@ -279,7 +279,13 @@ public class SurveySessionService {
             JsonNode value = values.get(slot);
             if (value != null && value.canConvertToInt()) valuesBySlot.put(slot, value.intValue());
         }
-        levelBenchmarks.assignLevelFromOnboarding(session.getUser().getId(), valuesBySlot);
+        try {
+            levelBenchmarks.assignLevelFromOnboarding(session.getUser().getId(), valuesBySlot);
+        } catch (Exception e) {
+            // Benchmark level assignment failure should not fail the survey completion
+            // Log but continue - level will be assigned via rules or manually later
+            System.err.println("Warning: Failed to assign benchmark level for user " + session.getUser().getId() + ": " + e.getMessage());
+        }
     }
 
     /**

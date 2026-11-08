@@ -6,6 +6,7 @@ import {
   Tooltip, Typography,
 } from "@mui/material";
 import { keyframes } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import EventNoteRoundedIcon from "@mui/icons-material/EventNoteRounded";
@@ -29,33 +30,35 @@ const enter = (delay = 0) => ({
 });
 
 const BREADCRUMB = [
-  { label: "Content manager", to: CONTENT_PATHS.dashboard },
-  { label: "Daily Training Plans" },
+  { labelKey: "nav.contentManagerRole", to: CONTENT_PATHS.dashboard },
+  { labelKey: "nav.dailyTrainingPlans" },
 ];
 
 // Fixed widths: Name, Level, Type, Days/week, Status, Action.
 const COLUMN_WIDTHS = ["31%", "14%", "16%", "13%", "13%", "13%"];
 
 export function StatusDot({ active }) {
+  const { t } = useTranslation();
   return (
     <Stack direction="row" spacing={0.75} alignItems="center">
       <Box sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: active ? CM.green : CM.pink }} />
       <Typography variant="caption" sx={{ color: active ? CM.green : CM.pink, fontWeight: 600 }}>
-        {active ? "Active" : "Inactive"}
+        {active ? t("contentManager.templates.active") : t("contentManager.templates.inactive")}
       </Typography>
     </Stack>
   );
 }
 
-function planType(days) {
+function planType(days, t) {
   const types = new Set((days || []).flatMap((day) => day.workoutTypes || []).map((type) => String(type).toUpperCase()));
-  if (types.has("FLEX") || (types.has("HEALTH") && types.has("SKILL"))) return "Flex";
-  if (types.has("HEALTH")) return "Health";
-  if (types.has("SKILL")) return "Skill";
-  return "Flex";
+  if (types.has("FLEX") || (types.has("HEALTH") && types.has("SKILL"))) return t("contentManager.templates.typeFlex");
+  if (types.has("HEALTH")) return t("contentManager.templates.typeHealth");
+  if (types.has("SKILL")) return t("contentManager.templates.typeSkill");
+  return t("contentManager.templates.typeFlex");
 }
 
 export default function DailyPlanTemplateListPage() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const routedSuccess = location.state?.successMessage;
@@ -108,41 +111,41 @@ export default function DailyPlanTemplateListPage() {
 
       <ContentPageHeader
         breadcrumb={BREADCRUMB}
-        title="Daily Training Plan Templates"
-        description="Schedule existing system workouts onto each training day by level and days per week."
+        title={t("contentManager.templates.pageTitle")}
+        description={t("contentManager.templates.pageDescription")}
         action={(
           <Button component={RouterLink} to={`${CONTENT_PATHS.templates}/new`} variant="contained" startIcon={<AddRoundedIcon />}>
-            Create plan
+            {t("contentManager.templates.createPlan")}
           </Button>
         )}
       />
 
-      <Box component="section" aria-label="Plan summary" sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" } }}>
-        <Box sx={enter(0)}><SummaryCard label="All plans" count={templates.length} detail="templates" /></Box>
-        <Box sx={enter(80)}><SummaryCard label="Active" tone="success" count={activeCount} detail="templates" /></Box>
-        <Box sx={enter(160)}><SummaryCard label="Inactive" tone="error" count={templates.length - activeCount} detail="templates" /></Box>
+      <Box component="section" aria-label={t("contentManager.templates.summary")} sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" } }}>
+        <Box sx={enter(0)}><SummaryCard label={t("contentManager.templates.allPlans")} count={templates.length} detail={t("contentManager.templates.templates")} /></Box>
+        <Box sx={enter(80)}><SummaryCard label={t("contentManager.templates.active")} tone="success" count={activeCount} detail={t("contentManager.templates.templates")} /></Box>
+        <Box sx={enter(160)}><SummaryCard label={t("contentManager.templates.inactive")} tone="error" count={templates.length - activeCount} detail={t("contentManager.templates.templates")} /></Box>
       </Box>
 
       <Card sx={{ mt: 2.5, overflow: "hidden", ...enter(220) }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ xs: "stretch", md: "center" }} sx={{ p: 1.5, borderBottom: `1px solid ${CM.border}` }}>
           <TextField
             size="small" fullWidth value={search} onChange={resetPage(setSearch)}
-            placeholder="Search plan" inputProps={{ "aria-label": "Search plan" }}
+            placeholder={t("contentManager.templates.searchPlaceholder")} inputProps={{ "aria-label": t("contentManager.templates.searchAria") }}
             InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" color="disabled" /></InputAdornment> }}
             sx={{ flex: 1, minWidth: 200 }}
           />
-          <TextField select size="small" value={status} onChange={resetPage(setStatus)} SelectProps={{ SelectDisplayProps: { "aria-label": "Filter by status" } }} sx={{ minWidth: 125 }}>
-            <MenuItem value="all">All status</MenuItem>
-            <MenuItem value="active">Active</MenuItem>
-            <MenuItem value="inactive">Inactive</MenuItem>
+          <TextField select size="small" value={status} onChange={resetPage(setStatus)} SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.templates.filterByStatus") } }} sx={{ minWidth: 125 }}>
+            <MenuItem value="all">{t("contentManager.templates.allStatus")}</MenuItem>
+            <MenuItem value="active">{t("contentManager.templates.active")}</MenuItem>
+            <MenuItem value="inactive">{t("contentManager.templates.inactive")}</MenuItem>
           </TextField>
-          <TextField select size="small" value={level} onChange={resetPage(setLevel)} SelectProps={{ SelectDisplayProps: { "aria-label": "Filter by level" } }} sx={{ minWidth: 125 }}>
-            <MenuItem value="all">All levels</MenuItem>
+          <TextField select size="small" value={level} onChange={resetPage(setLevel)} SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.templates.filterByLevel") } }} sx={{ minWidth: 125 }}>
+            <MenuItem value="all">{t("contentManager.templates.allLevels")}</MenuItem>
             {levelNames.map((name) => <MenuItem key={name} value={name.toLowerCase()}>{name}</MenuItem>)}
           </TextField>
-          <Tooltip title="Refresh">
+          <Tooltip title={t("contentManager.templates.refresh")}>
             <span>
-              <IconButton onClick={() => refetch()} disabled={isFetching} aria-label="Refresh plan list" sx={{ border: 1, borderColor: "divider", borderRadius: 2 }}>
+              <IconButton onClick={() => refetch()} disabled={isFetching} aria-label={t("contentManager.templates.refreshAria")} sx={{ border: 1, borderColor: "divider", borderRadius: 2 }}>
                 {isFetching ? <CircularProgress size={18} /> : <RefreshRoundedIcon fontSize="small" />}
               </IconButton>
             </span>
@@ -157,12 +160,12 @@ export default function DailyPlanTemplateListPage() {
 
         {isLoading ? (
           <Box sx={{ py: 8, display: "grid", placeItems: "center" }}>
-            <Stack spacing={1.5} alignItems="center"><CircularProgress size={24} /><Typography variant="body2" color="text.secondary">Loading plans…</Typography></Stack>
+            <Stack spacing={1.5} alignItems="center"><CircularProgress size={24} /><Typography variant="body2" color="text.secondary">{t("contentManager.templates.loading")}</Typography></Stack>
           </Box>
         ) : error ? (
           <Box sx={{ py: 6, px: 2 }}>
-            <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => refetch()}>Try again</Button>}>
-              Could not load daily training plans. {error.message}
+            <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => refetch()}>{t("contentManager.templates.tryAgain")}</Button>}>
+              {t("contentManager.templates.loadFailed", { message: error.message })}
             </Alert>
           </Box>
         ) : (
@@ -180,12 +183,12 @@ export default function DailyPlanTemplateListPage() {
                 </colgroup>
                 <TableHead>
                   <TableRow sx={{ "& th": headSx }}>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Level</TableCell>
-                    <TableCell>Type</TableCell>
-                    <TableCell>Days / week</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Action</TableCell>
+                    <TableCell>{t("contentManager.templates.colName")}</TableCell>
+                    <TableCell>{t("contentManager.templates.colLevel")}</TableCell>
+                    <TableCell>{t("contentManager.templates.colType")}</TableCell>
+                    <TableCell>{t("contentManager.templates.colDaysPerWeek")}</TableCell>
+                    <TableCell>{t("contentManager.templates.colStatus")}</TableCell>
+                    <TableCell>{t("contentManager.templates.colAction")}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -201,15 +204,15 @@ export default function DailyPlanTemplateListPage() {
                         </Stack>
                       </TableCell>
                       <TableCell><DarkPill tone={levelTone(item.level)}>{item.level || "—"}</DarkPill></TableCell>
-                      <TableCell><DarkPill tone="primary">{planType(item.days)}</DarkPill></TableCell>
+                      <TableCell><DarkPill tone="primary">{planType(item.days, t)}</DarkPill></TableCell>
                       <TableCell><Typography sx={{ color: "#fff", fontSize: 18, fontWeight: 700, lineHeight: 1.2 }}>{item.daysPerWeek}</Typography></TableCell>
                       <TableCell><Box sx={{ display: "flex", justifyContent: "center" }}><StatusDot active={item.active} /></Box></TableCell>
                       <TableCell>
                         <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
                           <Button component={RouterLink} to={`${CONTENT_PATHS.templates}/${encodeURIComponent(item.code)}`} size="small" variant="outlined" sx={{ py: 0.25, px: 1.25, fontSize: 11.5, minWidth: 0, borderRadius: "8px" }}>
-                            View
+                            {t("contentManager.templates.view")}
                           </Button>
-                          <IconButton size="small" aria-label={`More actions for ${item.name}`} onClick={(event) => setMenu({ anchor: event.currentTarget, template: item })}>
+                          <IconButton size="small" aria-label={t("contentManager.templates.moreActions", { name: item.name })} onClick={(event) => setMenu({ anchor: event.currentTarget, template: item })}>
                             <MoreVertRoundedIcon fontSize="small" />
                           </IconButton>
                         </Stack>
@@ -222,7 +225,7 @@ export default function DailyPlanTemplateListPage() {
                         <Stack alignItems="center" spacing={1}>
                           <EventNoteRoundedIcon sx={{ fontSize: 44, color: CM.textDim, opacity: 0.4 }} />
                           <Typography variant="body2" color="text.secondary">
-                            {templates.length ? "No plans match this search." : "No daily training plans yet. Create one from your existing workouts."}
+                            {templates.length ? t("contentManager.templates.noMatch") : t("contentManager.templates.empty")}
                           </Typography>
                         </Stack>
                       </TableCell>
@@ -236,7 +239,7 @@ export default function DailyPlanTemplateListPage() {
               onPageChange={(_, next) => setPage(next)} rowsPerPage={rowsPerPage}
               onRowsPerPageChange={(event) => { setRowsPerPage(parseInt(event.target.value, 10)); setPage(0); }}
               rowsPerPageOptions={[10, 20, 50]}
-              labelDisplayedRows={({ from, to, count }) => `Showing ${from}-${to} of ${count} plans`}
+              labelDisplayedRows={({ from, to, count }) => t("contentManager.templates.showingRows", { from, to, count })}
             />
           </>
         )}
@@ -244,22 +247,22 @@ export default function DailyPlanTemplateListPage() {
 
       <Menu anchorEl={menu.anchor} open={Boolean(menu.anchor)} onClose={closeMenu}>
         <MenuItem component={RouterLink} to={menu.template ? `${CONTENT_PATHS.templates}/${encodeURIComponent(menu.template.code)}` : "#"} onClick={closeMenu}>
-          View details
+          {t("contentManager.templates.viewDetails")}
         </MenuItem>
         <MenuItem
           disabled={statusMutation.isPending}
           onClick={() => { const item = menu.template; closeMenu(); if (item) statusMutation.mutate({ code: item.code, active: !item.active }); }}
         >
-          {menu.template?.active ? "Set inactive" : "Set active"}
+          {menu.template?.active ? t("contentManager.templates.setInactive") : t("contentManager.templates.setActive")}
         </MenuItem>
         <MenuItem
           disabled={deleteMutation.isPending} sx={{ color: "error.main" }}
           onClick={() => {
             const item = menu.template; closeMenu();
-            if (item && window.confirm(`Delete "${item.name}"? This cannot be undone.`)) deleteMutation.mutate(item.code);
+            if (item && window.confirm(t("contentManager.templates.deleteConfirm", { name: item.name }))) deleteMutation.mutate(item.code);
           }}
         >
-          <DeleteOutlineRoundedIcon fontSize="small" sx={{ mr: 1 }} />Delete
+          <DeleteOutlineRoundedIcon fontSize="small" sx={{ mr: 1 }} />{t("contentManager.templates.delete")}
         </MenuItem>
       </Menu>
     </Box>

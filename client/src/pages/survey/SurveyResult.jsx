@@ -4,7 +4,7 @@ import { surveyApi, surveyErrorMessage } from "../../api/survey";
 import SurveyProgress from "../../components/survey/SurveyProgress";
 import TrainingPlanPreviewModal from "../../components/survey/TrainingPlanPreviewModal";
 import { ArrowLeft, ArrowRight, MedalIcon, RefreshIcon, SparkleIcon } from "../../components/survey/SurveyIcons";
-import { durationRange } from "../../utils/planCalendar";
+import { useTranslation } from "react-i18next";
 import "./Survey.css";
 
 /** Số đẹp cho kết quả: 35 -> "35", 12.5 -> "12.5". */
@@ -22,6 +22,7 @@ const LEVEL_TEST_SLUG = "level-test";
  */
 export default function SurveyResult() {
   const navigate = useNavigate();
+  const { t } = useTranslation("member");
   const [state, setState] = useState({ status: "loading" });
   const [previewOpen, setPreviewOpen] = useState(false);
   const [busy, setBusy] = useState(null); // null | "start" | "back"
@@ -41,12 +42,12 @@ export default function SurveyResult() {
       ]);
       setState({ status: "ready", result, sessionId: completed.sessionId, stepCount: definition.steps.length });
     } catch (err) {
-      setState({ status: "error", message: surveyErrorMessage(err, "We could not load your result.") });
+      setState({ status: "error", message: surveyErrorMessage(err, t("survey.result.loadFailed")) });
     }
   }, [navigate]);
 
   useEffect(() => {
-    document.title = "CalisHealth · Survey – Result";
+    document.title = t("survey.result.documentTitle");
     load();
   }, [load]);
 
@@ -60,7 +61,7 @@ export default function SurveyResult() {
     } catch (err) {
       setState((prev) => ({
         ...prev,
-        actionError: surveyErrorMessage(err, "We could not start your training plan. Please try again."),
+        actionError: surveyErrorMessage(err, t("survey.result.startPlanFailed")),
       }));
       setBusy(null);
     }
@@ -76,7 +77,7 @@ export default function SurveyResult() {
     } catch (err) {
       setState((prev) => ({
         ...prev,
-        actionError: surveyErrorMessage(err, "We could not reopen the level test. Please try again."),
+        actionError: surveyErrorMessage(err, t("survey.result.reopenFailed")),
       }));
       setBusy(null);
     }
@@ -86,16 +87,16 @@ export default function SurveyResult() {
     return (
       <div className="survey-page survey-page--center">
         {state.status === "loading" ? (
-          <p className="survey-status">Calculating your level…</p>
+          <p className="survey-status">{t("survey.result.calculating")}</p>
         ) : (
           <div className="survey-status-box" role="alert">
             <p className="survey-status">{state.message}</p>
             <div className="survey-status-actions">
               <button type="button" className="survey-btn survey-btn--primary" onClick={load}>
-                Try again
+                {t("survey.tryAgain")}
               </button>
               <button type="button" className="survey-link" onClick={() => navigate("/", { replace: true })}>
-                Go to dashboard
+                {t("survey.goToDashboard")}
               </button>
             </div>
           </div>
@@ -115,11 +116,9 @@ export default function SurveyResult() {
         <SurveyProgress current={state.stepCount} total={state.stepCount} />
 
         <header className="survey-header">
-          <p className="survey-header-label">Result &amp; recommended plan</p>
-          <h1 className="survey-header-title">Your results are in</h1>
-          <p className="survey-header-subtitle">
-            A starting point that fits you. Let&apos;s build strength, one session at a time.
-          </p>
+          <p className="survey-header-label">{t("survey.result.eyebrow")}</p>
+          <h1 className="survey-header-title">{t("survey.result.title")}</h1>
+          <p className="survey-header-subtitle">{t("survey.result.subtitle")}</p>
         </header>
 
         {state.actionError && (
@@ -135,22 +134,18 @@ export default function SurveyResult() {
               <MedalIcon />
             </span>
             <div className="result-level-text">
-              <p className="result-muted">Your current level</p>
-              <p className="result-level-name">{level?.name ?? "Not assessed yet"}</p>
+              <p className="result-muted">{t("survey.result.currentLevel")}</p>
+              <p className="result-level-name">{level?.name ?? t("survey.result.notAssessed")}</p>
             </div>
             {level?.rank && (
               <span className="result-badge">
-                Level {level.rank} of {totalSteps}
+                {t("survey.result.levelOf", { rank: level.rank, total: totalSteps })}
               </span>
             )}
           </div>
 
           {assessment.summary && <p className="result-body">{assessment.summary}</p>}
-          {!level && (
-            <p className="result-body">
-              We could not assess your level from your answers. You can retake the survey any time.
-            </p>
-          )}
+          {!level && <p className="result-body">{t("survey.result.couldNotAssess")}</p>}
 
           {levels.length > 0 && (
             <div className="result-ladder" aria-hidden="true">
@@ -174,8 +169,8 @@ export default function SurveyResult() {
         {assessment.showLevelBreakdown && assessment.criteria.length > 0 && (
           <section className="result-section">
             <div className="result-section-head">
-              <h2 className="result-section-title">Your test results</h2>
-              <p className="result-muted">Your starting benchmark</p>
+              <h2 className="result-section-title">{t("survey.result.testResults")}</h2>
+              <p className="result-muted">{t("survey.result.startingBenchmark")}</p>
             </div>
             <div className={`result-scores result-scores--count-${Math.min(assessment.criteria.length, 7)}`}>
               {assessment.criteria.map((item) => (
@@ -188,7 +183,7 @@ export default function SurveyResult() {
                   {item.bandLabel && <p className="result-score-band">{item.bandLabel}</p>}
                   {item.score !== null && item.score !== undefined && (
                     <p className="result-score-points">
-                      {formatNumber(item.score)} {Number(item.score) === 1 ? "point" : "points"}
+                      {t("survey.result.point", { count: Number(item.score) })}
                     </p>
                   )}
                 </div>
@@ -202,20 +197,24 @@ export default function SurveyResult() {
           <section className="result-card result-plan">
             <span className="result-plan-tag">
               <SparkleIcon />
-              Recommended for you
+              {t("survey.result.recommendedForYou")}
             </span>
             <h3 className="result-plan-name">{plan.name}</h3>
             {plan.description && <p className="result-body">{plan.description}</p>}
 
             <div className="result-chips">
-              <span>{plan.weeks} weeks</span>
-              <span>{plan.sessionsPerWeek} sessions / week</span>
-              <span>{durationRange(plan.minutesPerSession)} / session</span>
+              <span>{t("survey.result.weeks", { count: plan.weeks })}</span>
+              <span>{t("survey.result.sessionsPerWeek", { count: plan.sessionsPerWeek })}</span>
+              <span>
+                {t("survey.result.perSession", {
+                  duration: `${Math.max(10, plan.minutesPerSession - 5)}–${plan.minutesPerSession} min`,
+                })}
+              </span>
             </div>
 
             <div className="result-divider" />
 
-            <p className="result-rhythm-title">Your weekly rhythm</p>
+            <p className="result-rhythm-title">{t("survey.result.weeklyRhythm")}</p>
             <ul className="result-rhythm">
               {plan.rhythm.map((slot) => (
                 <li key={slot.day}>
@@ -246,12 +245,12 @@ export default function SurveyResult() {
             onClick={handleStartPlan}
             disabled={Boolean(busy)}
           >
-            <span>{busy === "start" ? "Starting…" : "Start my training plan"}</span>
+            <span>{busy === "start" ? t("survey.result.starting") : t("survey.result.startPlan")}</span>
             <ArrowRight />
           </button>
           {plan && assessment.showPlanPreview && (
             <button type="button" className="survey-btn survey-btn--ghost" onClick={() => setPreviewOpen(true)}>
-              <span>Preview training plan</span>
+              <span>{t("survey.result.previewPlan")}</span>
               <ArrowRight />
             </button>
           )}
@@ -262,16 +261,16 @@ export default function SurveyResult() {
             disabled={Boolean(busy)}
           >
             <ArrowLeft />
-            <span>{busy === "back" ? "Opening…" : "Back to level test"}</span>
+            <span>{busy === "back" ? t("survey.result.opening") : t("survey.result.backToLevelTest")}</span>
           </button>
         </div>
 
         <div className="result-retake">
           <button type="button" className="survey-link" onClick={() => navigate("/survey", { state: { retake: true } })}>
             <RefreshIcon />
-            Retake survey
+            {t("survey.result.retake")}
           </button>
-          <p className="result-muted">Your plan can evolve as you get stronger.</p>
+          <p className="result-muted">{t("survey.result.planEvolves")}</p>
         </div>
       </div>
 

@@ -157,6 +157,7 @@ public class ExerciseService {
                 exercise.getDefaultSets(),
                 exercise.getDefaultReps(),
                 exercise.getDefaultDuration(),
+                "HOLD".equalsIgnoreCase(exercise.getCategory()) ? "HOLD" : "REPS",
                 exercise.getEquipment(),
                 exercise.getType(),
                 exercise.getGoal() == null ? null : exercise.getGoal().name(),

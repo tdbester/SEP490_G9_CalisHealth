@@ -45,7 +45,7 @@ public class MediaRegistryService {
     @Transactional(readOnly = true)
     public StorageSettings settings() {
         return settingsRepository.findById(StorageSettings.ID)
-                .orElseThrow(() -> new IllegalStateException("storage_settings row 1 is missing (see V47)"));
+                .orElseThrow(() -> new IllegalStateException("storage_settings row 1 is missing (see V64)"));
     }
 
     // ---------------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
@@ -12,10 +13,10 @@ import NotificationDetailModal from "../components/notifications/NotificationDet
 import "../styles/notification.css";
 
 const FILTERS = [
-  { key: "ALL", label: "All", count: "allCount" },
-  { key: "MAINTENANCE", label: "Maintenance", count: "maintenanceCount" },
-  { key: "ANNOUNCEMENT", label: "Announcement", count: "announcementCount" },
-  { key: "UPDATE", label: "Update", count: "updateCount" },
+  { key: "ALL", labelKey: "admin.notifications.filterAll", count: "allCount" },
+  { key: "MAINTENANCE", labelKey: "admin.notifications.filterMaintenance", count: "maintenanceCount" },
+  { key: "ANNOUNCEMENT", labelKey: "admin.notifications.filterAnnouncement", count: "announcementCount" },
+  { key: "UPDATE", labelKey: "admin.notifications.filterUpdate", count: "updateCount" },
 ];
 
 const TYPE_STYLES = {
@@ -23,15 +24,6 @@ const TYPE_STYLES = {
   ANNOUNCEMENT: "border-cyan-500/30 bg-cyan-500/10 text-[#06B6D4]",
   UPDATE: "border-violet-500/30 bg-violet-500/10 text-[#8B5CF6]",
   SYSTEM: "border-indigo-500/30 bg-indigo-500/10 text-indigo-300",
-};
-const AUDIENCE_LABELS = {
-  MEMBER: "All Members",
-  ALL_MEMBERS: "All Members",
-  CONTENT_MANAGER: "Content Manager",
-  SYSTEM_WIDE: "System-wide",
-  ALL_USERS: "System-wide",
-  GLOBAL: "System-wide",
-  SPECIFIC_USER: "Direct User",
 };
 const AUDIENCE_STYLES = {
   MEMBER: "border-cyan-500/30 bg-cyan-500/10 text-cyan-300",
@@ -45,6 +37,7 @@ const AUDIENCE_STYLES = {
 const PAGE_SIZE = 5;
 
 function PaginationBar({ currentPage, totalPages, onPageChange }) {
+  const { t } = useTranslation();
   const firstPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
   const visiblePages = Array.from(
     { length: Math.min(5, totalPages) },
@@ -54,13 +47,13 @@ function PaginationBar({ currentPage, totalPages, onPageChange }) {
   if (totalPages <= 1) return null;
 
   return (
-    <nav className="mt-4 flex items-center justify-center gap-2" aria-label="Notification pages">
+    <nav className="mt-4 flex items-center justify-center gap-2" aria-label={t("admin.notifications.pagesAria")}>
       <button
         type="button"
         className="flex h-7 w-7 items-center justify-center rounded-md border border-[#22184c] bg-[#130d2e] text-[#8a82af] transition hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
         disabled={currentPage <= 1}
         onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-        aria-label="Previous page"
+        aria-label={t("admin.notifications.previousPage")}
       >
         <ChevronLeftRoundedIcon sx={{ fontSize: 16 }} />
       </button>
@@ -84,7 +77,7 @@ function PaginationBar({ currentPage, totalPages, onPageChange }) {
         className="flex h-7 w-7 items-center justify-center rounded-md border border-[#22184c] bg-[#130d2e] text-[#8a82af] transition hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
         disabled={currentPage >= totalPages}
         onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-        aria-label="Next page"
+        aria-label={t("admin.notifications.nextPage")}
       >
         <ChevronRightRoundedIcon sx={{ fontSize: 16 }} />
       </button>
@@ -110,6 +103,7 @@ function getNotificationAudience(notification) {
 }
 
 export default function NotificationListPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [activeType, setActiveType] = useState("ALL");
   const [currentPage, setCurrentPage] = useState(1);
@@ -143,12 +137,12 @@ export default function NotificationListPage() {
     } catch (requestError) {
       setError(
         requestError.response?.data?.message ||
-          "Could not load notifications. Please try again.",
+          t("admin.notifications.loadFailed"),
       );
     } finally {
       setLoading(false);
     }
-  }, [activeType]);
+  }, [activeType, t]);
 
   useEffect(() => {
     setSelectedIds([]);
@@ -191,11 +185,11 @@ export default function NotificationListPage() {
         style: { fontFamily: "Arial, sans-serif" },
       },
       toastMessage: idsToDelete.length === 1
-        ? "Notification deleted."
-        : `${idsToDelete.length} notifications deleted.`,
+        ? t("admin.notifications.deletedOne")
+        : t("admin.notifications.deletedMany", { count: idsToDelete.length }),
       successMessage: idsToDelete.length === 1
-        ? "Notification permanently deleted."
-        : "Notifications permanently deleted.",
+        ? t("admin.notifications.permanentlyDeletedOne")
+        : t("admin.notifications.permanentlyDeletedMany"),
       onOptimisticDelete: () => {
         const removed = notifications.filter((item) => idsToDelete.includes(item.id));
         setNotifications((current) => current.filter((item) => !idsToDelete.includes(item.id)));
@@ -226,19 +220,18 @@ export default function NotificationListPage() {
     <section className="notification-module mx-auto w-full max-w-[1440px] text-slate-100">
       <header className="mb-7">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-[22px] font-bold tracking-tight text-white">Notifications</h1>
+          <h1 className="text-[22px] font-bold tracking-tight text-white">{t("admin.notifications.title")}</h1>
           <button
             type="button"
             onClick={() => navigate("/admin/notifications/new")}
             className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-violet-400/40 bg-violet-600 px-4 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(124,58,237,0.28)] transition hover:bg-violet-500"
           >
             <AddRoundedIcon fontSize="small" />
-            Create notification
+            {t("admin.notifications.create")}
           </button>
         </div>
         <p className="mt-2 max-w-3xl text-xs leading-5 text-[#a89bd0]">
-          Notifications shown to members in the web notification bell. Maintenance schedules
-          add their notification here automatically.
+          {t("admin.notifications.headerDescription")}
         </p>
       </header>
 
@@ -246,7 +239,7 @@ export default function NotificationListPage() {
         <div
           className="inline-flex max-w-full flex-wrap gap-1 rounded-xl border border-[#35275e] bg-[#21183c] p-1"
           role="tablist"
-          aria-label="Filter notifications by type"
+          aria-label={t("admin.notifications.filterAria")}
         >
           {FILTERS.map((filter) => (
             <button
@@ -261,7 +254,7 @@ export default function NotificationListPage() {
                   : "bg-transparent font-medium text-[#a89bd0] hover:text-white"
               }`}
             >
-              {filter.label}
+              {t(filter.labelKey)}
               <span className="ml-1.5 text-[11px] opacity-80">{counts[filter.count]}</span>
             </button>
           ))}
@@ -274,7 +267,7 @@ export default function NotificationListPage() {
           className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#463b61] bg-[#17112d] px-3 text-xs font-medium text-[#d3cce4] transition hover:border-rose-400/50 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <DeleteOutlineRoundedIcon fontSize="small" />
-          Delete selected
+          {t("admin.notifications.deleteSelected")}
         </button>
       </div>
 
@@ -292,7 +285,7 @@ export default function NotificationListPage() {
                 <label className="relative inline-flex h-4 w-4 cursor-pointer items-center justify-center">
                   <input
                     type="checkbox"
-                    aria-label="Select all notifications"
+                    aria-label={t("admin.notifications.selectAll")}
                     checked={allVisibleSelected}
                     onChange={toggleAll}
                     disabled={loading || visibleNotifications.length === 0}
@@ -305,25 +298,25 @@ export default function NotificationListPage() {
                   )}
                 </label>
               </th>
-              <th className="px-3 py-3">Notification</th>
-              <th className="w-36 px-3 py-3 text-center">Type</th>
-              <th className="w-40 px-3 py-3 text-center">Audience</th>
-              <th className="w-32 px-3 py-3 text-center">Status</th>
-              <th className="w-32 px-3 py-3">Created</th>
-              <th className="w-24 px-3 py-3 text-right">Actions</th>
+              <th className="px-3 py-3">{t("admin.notifications.colNotification")}</th>
+              <th className="w-36 px-3 py-3 text-center">{t("admin.notifications.colType")}</th>
+              <th className="w-40 px-3 py-3 text-center">{t("admin.notifications.colAudience")}</th>
+              <th className="w-32 px-3 py-3 text-center">{t("admin.notifications.colStatus")}</th>
+              <th className="w-32 px-3 py-3">{t("admin.notifications.colCreated")}</th>
+              <th className="w-24 px-3 py-3 text-right">{t("admin.notifications.colActions")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#35275e]">
             {loading ? (
               <tr>
                 <td colSpan={7} className="px-4 py-12 text-center text-sm text-[#aaa0c5]">
-                  Loading notifications…
+                  {t("admin.notifications.loading")}
                 </td>
               </tr>
             ) : visibleNotifications.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-12 text-center text-sm text-[#aaa0c5]">
-                  No notifications found.
+                  {t("admin.notifications.empty")}
                 </td>
               </tr>
             ) : (
@@ -337,7 +330,7 @@ export default function NotificationListPage() {
                       <label className="relative inline-flex h-4 w-4 cursor-pointer items-center justify-center">
                         <input
                           type="checkbox"
-                          aria-label={`Select ${notification.title}`}
+                          aria-label={t("admin.notifications.selectOne", { title: notification.title })}
                           checked={selectedIds.includes(notification.id)}
                           onChange={() => toggleOne(notification.id)}
                           className="block h-[18px] w-[18px] shrink-0 cursor-pointer appearance-none rounded-[4px] border-2 border-[#c4b5fd] bg-[#17112d] shadow-[0_0_0_1px_rgba(167,139,250,0.2)] transition checked:border-violet-400 checked:bg-violet-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
@@ -361,7 +354,7 @@ export default function NotificationListPage() {
                       <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${
                         TYPE_STYLES[normalizedType] || "border-slate-500/30 bg-slate-500/10 text-slate-300"
                       }`}>
-                        {normalizedType.charAt(0) + normalizedType.slice(1).toLowerCase()}
+                        {t(`admin.notifications.type${normalizedType.charAt(0) + normalizedType.slice(1).toLowerCase()}`, normalizedType)}
                       </span>
                     </td>
                     <td className="px-3 py-3.5 text-center">
@@ -369,12 +362,14 @@ export default function NotificationListPage() {
                         AUDIENCE_STYLES[audience] || "border-slate-500/30 bg-slate-500/10 text-slate-300"
                       }`}>
                         {audience === "CONTENT_MANAGER"
-                          ? "Content Manager"
+                          ? t("admin.notifications.audienceContentManager")
                           : audience === "SYSTEM_WIDE" || audience === "ALL_USERS" || audience === "GLOBAL"
-                            ? "System-wide"
+                            ? t("admin.notifications.audienceSystem")
                             : audience === "MEMBER" || audience === "ALL_MEMBERS"
-                              ? "All Members"
-                              : AUDIENCE_LABELS[audience] || audience}
+                              ? t("admin.notifications.audienceMembers")
+                              : audience === "SPECIFIC_USER"
+                                ? t("admin.notifications.audienceDirect")
+                                : audience}
                         {audience === "SPECIFIC_USER" && notification.userId ? ` #${notification.userId}` : ""}
                       </span>
                     </td>
@@ -385,7 +380,7 @@ export default function NotificationListPage() {
                           : "border-slate-500/40 bg-slate-500/10 text-[#9CA3AF]"
                       }`}>
                         <span className={`h-1.5 w-1.5 rounded-full ${isPublished ? "bg-[#10B981]" : "bg-[#9CA3AF]"}`} />
-                        {isPublished ? "Published" : "Draft"}
+                        {isPublished ? t("admin.notifications.published") : t("admin.notifications.draft")}
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-3 py-3.5 text-xs text-[#d2ccdf]">
@@ -395,11 +390,11 @@ export default function NotificationListPage() {
                       <button
                         type="button"
                         onClick={() => setSelectedNotification(notification)}
-                        aria-label={`View ${notification.title}`}
+                        aria-label={t("admin.notifications.viewAria", { title: notification.title })}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-[#1e202e] px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:bg-[#282a3d]"
                       >
                         <VisibilityOutlinedIcon sx={{ fontSize: 15 }} />
-                        View
+                        {t("admin.notifications.view")}
                       </button>
                     </td>
                   </tr>
@@ -418,13 +413,16 @@ export default function NotificationListPage() {
 
       <footer className="mt-3 flex flex-wrap items-center justify-between gap-3 text-[11px] text-[#aaa0c5]">
         <span>
-          Showing {loading ? "…" : notifications.length === 0
-            ? 0
-            : `${(pageToDisplay - 1) * PAGE_SIZE + 1}–${Math.min(pageToDisplay * PAGE_SIZE, notifications.length)}`} of {counts.allCount} notifications
+          {t("admin.notifications.showingOf", {
+            range: loading ? "…" : notifications.length === 0
+              ? 0
+              : `${(pageToDisplay - 1) * PAGE_SIZE + 1}–${Math.min(pageToDisplay * PAGE_SIZE, notifications.length)}`,
+            total: counts.allCount,
+          })}
         </span>
         <span className="inline-flex items-center gap-1.5 text-[#c5b88a]">
           <WarningAmberRoundedIcon sx={{ fontSize: 14 }} />
-          Deleted notifications disappear from every member’s notification bell.
+          {t("admin.notifications.deletedHint")}
         </span>
       </footer>
 

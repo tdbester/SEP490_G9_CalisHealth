@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import { Box } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { AD } from "../../theme-admin";
 
 // Geometry follows the Figma chart area (742 x 221 plot), in a 820 x 262 viewBox.
@@ -30,6 +31,7 @@ const fmt = (n) => n.toLocaleString("en-US");
  * @param {{ points: { label: string, tooltipLabel: string, value: number }[] }} props
  */
 export default function ActivityTrendChart({ points }) {
+  const { t } = useTranslation();
   const gradientId = useId();
   const [hovered, setHovered] = useState(null);
 
@@ -65,7 +67,7 @@ export default function ActivityTrendChart({ points }) {
           viewBox={`0 0 ${VB_W} ${VB_H}`}
           width="100%"
           role="group"
-          aria-label="User activity trend chart: workout logs"
+          aria-label={t("admin.dashboard.workoutLogsAria")}
           onMouseLeave={() => setHovered(null)}
           style={{ display: "block" }}
         >
@@ -110,7 +112,7 @@ export default function ActivityTrendChart({ points }) {
             fontSize="12"
             fill={AD.muted}
           >
-            Workout Logs
+            {t("admin.dashboard.workoutLogs")}
           </text>
 
           <path d={areaPath} fill={`url(#${gradientId})`} />
@@ -138,7 +140,10 @@ export default function ActivityTrendChart({ points }) {
                 fill="transparent"
                 tabIndex={0}
                 role="img"
-                aria-label={`${points[i].tooltipLabel}: ${fmt(points[i].value)} workout logs`}
+                aria-label={t("admin.dashboard.pointAria", {
+                  label: points[i].tooltipLabel,
+                  value: fmt(points[i].value),
+                })}
                 style={{ cursor: "pointer", outline: "none" }}
                 onMouseEnter={() => setHovered(i)}
                 onFocus={() => setHovered(i)}
@@ -163,7 +168,7 @@ export default function ActivityTrendChart({ points }) {
             </text>
             <circle cx={tipX + 14.5} cy={tipY + 32} r="3.5" fill={AD.chartLine} />
             <text x={tipX + 25} y={tipY + 36} fontSize="12" fill="#fff">
-              {fmt(points[activeIndex].value)} Workout Logs
+              {t("admin.dashboard.chartTooltipValue", { value: fmt(points[activeIndex].value) })}
             </text>
           </g>
         </svg>

@@ -1,5 +1,7 @@
 // Tính và phân loại BMI theo chuẩn WHO (người trưởng thành).
 
+import i18n from "../i18n";
+
 export const BMI_HEALTHY_MIN = 18.5;
 export const BMI_HEALTHY_MAX = 24.9;
 
@@ -10,8 +12,9 @@ export function calculateBmi(weightKg, heightCm) {
 }
 
 export function classifyBmi(bmi) {
-  if (bmi < BMI_HEALTHY_MIN) return { label: "Underweight", tone: "warning" };
-  if (bmi < 25) return { label: "Healthy", tone: "healthy" };
-  if (bmi < 30) return { label: "Overweight", tone: "warning" };
-  return { label: "Obese", tone: "danger" };
+  const t = (key) => i18n.t(key);
+  if (bmi < BMI_HEALTHY_MIN) return { label: t("member.healthTracking.bmiUnderweight"), tone: "warning" };
+  if (bmi < 25) return { label: t("member.healthTracking.bmiHealthy"), tone: "healthy" };
+  if (bmi < 30) return { label: t("member.healthTracking.bmiOverweight"), tone: "warning" };
+  return { label: t("member.healthTracking.bmiObese"), tone: "danger" };
 }

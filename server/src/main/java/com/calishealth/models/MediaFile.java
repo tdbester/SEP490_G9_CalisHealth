@@ -8,7 +8,7 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/** One uploaded file. Rows with a category are managed by Admin > Media storage (see V47 for the lifecycle). */
+/** One uploaded file. Rows with a category are managed by Admin > Media storage (see V64 for the lifecycle). */
 @Entity
 @Table(name = "media_files")
 @Getter
