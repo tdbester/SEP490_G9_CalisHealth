@@ -26,6 +26,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -235,6 +236,42 @@ class AiSupportServiceTest {
         assertEquals("local-rules", response.provider());
         assertEquals("AI_NOT_CONFIGURED", response.notice());
         assertEquals(3, response.answer().causes().size());
+    }
+
+    @Test
+    void demoAnswerFollowsTheQuestionInsteadOfBeingStatic() {
+        when(openAi.isConfigured()).thenReturn(false);
+        when(usageRepository.findForUpdate(7L, LocalDate.now())).thenReturn(Optional.of(usage(0)));
+        when(sessionRepository.findForUpdate(7L, "session-1")).thenReturn(Optional.of(session(0)));
+
+        var warmUp = service.ask("member@example.com",
+                new AskQuestionRequest("SQUAT", "How do I warm up for squat?", "session-1", List.of(), null));
+        var depth = service.ask("member@example.com",
+                new AskQuestionRequest("SQUAT", "Why is my depth too low?", "session-1", List.of(), null));
+
+        assertEquals("local-rules", warmUp.provider());
+        assertEquals("local-rules", depth.provider());
+        assertNotEquals(
+                warmUp.answer().causes().get(0).title(),
+                depth.answer().causes().get(0).title(),
+                "Câu hỏi khác nhau phải cho nguyên nhân khác nhau");
+        assertTrue(warmUp.answer().causes().stream()
+                .anyMatch(cause -> cause.title().toLowerCase().contains("warm-up")));
+        assertTrue(depth.answer().causes().stream()
+                .anyMatch(cause -> cause.title().toLowerCase().contains("range of motion")));
+    }
+
+    @Test
+    void demoAnswerLeadsWithTheDetectedFormIssue() {
+        when(openAi.isConfigured()).thenReturn(false);
+        when(usageRepository.findForUpdate(7L, LocalDate.now())).thenReturn(Optional.of(usage(0)));
+        when(sessionRepository.findForUpdate(7L, "session-1")).thenReturn(Optional.of(session(0)));
+
+        var response = service.ask("member@example.com",
+                new AskQuestionRequest("SQUAT", "What happened?", "session-1",
+                        List.of("Knee valgus detected"), null));
+
+        assertEquals("Knee valgus detected", response.answer().causes().get(0).title());
     }
 
     @Test

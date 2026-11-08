@@ -201,14 +201,14 @@ public class AiSupportService {
                     throw exception;
                 }
                 log.warn("OpenAI unavailable, serving the local demo answer: {}", exception.getCode());
-                answer = fallbackAnswer(exercise, rules, question);
+                answer = fallbackAnswer(exercise, rules, request.formIssues(), question);
                 tokens = 0;
                 provider = "local-rules";
                 notice = exception.getCode();
             }
         } else {
             // Chưa cấu hình API key -> trả lời bằng rule nội bộ kèm cờ báo rõ.
-            answer = fallbackAnswer(exercise, rules, question);
+            answer = fallbackAnswer(exercise, rules, request.formIssues(), question);
             tokens = 0;
             provider = "local-rules";
             notice = "AI_NOT_CONFIGURED";
@@ -437,40 +437,175 @@ public class AiSupportService {
      *
      * Dùng nguyên nhân phổ biến theo khớp đang theo dõi + câu nhắc của
      * Content Manager, để member vẫn nhận được gợi ý hữu ích.
+     *
+     * Câu trả lời bám theo ý định câu hỏi (nhiệt, độ sâu, lỗi cụ thể...) và
+     * ngữ cảnh thật của bài vừa tập, không phải một bộ cố định cho mọi câu.
      */
-    private AnswerResponse fallbackAnswer(Exercise exercise, List<FormRule> rules, String question) {
+    private AnswerResponse fallbackAnswer(Exercise exercise, List<FormRule> rules,
+                                          List<String> formIssues, String question) {
         List<LikelyCause> causes = new ArrayList<>();
         String joint = rules.isEmpty() ? "BODY" : rules.get(0).getJoint();
         String feedback = rules.isEmpty() ? null : rules.get(0).getFeedbackMessage();
+        String name = exercise.getName();
+        String lower = question == null ? "" : question.toLowerCase(Locale.ROOT);
 
-        causes.add(new LikelyCause(
+        // Lỗi form đã phát hiện trong buổi tập — nguyên nhân đáng tin nhất.
+        if (formIssues != null && !formIssues.isEmpty()) {
+            for (String issue : formIssues) {
+                if (issue == null || issue.isBlank()) {
+                    continue;
+                }
+                String detail = "The AI tracker flagged \"" + issue.trim()
+                        + "\" during your set, so this is the most likely cause.";
+                causes.add(new LikelyCause(issue.trim(), detail));
+            }
+        }
+
+        // Nguyên nhân theo ý định câu hỏi.
+        if (mentions(lower, "warm", "warmup", "warm-up", "prepare", "stretch",
+                "khởi động", "làm sắn", "giãn cơ")) {
+            causes.add(new LikelyCause(
+                    "Warm-up not specific enough",
+                    "A general warm-up does not wake up the stabilisers that hold your " + joint.toLowerCase(Locale.ROOT)
+                            + " in line. Add 2-3 activation sets of " + name
+                            + " at a controlled tempo before your working sets."));
+        }
+        if (mentions(lower, "rest", "recover", "sleep", "tired", "fatigue", "break",
+                "nghỉ", "nghi", "hồi phục", "mệt", "mỏi", "giữa các set")) {
+            causes.add(new LikelyCause(
+                    "Recovery not long enough between sets",
+                    "Your stabiliser muscles need roughly 60-90 seconds on the same movement to recover fully. "
+                            + "Chaining " + name + " sets back to back is the usual reason your form drops "
+                            + "as the set gets harder."));
+        }
+        if (mentions(lower, "depth", "range", "rom", "low", "higher", "shallow",
+                "độ sâu", "sâu", "thấp", "nông", "biên độ")) {
+            causes.add(new LikelyCause(
+                    "Range of motion shorter than required",
+                    "The tracker scores a rep as clean only when your " + joint.toLowerCase(Locale.ROOT)
+                            + " reaches the required depth"
+                            + (rules.isEmpty() || rules.get(0).getRomDepth() == null
+                            ? " for " + name
+                            : " (" + rules.get(0).getRomDepth().stripTrailingZeros().toPlainString() + "°)")
+                            + ", so stopping short marks the whole set as inaccurate."));
+        }
+        if (mentions(lower, "tempo", "fast", "slow", "speed", "pace", "bounce",
+                "nhịp", "tốc độ", "nhanh", "chậm", "nhảy")) {
+            causes.add(new LikelyCause(
+                    "Tempo too fast to control the joint",
+                    "A fast rep passes through the correct position without staying there, so the tracker "
+                            + "never sees a stable joint angle and counts it as an inaccurate rep."));
+        }
+        if (mentions(lower, "weight", "heavier", "lighter", "difficulty", "easier", "harder", "load",
+                "tạ", "nặng", "nhẹ", "khó", "dễ", "tăng", "giảm")) {
+            causes.add(new LikelyCause(
+                    "Load outpaces the current capacity",
+                    "When the load is too high, the muscles that stabilise the " + joint.toLowerCase(Locale.ROOT)
+                            + " give out before the target muscles fatigue. Drop to a lighter variation of "
+                            + name + " and rebuild from there."));
+        }
+        if (mentions(lower, "shoulder", "elbow", "knee", "hip", "back", "wrist", "ankle", "neck",
+                "vai", "khuỷu", "gối", "hông", "lưng", "cổ tay", "cổ chân", "cổ")) {
+            String bodyPart = bodyPartIn(lower);
+            causes.add(new LikelyCause(
+                    bodyPart + " alignment under load",
+                    "Your " + bodyPart + " drifts as the set gets harder, which means the muscles around it "
+                            + "are not keeping the joint stacked over the correct axis of movement."));
+        }
+        if (mentions(lower, "why", "cause", "reason", "wrong", "happen", "mean",
+                "vì sao", "tại sao", "là sao", "nguyên nhân", "sai", "lỗi")) {
+            causes.add(new LikelyCause(
+                    joint + " position drifts under load",
+                    "Your " + joint.toLowerCase(Locale.ROOT)
+                            + " alignment changes as the set gets harder, which usually means the stabiliser "
+                            + "muscles fatigue before the target muscles do."));
+        }
+        if (mentions(lower, "fix", "correct", "improve", "how", "solve", "avoid",
+                "sửa", "làm sao", "cải thiện", "tránh", "thực hiện")) {
+            causes.add(new LikelyCause(
+                    "Muscle memory of the old pattern",
+                    "Repeating the same shape trains the pattern. Move slowly through the bottom position "
+                            + "and pause there for a beat so the corrected pattern gets the attention it needs."));
+        }
+
+        // Chưa khớp ý định nào -> nói thẳng là chưa đủ thông tin, kèm gợi ý hỏi.
+        if (causes.isEmpty()) {
+            causes.add(new LikelyCause(
+                    "Need more detail about the error",
+                    "The tracker data for " + name + " does not say which joint moved, so the likely cause "
+                            + "cannot be pinned down. Ask about the specific joint, the depth you reached, "
+                            + "or how fast you performed the reps."));
+        }
+
+        // Bổ sung nguyên nhân theo ngữ cảnh thật cho tới khi đủ 3 nguyên nhân,
+        // để member luôn nhận được gợi ý đủ thông tin.
+        List<String> contextCauses = List.of(
                 joint + " position drifts under load",
-                "Your " + joint.toLowerCase(Locale.ROOT)
-                        + " alignment changes as the set gets harder, which usually means the stabiliser muscles "
-                        + "fatigue before the target muscles do."));
-
-        causes.add(new LikelyCause(
                 "Insufficient range of motion",
+                "Tempo not controlled");
+        List<String> contextDetails = List.of(
+                "Your " + joint.toLowerCase(Locale.ROOT)
+                        + " alignment changes as the set gets harder, which usually means the stabiliser "
+                        + "muscles fatigue before the target muscles do.",
                 "The rep stops before the joint reaches the depth the AI tracker requires ("
                         + (rules.isEmpty() || rules.get(0).getRomDepth() == null
                         ? "see the exercise's form rule"
                         : rules.get(0).getRomDepth().stripTrailingZeros().toPlainString() + "°")
-                        + "), so the set is scored as inaccurate."));
-
-        causes.add(new LikelyCause(
-                "Tempo not controlled",
+                        + "), so the set is scored as inaccurate.",
                 "Moving too fast between positions means the joint passes through the correct range without "
-                        + "staying there long enough to be counted as a clean rep."));
+                        + "staying there long enough to be counted as a clean rep.");
+        for (int index = 0; index < contextCauses.size() && causes.size() < 3; index += 1) {
+            causes.add(new LikelyCause(contextCauses.get(index), contextDetails.get(index)));
+        }
+
+        // Giới hạn 3 nguyên nhân như thiết kế.
+        while (causes.size() > 3) {
+            causes.remove(causes.size() - 1);
+        }
 
         String tip = feedback != null && !feedback.isBlank()
                 ? "Tip: " + feedback
                 : "Tip: slow the set down and hold the correct position for a beat at the bottom.";
 
         List<String> followUps = List.of(
-                "How do I warm up for " + exercise.getName() + "?",
-                "What rest should I take between sets of " + exercise.getName() + "?");
+                "How do I warm up for " + name + "?",
+                "What rest should I take between sets of " + name + "?");
 
         return new AnswerResponse(causes, tip, followUps);
+    }
+
+    /**
+     * Kiểm tra câu hỏi có chứa một trong các từ khoá không.
+     *
+     * @param lower câu hỏi đã chuyển chữ thường
+     * @param words  các từ khoá cần tìm
+     */
+    private boolean mentions(String lower, String... words) {
+        for (String word : words) {
+            if (lower.contains(word)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Tìm khớp cơ thể được nhắc tới trong câu hỏi.
+     *
+     * @param lower câu hỏi đã chuyển chữ thường
+     */
+    private String bodyPartIn(String lower) {
+        for (String part : List.of("shoulder", "elbow", "knee", "hip", "wrist", "ankle", "back", "neck")) {
+            if (lower.contains(part)) {
+                return Character.toUpperCase(part.charAt(0)) + part.substring(1);
+            }
+        }
+        for (String part : List.of("vai", "khuỷu", "gối", "hông", "cổ tay", "cổ chân", "lưng", "cổ")) {
+            if (lower.contains(part)) {
+                return Character.toUpperCase(part.charAt(0)) + part.substring(1);
+            }
+        }
+        return "Joint";
     }
 
     /** Render câu trả lời thành JSON để client khôi phục lại hội thoại khi mở popup. */
