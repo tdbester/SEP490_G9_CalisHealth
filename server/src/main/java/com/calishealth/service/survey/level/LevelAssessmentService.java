@@ -106,6 +106,7 @@ public class LevelAssessmentService {
 
     public LevelAssessment assess(SurveySession session, SurveyDefinition survey, Map<String, JsonNode> answers) {
         ResultConfig config = resultConfig(session);
+        Integer daysPerWeek = persistAndReadDaysPerWeek(session, answers);
         Optional<LevelRuleSet> ruleSet = ruleSets.findBySurveyCodeAndStatus(survey.code(), LevelRuleSet.Status.ACTIVE);
         LevelRuleSetDefinition rules = ruleSet.map(set -> validRules(set, survey)).orElse(null);
         Evaluation evaluation = rules == null ? null : LevelRuleEvaluator.evaluate(rules, answers);
@@ -139,7 +140,7 @@ public class LevelAssessmentService {
             totalScore = evaluation.totalScore();
             summary = outcome.map(Outcome::summary).orElse(null);
             criteria = criteriaItems(evaluation, survey);
-            plan = outcome.map(o -> plan(o, config)).orElse(null);
+            plan = outcome.map(o -> plan(o, config, daysPerWeek)).orElse(null);
         } else if (benchmark.isPresent()) {
             method = SurveyLevelResult.Method.RULES;
             BenchmarkAssessment assessed = benchmark.get();
@@ -154,7 +155,7 @@ public class LevelAssessmentService {
             totalScore = BigDecimal.valueOf(assessed.totalScore());
             criteria = benchmarkCriteria(assessed);
             summary = benchmarkSummary(assessed);
-            plan = plans.build(level, desiredDaysPerWeek(answers), config);
+            plan = plans.build(level, daysPerWeek, config);
         } else {
             reason = ruleSet.isEmpty() ? NO_RULE_SET : rules == null ? RULES_INVALID : evaluation.failureReason();
             level = config.fallbackFitnessLevelId() == null ? null
@@ -162,7 +163,7 @@ public class LevelAssessmentService {
             method = level == null ? SurveyLevelResult.Method.NONE : SurveyLevelResult.Method.FALLBACK;
             levelItem = level == null ? null : new LevelItem(level.getId(), level.getName(), null);
             ladder = List.of();
-            plan = level == null ? null : plans.build(level, desiredDaysPerWeek(answers), config);
+            plan = level == null ? null : plans.build(level, daysPerWeek, config);
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -298,13 +299,15 @@ public class LevelAssessmentService {
      * Kế hoạch gợi ý: nội dung (tên, buổi tập, bài tập) theo level, nhịp độ (số tuần, buổi/tuần, phút/buổi)
      * theo cấu hình bước Result. Các buổi trải đều trong tuần, lặp vòng theo danh sách sessions.
      */
-    static PlanResponse plan(Outcome outcome, ResultConfig config) {
+    static PlanResponse plan(Outcome outcome, ResultConfig config, Integer desiredDaysPerWeek) {
         if (outcome.recommendation() == null) {
             return null;
         }
         Recommendation recommendation = SurveyJson.read(SurveyJson.write(outcome.recommendation()), Recommendation.class);
         List<SessionTemplate> sessions = recommendation.sessions() == null ? List.of() : recommendation.sessions();
-        int perWeek = config.sessionsPerWeek();
+        int perWeek = desiredDaysPerWeek == null || desiredDaysPerWeek < 1 || desiredDaysPerWeek > 7
+                ? config.sessionsPerWeek()
+                : desiredDaysPerWeek;
         List<PlanDayItem> rhythm = new ArrayList<>();
         for (int i = 0; i < perWeek && !sessions.isEmpty(); i++) {
             SessionTemplate template = sessions.get(i % sessions.size());
@@ -313,6 +316,25 @@ public class LevelAssessmentService {
         }
         return new PlanResponse(recommendation.planName(), recommendation.description(), recommendation.note(),
                 config.planDurationWeeks(), perWeek, config.minutesPerSession(), rhythm);
+    }
+
+    static PlanResponse plan(Outcome outcome, ResultConfig config) {
+        return plan(outcome, config, null);
+    }
+
+    private Integer persistAndReadDaysPerWeek(SurveySession session, Map<String, JsonNode> answers) {
+        MemberProfile profile = profiles.findByUserId(session.getUser().getId()).orElseGet(() -> {
+            MemberProfile created = new MemberProfile();
+            created.setUser(session.getUser());
+            return created;
+        });
+        Integer selected = desiredDaysPerWeek(answers);
+        if (selected != null) {
+            profile.setDaysPerWeek(selected);
+            profiles.save(profile);
+        }
+        int stored = profile.getDaysPerWeek();
+        return stored >= 1 && stored <= 7 ? stored : null;
     }
 
     private void updateProfileFromSurvey(SurveySession session, FitnessLevel level, Map<String, JsonNode> answers) {
@@ -344,7 +366,11 @@ public class LevelAssessmentService {
 
             JsonNode genderNode = answers.get("GENDER");
             if (genderNode != null && genderNode.isTextual()) {
-                profile.setGender(genderNode.asText());
+                String gender = com.calishealth.service.ProfileService.normaliseGender(genderNode.asText());
+                if (gender != null) {
+                    profile.setGender(gender);
+                    session.getUser().setGender(gender);
+                }
             }
 
             JsonNode goalNode = answers.get("GOAL_TYPE");

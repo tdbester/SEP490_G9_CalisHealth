@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test - Survey & Profile</title>
+    <style>
+        body { font-family: Arial; margin: 20px; background: #f5f5f5; }
+        .section { background: white; padding: 20px; margin: 10px 0; border-radius: 5px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 3px; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f8f8; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .error { color: #d32f2f; }
+        .success { color: #388e3c; }
+        input { padding: 8px; margin: 5px; width: 300px; }
+        h2 { color: #333; }
+    </style>
+</head>
+<body>
+<h1>CalisHealth API Test</h1>
+
+<div class="section">
+    <h2>1. Authentication</h2>
+    <div>
+        <input type="email" id="email" placeholder="Email" value="admin@test.com">
+        <input type="password" id="password" placeholder="Password" value="Admin@123">
+    </div>
+    <button onclick="testLogin()">Login</button>
+    <div id="loginResult"></div>
+</div>
+
+<div class="section">
+    <h2>2. Profile Endpoint</h2>
+    <button onclick="testGetProfile()">GET /api/profile</button>
+    <button onclick="testUpdateProfile()">PUT /api/profile</button>
+    <div id="profileResult"></div>
+</div>
+
+<div class="section">
+    <h2>3. Survey Endpoints</h2>
+    <div>
+        <input type="text" id="surveyCode" placeholder="Survey Code" value="CALISHEALTH_ONBOARDING">
+    </div>
+    <button onclick="testListSessions()">List Sessions</button>
+    <button onclick="testStartSession()">Start Session</button>
+    <button onclick="testGetSession()">Get Session (ID needed)</button>
+    <div id="surveyResult"></div>
+</div>
+
+<div class="section">
+    <h2>Response</h2>
+    <pre id="response">No response yet...</pre>
+</div>
+
+<script>
+let token = '';
+
+async function apiCall(method, endpoint, body = null) {
+    const options = {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    };
+
+    if (token) {
+        options.headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    if (body) {
+        options.body = JSON.stringify(body);
+    }
+
+    try {
+        const response = await fetch(`http://localhost:8080${endpoint}`, options);
+        const data = await response.text();
+        const result = {
+            status: response.status,
+            headers: Object.fromEntries(response.headers),
+            body: data ? JSON.parse(data) : null
+        };
+        document.getElementById('response').textContent = JSON.stringify(result, null, 2);
+        return result;
+    } catch (error) {
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+        return null;
+    }
+}
+
+async function testLogin() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    
+    const result = await apiCall('POST', '/api/auth/login', { email, password });
+    if (result && result.status === 200) {
+        token = result.body.token || result.body.accessToken;
+        document.getElementById('loginResult').innerHTML = `<span class="success">✓ Login successful! Token: ${token.substring(0, 30)}...</span>`;
+    } else {
+        document.getElementById('loginResult').innerHTML = `<span class="error">✗ Login failed: ${result?.status}</span>`;
+    }
+}
+
+async function testGetProfile() {
+    if (!token) {
+        document.getElementById('profileResult').innerHTML = '<span class="error">Please login first</span>';
+        return;
+    }
+    const result = await apiCall('GET', '/api/profile');
+    document.getElementById('profileResult').innerHTML = result && result.status === 200 
+        ? '<span class="success">✓ Profile retrieved</span>'
+        : `<span class="error">✗ Failed: ${result?.status}</span>`;
+}
+
+async function testUpdateProfile() {
+    if (!token) {
+        document.getElementById('profileResult').innerHTML = '<span class="error">Please login first</span>';
+        return;
+    }
+    const result = await apiCall('PUT', '/api/profile', {
+        fullName: 'Test User Updated',
+        bio: 'Test bio'
+    });
+    document.getElementById('profileResult').innerHTML = result && result.status === 200 
+        ? '<span class="success">✓ Profile updated</span>'
+        : `<span class="error">✗ Failed: ${result?.status}</span>`;
+}
+
+async function testListSessions() {
+    if (!token) {
+        document.getElementById('surveyResult').innerHTML = '<span class="error">Please login first</span>';
+        return;
+    }
+    const surveyCode = document.getElementById('surveyCode').value;
+    const result = await apiCall('GET', `/api/survey-sessions?surveyCode=${surveyCode}`);
+    document.getElementById('surveyResult').innerHTML = result && result.status === 200 
+        ? '<span class="success">✓ Sessions listed</span>'
+        : `<span class="error">✗ Failed: ${result?.status}</span>`;
+}
+
+async function testStartSession() {
+    if (!token) {
+        document.getElementById('surveyResult').innerHTML = '<span class="error">Please login first</span>';
+        return;
+    }
+    const surveyCode = document.getElementById('surveyCode').value;
+    const result = await apiCall('POST', '/api/survey-sessions', { surveyCode });
+    document.getElementById('surveyResult').innerHTML = result && (result.status === 200 || result.status === 201)
+        ? '<span class="success">✓ Session started</span>'
+        : `<span class="error">✗ Failed: ${result?.status}</span>`;
+}
+
+async function testGetSession() {
+    if (!token) {
+        document.getElementById('surveyResult').innerHTML = '<span class="error">Please login first</span>';
+        return;
+    }
+    const result = await apiCall('GET', '/api/survey-sessions/1');
+    document.getElementById('surveyResult').innerHTML = result && result.status === 200 
+        ? '<span class="success">✓ Session retrieved</span>'
+        : `<span class="error">✗ Failed: ${result?.status}</span>`;
+}
+</script>
+</body>
+</html>

@@ -402,7 +402,10 @@ export default function ProfilePage() {
                   <MenuItem value="">
                     <em>{t("member.profile.notSpecified")}</em>
                   </MenuItem>
-                  {(profile?.genderOptions || []).map((option) => (
+                  {(profile?.genderOptions && profile.genderOptions.length > 0
+                    ? profile.genderOptions
+                    : ["Male", "Female", "Other", "Prefer not to say"]
+                  ).map((option) => (
                     <MenuItem key={option} value={option}>
                       {option}
                     </MenuItem>

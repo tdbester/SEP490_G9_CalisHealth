@@ -1,4 +1,4 @@
--- V55: Bỏ trạng thái DRAFT khỏi module Admin Notification.
+-- V64: Bỏ trạng thái DRAFT khỏi module Admin Notification.
 --
 -- Mục đích
 -- ------
@@ -10,7 +10,7 @@
 --
 -- Lưu ý
 -- -----
--- File này là migration MỚI (version 55) nên chưa từng được apply ở bất kỳ
+-- File này là migration MỚI (version 64) nên chưa từng được apply ở bất kỳ
 -- môi trường nào -> không phát sinh checksum mismatch cho DB đã có dữ liệu.
 
 UPDATE notifications

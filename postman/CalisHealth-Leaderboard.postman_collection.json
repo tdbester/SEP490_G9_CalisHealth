@@ -1,0 +1,310 @@
+{
+  "info": {
+    "name": "CalisHealth - Leaderboard API",
+    "description": "Test weekly leaderboard endpoints. Set memberEmail, memberPassword before running.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "memberEmail",
+      "value": "test1@example.com"
+    },
+    {
+      "key": "memberPassword",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "secret"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Login (save JWT token)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    var data = pm.response.json();",
+              "    pm.collectionVariables.set('token', data.token);",
+              "    console.log('✅ Token saved:', data.token.substring(0, 20) + '...');",
+              "}",
+              "pm.test('Login successful', function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.json()).to.have.property('token');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"{{memberEmail}}\",\"password\":\"{{memberPassword}}\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        }
+      }
+    },
+    {
+      "name": "2. Get Current Week Leaderboard (Global)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Response OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var data = pm.response.json();",
+              "pm.test('Response contains entries', function () {",
+              "    pm.expect(data).to.have.property('entries');",
+              "    pm.expect(data.entries).to.be.an('array');",
+              "});",
+              "",
+              "if (data.entries && data.entries.length > 0) {",
+              "    var firstEntry = data.entries[0];",
+              "    console.log('🥇 Rank 1: ' + firstEntry.memberName + ' - Score: ' + firstEntry.totalScore);",
+              "    pm.test('First entry has required fields', function () {",
+              "        pm.expect(firstEntry).to.have.property('rank');",
+              "        pm.expect(firstEntry).to.have.property('memberId');",
+              "        pm.expect(firstEntry).to.have.property('memberName');",
+              "        pm.expect(firstEntry).to.have.property('totalScore');",
+              "    });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/leaderboard/week/current",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "leaderboard", "week", "current"]
+        }
+      }
+    },
+    {
+      "name": "3. Get Leaderboard - Level 1 Filter",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Response OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var data = pm.response.json();",
+              "pm.test('Filtering by level 1 works', function () {",
+              "    pm.expect(data).to.have.property('levelId');",
+              "    pm.expect(data.levelId).to.equal(1);",
+              "    if (data.entries.length > 0) {",
+              "        pm.expect(data.entries[0]).to.have.property('fitnessLevel');",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/leaderboard/week/current?levelId=1",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "leaderboard", "week", "current"],
+          "query": [
+            {
+              "key": "levelId",
+              "value": "1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Get Leaderboard - Level 2 Filter",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Response OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var data = pm.response.json();",
+              "console.log('📊 Level 2 leaderboard: ' + data.entries.length + ' entries');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/leaderboard/week/current?levelId=2",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "leaderboard", "week", "current"],
+          "query": [
+            {
+              "key": "levelId",
+              "value": "2"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "5. Get Member Week History",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Response OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var data = pm.response.json();",
+              "pm.test('History contains weeks', function () {",
+              "    pm.expect(data).to.have.property('weeks');",
+              "    pm.expect(data.weeks).to.be.an('array');",
+              "});",
+              "",
+              "if (data.weeks && data.weeks.length > 0) {",
+              "    console.log('📈 Member week history: ' + data.weeks.length + ' weeks');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/leaderboard/week/history?memberId=1",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "leaderboard", "week", "history"],
+          "query": [
+            {
+              "key": "memberId",
+              "value": "1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "6. Admin - Compute Weekly Scores",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Response OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var data = pm.response.json();",
+              "console.log('✅ Scores computed: ' + data.message);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/leaderboard/admin/compute",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "leaderboard", "admin", "compute"]
+        }
+      }
+    },
+    {
+      "name": "7. Admin - Compute for Specific Week",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Response OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var data = pm.response.json();",
+              "console.log('✅ Scores computed for week: ' + data.week);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/leaderboard/admin/compute?weekStart=2026-11-03",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "leaderboard", "admin", "compute"],
+          "query": [
+            {
+              "key": "weekStart",
+              "value": "2026-11-03"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

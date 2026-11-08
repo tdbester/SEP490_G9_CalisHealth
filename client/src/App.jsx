@@ -86,6 +86,7 @@ import ProfilePage from "./pages/ProfilePage";
 import SurveyFlow, { SurveyEntry } from "./pages/survey/SurveyFlow";
 import SurveyStepPage from "./pages/survey/SurveyStepPage";
 import SurveyResult from "./pages/survey/SurveyResult";
+import LeaderboardPage from "./pages/LeaderboardPage";
 import SurveyManagement from "./pages/content/SurveyManagement";
 import { ContentManagementPage } from "./features/content-manager/pages/ContentManagementPage";
 
@@ -119,6 +120,7 @@ export default function App() {
           <Route path="/" element={<RoleHomeRoute />} />
           <Route path="/dashboard" element={<Navigate to="/" replace />} />
           <Route path="/day-streak" element={memberPage(<DayStreak />)} />
+          <Route path="/leaderboard" element={memberPage(<LeaderboardPage />)} />
           {/* Onboarding survey của member (sau khi đăng nhập); URL theo Figma: /survey/body-information … */}
           <Route
             path="/survey"
