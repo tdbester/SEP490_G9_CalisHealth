@@ -1589,6 +1589,7 @@ export default {
     toastUnavailable: "AI support is unavailable right now. Please try again.",
     toastRateLimited: "AI support is busy right now. Please try again in a moment.",
     toastInvalidKey: "AI support is not configured correctly on the server right now.",
+    toastOutOfCredits: "AI support has run out of server credits right now. Please try again later.",
     aiCoachFeedback: "AI coach feedback",
     sourceCamera: "AI camera session",
     sourceVideo: "AI video scan session",

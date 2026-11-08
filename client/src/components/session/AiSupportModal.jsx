@@ -286,6 +286,8 @@ export default function AiSupportModal({
             toast.error(t("member:aiSupport.toastRateLimited"));
           } else if (errorCode === "AI_INVALID_KEY") {
             toast.error(t("member:aiSupport.toastInvalidKey"));
+          } else if (errorCode === "AI_OUT_OF_CREDITS") {
+            toast.error(t("member:aiSupport.toastOutOfCredits"));
           } else {
             toast.error(serverMessage || t("member:aiSupport.toastUnavailable"));
           }

@@ -143,6 +143,20 @@ class OpenAiChatServiceTest {
     }
 
     @Test
+    void mapsExhaustedCreditsToDedicatedErrorCode() {
+        responseStatus = 429;
+        responseBody = """
+                {"error":{"message":"You have no credits remaining.","type":"insufficient_quota",
+                 "code":"credit_balance_exhausted"}}
+                """;
+
+        OpenAiException exception = assertThrows(OpenAiException.class,
+                () -> service("sk-test-key").chat("system", "hello"));
+
+        assertEquals("AI_OUT_OF_CREDITS", exception.getCode());
+    }
+
+    @Test
     void mapsUpstreamServerErrorToDedicatedErrorCode() {
         responseStatus = 500;
         responseBody = "{\"error\":{\"message\":\"server error\"}}";

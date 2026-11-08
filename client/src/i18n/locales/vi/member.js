@@ -1591,6 +1591,7 @@ export default {
     toastUnavailable: "Hỗ trợ AI hiện không khả dụng. Vui lòng thử lại sau.",
     toastRateLimited: "Hỗ trợ AI đang bận. Vui lòng thử lại sau giây lát.",
     toastInvalidKey: "Hỗ trợ AI chưa được cấu hình đúng trên máy chủ.",
+    toastOutOfCredits: "Hỗ trợ AI đã hết credit trên máy chủ. Vui lòng thử lại sau.",
     aiCoachFeedback: "Phản hồi của huấn luyện viên AI",
     sourceCamera: "Buổi tập bằng camera AI",
     sourceVideo: "Buổi quét video AI",

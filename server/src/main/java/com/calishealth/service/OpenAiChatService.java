@@ -164,7 +164,9 @@ public class OpenAiChatService {
      * Dịch lỗi HTTP của OpenAI sang {@link OpenAiException} có mã rõ ràng.
      *
      * - 401/403: API key sai hoặc không có quyền -> lỗi cấu hình.
-     * - 429: hết credit / rate limit -> báo member thử lại sau.
+     * - 429 với {@code insufficient_quota}: hết credit trong tài khoản ->
+     *   lỗi cấu hình của chủ dự án, không phải tạm thời.
+     * - 429 còn lại: rate limit -> báo member thử lại sau.
      * - 5xx: OpenAI đang lỗi -> báo tạm thời không khả dụng.
      */
     private OpenAiException translate(RestClientException exception) {
@@ -172,10 +174,13 @@ public class OpenAiChatService {
         log.error("OpenAI request failed: {}", raw);
 
         int status = 0;
+        String responseBody = "";
         if (exception instanceof org.springframework.web.client.HttpStatusCodeException statusException) {
             status = statusException.getStatusCode().value();
+            responseBody = statusException.getResponseBodyAsString();
         } else if (exception instanceof org.springframework.web.client.RestClientResponseException responseException) {
             status = responseException.getStatusCode().value();
+            responseBody = responseException.getResponseBodyAsString();
         }
 
         if (status == 401 || status == 403) {
@@ -185,6 +190,14 @@ public class OpenAiChatService {
                     exception);
         }
         if (status == 429) {
+            // Hết credit -> lỗi cấu hình tài khoản, không phải tạm thời.
+            if (responseBody.contains("insufficient_quota")
+                    || responseBody.contains("credit_balance_exhausted")) {
+                return new OpenAiException(
+                        "AI_OUT_OF_CREDITS",
+                        "AI Support has run out of API credits on the server right now.",
+                        exception);
+            }
             return new OpenAiException(
                     "AI_RATE_LIMITED",
                     "AI Support is busy right now. Please try again in a moment.",
