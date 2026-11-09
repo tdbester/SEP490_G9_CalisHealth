@@ -27,6 +27,7 @@ import ReportGmailerrorredRoundedIcon from "@mui/icons-material/ReportGmailerror
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import RestoreFromTrashOutlinedIcon from "@mui/icons-material/RestoreFromTrashOutlined";
+import { useTranslation } from "react-i18next";
 import { adminStorageApi } from "../../api/adminStorage";
 import { apiErrorMessage } from "../../api/adminUsers";
 import { useApiQuery } from "../../hooks";
@@ -40,43 +41,42 @@ const IMAGE_FORMATS = ["JPG", "PNG", "WEBP"];
 /**
  * Numeric settings grouped by card. min/max are the allowed ranges (the backend validates the same ranges).
  * formats: the key of the format list edited in the same row.
+ *
+ * The titles, the descriptions and the labels come from the `storage` namespace, so the key of the
+ * translation of each one is written next to it.
  */
 const SECTIONS = [
   {
-    title: "Maximum size per file",
-    sub: "Uploads larger than this are rejected before they are stored. Click a format to allow or block it.",
+    key: "fileSize",
     fields: [
-      { key: "maxVideoMb", label: "Videos", desc: "Exercise demo videos and the form-check videos uploaded for the AI assessment.", unit: "MB", min: 10, max: 500, icon: VideocamOutlinedIcon, tone: "violet", formats: ["videoFormats", VIDEO_FORMATS] },
-      { key: "maxImageMb", label: "Images", desc: "Exercise anatomy images.", unit: "MB", min: 1, max: 20, icon: ImageOutlinedIcon, tone: "pink", formats: ["imageFormats", IMAGE_FORMATS] },
+      { key: "maxVideoMb", unit: "MB", min: 10, max: 500, icon: VideocamOutlinedIcon, tone: "violet", formats: ["videoFormats", VIDEO_FORMATS] },
+      { key: "maxImageMb", unit: "MB", min: 1, max: 20, icon: ImageOutlinedIcon, tone: "pink", formats: ["imageFormats", IMAGE_FORMATS] },
     ],
   },
   {
-    title: "Video duration & member limits",
-    sub: "Keeps each upload small and stops a single member from filling the system.",
+    key: "duration",
     fields: [
-      { key: "demoMaxSeconds", label: "Video length", desc: "Demo videos of system and personal exercises. The server rejects a longer video, even if the browser did not.", unit: "sec", min: 10, max: 600, icon: TimerOutlinedIcon, tone: "violet" },
-      { key: "memberQuotaMb", label: "Storage quota per member", desc: 'Personal exercises count toward it. Members see "Storage full" when it is reached.', unit: "MB", min: 50, max: 2000, icon: PersonOutlineOutlinedIcon, tone: "violet" },
-      { key: "uploadsPerDay", label: "Uploads per member per day", desc: "Prevents spam and accidental repeated uploads.", unit: "files", min: 1, max: 50, icon: UploadFileOutlinedIcon, tone: "violet" },
+      { key: "demoMaxSeconds", unit: "sec", min: 10, max: 600, icon: TimerOutlinedIcon, tone: "violet" },
+      { key: "memberQuotaMb", unit: "MB", min: 50, max: 2000, icon: PersonOutlineOutlinedIcon, tone: "violet" },
+      { key: "uploadsPerDay", unit: "files", min: 1, max: 50, icon: UploadFileOutlinedIcon, tone: "violet" },
     ],
   },
   {
-    title: "Retention & auto-cleanup",
-    sub: "How long media is kept. A daily job deletes expired files, so manual cleanup is only needed for exceptions.",
+    key: "retention",
     fields: [
-      { key: "rejectedRetentionDays", label: "Keep rejected media for", desc: "Counted from the moderation rejection date, so the member can read the reason and resubmit.", unit: "days", min: 7, max: 90, icon: DeleteOutlineRoundedIcon, tone: "pink" },
-      { key: "orphanGraceHours", label: "Grace period for orphaned files", desc: "Protects files that were just uploaded but whose form is not saved yet.", unit: "hours", min: 1, max: 72, icon: LinkOffRoundedIcon, tone: "amber" },
-      { key: "trashRetentionDays", label: "Keep deleted files in trash for", desc: "Deleted and expired files stay restorable in the trash, then are deleted permanently. Storage is freed only at that point. 0 = delete immediately.", unit: "days", min: 0, max: 30, icon: RestoreFromTrashOutlinedIcon, tone: "violet", tag: "Soft delete" },
-      { key: "restoreGraceDays", label: "Protect restored files for", desc: "After a file is restored from the trash, auto-cleanup leaves it alone for this long. Admins can still move it to the trash by hand. 0 = only until its original cleanup date.", unit: "days", min: 0, max: 30, icon: HistoryRoundedIcon, tone: "green" },
+      { key: "rejectedRetentionDays", unit: "days", min: 7, max: 90, icon: DeleteOutlineRoundedIcon, tone: "pink" },
+      { key: "orphanGraceHours", unit: "hours", min: 1, max: 72, icon: LinkOffRoundedIcon, tone: "amber" },
+      { key: "trashRetentionDays", unit: "days", min: 0, max: 30, icon: RestoreFromTrashOutlinedIcon, tone: "violet", tag: "softDelete" },
+      { key: "restoreGraceDays", unit: "days", min: 0, max: 30, icon: HistoryRoundedIcon, tone: "green" },
     ],
-    toggle: { key: "autoCleanupEnabled", label: "Daily auto-cleanup", desc: "Runs every day at 03:00 (server time): moves expired files to the trash and permanently deletes trash past its period. Duplicate files are stored once (content hash).", icon: AutoDeleteOutlinedIcon, tone: "green" },
+    toggle: { key: "autoCleanupEnabled", icon: AutoDeleteOutlinedIcon, tone: "green" },
   },
   {
-    title: "Storage quota & alerts",
-    sub: "Total space the system may use. Admins are notified when usage crosses a threshold.",
+    key: "quota",
     fields: [
-      { key: "quotaGb", label: "Total storage quota", desc: "New uploads are blocked once the quota is reached. Must be higher than current usage.", unit: "GB", min: 1, max: 1000, icon: StorageRoundedIcon, tone: "cyan" },
-      { key: "warningPercent", label: "Warning threshold", desc: "Shows a warning on Storage capacity and sends a notification.", unit: "%", min: 50, max: 95, icon: WarningAmberRoundedIcon, tone: "amber" },
-      { key: "criticalPercent", label: "Critical threshold", desc: "Must be higher than the warning threshold.", unit: "%", min: 51, max: 99, icon: ReportGmailerrorredRoundedIcon, tone: "pink" },
+      { key: "quotaGb", unit: "GB", min: 1, max: 1000, icon: StorageRoundedIcon, tone: "cyan" },
+      { key: "warningPercent", unit: "percent", min: 50, max: 95, icon: WarningAmberRoundedIcon, tone: "amber" },
+      { key: "criticalPercent", unit: "percent", min: 51, max: 99, icon: ReportGmailerrorredRoundedIcon, tone: "pink" },
     ],
   },
 ];
@@ -86,34 +86,34 @@ const EDITABLE_KEYS = [...FIELDS.map((f) => f.key), "videoFormats", "imageFormat
 // Inputs hold strings ("100") while the API returns numbers (100), so scalars are compared as strings.
 const same = (a, b) => (Array.isArray(a) ? [...a].sort().join() === [...b].sort().join() : String(a) === String(b));
 
-function validate(form, usedBytes, quotaEditable = true) {
+function validate(form, usedBytes, quotaEditable, t) {
   const errors = {};
   FIELDS.forEach(({ key, min, max }) => {
     if (key === "quotaGb" && !quotaEditable) return;
     const raw = form[key];
     const value = Number(raw);
-    if (raw === "" || !Number.isInteger(value)) errors[key] = "Enter a whole number";
-    else if (value < min || value > max) errors[key] = `Must be between ${min} and ${max}`;
+    if (raw === "" || !Number.isInteger(value)) errors[key] = t("limits.errorInteger");
+    else if (value < min || value > max) errors[key] = t("limits.errorRange", { min, max });
   });
   if (quotaEditable && !errors.quotaGb && Number(form.quotaGb) * GB <= usedBytes) {
-    errors.quotaGb = `Must be higher than current usage (${formatBytes(usedBytes)})`;
+    errors.quotaGb = t("limits.errorQuotaHigher", { used: formatBytes(usedBytes) });
   }
   if (!errors.criticalPercent && !errors.warningPercent && Number(form.criticalPercent) <= Number(form.warningPercent)) {
-    errors.criticalPercent = "Must be higher than the warning threshold";
+    errors.criticalPercent = t("limits.errorCriticalHigher");
   }
-  if (!form.videoFormats.length) errors.maxVideoMb = "Allow at least one video format";
-  if (!form.imageFormats.length) errors.maxImageMb = "Allow at least one image format";
+  if (!form.videoFormats.length) errors.maxVideoMb = t("limits.errorNoVideoFormat");
+  if (!form.imageFormats.length) errors.maxImageMb = t("limits.errorNoImageFormat");
   return errors;
 }
 
 /** Extra hint under some inputs, computed from the current form. */
-function liveHint(key, form, usedBytes, quotaEditable) {
+function liveHint(key, form, usedBytes, quotaEditable, t) {
   const quota = Number(form.quotaGb) * GB;
   if (key === "quotaGb" && quota > 0) {
     // With a plan that does not cap the storage, the quota is only a guideline: the percentage
     // would tell the admin that the system is nearly full when the plan says the opposite.
-    if (!quotaEditable) return "Guideline only: the plan counts credits";
-    return `Currently ${Math.round((usedBytes / quota) * 100)}% used`;
+    if (!quotaEditable) return t("limits.hintGuidelineOnly");
+    return t("limits.hintCurrentlyUsed", { percent: Math.round((usedBytes / quota) * 100) });
   }
   if ((key === "warningPercent" || key === "criticalPercent") && quota > 0 && quotaEditable) {
     return `= ${formatBytes((quota * Number(form[key])) / 100)}`;
@@ -150,6 +150,7 @@ function SettingRow({ icon, tone, label, desc, tag, control, children, last }) {
 
 /** Tab 3: upload limits, member limits, retention and quota (Figma "Admin / Upload limits"). */
 export default function UploadLimitsTab() {
+  const { t } = useTranslation("storage");
   const { data, isLoading, error, setData } = useApiQuery(() => adminStorageApi.settings());
   // The Cloudinary plan decides how much space there is, so the quota may not be typed by hand.
   const { data: quota } = useApiQuery(() => adminStorageApi.quota());
@@ -162,8 +163,8 @@ export default function UploadLimitsTab() {
   const planLimitBytes = quota?.planLimitBytes ?? 0;
 
   useEffect(() => {
-    document.title = "Upload limits | CalisHealth";
-  }, []);
+    document.title = t("limits.documentTitle");
+  }, [t]);
 
   useEffect(() => {
     if (data) setForm(data);
@@ -173,7 +174,7 @@ export default function UploadLimitsTab() {
     () => (data && form ? EDITABLE_KEYS.filter((k) => (k === "quotaGb" && !quotaEditable ? false : !same(form[k], data[k]))) : []),
     [data, form, quotaEditable],
   );
-  const errors = useMemo(() => (form ? validate(form, form.usedBytes, quotaEditable) : {}), [form, quotaEditable]);
+  const errors = useMemo(() => (form ? validate(form, form.usedBytes, quotaEditable, t) : {}), [form, quotaEditable, t]);
   const hasErrors = Object.keys(errors).length > 0;
 
   // Warn before closing the tab with unsaved changes.
@@ -187,7 +188,7 @@ export default function UploadLimitsTab() {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [changed.length]);
 
-  if (error) return <Alert severity="error">{apiErrorMessage(error, "Could not load upload settings.")}</Alert>;
+  if (error) return <Alert severity="error">{apiErrorMessage(error, t("limits.errorLoad"))}</Alert>;
   if (isLoading || !form) return <Skeleton variant="rounded" height={520} />;
 
   const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
@@ -206,9 +207,9 @@ export default function UploadLimitsTab() {
     try {
       const saved = await adminStorageApi.updateSettings(payload);
       setData(saved);
-      setToast("Upload settings saved. They apply to new uploads.");
+      setToast(t("limits.saved"));
     } catch (err) {
-      setSaveError(apiErrorMessage(err, "Could not save the settings."));
+      setSaveError(apiErrorMessage(err, t("limits.errorSave")));
     } finally {
       setSaving(false);
     }
@@ -217,44 +218,49 @@ export default function UploadLimitsTab() {
   return (
     <Box sx={{ maxWidth: 980, display: "grid", gap: 3 }}>
       <Typography sx={{ fontSize: 13, color: CM.textMuted }}>
-        Changes apply to new uploads only. {formatBytes(form.usedBytes)} used
+        {t("limits.intro", { used: formatBytes(form.usedBytes) })}
         {planLimitBytes > 0
-          ? ` of ${formatBytes(planLimitBytes)} plan limit`
+          ? t("limits.contextPlanLimit", { limit: formatBytes(planLimitBytes) })
           : quotaEditable
-            ? ` of ${formatBytes(Number(data.quotaGb) * GB)} quota`
-            : " in the Cloudinary account (the plan counts credits, not bytes)"} ·{" "}
+            ? t("limits.contextQuota", { quota: formatBytes(Number(data.quotaGb) * GB) })
+            : t("limits.contextCloudinary")}
+        {" · "}
         <Link component={RouterLink} to={STORAGE_PATHS.capacity} underline="hover" sx={{ fontWeight: 600, color: CM.violetBright }}>
-          View storage capacity →
+          {t("limits.viewCapacity")}
         </Link>
       </Typography>
 
       {SECTIONS.map((section) => (
-        <Box key={section.title} component="section" sx={{ borderRadius: "16px", bgcolor: CM.surface, border: `1px solid ${CM.border}`, overflow: "hidden" }}>
+        <Box key={section.key} component="section" sx={{ borderRadius: "16px", bgcolor: CM.surface, border: `1px solid ${CM.border}`, overflow: "hidden" }}>
           <Box sx={{ px: 2.5, pt: 2.25, pb: 2, borderBottom: `1px solid ${CM.border}` }}>
             <Typography component="h2" sx={{ fontSize: 16, fontWeight: 700 }}>
-              {section.title}
+              {t(`limits.sections.${section.key}.title`)}
             </Typography>
-            <Typography sx={{ mt: 0.25, fontSize: 13, color: CM.textDim }}>{section.sub}</Typography>
+            <Typography sx={{ mt: 0.25, fontSize: 13, color: CM.textDim }}>{t(`limits.sections.${section.key}.sub`)}</Typography>
           </Box>
 
           {section.fields.map((f, index) => {
-            const hint = liveHint(f.key, form, form.usedBytes, quotaEditable);
+            const hint = liveHint(f.key, form, form.usedBytes, quotaEditable, t);
             // With Cloudinary the plan decides the limit, so the quota cannot be typed.
             const locked = f.key === "quotaGb" && !quotaEditable;
+            const label = t(`limits.fields.${f.key}.label`);
             return (
               <SettingRow
                 key={f.key}
                 icon={f.icon}
                 tone={f.tone}
-                label={f.label}
+                label={label}
                 desc={
                   locked
                     ? planLimitBytes > 0
-                      ? `Decided by the ${quota?.plan ? `${quota.plan} ` : ""}plan: ${formatBytes(planLimitBytes)}. Change it in the Cloudinary account.`
-                      : `The ${quota?.plan ? `${quota.plan} ` : ""}plan does not cap the storage in bytes, it counts credits instead. This value is only a guideline for the screen.`
-                    : f.desc
+                      ? t("limits.lockedPlanLimit", {
+                          plan: quota?.plan ? `${quota.plan} ` : "",
+                          limit: formatBytes(planLimitBytes),
+                        })
+                      : t("limits.lockedCredits", { plan: quota?.plan ? `${quota.plan} ` : "" })
+                    : t(`limits.fields.${f.key}.desc`)
                 }
-                tag={locked ? "Plan limit" : f.tag}
+                tag={locked ? t("limits.tags.planLimit") : f.tag ? t(`limits.tags.${f.tag}`) : undefined}
                 last={!section.toggle && index === section.fields.length - 1}
                 control={
                   <TextField
@@ -268,19 +274,19 @@ export default function UploadLimitsTab() {
                       hint ||
                       (locked
                         ? planLimitBytes > 0
-                          ? "Read-only"
-                          : "Guideline only: the plan counts credits"
-                        : `Allowed range: ${f.min} – ${f.max}`)
+                          ? t("limits.lockedReadOnly")
+                          : t("limits.hintGuidelineOnly")
+                        : t("limits.allowedRange", { min: f.min, max: f.max }))
                     }
-                    inputProps={{ min: f.min, max: f.max, step: 1, "aria-label": `${f.label} (${f.unit})`, style: { textAlign: "right" } }}
-                    InputProps={{ endAdornment: <InputAdornment position="end">{f.unit}</InputAdornment> }}
+                    inputProps={{ min: f.min, max: f.max, step: 1, "aria-label": `${label} (${f.unit})`, style: { textAlign: "right" } }}
+                    InputProps={{ endAdornment: <InputAdornment position="end">{t(`limits.units.${f.unit}`)}</InputAdornment> }}
                     FormHelperTextProps={{ sx: { textAlign: "right", mr: 0 } }}
                     sx={{ width: 190 }}
                   />
                 }
               >
                 {f.formats && (
-                  <Box sx={{ mt: 1, display: "flex", gap: 1, flexWrap: "wrap" }} role="group" aria-label={`${f.label} formats`}>
+                  <Box sx={{ mt: 1, display: "flex", gap: 1, flexWrap: "wrap" }} role="group" aria-label={t("limits.formatsAria", { label })}>
                     {f.formats[1].map((format) => {
                       const on = form[f.formats[0]].includes(format);
                       return (
@@ -306,18 +312,18 @@ export default function UploadLimitsTab() {
             <SettingRow
               icon={section.toggle.icon}
               tone={section.toggle.tone}
-              label={section.toggle.label}
-              desc={section.toggle.desc}
+              label={t("limits.toggleAutoCleanup.label")}
+              desc={t("limits.toggleAutoCleanup.desc")}
               last
               control={
                 <>
                   <Switch
                     checked={form[section.toggle.key]}
                     onChange={(e) => set(section.toggle.key, e.target.checked)}
-                    inputProps={{ "aria-label": section.toggle.label }}
+                    inputProps={{ "aria-label": t("limits.toggleAutoCleanup.label") }}
                   />
                   {!form[section.toggle.key] && (
-                    <Typography sx={{ fontSize: 12, color: CM.amber }}>Expired files will pile up</Typography>
+                    <Typography sx={{ fontSize: 12, color: CM.amber }}>{t("limits.toggleAutoCleanup.offWarning")}</Typography>
                   )}
                 </>
               }
@@ -347,18 +353,18 @@ export default function UploadLimitsTab() {
       >
         <HistoryRoundedIcon sx={{ fontSize: 17, color: CM.textDim }} />
         <Typography sx={{ flex: 1, minWidth: 240, fontSize: 13, color: CM.textDim }}>
-          Last updated by {data.updatedBy || "-"} · {fmtDateTime(data.updatedAt)}
+          {t("limits.lastUpdated", { user: data.updatedBy || "-", date: fmtDateTime(data.updatedAt) })}
         </Typography>
         {changed.length > 0 && (
           <Typography sx={{ fontSize: 13, fontWeight: 600, color: CM.amber }}>
-            {changed.length} unsaved change{changed.length === 1 ? "" : "s"}
+            {t("limits.unsaved", { count: changed.length })}
           </Typography>
         )}
         <Button color="inherit" onClick={() => setForm(data)} disabled={!changed.length || saving}>
-          Cancel
+          {t("limits.cancel")}
         </Button>
         <Button variant="contained" onClick={save} disabled={!changed.length || hasErrors || saving}>
-          {saving ? "Saving…" : "Save changes"}
+          {saving ? t("limits.saving") : t("limits.save")}
         </Button>
       </Box>
 

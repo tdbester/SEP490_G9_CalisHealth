@@ -83,6 +83,7 @@ public class CloudinaryUsageService {
 
     private final Cloudinary cloudinary;
     private final boolean enabled;
+    private final String cloudName;
 
     private volatile Usage cached;
     private volatile LocalDateTime cachedAt;
@@ -92,13 +93,41 @@ public class CloudinaryUsageService {
             Cloudinary cloudinary,
             @Value("${app.cloudinary.cloud-name:}") String cloudName) {
         this.cloudinary = cloudinary;
-        this.enabled = cloudName != null && !cloudName.isBlank();
+        this.cloudName = cloudName == null ? "" : cloudName.trim();
+        this.enabled = !this.cloudName.isEmpty();
     }
 
     /** True when a Cloudinary account is configured; the local disk is used otherwise. */
     public boolean isEnabled() {
         return enabled;
     }
+
+    /** The cloud name of the account, empty when there is none. */
+    public String cloudName() {
+        return cloudName;
+    }
+
+    /**
+     * The links to the Cloudinary console, so the admin can manage the account without hunting for
+     * the address. The media library is the page where the assets of this app live.
+     */
+    public ConsoleLinks consoleLinks() {
+        if (!enabled) return new ConsoleLinks(null, null, null, null);
+        String environment = "?productEnvironment=" + cloudName;
+        return new ConsoleLinks(
+                "https://cloudinary.com/console/media_library" + environment,
+                "https://cloudinary.com/console/l_usage/" + cloudName,
+                "https://cloudinary.com/console/settings/upload" + environment,
+                "https://cloudinary.com/console/l_plan/" + cloudName);
+    }
+
+    /**
+     * @param mediaLibrary  the assets of the account
+     * @param usage         the usage reports
+     * @param uploadSettings the upload defaults and presets
+     * @param plan          the plan and the credits of the account
+     */
+    public record ConsoleLinks(String mediaLibrary, String usage, String uploadSettings, String plan) {}
 
     /** The last error of the Admin API, so the screen can say why the numbers are missing. */
     public String lastError() {

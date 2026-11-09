@@ -33,6 +33,16 @@ public class AdminStorageDtos {
 
     public record TopMember(Long userId, String email, long bytes, long files) {}
 
+    /**
+     * The links to the Cloudinary console, so the admin can manage the account from this screen.
+     *
+     * @param mediaLibrary   the assets of the account
+     * @param usage          the usage reports
+     * @param uploadSettings the upload defaults and presets
+     * @param plan           the plan and the credits of the account
+     */
+    public record ConsoleLinks(String mediaLibrary, String usage, String uploadSettings, String plan) {}
+
     public record AutoCleanup(
             boolean enabled,
             String runAt,
@@ -67,6 +77,8 @@ public class AdminStorageDtos {
     public record Overview(
             String provider,
             String plan,
+            String cloudName,
+            ConsoleLinks console,
             boolean cdnReachable,
             long quotaBytes,
             boolean quotaLimited,

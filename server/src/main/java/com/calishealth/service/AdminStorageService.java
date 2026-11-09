@@ -123,9 +123,16 @@ public class AdminStorageService {
                 orphaned[0] + rejected[0], orphaned[1] + rejected[1]);
 
         CloudinaryUsageService.Usage cloudUsage = cloud.orElse(null);
+        CloudinaryUsageService.ConsoleLinks links = cloudinary.consoleLinks();
         return new Overview(
                 provider,
                 cloudUsage == null ? null : cloudUsage.plan(),
+                cloudinary.cloudName(),
+                links.mediaLibrary() == null ? null : new ConsoleLinks(
+                        links.mediaLibrary(),
+                        links.usage(),
+                        links.uploadSettings(),
+                        links.plan()),
                 cloudinary.isEnabled(),
                 quota,
                 quotaLimited,

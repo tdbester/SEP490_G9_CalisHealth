@@ -1,4 +1,5 @@
 import { Box, Typography } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { CM } from "../../theme-content";
 
 export const STORAGE_PATHS = {
@@ -18,18 +19,23 @@ export function formatBytes(bytes) {
   return `${mb >= 10 ? Math.round(mb) : mb.toFixed(1)} MB`;
 }
 
-/** Duration between an ISO time and now, e.g. "5 minutes", "3 hours", "12 days". */
-export function formatDuration(iso, now = Date.now()) {
+/**
+ * Duration between an ISO time and now, e.g. "5 minutes", "3 hours", "12 days".
+ *
+ * The words come from the `storage` namespace, so the sentence reads naturally in both
+ * languages (Vietnamese has no plural forms, hence the same value for one / other).
+ */
+export function formatDuration(iso, now = Date.now(), t) {
   const ms = Math.abs(now - new Date(iso).getTime());
   const hours = Math.round(ms / 3600000);
   if (hours < 1) {
     const minutes = Math.round(ms / 60000);
-    if (minutes < 1) return "less than a minute";
-    return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+    if (minutes < 1) return t("duration.lessThanMinute");
+    return t("duration.minute", { count: minutes });
   }
-  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"}`;
+  if (hours < 24) return t("duration.hour", { count: hours });
   const days = Math.round(hours / 24);
-  return `${days} day${days === 1 ? "" : "s"}`;
+  return t("duration.day", { count: days });
 }
 
 export const fmtDate = (iso) =>
