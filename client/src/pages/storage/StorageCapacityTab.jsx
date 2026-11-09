@@ -35,6 +35,7 @@ import { apiErrorMessage } from "../../api/adminUsers";
 import { useApiQuery } from "../../hooks";
 import { CM } from "../../theme-content";
 import { formatBytes, IconBox, Panel, Pill, STORAGE_PATHS, StatTile, TONE } from "./StorageShared";
+import CloudinaryFoldersPanel from "./CloudinaryFoldersPanel";
 
 /** The categories and the sources of the media, with the icon and the colour of each one. */
 const CATEGORY = {
@@ -500,6 +501,8 @@ export default function StorageCapacityTab() {
       </Box>
 
       <ProviderPanel data={data} />
+
+      {data.provider === "CLOUDINARY" && <CloudinaryFoldersPanel />}
 
       <Panel title={t("capacity.title")} action={<Pill tone={status.tone}>● {status.label}</Pill>}>
         <Box sx={{ display: "flex", alignItems: "baseline", gap: 1, mb: 1.5 }}>

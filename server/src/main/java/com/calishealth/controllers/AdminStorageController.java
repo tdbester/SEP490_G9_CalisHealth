@@ -69,6 +69,18 @@ public class AdminStorageController {
         return service.quotaInfo();
     }
 
+    /** The folders of the Cloudinary account the app writes into, with their file count and size. */
+    @GetMapping("/folders")
+    public FolderSetup folders() {
+        return service.folders();
+    }
+
+    /** Creates the folders of the app that are not in the account yet. */
+    @PostMapping("/folders/setup")
+    public FolderSetup setupFolders(Authentication a) {
+        return service.setupFolders(a.getName());
+    }
+
     /**
      * Reads the usage of the provider right now and stores it as the snapshot of the day.
      * The daily job does this at night; the button lets an admin refresh the numbers without

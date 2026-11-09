@@ -190,6 +190,29 @@ public class AdminStorageDtos {
      */
     public record QuotaInfo(String provider, String plan, long planLimitBytes, boolean quotaEditable) {}
 
+    // ---- Cloudinary folders ----
+
+    /**
+     * One folder of the Cloudinary account, so the admin can see what the app writes where.
+     *
+     * @param path   the full path of the folder, e.g. "calishealth/exercise-demos"
+     * @param label  what the folder holds, in the language of the app
+     * @param exists whether the folder is already in the account
+     * @param files  how many files are in it
+     * @param bytes  how big those files are
+     */
+    public record FolderInfo(String path, String label, boolean exists, int files, long bytes) {}
+
+    /**
+     * The folders of the account and what the setup did.
+     *
+     * @param folders every folder the app uses
+     * @param created the folders the setup just created
+     * @param failed the folders the setup could not create
+     */
+    public record FolderSetup(List<FolderInfo> folders, List<String> created, List<String> existing,
+                              List<String> failed) {}
+
     /** Ranges are checked in AdminStorageService (same ranges as the form). */
     public record UpdateSettingsRequest(
             @NotNull Integer maxVideoMb,

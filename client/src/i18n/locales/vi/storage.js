@@ -113,6 +113,36 @@ export default {
     cloudUnknown: "tài khoản đã cấu hình",
   },
 
+  // ---- Cloudinary folders ----
+  folders: {
+    title: "Cấu trúc thư mục trên Cloudinary",
+    hint:
+      "Mỗi loại media nằm trong một thư mục riêng, nên quản trị viên tìm thấy đúng nhóm tệp trong Media Library mà không cần mở từng tệp.",
+    setup: "Tạo thư mục còn thiếu",
+    settingUp: "Đang tạo…",
+    setupDone: "Đã tạo {count} thư mục trên Cloudinary.",
+    setupNothing: "Tất cả thư mục của app đã có trong tài khoản Cloudinary.",
+    missing: "Còn {count} thư mục chưa có trong tài khoản. Bấm “Tạo thư mục còn thiếu” để tạo ngay.",
+    errorLoad: "Không tải được danh sách thư mục.",
+    errorSetup: "Không tạo được thư mục trên Cloudinary.",
+    refresh: "Làm mới",
+    columnFolder: "THƯ MỤC",
+    columnPurpose: "DÙNG ĐỂ",
+    columnFiles: "TỆP",
+    columnSize: "DUNG LƯỢNG",
+    columnStatus: "TRẠNG THÁI",
+    statusReady: "Đã có",
+    statusMissing: "Chưa có",
+    purpose: {
+      systemDemo: "Video demo của bài tập do Content Manager quản lý",
+      systemAnatomy: "Ảnh giải phẫu của bài tập do Content Manager quản lý",
+      avatars: "Ảnh đại diện của mọi tài khoản",
+      memberDemo: "Video demo của bài tập cá nhân do thành viên tải lên",
+      memberAnatomy: "Ảnh giải phẫu của bài tập cá nhân do thành viên tải lên",
+      trash: "Tệp đã xóa mềm, chờ bị xóa vĩnh viễn",
+    },
+  },
+
   // ---- Breakdown (by category / by source) ----
   breakdown: {
     byCategory: "Nội dung nào chiếm dung lượng",

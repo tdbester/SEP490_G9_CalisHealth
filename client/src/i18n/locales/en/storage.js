@@ -113,6 +113,36 @@ export default {
     cloudUnknown: "the configured account",
   },
 
+  // ---- Cloudinary folders ----
+  folders: {
+    title: "Folder structure on Cloudinary",
+    hint:
+      "Every media type lives in its own folder, so an admin finds the right group of files in the Media Library without opening each one.",
+    setup: "Create missing folders",
+    settingUp: "Creating…",
+    setupDone: "Created {count} folders on Cloudinary.",
+    setupNothing: "Every folder of the app is already in the Cloudinary account.",
+    missing: "{count} folders are not in the account yet. Press “Create missing folders” to add them.",
+    errorLoad: "Could not load the folders.",
+    errorSetup: "Could not create the folders on Cloudinary.",
+    refresh: "Refresh",
+    columnFolder: "FOLDER",
+    columnPurpose: "USED FOR",
+    columnFiles: "FILES",
+    columnSize: "SIZE",
+    columnStatus: "STATUS",
+    statusReady: "Ready",
+    statusMissing: "Missing",
+    purpose: {
+      systemDemo: "Demo videos of the exercises the Content Manager manages",
+      systemAnatomy: "Anatomy images of the exercises the Content Manager manages",
+      avatars: "Profile photos of every account",
+      memberDemo: "Demo videos of the personal exercises members upload",
+      memberAnatomy: "Anatomy images of the personal exercises members upload",
+      trash: "Files that were deleted and wait to be purged",
+    },
+  },
+
   // ---- Breakdown (by category / by source) ----
   breakdown: {
     byCategory: "What takes the space",

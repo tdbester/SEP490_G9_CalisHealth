@@ -57,7 +57,10 @@ app:
     api-key: ${CLOUDINARY_API_KEY:722157934773437}
     api-secret: ${CLOUDINARY_API_SECRET:RCWUbVn9XT46SYBFmwN_f46vcl4}
     secure: true
-    folder: ${CLOUDINARY_FOLDER:calishealth} # blank cloud-name = store uploads on the local disk instead
+    # blank cloud-name = store uploads on the local disk instead
+    # Thư mục gốc trên Cloudinary. Mọi media của app nằm dưới thư mục này, mỗi loại media một
+    # thư mục con (exercise-demos, exercise-anatomy, profile-avatars, member-exercises, trash).
+    folder: ${CLOUDINARY_FOLDER:calishealth}
     # Ngày trong tháng mà bộ đếm của gói Cloudinary được reset (mặc định là ngày 1).
     usage-reset-day: ${CLOUDINARY_USAGE_RESET_DAY:1}
   jwt:

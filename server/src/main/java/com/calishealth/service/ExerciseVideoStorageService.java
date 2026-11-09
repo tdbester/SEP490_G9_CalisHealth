@@ -3,6 +3,7 @@ package com.calishealth.service;
 import com.calishealth.models.MediaFile;
 import com.calishealth.models.StorageSettings;
 import com.calishealth.models.User;
+import com.calishealth.models.UserRole;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,7 +53,7 @@ public class ExerciseVideoStorageService {
     private final MediaRegistryService registry;
     private final Cloudinary cloudinary;
     private final String cloudName;
-    private final String cloudinaryFolder;
+    private final CloudinaryFolderService folders;
 
     /** A file found on disk by {@link #listStoredFiles()}. */
     public record StoredFile(String url, Path path, String category) {}
@@ -61,8 +62,8 @@ public class ExerciseVideoStorageService {
             @Value("${app.storage.exercise-video-dir:${user.home}/calishealth/uploads/exercise-videos}") String storageDirectory,
             @Value("${app.storage.exercise-anatomy-dir:${user.home}/calishealth/uploads/exercise-anatomy}") String anatomyImageDirectory,
             @Value("${app.cloudinary.cloud-name:}") String cloudName,
-            @Value("${app.cloudinary.folder:calishealth}") String cloudinaryFolder,
             MediaRegistryService registry,
+            CloudinaryFolderService folders,
             Cloudinary cloudinary
     ) {
         this.storageDirectory = Path.of(storageDirectory).toAbsolutePath().normalize();
@@ -70,7 +71,7 @@ public class ExerciseVideoStorageService {
         this.registry = registry;
         this.cloudinary = cloudinary;
         this.cloudName = cloudName == null ? "" : cloudName.trim();
-        this.cloudinaryFolder = cloudinaryFolder;
+        this.folders = folders;
     }
 
     /** Stores a demo video and returns its public URL. */
@@ -156,8 +157,10 @@ public class ExerciseVideoStorageService {
 
         if (cloudinaryEnabled()) {
             CloudUpload upload;
+            String source = uploader != null && uploader.getRole() == UserRole.MEMBER
+                    ? MediaFile.SOURCE_MEMBER : MediaFile.SOURCE_SYSTEM;
             try {
-                upload = uploadFile(temp, category);
+                upload = uploadFile(temp, category, source);
             } catch (IOException | RuntimeException exception) {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Could not upload the file to cloud storage", exception);
             } finally {
@@ -195,11 +198,6 @@ public class ExerciseVideoStorageService {
         return !cloudName.isEmpty();
     }
 
-    /** Uploads the file into {folder}/exercise-demos or {folder}/exercise-anatomy and returns its HTTPS URL. */
-    private String uploadToCloudinary(Path file, String category) throws IOException {
-        return uploadFile(file, category).url();
-    }
-
     /** The uploaded file: its URL and, for videos, how long it is. */
     private record CloudUpload(String url, Integer durationSeconds) {}
 
@@ -208,10 +206,10 @@ public class ExerciseVideoStorageService {
      * admin limit ({@code demo_max_seconds}) is checked against, so the server decides and not only
      * the browser.
      */
-    private CloudUpload uploadFile(Path file, String category) throws IOException {
+    private CloudUpload uploadFile(Path file, String category, String source) throws IOException {
         boolean video = !MediaFile.ANATOMY_IMAGE.equals(category);
         Map<?, ?> options = ObjectUtils.asMap(
-                "folder", cloudinaryFolder + (video ? "/exercise-demos" : "/exercise-anatomy"),
+                "folder", folders.forCategory(category, source),
                 "public_id", UUID.randomUUID().toString(),
                 "resource_type", video ? "video" : "image",
                 "overwrite", false
@@ -267,6 +265,92 @@ public class ExerciseVideoStorageService {
         return cloudinaryAsset(mediaUrl).map(asset -> asset.resourceType() + "/" + asset.publicId());
     }
 
+    /**
+     * Moves a file of this app to another folder of the Cloudinary account.
+     *
+     * <p>Cloudinary renames the public id when a file moves, so the URL changes. The caller gets the
+     * new URL and has to save it, otherwise the exercise keeps a dead link.
+     *
+     * @param mediaUrl the current URL of the file
+     * @param targetFolder the folder to move it to, e.g. the trash folder
+     * @return the new URL, or empty when the file is not on Cloudinary or the move failed
+     */
+    public Optional<String> moveToFolder(String mediaUrl, String targetFolder) {
+        Optional<CloudinaryAsset> asset = cloudinaryAsset(mediaUrl);
+        if (asset.isEmpty() || targetFolder == null || targetFolder.isBlank()) return Optional.empty();
+        try {
+            Map<?, ?> result = cloudinary.uploader().rename(
+                    asset.get().publicId(),
+                    targetFolder + "/" + UUID.randomUUID(),
+                    ObjectUtils.asMap("resource_type", asset.get().resourceType(), "overwrite", false));
+            Object url = result.get("secure_url");
+            if (url == null) return Optional.empty();
+            return Optional.of(url.toString());
+        } catch (Exception exception) {
+            logger.warn("Could not move Cloudinary file {} to {}", mediaUrl, targetFolder, exception);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Moves a file that sits in the trash folder back to the folder it came from. The trash folder
+     * keeps the name of the original folder, so the way back is known.
+     *
+     * @return the new URL, or empty when the file is not on Cloudinary or the move failed
+     */
+    public Optional<String> restoreFromTrash(String mediaUrl) {
+        Optional<String> currentFolder = folderOf(mediaUrl);
+        if (currentFolder.isEmpty()) return Optional.empty();
+        String folder = currentFolder.get();
+        String trashPrefix = folders.trash() + "/";
+        if (!folder.startsWith(trashPrefix)) return Optional.of(mediaUrl);
+        String original = folders.of(folder.substring(trashPrefix.length()));
+        return moveToFolder(mediaUrl, original);
+    }
+
+    /**
+     * The trash folder for a file that sits in the given folder. The name of the original folder is
+     * kept inside the trash folder, so the admin still sees what the file was and the file can go
+     * back to where it came from.
+     *
+     * @param currentFolder the folder the file is in now, e.g. "calishealth/exercise-demos"
+     */
+    public String trashFolderFor(String currentFolder) {
+        String prefix = folders.root() + "/";
+        String sub = currentFolder != null && currentFolder.startsWith(prefix)
+                ? currentFolder.substring(prefix.length())
+                : currentFolder;
+        if (sub == null || sub.isBlank()) return folders.trash();
+        return folders.of("trash/" + sub);
+    }
+
+    /**
+     * The trash folder for a file of the given category, when the current folder is not known.
+     *
+     * @param category DEMO_VIDEO | ANATOMY_IMAGE | PROFILE_AVATAR
+     */
+    public String trashFolderForCategory(String category) {
+        String original = folders.forCategory(category);
+        String prefix = folders.root() + "/";
+        String sub = original.startsWith(prefix) ? original.substring(prefix.length()) : original;
+        return folders.of("trash/" + sub);
+    }
+
+    /**
+     * The folder a file of this app currently lives in; empty when the file is not on Cloudinary or
+     * sits in a folder the app does not manage.
+     */
+    public Optional<String> folderOf(String mediaUrl) {
+        Optional<CloudinaryAsset> asset = cloudinaryAsset(mediaUrl);
+        if (asset.isEmpty()) return Optional.empty();
+        return folderOfPublicId(asset.get().publicId());
+    }
+
+    /** The folder of a file of this app, given its URL and the category it was registered with. */
+    public String folderFor(String mediaUrl, String category) {
+        return folderOf(mediaUrl).orElseGet(() -> folders.forCategory(category));
+    }
+
     /** A file found in the app's Cloudinary folders by {@link #listCloudinaryFiles()}. */
     public record CloudFile(String key, String url, long sizeBytes, String format, String category,
                             LocalDateTime uploadedAt, Integer durationSeconds) {}
@@ -274,13 +358,16 @@ public class ExerciseVideoStorageService {
     /**
      * Every file in the app's Cloudinary folders, by key (see {@link #cloudinaryKey}). Empty when
      * Cloudinary is off or the listing failed, so callers never mistake an outage for missing files.
+     *
+     * <p>The whole tree below the app's root folder is scanned, so a file that was moved to the trash
+     * folder is still found and is not mistaken for a deleted file.
      */
     public Optional<Map<String, CloudFile>> listCloudinaryFiles() {
         if (!cloudinaryEnabled()) return Optional.empty();
         Map<String, CloudFile> files = new HashMap<>();
         try {
-            collectCloudinaryFiles("video", cloudinaryFolder + "/exercise-demos/", MediaFile.DEMO_VIDEO, files);
-            collectCloudinaryFiles("image", cloudinaryFolder + "/exercise-anatomy/", MediaFile.ANATOMY_IMAGE, files);
+            collectCloudinaryFiles("video", folders.root() + "/", files);
+            collectCloudinaryFiles("image", folders.root() + "/", files);
             return Optional.of(files);
         } catch (Exception exception) {
             logger.warn("Could not list Cloudinary files", exception);
@@ -288,7 +375,7 @@ public class ExerciseVideoStorageService {
         }
     }
 
-    private void collectCloudinaryFiles(String resourceType, String prefix, String category,
+    private void collectCloudinaryFiles(String resourceType, String prefix,
                                         Map<String, CloudFile> files) throws Exception {
         String cursor = null;
         do {
@@ -299,17 +386,45 @@ public class ExerciseVideoStorageService {
             if (page.get("resources") instanceof List<?> resources) {
                 for (Object resource : resources) {
                     if (!(resource instanceof Map<?, ?> item) || item.get("public_id") == null || item.get("secure_url") == null) continue;
-                    String key = resourceType + "/" + item.get("public_id");
+                    String publicId = item.get("public_id").toString();
+                    String key = resourceType + "/" + publicId;
                     long bytes = item.get("bytes") instanceof Number number ? number.longValue() : 0;
                     String format = item.get("format") == null ? "" : item.get("format").toString();
                     Integer duration = item.get("duration") instanceof Number seconds ? seconds.intValue() : null;
-                    files.put(key, new CloudFile(key, item.get("secure_url").toString(), bytes, format, category,
-                            parseCloudinaryTime(item.get("created_at")), duration));
+                    files.put(key, new CloudFile(key, item.get("secure_url").toString(), bytes, format,
+                            categoryOfFolder(publicId), parseCloudinaryTime(item.get("created_at")), duration));
                 }
             }
             Object next = page.get("next_cursor");
             cursor = next == null ? null : next.toString();
         } while (cursor != null);
+    }
+
+    /**
+     * The category a file belongs to, read from the folder it sits in. A file in the trash folder
+     * keeps the category of the media it came from, because the trash folder holds a copy of the
+     * original folder name.
+     */
+    private String categoryOfFolder(String publicId) {
+        String folder = folderOfPublicId(publicId).orElse("");
+        if (folder.isBlank()) return MediaFile.DEMO_VIDEO;
+        // The trash folder mirrors the folder the file came from: "calishealth/trash/exercise-demos".
+        String sub = folder.startsWith(folders.root() + "/")
+                ? folder.substring(folders.root().length() + 1)
+                : folder;
+        if (sub.startsWith("trash/")) sub = sub.substring("trash/".length());
+        // The member folder has its own sub folders, so look at the last part of the path.
+        if (sub.endsWith("exercise-anatomy")) return MediaFile.ANATOMY_IMAGE;
+        if (sub.endsWith("profile-avatars")) return MediaFile.PROFILE_AVATAR;
+        return MediaFile.DEMO_VIDEO;
+    }
+
+    /** The folder of a public id: everything before the last slash. */
+    private Optional<String> folderOfPublicId(String publicId) {
+        if (publicId == null) return Optional.empty();
+        int slash = publicId.lastIndexOf('/');
+        if (slash <= 0) return Optional.empty();
+        return Optional.of(publicId.substring(0, slash));
     }
 
     private static LocalDateTime parseCloudinaryTime(Object value) {

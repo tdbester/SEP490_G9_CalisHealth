@@ -61,6 +61,7 @@ public class AdminStorageService {
     private final MediaRegistryService registry;
     private final MediaCleanupService cleanup;
     private final CloudinaryUsageService cloudinary;
+    private final CloudinarySetupService cloudinarySetup;
     private final StorageUsageJob usageJob;
     private final UserRepository users;
     private final UserActivityRepository activity;
@@ -318,6 +319,42 @@ public class AdminStorageService {
             return new QuotaInfo("CLOUDINARY", cloud.get().plan(), cloud.get().storageLimitBytes(), false);
         }
         return new QuotaInfo("LOCAL", null, 0, true);
+    }
+
+    /**
+     * The folders of the Cloudinary account the app writes into, with the number of files and their
+     * size, so the admin sees the structure of the account without opening the Media Library.
+     */
+    @Transactional(readOnly = true)
+    public FolderSetup folders() {
+        List<FolderInfo> infos = new ArrayList<>();
+        for (Map.Entry<String, String> entry : cloudinarySetup.folderLabels().entrySet()) {
+            String path = entry.getKey();
+            String label = entry.getValue();
+            boolean exists = cloudinarySetup.folderExists(path);
+            int files = exists ? cloudinarySetup.fileCount(path) : 0;
+            long bytes = exists ? cloudinarySetup.folderBytes(path) : 0;
+            infos.add(new FolderInfo(path, label, exists, files, bytes));
+        }
+        return new FolderSetup(infos, List.of(), List.of(), List.of());
+    }
+    /**
+     * Creates the folders the app needs that are not in the account yet. Cloudinary creates a folder
+     * by itself when the first file is uploaded into it, so this is only needed when the admin wants
+     * the structure to be visible in the console right away.
+     */
+    @Transactional
+    public FolderSetup setupFolders(String adminEmail) {
+        User admin = admin(adminEmail);
+        CloudinarySetupService.SetupResult result = cloudinarySetup.setupFolders();
+        List<FolderInfo> infos = new ArrayList<>();
+        Map<String, String> labels = cloudinarySetup.folderLabels();
+        for (CloudinarySetupService.FolderStatus status : result.folders()) {
+            infos.add(new FolderInfo(status.path(), labels.getOrDefault(status.path(), status.path()),
+                    status.exists(), status.files(), status.bytes()));
+        }
+        log(admin, "Created " + result.created().size() + " Cloudinary folders");
+        return new FolderSetup(infos, result.created(), result.existing(), result.failed());
     }
 
     /**

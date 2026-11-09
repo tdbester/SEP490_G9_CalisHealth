@@ -16,10 +16,15 @@ import api from "./client";
  *   GET    /admin/storage/settings                     -> settings
  *   PUT    /admin/storage/settings body settings        -> settings
  *   POST   /admin/storage/usage/refresh                  -> overview (reads the provider right now)
+ *   GET    /admin/storage/folders                      -> { folders, created, existing, failed }
+ *          the folders of the Cloudinary account the app writes into
+ *   POST   /admin/storage/folders/setup                -> creates the folders that are missing
  */
 export const adminStorageApi = {
   overview: () => api.get("/admin/storage/overview").then((res) => res.data),
   quota: () => api.get("/admin/storage/quota").then((res) => res.data),
+  folders: () => api.get("/admin/storage/folders").then((res) => res.data),
+  setupFolders: () => api.post("/admin/storage/folders/setup").then((res) => res.data),
   refreshUsage: () => api.post("/admin/storage/usage/refresh").then((res) => res.data),
   media: ({ view, status, source, type, sort, page, size } = {}) =>
     api
