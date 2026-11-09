@@ -70,7 +70,7 @@ const SECTIONS = [
       { key: "trashRetentionDays", unit: "days", min: 0, max: 30, icon: RestoreFromTrashOutlinedIcon, tone: "violet", tag: "softDelete" },
       { key: "restoreGraceDays", unit: "days", min: 0, max: 30, icon: HistoryRoundedIcon, tone: "green" },
     ],
-    toggle: { key: "autoCleanupEnabled", icon: AutoDeleteOutlinedIcon, tone: "green" },
+    toggle: { key: "autoCleanupEnabled", icon: AutoDeleteOutlinedIcon, tone: "green", i18n: "toggleAutoCleanup" },
   },
   {
     key: "quota",
@@ -325,24 +325,48 @@ export default function UploadLimitsTab() {
             );
           })}
 
+          {section.toggle && (
+            <SettingRow
+              icon={section.toggle.icon}
+              tone={section.toggle.tone}
+              label={t(`limits.${section.toggle.i18n}.label`)}
+              desc={t(`limits.${section.toggle.i18n}.desc`)}
+              last={!section.toggles?.length}
+              control={
+                <>
+                  <Switch
+                    checked={form[section.toggle.key]}
+                    onChange={(e) => set(section.toggle.key, e.target.checked)}
+                    inputProps={{ "aria-label": t(`limits.${section.toggle.i18n}.label`) }}
+                  />
+                  {!form[section.toggle.key] && (
+                    <Typography sx={{ fontSize: 12, color: CM.amber }}>
+                      {t(`limits.${section.toggle.i18n}.offWarning`)}
+                    </Typography>
+                  )}
+                </>
+              }
+            />
+          )}
+
           {section.toggles?.map((toggle, toggleIndex) => (
             <SettingRow
               key={toggle.key}
               icon={toggle.icon}
               tone={toggle.tone}
-              label={t(`limits.toggle${toggle.key.charAt(0).toUpperCase()}${toggle.key.slice(1)}.label`)}
-              desc={t(`limits.toggle${toggle.key.charAt(0).toUpperCase()}${toggle.key.slice(1)}.desc`)}
-              last={!section.toggles.slice(toggleIndex + 1).length && index === section.fields.length - 1}
+              label={t(`limits.${toggle.i18n}.label`)}
+              desc={t(`limits.${toggle.i18n}.desc`)}
+              last={toggleIndex === section.toggles.length - 1}
               control={
                 <>
                   <Switch
                     checked={form[toggle.key]}
                     onChange={(e) => set(toggle.key, e.target.checked)}
-                    inputProps={{ "aria-label": t(`limits.toggle${toggle.key.charAt(0).toUpperCase()}${toggle.key.slice(1)}.label`) }}
+                    inputProps={{ "aria-label": t(`limits.${toggle.i18n}.label`) }}
                   />
                   {!form[toggle.key] && (
                     <Typography sx={{ fontSize: 12, color: CM.amber }}>
-                      {t(`limits.toggle${toggle.key.charAt(0).toUpperCase()}${toggle.key.slice(1)}.offWarning`)}
+                      {t(`limits.${toggle.i18n}.offWarning`)}
                     </Typography>
                   )}
                 </>
