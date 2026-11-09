@@ -143,6 +143,24 @@ export default {
     },
   },
 
+  // ---- Media optimization ----
+  optimization: {
+    title: "Tối ưu media trước khi lưu",
+    hint:
+      "App thu nhỏ file ngay lúc tải lên, nên tài khoản Cloudinary chỉ tính tiền cho bản nhỏ thay vì bản gốc.",
+    enabled: "Đang bật",
+    disabled: "Đang tắt",
+    disabledHint:
+      "Media được lưu nguyên bản như cũ. Bật lại bằng biến môi trường CLOUDINARY_OPTIMIZE_ENABLED=true.",
+    imageRule: "Quy tắc cho ảnh",
+    videoRule: "Quy tắc cho video",
+    deliveryRule: "Khi gửi tới trình duyệt",
+    imageWidth: "Ảnh tối đa {width} px",
+    videoWidth: "Video tối đa {width} px",
+    note: "Chỉ áp dụng cho media tải lên từ lúc bật. File đã có trên Cloudinary không bị thay đổi.",
+    consoleHint: "Mở cài đặt upload của Cloudinary",
+  },
+
   // ---- Breakdown (by category / by source) ----
   breakdown: {
     byCategory: "Nội dung nào chiếm dung lượng",

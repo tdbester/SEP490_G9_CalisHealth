@@ -76,6 +76,7 @@ class PersonalExerciseServiceTest {
                 "",
                 mediaRegistry,
                 new CloudinaryFolderService("calishealth"),
+                new CloudinaryOptimizationService(true, 1600, 1280, "auto:good", "auto:good", "", ""),
                 mock(Cloudinary.class));
         service = new PersonalExerciseService(
                 exercises,

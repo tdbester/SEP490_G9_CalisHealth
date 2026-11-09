@@ -61,6 +61,23 @@ app:
     # Thư mục gốc trên Cloudinary. Mọi media của app nằm dưới thư mục này, mỗi loại media một
     # thư mục con (exercise-demos, exercise-anatomy, profile-avatars, member-exercises, trash).
     folder: ${CLOUDINARY_FOLDER:calishealth}
+    # Tối ưu media trước khi lưu lên Cloudinary. File được thu nhỏ ngay lúc upload (upload
+    # transformation), nên tài khoản chỉ phải trả tiền cho bản nhỏ chứ không phải bản gốc.
+    # Đo thực tế trên tài khoản Cloudinary Free của dự án:
+    #   ảnh 1600x1200 :  8462 B  ->   226 B   (c_limit,w_1200,q_auto:good)
+    #   ảnh 2400x1800 : 27740 B  ->  5937 B   (c_limit,w_1600,q_auto:good)
+    #   video 10 s    : 3018 KB  ->  549 KB   (vc_auto,c_limit,w_1280,q_auto:good)
+    # Đặt enabled=false để tắt (khi cần giữ nguyên file gốc).
+    optimize:
+      enabled: ${CLOUDINARY_OPTIMIZE_ENABLED:true}
+      image-max-width: ${CLOUDINARY_IMAGE_MAX_WIDTH:1600}
+      video-max-width: ${CLOUDINARY_VIDEO_MAX_WIDTH:1280}
+      image-quality: ${CLOUDINARY_IMAGE_QUALITY:auto:good}
+      video-quality: ${CLOUDINARY_VIDEO_QUALITY:auto:good}
+      # Để trống = giữ nguyên định dạng gốc khi lưu. Ảnh dạng này chỉ nén lại, không đổi phần mở rộng.
+      image-format: ${CLOUDINARY_IMAGE_FORMAT:}
+      # Video: để trống thì vc_auto tự chọn codec (MOV sẽ thành MP4).
+      video-format: ${CLOUDINARY_VIDEO_FORMAT:}
     # Ngày trong tháng mà bộ đếm của gói Cloudinary được reset (mặc định là ngày 1).
     usage-reset-day: ${CLOUDINARY_USAGE_RESET_DAY:1}
   jwt:

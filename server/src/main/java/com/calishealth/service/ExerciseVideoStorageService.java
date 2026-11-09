@@ -54,6 +54,7 @@ public class ExerciseVideoStorageService {
     private final Cloudinary cloudinary;
     private final String cloudName;
     private final CloudinaryFolderService folders;
+    private final CloudinaryOptimizationService optimization;
 
     /** A file found on disk by {@link #listStoredFiles()}. */
     public record StoredFile(String url, Path path, String category) {}
@@ -64,6 +65,7 @@ public class ExerciseVideoStorageService {
             @Value("${app.cloudinary.cloud-name:}") String cloudName,
             MediaRegistryService registry,
             CloudinaryFolderService folders,
+            CloudinaryOptimizationService optimization,
             Cloudinary cloudinary
     ) {
         this.storageDirectory = Path.of(storageDirectory).toAbsolutePath().normalize();
@@ -72,6 +74,7 @@ public class ExerciseVideoStorageService {
         this.cloudinary = cloudinary;
         this.cloudName = cloudName == null ? "" : cloudName.trim();
         this.folders = folders;
+        this.optimization = optimization;
     }
 
     /** Stores a demo video and returns its public URL. */
@@ -169,7 +172,13 @@ public class ExerciseVideoStorageService {
             String url = upload.url();
             try {
                 checkVideoDuration(url, upload.durationSeconds(), category);
-                registry.register(url, file.getOriginalFilename(), file.getSize(), category, extension, hash, uploader,
+                // The size of the file that is really stored, not the size of the upload: the
+                // transformation shrinks it, and the registry has to count what the account pays for.
+                long storedBytes = upload.bytes() == null ? file.getSize() : upload.bytes();
+                // The codec rule can change the format (a MOV ends up as a MP4), so the registry
+                // gets the format of the file that is really on the CDN.
+                String storedFormat = upload.format() == null ? extension : upload.format();
+                registry.register(url, file.getOriginalFilename(), storedBytes, category, storedFormat, hash, uploader,
                         LocalDateTime.now(), upload.durationSeconds());
                 return url;
             } catch (RuntimeException exception) {
@@ -199,28 +208,40 @@ public class ExerciseVideoStorageService {
     }
 
     /** The uploaded file: its URL and, for videos, how long it is. */
-    private record CloudUpload(String url, Integer durationSeconds) {}
+    private record CloudUpload(String url, Integer durationSeconds, Long bytes, String format) {}
 
     /**
      * Uploads the file and reads its length from the answer of Cloudinary. The length is what the
      * admin limit ({@code demo_max_seconds}) is checked against, so the server decides and not only
      * the browser.
+     *
+     * <p>The file is shrunk before it is stored: Cloudinary applies the transformation of
+     * {@link CloudinaryOptimizationService} and keeps the small version, so the account does not
+     * pay for the big one. The URL stays the plain one, because the transformation is stored with
+     * the asset and the CDN serves the small file already.
      */
     private CloudUpload uploadFile(Path file, String category, String source) throws IOException {
         boolean video = !MediaFile.ANATOMY_IMAGE.equals(category);
-        Map<?, ?> options = ObjectUtils.asMap(
+        Map<String, Object> options = new HashMap<>(ObjectUtils.asMap(
                 "folder", folders.forCategory(category, source),
                 "public_id", UUID.randomUUID().toString(),
                 "resource_type", video ? "video" : "image",
-                "overwrite", false
-        );
+                "overwrite", false));
+        String transformation = optimization.transformationFor(video);
+        if (!transformation.isBlank()) options.put("transformation", transformation);
+        String format = optimization.formatFor(video);
+        if (!format.isBlank()) options.put("format", format);
         // Videos go up in chunks so files above Cloudinary's single-request limit still work.
         Map<?, ?> result = video
                 ? cloudinary.uploader().uploadLarge(file.toFile(), options)
                 : cloudinary.uploader().upload(file.toFile(), options);
         Object url = result.get("secure_url");
         if (url == null) throw new IOException("Cloudinary did not return a URL");
-        return new CloudUpload(url.toString(), durationOf(result));
+        Object bytes = result.get("bytes");
+        Object storedFormat = result.get("format");
+        return new CloudUpload(url.toString(), durationOf(result),
+                bytes instanceof Number number ? number.longValue() : null,
+                storedFormat == null ? null : storedFormat.toString());
     }
 
     /** The length of an uploaded video in whole seconds; null when Cloudinary did not report it. */

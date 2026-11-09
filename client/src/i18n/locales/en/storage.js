@@ -143,6 +143,24 @@ export default {
     },
   },
 
+  // ---- Media optimization ----
+  optimization: {
+    title: "Media optimization",
+    hint:
+      "The app shrinks a file right when it is uploaded, so the Cloudinary account only pays for the small version instead of the original.",
+    enabled: "Enabled",
+    disabled: "Disabled",
+    disabledHint:
+      "Media is stored as it was uploaded. Turn it back on with the environment variable CLOUDINARY_OPTIMIZE_ENABLED=true.",
+    imageRule: "Rule for images",
+    videoRule: "Rule for videos",
+    deliveryRule: "When it is sent to the browser",
+    imageWidth: "Images up to {width} px",
+    videoWidth: "Videos up to {width} px",
+    note: "Only applies to media uploaded from now on. Files that are already on Cloudinary stay as they are.",
+    consoleHint: "Open the upload settings of Cloudinary",
+  },
+
   // ---- Breakdown (by category / by source) ----
   breakdown: {
     byCategory: "What takes the space",

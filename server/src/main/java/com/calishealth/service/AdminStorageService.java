@@ -62,6 +62,7 @@ public class AdminStorageService {
     private final MediaCleanupService cleanup;
     private final CloudinaryUsageService cloudinary;
     private final CloudinarySetupService cloudinarySetup;
+    private final CloudinaryOptimizationService optimization;
     private final StorageUsageJob usageJob;
     private final UserRepository users;
     private final UserActivityRepository activity;
@@ -355,6 +356,21 @@ public class AdminStorageService {
         }
         log(admin, "Created " + result.created().size() + " Cloudinary folders");
         return new FolderSetup(infos, result.created(), result.existing(), result.failed());
+    }
+
+    /**
+     * The rules that shrink the media before it is stored, so the admin sees what happens to an
+     * upload and knows that the account only pays for the small version.
+     */
+    @Transactional(readOnly = true)
+    public OptimizationInfo optimization() {
+        return new OptimizationInfo(
+                optimization.enabled(),
+                optimization.imageTransformation(),
+                optimization.videoTransformation(),
+                optimization.deliveryTransformation(),
+                optimization.imageMaxWidth(),
+                optimization.videoMaxWidth());
     }
 
     /**

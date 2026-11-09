@@ -81,6 +81,12 @@ public class AdminStorageController {
         return service.setupFolders(a.getName());
     }
 
+    /** The rules that shrink the media before it is stored on the CDN. */
+    @GetMapping("/optimization")
+    public OptimizationInfo optimization() {
+        return service.optimization();
+    }
+
     /**
      * Reads the usage of the provider right now and stores it as the snapshot of the day.
      * The daily job does this at night; the button lets an admin refresh the numbers without

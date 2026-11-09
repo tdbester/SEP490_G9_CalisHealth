@@ -213,6 +213,20 @@ public class AdminStorageDtos {
     public record FolderSetup(List<FolderInfo> folders, List<String> created, List<String> existing,
                               List<String> failed) {}
 
+    /**
+     * The rules that shrink the media before it is stored, so the admin sees what the app does with
+     * an upload and can turn it off.
+     *
+     * @param enabled         true when the media is shrunk before it is stored
+     * @param imageRule       the transformation of an image, e.g. "c_limit,w_1600,q_auto:good"
+     * @param videoRule       the transformation of a video, e.g. "vc_auto,c_limit,w_1280,q_auto:good"
+     * @param deliveryRule    the transformation of the delivery, e.g. "q_auto:good,f_auto"
+     * @param imageMaxWidth   the widest side a stored image gets, in pixels
+     * @param videoMaxWidth   the widest side a stored video gets, in pixels
+     */
+    public record OptimizationInfo(boolean enabled, String imageRule, String videoRule, String deliveryRule,
+                                   int imageMaxWidth, int videoMaxWidth) {}
+
     /** Ranges are checked in AdminStorageService (same ranges as the form). */
     public record UpdateSettingsRequest(
             @NotNull Integer maxVideoMb,
