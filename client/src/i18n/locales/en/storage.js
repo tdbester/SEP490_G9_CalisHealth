@@ -104,9 +104,9 @@ export default {
       "The {plan} plan does not cap the storage in bytes: it counts credits instead. The limit on this screen is the one of the admin settings, the real usage is the one of the account.",
     diffAlert:
       "The app manages {registry} of files, the account uses {used}. The two numbers differ when media was uploaded straight to Cloudinary, outside the app, or when a file is still in the trash.",
-    openConsole: "Mở Media Library",
-    consoleTitle: "Quản lý trên Cloudinary",
-    consoleUsage: "Báo cáo mức dùng",
+    openConsole: "Open Media Library",
+    consoleTitle: "Manage on Cloudinary",
+    consoleUsage: "Usage reports",
     consoleUploadSettings: "Upload settings",
     consolePlan: "Plan & credits",
     consoleHint: "Opens the Cloudinary console in a new tab. You need a Cloudinary account with access to {cloud}.",
