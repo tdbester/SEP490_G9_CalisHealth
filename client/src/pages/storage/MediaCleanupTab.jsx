@@ -236,11 +236,7 @@ function FileList({ files }) {
     <Box sx={{ mt: 2, maxHeight: 220, overflowY: "auto", borderRadius: "10px", border: `1px solid ${CM.border}`, bgcolor: CM.surfaceSoft }}>
       {files.map((m) => (
         <Box key={m.id} sx={{ px: 1.75, py: 1, display: "flex", alignItems: "center", gap: 1.25, "& + &": { borderTop: `1px solid ${CM.border}` } }}>
-          {m.fileType === "VIDEO" ? (
-            <VideocamOutlinedIcon sx={{ fontSize: 17, color: TONE.violet.fg }} />
-          ) : (
-            <ImageOutlinedIcon sx={{ fontSize: 17, color: TONE.pink.fg }} />
-          )}
+          <Thumbnail m={m} />
           <Typography sx={{ flex: 1, minWidth: 0, fontSize: 13 }} noWrap>
             {m.fileName}
           </Typography>
@@ -301,10 +297,54 @@ function ExtendDialog({ media, busy, onCancel, onConfirm, t }) {
   );
 }
 
+/**
+ * The picture of a file, so the admin sees what it is without opening it.
+ *
+ * The picture comes from Cloudinary (it is made on the fly, so it costs no storage). When there is
+ * none, the icon of the kind of file is shown instead.
+ */
+function Thumbnail({ m }) {
+  const [failed, setFailed] = useState(false);
+  const size = 44;
+  const showPicture = m.thumbnailUrl && !failed;
+  return (
+    <Box
+      sx={{
+        width: size,
+        height: size,
+        flex: `0 0 ${size}px`,
+        borderRadius: "8px",
+        overflow: "hidden",
+        bgcolor: CM.surfaceSoft,
+        border: `1px solid ${CM.border}`,
+        display: "grid",
+        placeItems: "center",
+      }}
+    >
+      {showPicture ? (
+        <Box
+          component="img"
+          src={m.thumbnailUrl}
+          alt=""
+          loading="lazy"
+          onError={() => setFailed(true)}
+          sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
+      ) : (
+        <IconBox
+          icon={m.fileType === "VIDEO" ? VideocamOutlinedIcon : ImageOutlinedIcon}
+          tone={m.fileType === "VIDEO" ? "violet" : "pink"}
+          size={size - 8}
+        />
+      )}
+    </Box>
+  );
+}
+
 function FileCell({ m, t }) {
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-      <IconBox icon={m.fileType === "VIDEO" ? VideocamOutlinedIcon : ImageOutlinedIcon} tone={m.fileType === "VIDEO" ? "violet" : "pink"} size={38} />
+      <Thumbnail m={m} />
       <Box sx={{ minWidth: 0 }}>
         <Typography sx={{ fontSize: 14, fontWeight: 600 }} noWrap>
           {m.fileName}

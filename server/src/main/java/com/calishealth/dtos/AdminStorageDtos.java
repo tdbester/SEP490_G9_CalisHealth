@@ -123,7 +123,9 @@ public class AdminStorageDtos {
             String trashedBy,
             LocalDateTime purgeAt,
             long sizeBytes,
-            String url) {}
+            String url,
+            /** A small picture of the file, so the admin sees it without opening it. Null when there is none. */
+            String thumbnailUrl) {}
 
     /** Whole-registry numbers for the stat tiles (ignore the current filters). total = inactive files. */
     public record MediaSummary(

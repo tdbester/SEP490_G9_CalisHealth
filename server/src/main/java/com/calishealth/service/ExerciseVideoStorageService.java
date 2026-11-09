@@ -287,6 +287,42 @@ public class ExerciseVideoStorageService {
     }
 
     /**
+     * The URL of a small picture of a media file, so the admin can see what a file is without
+     * opening it.
+     *
+     * <p>Cloudinary makes the picture on the fly, so no extra file is stored and the storage of the
+     * account does not grow. A video becomes its first frame ({@code so_0}), a picture becomes a
+     * small copy. The transformation is only added when the URL points at Cloudinary: a file on the
+     * local disk has no picture to ask for.
+     *
+     * @param mediaUrl the URL of the file
+     * @param video    true when the file is a video
+     * @return the URL of the picture, or empty when the file is not on Cloudinary
+     */
+    public Optional<String> thumbnailUrl(String mediaUrl, boolean video) {
+        if (mediaUrl == null || !mediaUrl.startsWith("http")) return Optional.empty();
+        Optional<CloudinaryAsset> asset = cloudinaryAsset(mediaUrl);
+        if (asset.isEmpty()) return Optional.empty();
+        CloudinaryAsset value = asset.get();
+        // The picture of a video is its first frame; a picture is scaled down to a small copy.
+        String rule = video ? "so_0,c_limit,w_160" : "c_limit,w_160,q_auto:low,f_auto";
+        String extension = extensionOf(mediaUrl);
+        String suffix = extension.isEmpty() ? "" : "." + extension;
+        return Optional.of("https://res.cloudinary.com/" + cloudName + "/" + value.resourceType()
+                + "/upload/" + rule + "/" + value.publicId() + suffix);
+    }
+
+    /** The extension of a URL, without the dot; empty when it has none. */
+    private static String extensionOf(String url) {
+        int dot = url.lastIndexOf('.');
+        if (dot < 0 || dot < url.lastIndexOf('/')) return "";
+        String extension = url.substring(dot + 1);
+        // A query string would end up in the extension.
+        int cut = extension.indexOf('?');
+        return cut < 0 ? extension : extension.substring(0, cut);
+    }
+
+    /**
      * Moves a file of this app to another folder of the Cloudinary account.
      *
      * <p>Cloudinary renames the public id when a file moves, so the URL changes. The caller gets the

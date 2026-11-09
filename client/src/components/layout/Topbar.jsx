@@ -5,11 +5,12 @@ import LocalFireDepartmentRoundedIcon from "@mui/icons-material/LocalFireDepartm
 import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import LanguageRoundedIcon from "@mui/icons-material/LanguageRounded";
 import api from "../../api/client";
 import NotificationBell from "../notifications/NotificationBell";
 import { avatarUrl, profileApi } from "../../api/profile";
 import BrandLogo from "../BrandLogo";
-import { changeLanguage, currentLanguage } from "../../i18n";
+import { changeLanguage, currentLanguage, SUPPORTED_LANGUAGES } from "../../i18n";
 import { notifyAuthSessionChanged } from "../../utils/authSession";
 import "./Topbar.css";
 
@@ -24,6 +25,9 @@ export default function Topbar() {
   const [user, setUser] = useState(null);
   const [currentStreak, setCurrentStreak] = useState(null);
   const [openPanel, setOpenPanel] = useState(null);
+  // The language is read from the storage on every render, so a change made in the account menu
+  // (or in another tab) is reflected here too.
+  const [language, setLanguage] = useState(() => currentLanguage());
 
   useEffect(() => {
     const cached = localStorage.getItem("token")
@@ -133,6 +137,15 @@ export default function Topbar() {
     navigate("/login");
   };
 
+  // Switching the language from the top bar: the page is reloaded so every screen picks the new
+  // language up, including the ones that are not mounted at the moment.
+  const handleLanguage = (code) => {
+    if (code === language) return;
+    changeLanguage(code);
+    setLanguage(code);
+    window.location.reload();
+  };
+
   const navigateFromPanel = (path) => {
     setOpenPanel(null);
     navigate(path);
@@ -218,6 +231,31 @@ export default function Topbar() {
             />
           </>
         )}
+
+        {/*
+          The language switcher sits in the top bar, so it is also there for a guest who has no
+          account menu to open.
+        */}
+        <div
+          className="topbar-lang"
+          role="group"
+          aria-label={t("common.changeLanguage")}
+        >
+          <LanguageRoundedIcon className="topbar-lang-icon" />
+          {SUPPORTED_LANGUAGES.map((item) => (
+            <button
+              key={item.code}
+              type="button"
+              className={`topbar-lang-option${language === item.code ? " is-active" : ""}`}
+              onClick={() => handleLanguage(item.code)}
+              aria-pressed={language === item.code}
+              aria-label={item.label}
+              lang={item.code}
+            >
+              {item.short}
+            </button>
+          ))}
+        </div>
 
         {user ? (
           <>

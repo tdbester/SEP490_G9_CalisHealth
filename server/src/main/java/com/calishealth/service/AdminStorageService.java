@@ -60,6 +60,7 @@ public class AdminStorageService {
     private final StorageUsageDailyRepository usageDaily;
     private final MediaRegistryService registry;
     private final MediaCleanupService cleanup;
+    private final ExerciseVideoStorageService storage;
     private final CloudinaryUsageService cloudinary;
     private final CloudinarySetupService cloudinarySetup;
     private final CloudinaryOptimizationService optimization;
@@ -222,7 +223,7 @@ public class AdminStorageService {
         Sort order = (sort == null ? fallback : SORTS.getOrDefault(sort, fallback)).and(Sort.by("id"));
         int pageSize = Math.min(Math.max(size, 1), 100);
         Page<MediaFile> result = media.findAll(spec, PageRequest.of(Math.max(page, 0), pageSize, order));
-        return new MediaPage(result.getContent().stream().map(AdminStorageService::toItem).toList(),
+        return new MediaPage(result.getContent().stream().map(this::toItem).toList(),
                 result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages(), summary());
     }
 
@@ -238,17 +239,19 @@ public class AdminStorageService {
                 media.sumTrashDue(now.plusDays(1)), registry.settings().getTrashRetentionDays());
     }
 
-    private static MediaItem toItem(MediaFile file) {
+    private MediaItem toItem(MediaFile file) {
         User uploader = file.getUploadedBy();
         String sourceLabel = MediaFile.SOURCE_MEMBER.equals(file.getSource())
                 ? (uploader == null ? "Unknown member" : uploader.getEmail())
                 : "Exercise library";
         String trashedBy = file.getTrashedAt() == null ? null
                 : file.getTrashedBy() == null ? "Auto-cleanup" : file.getTrashedBy().getEmail();
+        // The picture of the file, so the admin sees what it is without opening it.
+        String thumbnail = storage.thumbnailUrl(file.getFileUrl(), "VIDEO".equals(file.getFileType())).orElse(null);
         return new MediaItem(file.getId(), file.getOriginalName(), file.getFileType(), file.getStatus(),
                 file.getPreviousStatus(), file.getReason(), file.getSource(), sourceLabel, file.getUploadedAt(),
                 file.getInactiveSince(), file.getDeletableAt(), file.getTrashedAt(), trashedBy, file.getPurgeAt(),
-                file.getSizeBytes(), file.getFileUrl());
+                file.getSizeBytes(), file.getFileUrl(), thumbnail);
     }
 
     @Transactional
