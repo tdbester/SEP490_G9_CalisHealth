@@ -42,6 +42,7 @@ public class StorageUsageJob {
     private final MediaFileRepository media;
     private final MediaRegistryService registry;
     private final NotificationRepository notifications;
+    private final CreditGuardService guard;
 
     /** The plan period resets on this day of the month, so the counters are cleared with it. */
     @Value("${app.cloudinary.usage-reset-day:1}")
@@ -72,8 +73,34 @@ public class StorageUsageJob {
 
         backfillHistory(value);
         checkThreshold(value, row);
+        runGuard(value);
         log.info("Storage usage snapshot: {} bytes stored, {} bytes delivered, {} credits used",
                 value.storageUsedBytes(), value.bandwidthUsedBytes(), value.creditsUsed());
+    }
+
+    /**
+     * Frees space when the account is close to its limit.
+     *
+     * <p>The warning thresholds only tell the admins; the guard acts as well. It runs after the
+     * warning, so the admins know about the situation before the guard changes anything.
+     */
+    private void runGuard(CloudinaryUsageService.Usage usage) {
+        try {
+            CreditGuardService.GuardOutcome outcome = guard.run(false);
+            if (!outcome.freed()) return;
+            String message = "The storage account is at " + Math.round(outcome.usedPercent())
+                    + "% of the plan. The system freed " + outcome.freedBytes() + " bytes ("
+                    + outcome.purged() + " file(s) deleted, " + outcome.trashed() + " file(s) moved to the trash).";
+            Notification notification = new Notification();
+            notification.setTargetAudience("ADMIN");
+            notification.setTitle("Storage space freed automatically");
+            notification.setMessage(message);
+            notification.setType("UPDATE");
+            notification.setStatus("PUBLISHED");
+            notifications.save(notification);
+        } catch (RuntimeException exception) {
+            log.error("The credit guard could not free space", exception);
+        }
     }
 
     /**

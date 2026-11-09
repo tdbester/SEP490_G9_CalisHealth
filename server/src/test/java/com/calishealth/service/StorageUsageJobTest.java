@@ -48,15 +48,19 @@ class StorageUsageJobTest {
     private MediaRegistryService registry;
     @Mock
     private NotificationRepository notifications;
+    @Mock
+    private CreditGuardService guard;
 
     private StorageUsageJob job;
 
     @BeforeEach
     void setUp() {
-        job = new StorageUsageJob(cloudinary, usageDaily, media, registry, notifications);
+        job = new StorageUsageJob(cloudinary, usageDaily, media, registry, notifications, guard);
         when(registry.settings()).thenReturn(settings(80, 95));
         // No day has a snapshot yet, so the job fills the last 30 days.
         when(usageDaily.findByDayGreaterThanEqualOrderByDayAsc(any())).thenReturn(List.of());
+        // The guard is off by default, so it never frees anything in these tests.
+        when(guard.run(false)).thenReturn(new CreditGuardService.GuardOutcome(false, 0, 0, 0, 0, "off"));
     }
 
     private CloudinaryUsageService.Usage usage(long stored, long limit) {

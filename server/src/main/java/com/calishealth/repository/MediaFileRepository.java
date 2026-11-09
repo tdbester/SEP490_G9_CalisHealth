@@ -26,6 +26,8 @@ public interface MediaFileRepository extends JpaRepository<MediaFile, Long>, Jpa
 
     List<MediaFile> findAllByStatus(String status);
 
+    List<MediaFile> findAllByStatusIn(Collection<String> statuses);
+
     @Query("select coalesce(sum(m.sizeBytes), 0L) from MediaFile m where m.category is not null and m.status <> 'PURGED'")
     long sumBytesOnDisk();
 

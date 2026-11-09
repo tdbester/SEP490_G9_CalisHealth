@@ -161,6 +161,30 @@ export default {
     consoleHint: "Mở cài đặt upload của Cloudinary",
   },
 
+  // ---- Credit guard ----
+  guard: {
+    title: "Bộ bảo vệ credit",
+    hint:
+      "Gói Cloudinary tính theo credit chứ không tính dung lượng, nên tài khoản có thể hết credit trước khi hết chỗ. Bộ bảo vệ tự xóa media đã nằm trong thùng rác và chuyển media không còn bài tập nào dùng sang thùng rác.",
+    stateTitle: "Trạng thái bộ bảo vệ",
+    disabled: "Đang tắt",
+    ready: "Đang chờ",
+    active: "Đang kích hoạt",
+    usedPercent: "Đã dùng gói",
+    statThreshold: "Ngưỡng kích hoạt",
+    statReclaimable: "Có thể giải phóng",
+    statMode: "Cách hoạt động",
+    statModeAuto: "Tự động",
+    statModeManual: "Thủ công",
+    reclaimableHint: "Có thể giải phóng ngay {bytes} nếu dọn media mồ côi, bị từ chối và thùng rác.",
+    result: "Đã giải phóng {bytes}: xóa vĩnh viễn {purged} tệp, chuyển {trashed} tệp sang thùng rác.",
+    freeNow: "Giải phóng ngay",
+    freeing: "Đang giải phóng…",
+    configureHint: "Ngưỡng chỉnh ở tab Giới hạn tải lên",
+    errorLoad: "Không tải được trạng thái bộ bảo vệ.",
+    errorFree: "Không giải phóng được dung lượng.",
+  },
+
   // ---- Breakdown (by category / by source) ----
   breakdown: {
     byCategory: "Nội dung nào chiếm dung lượng",
@@ -433,6 +457,10 @@ export default {
         label: "Ngưỡng nghiêm trọng",
         desc: "Phải lớn hơn ngưỡng cảnh báo.",
       },
+      creditGuardThreshold: {
+        label: "Ngưỡng bộ bảo vệ credit",
+        desc: "Khi đã dùng ngần người gói này, hệ thống tự giải phóng dung lượng. Phải lớn hơn ngưỡng nghiêm trọng.",
+      },
     },
     tags: {
       softDelete: "Xóa mềm",
@@ -442,6 +470,11 @@ export default {
       label: "Tự động dọn dẹp hằng ngày",
       desc: "Chạy mỗi ngày lúc 03:00 (giờ máy chủ): chuyển tệp hết hạn vào thùng rác và xóa vĩnh viễn thùng rác quá hạn. Tệp trùng lặp chỉ được lưu một lần (hash nội dung).",
       offWarning: "Tệp hết hạn sẽ tích tụ lại",
+    },
+    toggleCreditGuard: {
+      label: "Bộ bảo vệ credit",
+      desc: "Khi tài khoản sắp cạn credit, hệ thống tự xóa vĩnh viễn media trong thùng rác và chuyển media không còn bài tập nào dùng sang thùng rác.",
+      offWarning: "Tài khoản có thể hết credit mà không ai được báo",
     },
     formatsAria: "Các định dạng của {label}",
     units: {
@@ -457,6 +490,7 @@ export default {
     errorRange: "Phải nằm trong khoảng {min} – {max}",
     errorQuotaHigher: "Phải lớn hơn mức dùng hiện tại ({used})",
     errorCriticalHigher: "Phải lớn hơn ngưỡng cảnh báo",
+    errorGuardHigher: "Phải lớn hơn ngưỡng nghiêm trọng",
     errorNoVideoFormat: "Phải cho phép ít nhất một định dạng video",
     errorNoImageFormat: "Phải cho phép ít nhất một định dạng ảnh",
     hintGuidelineOnly: "Chỉ mang tính tham khảo: gói tính credit",

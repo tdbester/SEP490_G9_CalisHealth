@@ -58,6 +58,25 @@ public class StorageSettings {
     @Column(name = "auto_cleanup_enabled", nullable = false)
     private boolean autoCleanupEnabled;
 
+    /**
+     * True when the app frees space by itself when the account runs out of room.
+     *
+     * <p>The plan of this app counts credits, so the account can run out of credits long before it
+     * runs out of space. The warning thresholds only tell the admins; the guard acts: the media
+     * that is already deleted is purged right away instead of waiting for the retention period.
+     */
+    @Column(name = "credit_guard_enabled", nullable = false)
+    private boolean creditGuardEnabled;
+
+    /**
+     * The share of the plan that switches the guard on, in percent.
+     *
+     * <p>It has to be above the critical threshold of the warnings, or the guard would act before
+     * the admins were told.
+     */
+    @Column(name = "credit_guard_threshold", nullable = false)
+    private int creditGuardThreshold;
+
     @Column(name = "quota_gb", nullable = false)
     private int quotaGb;
 

@@ -24,6 +24,7 @@ import AutoDeleteOutlinedIcon from "@mui/icons-material/AutoDeleteOutlined";
 import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import ReportGmailerrorredRoundedIcon from "@mui/icons-material/ReportGmailerrorredRounded";
+import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import RestoreFromTrashOutlinedIcon from "@mui/icons-material/RestoreFromTrashOutlined";
@@ -77,12 +78,20 @@ const SECTIONS = [
       { key: "quotaGb", unit: "GB", min: 1, max: 1000, icon: StorageRoundedIcon, tone: "cyan" },
       { key: "warningPercent", unit: "percent", min: 50, max: 95, icon: WarningAmberRoundedIcon, tone: "amber" },
       { key: "criticalPercent", unit: "percent", min: 51, max: 99, icon: ReportGmailerrorredRoundedIcon, tone: "pink" },
+      { key: "creditGuardThreshold", unit: "percent", min: 50, max: 100, icon: ShieldOutlinedIcon, tone: "green" },
     ],
+    toggles: [{ key: "creditGuardEnabled", icon: ShieldOutlinedIcon, tone: "green", i18n: "toggleCreditGuard" }],
   },
 ];
 
 const FIELDS = SECTIONS.flatMap((s) => s.fields);
-const EDITABLE_KEYS = [...FIELDS.map((f) => f.key), "videoFormats", "imageFormats", "autoCleanupEnabled"];
+const EDITABLE_KEYS = [
+  ...FIELDS.map((f) => f.key),
+  "videoFormats",
+  "imageFormats",
+  ...SECTIONS.flatMap((s) => s.toggles ?? []).map((tg) => tg.key),
+  ...SECTIONS.filter((s) => s.toggle).map((s) => s.toggle.key),
+];
 // Inputs hold strings ("100") while the API returns numbers (100), so scalars are compared as strings.
 const same = (a, b) => (Array.isArray(a) ? [...a].sort().join() === [...b].sort().join() : String(a) === String(b));
 
@@ -100,6 +109,14 @@ function validate(form, usedBytes, quotaEditable, t) {
   }
   if (!errors.criticalPercent && !errors.warningPercent && Number(form.criticalPercent) <= Number(form.warningPercent)) {
     errors.criticalPercent = t("limits.errorCriticalHigher");
+  }
+  // The guard acts without asking, so it must not run before the admins were warned.
+  if (
+    !errors.creditGuardThreshold &&
+    !errors.criticalPercent &&
+    Number(form.creditGuardThreshold) <= Number(form.criticalPercent)
+  ) {
+    errors.creditGuardThreshold = t("limits.errorGuardHigher");
   }
   if (!form.videoFormats.length) errors.maxVideoMb = t("limits.errorNoVideoFormat");
   if (!form.imageFormats.length) errors.maxImageMb = t("limits.errorNoImageFormat");
@@ -308,27 +325,30 @@ export default function UploadLimitsTab() {
             );
           })}
 
-          {section.toggle && (
+          {section.toggles?.map((toggle, toggleIndex) => (
             <SettingRow
-              icon={section.toggle.icon}
-              tone={section.toggle.tone}
-              label={t("limits.toggleAutoCleanup.label")}
-              desc={t("limits.toggleAutoCleanup.desc")}
-              last
+              key={toggle.key}
+              icon={toggle.icon}
+              tone={toggle.tone}
+              label={t(`limits.toggle${toggle.key.charAt(0).toUpperCase()}${toggle.key.slice(1)}.label`)}
+              desc={t(`limits.toggle${toggle.key.charAt(0).toUpperCase()}${toggle.key.slice(1)}.desc`)}
+              last={!section.toggles.slice(toggleIndex + 1).length && index === section.fields.length - 1}
               control={
                 <>
                   <Switch
-                    checked={form[section.toggle.key]}
-                    onChange={(e) => set(section.toggle.key, e.target.checked)}
-                    inputProps={{ "aria-label": t("limits.toggleAutoCleanup.label") }}
+                    checked={form[toggle.key]}
+                    onChange={(e) => set(toggle.key, e.target.checked)}
+                    inputProps={{ "aria-label": t(`limits.toggle${toggle.key.charAt(0).toUpperCase()}${toggle.key.slice(1)}.label`) }}
                   />
-                  {!form[section.toggle.key] && (
-                    <Typography sx={{ fontSize: 12, color: CM.amber }}>{t("limits.toggleAutoCleanup.offWarning")}</Typography>
+                  {!form[toggle.key] && (
+                    <Typography sx={{ fontSize: 12, color: CM.amber }}>
+                      {t(`limits.toggle${toggle.key.charAt(0).toUpperCase()}${toggle.key.slice(1)}.offWarning`)}
+                    </Typography>
                   )}
                 </>
               }
             />
-          )}
+          ))}
         </Box>
       ))}
 

@@ -173,6 +173,8 @@ public class AdminStorageDtos {
             int trashRetentionDays,
             int restoreGraceDays,
             boolean autoCleanupEnabled,
+            boolean creditGuardEnabled,
+            int creditGuardThreshold,
             int quotaGb,
             int warningPercent,
             int criticalPercent,
@@ -227,6 +229,27 @@ public class AdminStorageDtos {
     public record OptimizationInfo(boolean enabled, String imageRule, String videoRule, String deliveryRule,
                                    int imageMaxWidth, int videoMaxWidth) {}
 
+    /**
+     * The credit guard: the part of the app that frees space when the account is close to its limit.
+     *
+     * @param enabled        true when the app frees space by itself
+     * @param threshold      the share of the plan that switches the guard on, in percent
+     * @param usedPercent    the share of the plan that is used right now
+     * @param reclaimableBytes how much space the guard could free right now
+     * @param active         true when the guard is on and the account is over the threshold
+     */
+    public record CreditGuardInfo(boolean enabled, int threshold, double usedPercent,
+                                  long reclaimableBytes, boolean active) {}
+
+    /**
+     * What the credit guard did.
+     *
+     * @param purged     the files that were deleted for good
+     * @param freedBytes the space that was freed
+     * @param trashed    the files that were moved to the trash
+     */
+    public record CreditGuardResult(int purged, long freedBytes, int trashed, double usedPercent, String message) {}
+
     /** Ranges are checked in AdminStorageService (same ranges as the form). */
     public record UpdateSettingsRequest(
             @NotNull Integer maxVideoMb,
@@ -241,6 +264,8 @@ public class AdminStorageDtos {
             @NotNull Integer trashRetentionDays,
             @NotNull Integer restoreGraceDays,
             @NotNull Boolean autoCleanupEnabled,
+            @NotNull Boolean creditGuardEnabled,
+            @NotNull Integer creditGuardThreshold,
             @NotNull Integer quotaGb,
             @NotNull Integer warningPercent,
             @NotNull Integer criticalPercent) {}

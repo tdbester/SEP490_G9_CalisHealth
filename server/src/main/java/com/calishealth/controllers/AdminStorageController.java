@@ -87,6 +87,18 @@ public class AdminStorageController {
         return service.optimization();
     }
 
+    /** The credit guard: what it would free right now and whether it is switched on. */
+    @GetMapping("/credit-guard")
+    public CreditGuardInfo creditGuard() {
+        return service.creditGuard();
+    }
+
+    /** Frees space right away: deletes the media that is in the trash and moves the rest to it. */
+    @PostMapping("/credit-guard/free")
+    public CreditGuardResult freeSpace(Authentication a) {
+        return service.freeSpace(a.getName());
+    }
+
     /**
      * Reads the usage of the provider right now and stores it as the snapshot of the day.
      * The daily job does this at night; the button lets an admin refresh the numbers without

@@ -161,6 +161,30 @@ export default {
     consoleHint: "Open the upload settings of Cloudinary",
   },
 
+  // ---- Credit guard ----
+  guard: {
+    title: "Credit guard",
+    hint:
+      "The Cloudinary plan counts credits instead of bytes, so the account can run out of credits long before it runs out of space. The guard deletes the media that is already in the trash and moves the media that no exercise uses any more to the trash.",
+    stateTitle: "State of the guard",
+    disabled: "Disabled",
+    ready: "Standing by",
+    active: "Engaged",
+    usedPercent: "Plan used",
+    statThreshold: "Trigger threshold",
+    statReclaimable: "Reclaimable",
+    statMode: "Mode",
+    statModeAuto: "Automatic",
+    statModeManual: "Manual",
+    reclaimableHint: "Up to {bytes} can be freed right now by clearing the orphaned, rejected and trashed media.",
+    result: "Freed {bytes}: {purged} file(s) deleted for good, {trashed} file(s) moved to the trash.",
+    freeNow: "Free space now",
+    freeing: "Freeing…",
+    configureHint: "The threshold is set in the Upload limits tab",
+    errorLoad: "The state of the credit guard could not be loaded.",
+    errorFree: "The storage space could not be freed.",
+  },
+
   // ---- Breakdown (by category / by source) ----
   breakdown: {
     byCategory: "What takes the space",
@@ -433,6 +457,10 @@ export default {
         label: "Critical threshold",
         desc: "Must be higher than the warning threshold.",
       },
+      creditGuardThreshold: {
+        label: "Credit guard threshold",
+        desc: "The system frees space by itself when this share of the plan is used. Must be higher than the critical threshold.",
+      },
     },
     tags: {
       softDelete: "Soft delete",
@@ -442,6 +470,11 @@ export default {
       label: "Daily auto-cleanup",
       desc: "Runs every day at 03:00 (server time): moves expired files to the trash and permanently deletes trash past its period. Duplicate files are stored once (content hash).",
       offWarning: "Expired files will pile up",
+    },
+    toggleCreditGuard: {
+      label: "Credit guard",
+      desc: "When the account is close to running out of credits, the system deletes the media in the trash for good and moves the media no exercise uses any more to the trash.",
+      offWarning: "The account can run out of credits without anyone being told",
     },
     formatsAria: "{label} formats",
     units: {
@@ -457,6 +490,7 @@ export default {
     errorRange: "Must be between {min} and {max}",
     errorQuotaHigher: "Must be higher than current usage ({used})",
     errorCriticalHigher: "Must be higher than the warning threshold",
+    errorGuardHigher: "Must be higher than the critical threshold",
     errorNoVideoFormat: "Allow at least one video format",
     errorNoImageFormat: "Allow at least one image format",
     hintGuidelineOnly: "Guideline only: the plan counts credits",

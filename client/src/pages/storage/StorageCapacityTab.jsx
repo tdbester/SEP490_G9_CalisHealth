@@ -37,6 +37,7 @@ import { CM } from "../../theme-content";
 import { formatBytes, IconBox, Panel, Pill, STORAGE_PATHS, StatTile, TONE } from "./StorageShared";
 import CloudinaryFoldersPanel from "./CloudinaryFoldersPanel";
 import CloudinaryOptimizationPanel from "./CloudinaryOptimizationPanel";
+import CreditGuardPanel from "./CreditGuardPanel";
 
 /** The categories and the sources of the media, with the icon and the colour of each one. */
 const CATEGORY = {
@@ -506,6 +507,8 @@ export default function StorageCapacityTab() {
       {data.provider === "CLOUDINARY" && <CloudinaryFoldersPanel />}
 
       {data.provider === "CLOUDINARY" && <CloudinaryOptimizationPanel />}
+
+      <CreditGuardPanel />
 
       <Panel title={t("capacity.title")} action={<Pill tone={status.tone}>● {status.label}</Pill>}>
         <Box sx={{ display: "flex", alignItems: "baseline", gap: 1, mb: 1.5 }}>

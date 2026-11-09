@@ -63,6 +63,7 @@ public class AdminStorageService {
     private final CloudinaryUsageService cloudinary;
     private final CloudinarySetupService cloudinarySetup;
     private final CloudinaryOptimizationService optimization;
+    private final CreditGuardService guard;
     private final StorageUsageJob usageJob;
     private final UserRepository users;
     private final UserActivityRepository activity;
@@ -374,6 +375,33 @@ public class AdminStorageService {
     }
 
     /**
+     * The credit guard: what it would free right now and whether it is switched on.
+     */
+    @Transactional(readOnly = true)
+    public CreditGuardInfo creditGuard() {
+        StorageSettings s = registry.settings();
+        double usedPercent = cloudinary.usage().map(CloudinaryUsageService.Usage::planPercent).orElse(0d);
+        return new CreditGuardInfo(s.isCreditGuardEnabled(), s.getCreditGuardThreshold(), usedPercent,
+                guard.reclaimableBytes(), s.isCreditGuardEnabled() && usedPercent >= s.getCreditGuardThreshold());
+    }
+
+    /**
+     * Frees space right away: the media that is already deleted is purged and the media that no
+     * exercise uses any more is moved to the trash.
+     */
+    @Transactional
+    public CreditGuardResult freeSpace(String adminEmail) {
+        User admin = admin(adminEmail);
+        CreditGuardService.GuardOutcome outcome = guard.run(true);
+        if (outcome.freed()) {
+            log(admin, "Freed " + mb(outcome.freedBytes()) + " of storage: " + outcome.purged()
+                    + " file(s) deleted, " + outcome.trashed() + " file(s) moved to the trash");
+        }
+        return new CreditGuardResult(outcome.purged(), outcome.freedBytes(), outcome.trashed(),
+                outcome.usedPercent(), outcome.reason());
+    }
+
+    /**
      * Reads the usage of the provider right now and stores the snapshot of the day, so the admin
      * does not have to wait for the nightly job to see fresh numbers.
      */
@@ -396,11 +424,16 @@ public class AdminStorageService {
         range("Orphaned file grace period", r.orphanGraceHours(), 1, 72);
         range("Trash retention", r.trashRetentionDays(), 0, 30);
         range("Restored file protection", r.restoreGraceDays(), 0, 30);
+        range("Credit guard threshold", r.creditGuardThreshold(), 50, 100);
         range("Total storage quota", r.quotaGb(), 1, 1000);
         range("Warning threshold", r.warningPercent(), 50, 95);
         range("Critical threshold", r.criticalPercent(), 51, 99);
         if (r.criticalPercent() <= r.warningPercent()) {
             throw badRequest("Critical threshold must be higher than the warning threshold");
+        }
+        // The guard acts without asking, so it must not run before the admins were warned.
+        if (Boolean.TRUE.equals(r.creditGuardEnabled()) && r.creditGuardThreshold() <= r.criticalPercent()) {
+            throw badRequest("The credit guard threshold must be higher than the critical threshold");
         }
         StorageSettings s = registry.settings();
         // With Cloudinary the plan decides how much space there is, so the admin cannot set it.
@@ -426,6 +459,8 @@ public class AdminStorageService {
         s.setTrashRetentionDays(r.trashRetentionDays());
         s.setRestoreGraceDays(r.restoreGraceDays());
         s.setAutoCleanupEnabled(r.autoCleanupEnabled());
+        s.setCreditGuardEnabled(r.creditGuardEnabled());
+        s.setCreditGuardThreshold(r.creditGuardThreshold());
         if (quotaEditable) {
             s.setQuotaGb(r.quotaGb());
         }
@@ -445,8 +480,9 @@ public class AdminStorageService {
         return new Settings(s.getMaxVideoMb(), s.getMaxImageMb(), s.videoFormatList(), s.imageFormatList(),
                 s.getDemoMaxSeconds(), s.getMemberQuotaMb(), s.getUploadsPerDay(),
                 s.getRejectedRetentionDays(), s.getOrphanGraceHours(),
-                s.getTrashRetentionDays(), s.getRestoreGraceDays(), s.isAutoCleanupEnabled(), s.getQuotaGb(), s.getWarningPercent(),
-                s.getCriticalPercent(), used,
+                s.getTrashRetentionDays(), s.getRestoreGraceDays(), s.isAutoCleanupEnabled(),
+                s.isCreditGuardEnabled(), s.getCreditGuardThreshold(),
+                s.getQuotaGb(), s.getWarningPercent(), s.getCriticalPercent(), used,
                 s.getUpdatedBy() == null ? null : s.getUpdatedBy().getEmail(), s.getUpdatedAt());
     }
 
