@@ -80,3 +80,6 @@ boot.out
 boot.err
 vite.out
 vite.err
+
+# ===== Prototype local (khong commit) =====
+prototype/
