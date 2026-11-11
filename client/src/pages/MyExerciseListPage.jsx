@@ -7,6 +7,7 @@ import {
 } from "../api/library";
 import useUndoDelete from "../hooks/useUndoDelete";
 import { useTranslation } from "react-i18next";
+import BackButton from "../components/common/BackButton";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { getLevelLabel } from "../utils/levelLabel";
 import { useSystemLevels } from "../useSystemLevels";
@@ -331,6 +332,7 @@ export default function MyExerciseListPage() {
 
   return (
     <div className="my-ex-list w-full max-w-5xl mx-auto text-white pb-16">
+      <BackButton to="/library">{t("member.catalog.backToLibrary")}</BackButton>
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">{t("member.catalog.myExerciseTitle")}</h1>
