@@ -1,10 +1,11 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import SessionTopbar from "../components/session/SessionTopbar";
 import AiSupportModal from "../components/session/AiSupportModal";
 import { readWorkoutResults, readWorkoutOrigin, clearWorkoutOrigin } from "../utils/workoutResults";
+import { completeActiveDailyWorkout } from "../utils/dailyPlanProgress";
 import "./ExerciseResultPage.css";
 
 /** Ngưỡng đạt của bài tập — Figma hiển thị "Pass threshold: 70% accuracy". */
@@ -150,6 +151,19 @@ export default function ExerciseResultPage() {
    * Tập từ kế hoạch ngày -> về "/plan"; tập từ thư viện -> về "/library".
    */
   const origin = readWorkoutOrigin();
+
+  /**
+   * Đánh dấu buổi tập của kế hoạch ngày là đã hoàn thành.
+   *
+   * Màn kết quả chỉ mở ở CUỐI buổi tập, nên đây là lúc buổi tập của hôm nay
+   * được tính là hoàn thành -> màn "/plan" sẽ hiện màn chúc mừng nếu đã tập
+   * đủ các buổi trong ngày.
+   */
+  useEffect(() => {
+    if (origin !== "/plan") return;
+    completeActiveDailyWorkout(exerciseResults.map((item) => item.exerciseCode));
+  }, [origin, exerciseResults]);
+
   const backToPlan = useCallback(() => {
     clearWorkoutOrigin();
     navigate(origin);

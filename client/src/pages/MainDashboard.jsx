@@ -20,6 +20,7 @@ import api from "../api/client";
 import { FAVORITE_ITEM_TYPES } from "../api/favorites";
 import { useFavorites } from "../context/FavoritesContext";
 import OnboardingRedirect from "../components/survey/OnboardingRedirect";
+import { surveyApi, isMemberSession } from "../api/survey";
 import "./MainDashboard.css";
 
 const MUSCLE_ICONS = {
@@ -151,6 +152,30 @@ export default function MainDashboard() {
     navigate({ pathname: "/library/exercises", search: params });
   };
 
+  /** Nút Start workout: member chưa từng hoàn thành survey (kể cả đã skip lúc
+   * đầu) thì đưa sang Health & Progress để thực hiện survey, thay vì vào
+   * thẳng lịch tập khi chưa có level/kế hoạch gợi ý.
+   */
+  const [startingWorkout, setStartingWorkout] = useState(false);
+  const handleStartWorkout = useCallback(() => {
+    if (!isMemberSession() || startingWorkout) {
+      if (!isMemberSession()) navigate("/schedule");
+      return;
+    }
+    setStartingWorkout(true);
+    surveyApi
+      .sessions()
+      .then((sessions) => {
+        const done = (sessions ?? []).some((s) => s.status === "COMPLETED");
+        navigate(done ? "/schedule" : "/tracking");
+      })
+      .catch(() => {
+        // Lỗi API thì vẫn cho vào lịch tập, không chặn member.
+        navigate("/schedule");
+      })
+      .finally(() => setStartingWorkout(false));
+  }, [navigate, startingWorkout]);
+
   // Đếm nhanh số bài tập / workout đã đánh dấu sao cho thẻ Favorites trên dashboard.
   const favoriteCounts = useMemo(
     () => ({
@@ -192,7 +217,8 @@ export default function MainDashboard() {
           <button
             type="button"
             className="dash-btn dash-btn-primary"
-            onClick={() => navigate("/schedule")}
+            onClick={handleStartWorkout}
+            disabled={startingWorkout}
           >
             {t("member.dashboard.startWorkout")}
             <PlayArrowRoundedIcon />
