@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link as RouterLink, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
-  Alert, Box, Button, Card, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
+  Alert, Autocomplete, Box, Button, Card, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
   Divider, FormControlLabel, IconButton, InputAdornment, Menu, MenuItem, Stack, Switch, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, TextField, Tooltip, Typography,
 } from "@mui/material";
@@ -147,15 +147,7 @@ function StatusPill({ rule }) {
   return <DarkPill tone={statusTone(rule)} icon={<FiberManualRecordRoundedIcon />}>{statusText(rule, t)}</DarkPill>;
 }
 
-/** Big number with a small unit underneath, for the thresholds columns. */
-function BigStat({ value, unit }) {
-  return <Box>
-    <Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 22, lineHeight: 1.15 }}>{value}</Typography>
-    {unit && <Typography variant="caption" sx={{ color: CM.textDim, fontWeight: 600 }}>{unit}</Typography>}
-  </Box>;
-}
-
-/** Clean-form threshold as a number plus a thin bar, so strict rules are easy to spot. */
+/** Clean-form threshold as a percentage plus a thin bar, so strict rules are easy to spot. */
 function AccuracyMeter({ value }) {
   const { t } = useTranslation();
   const pct = Math.max(0, Math.min(100, Number(value ?? 0)));
@@ -173,6 +165,61 @@ function AccuracyMeter({ value }) {
   </Box>;
 }
 
+/** Nhãn hiển thị của một bài tập trong danh sách chọn: tên · loại · cách đo. */
+function exerciseOptionLabel(option, t) {
+  if (!option) return "";
+  return `${option.name} · ${option.type === "SKILL" ? t("contentManager.progressionRules.typeSkill") : t("contentManager.progressionRules.typeHealth")} · ${option.category === "HOLD" ? t("contentManager.progressionRules.categoryHold") : t("contentManager.progressionRules.categoryReps")}`;
+}
+
+/**
+ * Ô chọn bài tập kèm ô tìm kiếm ngay trong dropdown (Autocomplete).
+ * Tìm theo tên, mã bài hoặc loại/cách đo.
+ */
+function ExerciseSearchSelect({ label, value, options, onChange, disabled, placeholder }) {
+  const { t } = useTranslation();
+  // Bài đang chọn luôn nằm trong danh sách, kể cả khi nó bị lọc khỏi options (vd đã trùng với bài tiên quyết).
+  const choices = useMemo(() => {
+    const list = options || [];
+    if (value && !list.some((option) => option.code === value.code)) return [value, ...list];
+    return list;
+  }, [options, value]);
+  return (
+    <Autocomplete
+      size="small"
+      fullWidth
+      disabled={disabled}
+      options={choices}
+      value={value || null}
+      getOptionLabel={(option) => option?.name || ""}
+      isOptionEqualToValue={(option, selected) => option?.code === selected?.code}
+      onChange={(_, next) => onChange(next?.code || "")}
+      filterOptions={(list, state) => {
+        const term = state.inputValue.trim().toLowerCase();
+        if (!term) return list;
+        return list.filter((option) =>
+          (option.name || "").toLowerCase().includes(term)
+          || (option.code || "").toLowerCase().includes(term)
+          || `${option.type || ""} ${option.category || ""}`.toLowerCase().includes(term),
+        );
+      }}
+      noOptionsText={t("contentManager.progressionRules.noExerciseFound")}
+      renderOption={(props, option) => (
+        <li {...props} key={option.code}>
+          <Box>
+            <Typography sx={{ color: "#fff", fontWeight: 600, fontSize: 14 }}>{option.name}</Typography>
+            <Typography variant="caption" sx={{ color: CM.textMuted }}>
+              {exerciseOptionLabel(option, t).split(" · ").slice(1).join(" · ")}
+            </Typography>
+          </Box>
+        </li>
+      )}
+      renderInput={(params) => (
+        <TextField {...params} label={label} placeholder={placeholder} />
+      )}
+    />
+  );
+}
+
 /** Screen 1: Progression rule configurations (list). */
 export default function ProgressionRulesPage() {
   const { t } = useTranslation();
@@ -181,6 +228,8 @@ export default function ProgressionRulesPage() {
   const query = useApiQuery(() => contentManagerApi.progressionRules());
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(0);
   const [menu, setMenu] = useState({ anchor: null, entry: null });
   const [deleting, setDeleting] = useState(null);
@@ -192,11 +241,18 @@ export default function ProgressionRulesPage() {
     onSuccess: () => { setDeleting(null); setNotice(t("contentManager.progressionRules.deleted")); query.refetch(); },
   });
   const rules = query.data?.rules || [];
+  // Bộ lọc ngày áp dụng trên mốc thời gian của rule (updated_at): rule được cập nhật trong khoảng
+  // [startDate, endDate] mới hiện ra. So sánh theo chuỗi ngày YYYY-MM-DD nên không lệch múi giờ.
   const filtered = useMemo(() => rules.filter((rule) => {
     const term = search.trim().toLowerCase();
+    const stamp = String(rule.updatedAt || "").slice(0, 10);
+    const afterStart = !startDate || (stamp && stamp >= startDate);
+    const beforeEnd = !endDate || (stamp && stamp <= endDate);
     return (!term || rule.exercise.name.toLowerCase().includes(term) || rule.prerequisite.name.toLowerCase().includes(term))
-      && (status === "all" || rule.status.toLowerCase() === status);
-  }), [rules, search, status]);
+      && (status === "all" || rule.status.toLowerCase() === status)
+      && afterStart
+      && beforeEnd;
+  }), [rules, search, status, startDate, endDate]);
   const pages = Math.ceil(filtered.length / PAGE_SIZE);
   const currentPage = Math.min(page, Math.max(0, pages - 1));
   const visible = filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
@@ -233,11 +289,30 @@ export default function ProgressionRulesPage() {
           <Tooltip title={t("contentManager.progressionRules.refresh")}><span><IconButton onClick={query.refetch} disabled={query.isFetching} aria-label={t("contentManager.progressionRules.refresh")} sx={{ border: `1px solid ${CM.border}`, borderRadius: 1.25, transition: "all .2s ease", "&:hover": { borderColor: CM.violetBright, bgcolor: "rgba(139,92,246,0.1)" } }}>{query.isFetching ? <CircularProgress size={17} /> : <RefreshRoundedIcon />}</IconButton></span></Tooltip>
         </Stack>
       </Stack>
+      {/* Bộ lọc khoảng ngày cập nhật của rule */}
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "center" }} sx={{ px: 2, py: 1.25, borderBottom: `1px solid ${CM.border}`, bgcolor: "rgba(139,92,246,0.04)" }}>
+        <Typography variant="caption" sx={{ color: CM.textDim, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", fontSize: 10.5 }}>
+          {t("contentManager.progressionRules.dateFilterLabel")}
+        </Typography>
+        <TextField size="small" type="date" label={t("contentManager.progressionRules.startDate")} value={startDate}
+          onChange={(e) => { const next = e.target.value; setStartDate(next); setPage(0); if (endDate && next && endDate < next) setEndDate(next); }}
+          InputLabelProps={{ shrink: true }} inputProps={{ max: endDate || undefined, "aria-label": t("contentManager.progressionRules.startDate") }}
+          sx={{ minWidth: { xs: "100%", sm: 170 } }} />
+        <TextField size="small" type="date" label={t("contentManager.progressionRules.endDate")} value={endDate}
+          onChange={(e) => { setEndDate(e.target.value); setPage(0); }}
+          InputLabelProps={{ shrink: true }} inputProps={{ min: startDate || undefined, "aria-label": t("contentManager.progressionRules.endDate") }}
+          sx={{ minWidth: { xs: "100%", sm: 170 } }} />
+        {(startDate || endDate) && (
+          <Button size="small" onClick={() => { setStartDate(""); setEndDate(""); setPage(0); }}>
+            {t("contentManager.progressionRules.clearDates")}
+          </Button>
+        )}
+      </Stack>
       <TableContainer>
         <Table size="small" sx={{ minWidth: 980 }}>
           <TableHead><TableRow>
-            <TableCell><Box sx={{ width: 220, mx: "auto", textAlign: "left" }}>{t("contentManager.progressionRules.colPrerequisite")}</Box></TableCell><TableCell><Box sx={{ width: 220, mx: "auto", textAlign: "left" }}>{t("contentManager.progressionRules.colUnlocks")}</Box></TableCell><TableCell>{t("contentManager.progressionRules.colRequirement")}</TableCell>
-            <TableCell>{t("contentManager.progressionRules.colSets")}</TableCell><TableCell>{t("contentManager.progressionRules.colMinClean")}</TableCell><TableCell>{t("contentManager.progressionRules.colStatus")}</TableCell><TableCell>{t("contentManager.progressionRules.colUpdated")}</TableCell><TableCell align="center">{t("contentManager.progressionRules.colAction")}</TableCell>
+            <TableCell><Box sx={{ width: 220, mx: "auto", textAlign: "left" }}>{t("contentManager.progressionRules.colPrerequisite")}</Box></TableCell><TableCell><Box sx={{ width: 220, mx: "auto", textAlign: "left" }}>{t("contentManager.progressionRules.colUnlocks")}</Box></TableCell>
+            <TableCell>{t("contentManager.progressionRules.colMinClean")}</TableCell><TableCell>{t("contentManager.progressionRules.colStatus")}</TableCell><TableCell>{t("contentManager.progressionRules.colUpdated")}</TableCell><TableCell align="center">{t("contentManager.progressionRules.colAction")}</TableCell>
           </TableRow></TableHead>
           <TableBody>
             {visible.map((rule, idx) => <TableRow hover key={rule.id} sx={{
@@ -248,8 +323,6 @@ export default function ProgressionRulesPage() {
             }}>
               <TableCell><Box sx={{ width: 220, mx: "auto" }}><ExerciseChip exercise={rule.prerequisite} align="start" /></Box></TableCell>
               <TableCell><Box sx={{ width: 220, mx: "auto" }}><ExerciseChip exercise={rule.exercise} accent align="start" /></Box></TableCell>
-              <TableCell><BigStat value={isHold(rule) ? rule.requiredSeconds : rule.requiredReps} unit={isHold(rule) ? t("contentManager.progressionRules.unitSeconds") : t("contentManager.progressionRules.unitReps")} /></TableCell>
-              <TableCell><BigStat value={rule.requiredSets} unit={t("contentManager.progressionRules.unitSet", { count: rule.requiredSets })} /></TableCell>
               <TableCell><AccuracyMeter value={rule.minAccuracy} /></TableCell>
               <TableCell><StatusPill rule={rule} /></TableCell>
               <TableCell><Typography variant="caption" sx={{ color: CM.textMuted }}>{formatDate(rule.updatedAt)}</Typography></TableCell>
@@ -258,7 +331,7 @@ export default function ProgressionRulesPage() {
                 <IconButton size="small" aria-label={t("contentManager.progressionRules.actionsFor", { name: rule.exercise.name })} onClick={(e) => setMenu({ anchor: e.currentTarget, entry: rule })}><MoreVertRoundedIcon fontSize="small" /></IconButton>
               </Stack></TableCell>
             </TableRow>)}
-            {!visible.length && <TableRow><TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+            {!visible.length && <TableRow><TableCell colSpan={6} align="center" sx={{ py: 6 }}>
               <Stack alignItems="center" spacing={1}>
                 <AccountTreeRoundedIcon sx={{ fontSize: 48, color: CM.textDim, opacity: 0.4 }} />
                 <Typography sx={{ color: CM.textMuted }}>{rules.length ? t("contentManager.progressionRules.noMatch") : t("contentManager.progressionRules.empty")}</Typography>
@@ -497,9 +570,14 @@ export function ProgressionRuleFormPage() {
                 <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: CM.textDim }} />
                 <Typography variant="caption" sx={{ color: CM.textDim, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 10.5 }}>{t("contentManager.progressionRules.prerequisiteLabel")}</Typography>
               </Stack>
-              <TextField select fullWidth label={t("contentManager.progressionRules.labelMemberTrains")} value={form.prerequisiteCode} disabled={editing} onChange={(e) => set({ prerequisiteCode: e.target.value })} size="small">
-                {(editing ? [existing.prerequisite] : options).map((x) => <MenuItem key={x.code} value={x.code}>{x.name} · {x.type === "SKILL" ? t("contentManager.progressionRules.typeSkill") : t("contentManager.progressionRules.typeHealth")} · {x.category === "HOLD" ? t("contentManager.progressionRules.categoryHold") : t("contentManager.progressionRules.categoryReps")}</MenuItem>)}
-              </TextField>
+              <ExerciseSearchSelect
+                label={t("contentManager.progressionRules.labelMemberTrains")}
+                placeholder={t("contentManager.progressionRules.searchExercisePlaceholder")}
+                value={prerequisite}
+                options={editing ? [existing.prerequisite] : options}
+                disabled={editing}
+                onChange={(code) => set({ prerequisiteCode: code })}
+              />
               {prerequisite && <Stack direction="row" spacing={0.5} sx={{ mt: 1 }}>
                 <DarkPill tone={prerequisite.type === "SKILL" ? "primary" : "teal"}>{prerequisite.type === "SKILL" ? t("contentManager.progressionRules.typeSkill") : t("contentManager.progressionRules.typeHealth")}</DarkPill>
                 <DarkPill tone="neutral">{prerequisite.category === "HOLD" ? t("contentManager.progressionRules.categoryHold") : t("contentManager.progressionRules.categoryReps")}</DarkPill>
@@ -516,9 +594,14 @@ export function ProgressionRuleFormPage() {
                 <LockOpenRoundedIcon sx={{ fontSize: 12, color: CM.violetBright }} />
                 <Typography variant="caption" sx={{ color: CM.violetBright, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 10.5 }}>{t("contentManager.progressionRules.unlocksLabel")}</Typography>
               </Stack>
-              <TextField select fullWidth label={t("contentManager.progressionRules.labelExerciseToUnlock")} value={form.exerciseCode} disabled={editing} onChange={(e) => set({ exerciseCode: e.target.value })} size="small">
-                {(editing ? [existing.exercise] : options.filter((x) => x.code !== form.prerequisiteCode)).map((x) => <MenuItem key={x.code} value={x.code}>{x.name} · {x.type === "SKILL" ? t("contentManager.progressionRules.typeSkill") : t("contentManager.progressionRules.typeHealth")} · {x.category === "HOLD" ? t("contentManager.progressionRules.categoryHold") : t("contentManager.progressionRules.categoryReps")}</MenuItem>)}
-              </TextField>
+              <ExerciseSearchSelect
+                label={t("contentManager.progressionRules.labelExerciseToUnlock")}
+                placeholder={t("contentManager.progressionRules.searchExercisePlaceholder")}
+                value={exercise}
+                options={editing ? [existing.exercise] : options.filter((x) => x.code !== form.prerequisiteCode)}
+                disabled={editing}
+                onChange={(code) => set({ exerciseCode: code })}
+              />
               {exercise && <Stack direction="row" spacing={0.5} sx={{ mt: 1 }}>
                 <DarkPill tone={exercise.type === "SKILL" ? "primary" : "teal"}>{exercise.type === "SKILL" ? t("contentManager.progressionRules.typeSkill") : t("contentManager.progressionRules.typeHealth")}</DarkPill>
                 <DarkPill tone="neutral">{exercise.category === "HOLD" ? t("contentManager.progressionRules.categoryHold") : t("contentManager.progressionRules.categoryReps")}</DarkPill>
