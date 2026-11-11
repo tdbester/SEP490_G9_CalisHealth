@@ -119,7 +119,18 @@ export default function ExerciseTreePage() {
   const nodes = query.data?.nodes || [];
   const edges = query.data?.edges || [];
   const roots = useMemo(() => rootsOf(nodes, edges), [nodes, edges]);
-  const rootCode = roots.some((root) => root.code === params.get("chain")) ? params.get("chain") : roots[0]?.code;
+  const highlightCode = params.get("highlight");
+  // Mở từ màn chi tiết bài tập (Content Manager) — tự chọn chuỗi chứa bài đó và highlight nó.
+  const highlightRootCode = useMemo(() => {
+    if (!highlightCode || !nodes.length) return null;
+    const match = roots.find((root) =>
+      layoutChain(nodes, edges, root.code).items.some((item) => item.node.code === highlightCode)
+    );
+    return match?.code || null;
+  }, [highlightCode, nodes, edges, roots]);
+  const rootCode = roots.some((root) => root.code === params.get("chain"))
+    ? params.get("chain")
+    : highlightRootCode || roots[0]?.code;
   const chain = useMemo(() => (rootCode ? layoutChain(nodes, edges, rootCode) : null), [nodes, edges, rootCode]);
 
   if (query.isLoading) return <Box sx={{ py: 10, display: "grid", placeItems: "center" }}><CircularProgress /></Box>;
@@ -156,7 +167,7 @@ export default function ExerciseTreePage() {
   const width = chain.cols * NODE_W + (chain.cols - 1) * GAP_X;
   // Có thể có làn chạy dưới hàng cuối, nên nới chiều cao cho đủ.
   const height = Math.max(chain.rows * NODE_H + (chain.rows - 1) * GAP_Y, routed.maxY + 8);
-  const selected = spot.get(selectedCode) || spot.get(rootCode);
+  const selected = spot.get(selectedCode) || spot.get(highlightCode) || spot.get(rootCode);
   const incoming = chain.edges.filter((edge) => edge.exerciseCode === selected.node.code);
   const outgoing = chain.edges.filter((edge) => edge.prerequisiteCode === selected.node.code);
   const nodeOf = (code) => spot.get(code).node;
