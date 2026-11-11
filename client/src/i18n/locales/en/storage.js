@@ -207,7 +207,7 @@ export default {
   source: {
     system: {
       label: "System library",
-      sub: "Exercise & skill library managed by Content Managers",
+      sub: "Exercise & workout library managed by Content Managers",
     },
     member: {
       label: "Member uploads",

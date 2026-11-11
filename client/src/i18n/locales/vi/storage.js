@@ -207,7 +207,7 @@ export default {
   source: {
     system: {
       label: "Thư viện hệ thống",
-      sub: "Thư viện bài tập & kỹ năng do Quản lý nội dung quản lý",
+      sub: "Thư viện bài tập & workout do Quản lý nội dung quản lý",
     },
     member: {
       label: "Tải lên của thành viên",

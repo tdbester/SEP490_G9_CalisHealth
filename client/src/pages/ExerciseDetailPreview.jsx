@@ -6,6 +6,7 @@ import { mediaUrl } from "../api/contentManager";
 import VideoDemoModal from "../components/exercise/VideoDemoModal";
 import CameraCheckModal from "../components/exercise/CameraCheckModal";
 import UploadVideoModal from "../components/exercise/UploadVideoModal";
+import PhysiologyPanel from "../components/exercise/PhysiologyPanel";
 import { startWorkoutSession } from "../utils/workoutResults";
 import { normalizeExercisePayload, resolveExerciseCategory } from "../utils/libraryWorkout";
 import "./ExerciseDetailPreview.css";
@@ -184,6 +185,11 @@ export default function ExerciseDetailPreview() {
                 </ul>
               )}
             </section>
+
+            {/* Hồ sơ sinh lý (V76) — chỉ bài của hệ thống mới có.
+                Bài do Member tải lên không có hồ sơ được đối chiếu nguồn học thuật
+                nên không hiện panel này. */}
+            <PhysiologyPanel physiology={exercise.physiology} />
           </div>
 
           <aside className="exd-side">

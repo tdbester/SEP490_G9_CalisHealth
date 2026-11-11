@@ -298,6 +298,91 @@
   cursor: help;
 }
 
+/* Badge "cảnh báo y tế" — câu hỏi có triệu chứng cần bác sĩ đánh giá. */
+.ais-medical-badge {
+  flex-shrink: 0;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: #4a1414;
+  border: 1px solid #d15b5b;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: #ffb3b3;
+}
+
+/* Khối luật cảnh báo sinh lý (V76) dưới câu trả lời. */
+.ais-alerts {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #2f2a55;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ais-alerts-title {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: #c4b5fd;
+}
+
+.ais-alert {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  font-size: 11.5px;
+  line-height: 16px;
+  border: 1px solid #3a2f70;
+  background: #14102e;
+}
+
+.ais-alert--danger {
+  border-color: #d15b5b;
+  background: #2a1013;
+}
+
+.ais-alert--warn {
+  border-color: #c79a3d;
+  background: #2a2110;
+}
+
+.ais-alert--info {
+  border-color: #4a7ac9;
+  background: #101a2a;
+}
+
+.ais-alert-sev {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #d6d1f5;
+}
+
+.ais-alert--danger .ais-alert-sev {
+  color: #ff9d9d;
+}
+
+.ais-alert--warn .ais-alert-sev {
+  color: #f0d08a;
+}
+
+.ais-alert--info .ais-alert-sev {
+  color: #9fc6ff;
+}
+
+.ais-alert-text {
+  color: #b4aedb;
+}
+
 .ais-causes {
   margin: 0;
   padding: 0;

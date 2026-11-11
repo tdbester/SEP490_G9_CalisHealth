@@ -27,6 +27,16 @@ export const aiSupportApi = {
       .then((res) => res.data),
 
   /**
+   * Cảnh báo sinh lý (V76) của một bài tập — luật cảnh báo khớp với hồ sơ sinh lý.
+   *
+   * @param {string} exerciseCode mã bài tập
+   */
+  getAlerts: (exerciseCode) =>
+    api
+      .get(`/member/ai-support/alerts/${encodeURIComponent(exerciseCode)}`)
+      .then((res) => res.data),
+
+  /**
    * Đặt câu hỏi cho AI.
    *
    * @param {{ exerciseCode: string, question: string, sessionId?: string,

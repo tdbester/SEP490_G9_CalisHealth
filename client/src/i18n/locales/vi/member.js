@@ -251,6 +251,17 @@ export default {
     reviewLetsGo: "Bắt đầu nào →",
     reviewWorkoutMeta: "{level} · {count} bài tập",
     reviewSummarySets: "{sets} × {count}",
+    replayWorkout: "Tập lại buổi này",
+    congratsEyebrow: "HOÀN THÀNH KẾ HOẠCH HÔM NAY",
+    congratsTitle: "Chúc mừng bạn!",
+    congratsText:
+      "Bạn đã hoàn thành toàn bộ buổi tập được xếp cho hôm nay. Cơ thể cần thời gian hồi phục — nhưng nếu vẫn muốn tập thêm, thư viện bài tập luôn mở với bạn.",
+    congratsExercises: "Bài tập đã tập",
+    congratsAccuracy: "Độ chính xác",
+    congratsStreak: "Ngày tập liên tiếp",
+    congratsBackDashboard: "Về dashboard",
+    congratsGoLibrary: "Tập thêm trong thư viện",
+    congratsReviewPlan: "Xem lại kế hoạch hôm nay",
   },
 
   tracking: {
@@ -561,7 +572,7 @@ export default {
     uploadHint: "MP4, MOV · tối đa 500 MB",
     chooseVideo: "Bấm để tải video minh hoạ lên",
     changeVideo: "Bấm để chọn video khác",
-    pageTitle: "Thư viện bài tập & kỹ năng",
+    pageTitle: "Thư viện bài tập & workout",
     pageDescription: "Chọn một mục để mở danh sách của mục đó.",
     loadError: "Không tải được thống kê thư viện mới nhất. Đang hiển thị dữ liệu đã lưu hoặc mặc định.",
     exerciseSection: "Bài tập",
@@ -837,6 +848,7 @@ export default {
     muscleGroup: "NHÓM CƠ",
     all: "Tất cả",
     allLevels: "Tất cả cấp độ",
+    backToLibrary: "← Quay lại Thư viện",
     beginner: "Người mới",
     intermediate: "Trung cấp",
     advanced: "Nâng cao",
@@ -966,6 +978,20 @@ export default {
     toggleFullscreen: "Bật/tắt toàn màn hình",
     anatomyAlt: "Giải phẫu cơ cho {{name}}",
     targetMuscleGroups: "Nhóm cơ mục tiêu",
+    physiology: {
+      title: "Sinh lý vận động",
+      estimated: "Ước tính — không phải số đo thiết bị",
+      contraction: "Kiểu co cơ",
+      lever: "Đòn cân bằng",
+      cardio: "Tải tim mạch",
+      hrZone: "Vùng nhịp tim ước tính (%HRmax)",
+      bp: "Huyết áp",
+      valsalva: "Nguy cơ nín thở (Valsalva)",
+      tendon: "Tải gân / khớp chịu tải",
+      gi: "Rủi ro tiêu hoá",
+      breathing: "Nhịp thở",
+      caution: "Thận trọng nếu có",
+    },
   },
 
   /** Xem trước bài tập trong buổi tập. */
@@ -1012,6 +1038,8 @@ export default {
     addExercise: "+ Thêm",
     noExercisesFound: "Không tìm thấy bài tập nào.",
     showingAccepted: "Hiển thị {{from}}–{{to}} trong {{count}} bài tập đã duyệt",
+    showingRange: "Hiển thị {{from}}–{{to}} trong {{total}} {{noun}}",
+    workoutExercisePagesAria: "Các trang bài tập trong workout",
     acceptedPagesAria: "Các trang bài tập đã duyệt",
     previous: "Trang trước",
     next: "Trang sau",
@@ -1071,6 +1099,9 @@ export default {
     totalSets: "Tổng số hiệp",
     totalTime: "Tổng thời gian",
     summaryNote: "Cấp độ và tổng số tự động cập nhật khi bạn thay đổi bài tập.",
+    summaryLevelNote: "Bạn có thể chọn lại cấp độ ở phần Chi tiết workout.",
+    invalidExerciseIds:
+      "Không lưu được: các bài tập sau không thuộc hệ thống nên không lưu được — {{names}}. Hãy xóa và thêm lại từ danh sách bài tập đã duyệt.",
     unsavedChanges: "Bạn có thay đổi chưa lưu",
     allChangesSaved: "Đã lưu mọi thay đổi",
     saveChanges: "Lưu thay đổi",
@@ -1601,6 +1632,14 @@ export default {
     demoBadge: "Chế độ demo",
     demoTooltip:
       "Dịch vụ AI đang không khả dụng, nên câu trả lời này đến từ quy tắc tích hợp thay vì từ mô hình AI.",
+    medicalRedFlagBadge: "Cảnh báo y tế",
+    medicalRedFlagTitle: "Bạn nên đi khám bác sĩ",
+    medicalRedFlagFallback:
+      "Bạn nên đi khám bác sĩ. AI Support chỉ hỗ trợ về kỹ thuật tập, không thể chẩn đoán hay tư vấn y tế.",
+    physiologyAlertsTitle: "Lưu ý sinh lý cho bài này",
+    physiologyAlertDanger: "Nghiêm trọng",
+    physiologyAlertWarn: "Cần chú ý",
+    physiologyAlertInfo: "Thông tin",
   },
 
   /** Popup upload / kiểm tra camera. */

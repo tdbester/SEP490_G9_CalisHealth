@@ -33,6 +33,8 @@ import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import VideoLibraryRoundedIcon from "@mui/icons-material/VideoLibraryRounded";
 import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
+import MonitorHeartRoundedIcon from "@mui/icons-material/MonitorHeartRounded";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import { useTranslation } from "react-i18next";
 import { contentManagerApi } from "../api/contentManager";
 import { useLevelNames } from "../useLevelNames";
@@ -42,6 +44,7 @@ import { getLevelLabel } from "../utils/levelLabel";
 import { CONTENT_PATHS, ContentPageHeader, DarkPill, TONE_STYLES } from "../components/ContentShared";
 import { CM } from "../theme-content";
 import ConfirmDialog from "../components/common/ConfirmDialog";
+import ExercisePhysiologyFields, { EMPTY_PHYSIOLOGY, normalizeContraindications } from "../components/exercise/ExercisePhysiologyFields";
 
 const rise = keyframes`
   from { opacity: 0; transform: translateY(8px); }
@@ -362,6 +365,49 @@ export function validateExerciseUpload(file, kind) {
   });
 }
 
+/**
+ * Chuẩn hoá hồ sơ sinh lý từ form sang payload API.
+ * Trả về null khi CM không bật hồ sơ -> backend xoá hồ sơ cũ (nếu có).
+ */
+export function buildPhysiologyPayload(physiology) {
+  if (!physiology) return null;
+  const num = (value) => {
+    if (value === "" || value === null || value === undefined) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+  return {
+    contractionType: physiology.contractionType || "DYNAMIC",
+    leverGrade: num(physiology.leverGrade) ?? 3,
+    cardiovascularLoad: num(physiology.cardiovascularLoad) ?? 3,
+    hrZoneLow: num(physiology.hrZoneLow) ?? 60,
+    hrZoneHigh: num(physiology.hrZoneHigh) ?? 80,
+    bloodPressureEffect: physiology.bloodPressureEffect || "NEUTRAL",
+    valsalvaRisk: physiology.valsalvaRisk || "LOW",
+    giRisk: physiology.giRisk || "NONE",
+    tendonLoad: num(physiology.tendonLoad) ?? 3,
+    primaryJoint: physiology.primaryJoint || "KNEE",
+    breathingCue: physiology.breathingCue?.trim() || null,
+    contraindications: normalizeContraindications(physiology.contraindications),
+    physiologyNote: physiology.physiologyNote?.trim() || null,
+    evidenceRefs: Array.isArray(physiology.evidenceRefs) ? physiology.evidenceRefs : [],
+  };
+}
+
+/** Kiểm tra hồ sơ sinh lý phía client. Trả về true nếu hợp lệ. */
+export function validatePhysiology(physiology) {
+  if (!physiology) return true;
+  const scale = [physiology.leverGrade, physiology.cardiovascularLoad, physiology.tendonLoad];
+  if (scale.some((value) => !Number.isInteger(Number(value)) || Number(value) < 1 || Number(value) > 5)) {
+    return false;
+  }
+  const low = Number(physiology.hrZoneLow);
+  const high = Number(physiology.hrZoneHigh);
+  if (!Number.isInteger(low) || low < 30 || low > 95) return false;
+  if (!Number.isInteger(high) || high < low || high > 100) return false;
+  return true;
+}
+
 export function ExerciseFields({
   value,
   onChange,
@@ -377,6 +423,12 @@ export function ExerciseFields({
   anatomyImageError,
   onAnatomyImageChange,
   anatomyImagePreview,
+  /** Bật phần sinh lý (chỉ dành cho màn Create/Update System Exercise của Content Manager). */
+  showPhysiology = false,
+  physiology,
+  onPhysiologyChange,
+  physiologyEnabled = false,
+  onPhysiologyEnabledChange,
 }) {
   const { t } = useTranslation();
   const { levels: LEVELS, activeLevels } = useLevelNames();
@@ -401,11 +453,18 @@ export function ExerciseFields({
               onChange={(event) => {
                 onChange({ ...value, name: event.target.value });
                 onClearField("title");
+                onClearField("duplicateName");
               }}
               placeholder={t("contentManager.form.exerciseTitlePlaceholder")}
               inputProps={{ maxLength: 120 }}
-              error={invalid.title}
-              helperText={invalid.title ? t("contentManager.form.errTitleLength") : ` ${value.name.length}/120`}
+              error={invalid.title || invalid.duplicateName}
+              helperText={
+                invalid.duplicateName
+                  ? t("contentManager.form.errDuplicateName")
+                  : invalid.title
+                    ? t("contentManager.form.errTitleLength")
+                    : ` ${value.name.length}/120`
+              }
             />
             <TextField
               label={t("contentManager.form.fieldDescription")}
@@ -617,6 +676,48 @@ export function ExerciseFields({
           />
         </CardContent>
       </Card>
+
+      {showPhysiology && (
+        <Card sx={{ overflow: "hidden" }}>
+          <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
+            <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1 }}>
+              <Box sx={{ width: 34, height: 34, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}` }}>
+                <MonitorHeartRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
+                  {t("contentManager.form.physiology.title")}
+                </Typography>
+                <Typography variant="caption" sx={{ color: CM.textMuted }}>
+                  {t("contentManager.form.physiology.caption")}
+                </Typography>
+              </Box>
+              <Button
+                size="small"
+                variant={physiologyEnabled ? "outlined" : "contained"}
+                color="primary"
+                onClick={() => onPhysiologyEnabledChange?.(!physiologyEnabled)}
+                startIcon={physiologyEnabled ? <DeleteOutlineRoundedIcon /> : <AddRoundedIcon />}
+                sx={{ whiteSpace: "nowrap" }}
+              >
+                {physiologyEnabled
+                  ? t("contentManager.form.physiology.removeProfile")
+                  : t("contentManager.form.physiology.addProfile")}
+              </Button>
+            </Stack>
+            {physiologyEnabled ? (
+              <ExercisePhysiologyFields
+                value={physiology}
+                onChange={onPhysiologyChange}
+              />
+            ) : (
+              <Typography variant="body2" sx={{ color: CM.textMuted }}>
+                {t("contentManager.form.physiology.offHint")}
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </Stack>
   );
 }
@@ -1420,6 +1521,11 @@ export function WorkoutFields({
 function fieldErrorsFromMessage(message) {
   const normalized = String(message || "").toLowerCase();
   const fields = [];
+  if (normalized.includes("already exists") || normalized.includes("duplicate")) {
+    // Lỗi trùng tên: đánh dấu riêng để hiện đúng thông báo, không báo lỗi độ dài tiêu đề.
+    fields.push("duplicateName");
+    return fields;
+  }
   if (normalized.includes("title") || normalized.includes("name")) fields.push("title");
   if (normalized.includes("type")) fields.push("type");
   if (normalized.includes("level")) fields.push("level");
@@ -1447,6 +1553,8 @@ export default function ExerciseFormPage() {
   const [demoVideoError, setDemoVideoError] = useState(null);
   const [anatomyImage, setAnatomyImage] = useState(null);
   const [anatomyImageError, setAnatomyImageError] = useState(null);
+  const [physiology, setPhysiology] = useState(EMPTY_PHYSIOLOGY);
+  const [physiologyEnabled, setPhysiologyEnabled] = useState(false);
   const [workout, setWorkout] = useState(EMPTY_WORKOUT);
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [exerciseLevel, setExerciseLevel] = useState("all");
@@ -1470,13 +1578,26 @@ export default function ExerciseFormPage() {
     data: systemExercises,
     isLoading: isLoadingExercises,
     error: exerciseLoadError,
-  } = useApiQuery(() => contentManagerApi.exercises(), { enabled: kind === "workout" });
+  } = useApiQuery(() => contentManagerApi.exercises(), { enabled: true });
 
   // Workouts are built from the system library only; user-submitted (CUSTOM) exercises are excluded.
   const allExercises = useMemo(
     () => (Array.isArray(systemExercises) ? systemExercises : []).filter((entry) => entry.source === "SYSTEM"),
     [systemExercises],
   );
+
+  // Tên đã có trong DB (không phân biệt hoa thường, bỏ khoảng trắng thừa) -> chặn tạo trùng.
+  const existingExerciseNames = useMemo(() => {
+    const names = new Set();
+    (Array.isArray(systemExercises) ? systemExercises : []).forEach((entry) => {
+      const key = String(entry.name || "").trim().toLowerCase();
+      if (key) names.add(key);
+    });
+    return names;
+  }, [systemExercises]);
+
+  const isDuplicateExerciseName = (name) =>
+    existingExerciseNames.has(String(name || "").trim().toLowerCase());
 
   useEffect(() => {
     if (kind !== "workout") return;
@@ -1500,8 +1621,10 @@ export default function ExerciseFormPage() {
       onSuccess: (entry) =>
         navigate(`${CONTENT_PATHS.exercises}/${encodeURIComponent(entry.code)}`),
       onError: (requestError) => {
-        setError(requestError.message);
-        setInvalidFields(fieldErrorsFromMessage(requestError.message));
+        const message = requestError.message || "";
+        const duplicate = /already exists|duplicate/i.test(message);
+        setError(duplicate ? t("contentManager.form.errDuplicateName") : message);
+        setInvalidFields(fieldErrorsFromMessage(message));
       },
     },
   );
@@ -1535,6 +1658,7 @@ export default function ExerciseFormPage() {
     if (kind === "exercise") {
       const invalid = [];
       if (!exercise.name.trim() || exercise.name.length > 120) invalid.push("title");
+      else if (isDuplicateExerciseName(exercise.name)) invalid.push("duplicateName");
       if (!["HEALTH", "SKILL"].includes(exercise.type)) invalid.push("type");
       if (!activeLevels.includes(exercise.level)) invalid.push("level");
       if (selectedMuscles.length === 0) invalid.push("muscles");
@@ -1542,6 +1666,7 @@ export default function ExerciseFormPage() {
       if (!Number.isInteger(exerciseValue) || exerciseValue < 1 || exerciseValue > 3600) invalid.push("value");
       const defaultSets = Number(exercise.defaultSets);
       if (!Number.isInteger(defaultSets) || defaultSets < 1 || defaultSets > 20) invalid.push("defaultSets");
+      if (physiologyEnabled && !validatePhysiology(physiology)) invalid.push("physiology");
 
       if (demoVideoError || anatomyImageError) {
         setInvalidFields([
@@ -1554,7 +1679,11 @@ export default function ExerciseFormPage() {
       }
       setInvalidFields(invalid);
       if (invalid.length > 0) {
-        setError(t("contentManager.form.errCorrectFields"));
+        setError(
+          invalid.includes("duplicateName")
+            ? t("contentManager.form.errDuplicateName")
+            : t("contentManager.form.errCorrectFields"),
+        );
         return;
       }
 
@@ -1570,6 +1699,7 @@ export default function ExerciseFormPage() {
           level: exercise.level,
           guide: exercise.guide,
           muscleGroup: selectedMuscles.join(" · "),
+          physiology: physiologyEnabled ? buildPhysiologyPayload(physiology) : null,
         },
         video: demoVideo,
         image: anatomyImage,
@@ -1609,6 +1739,7 @@ export default function ExerciseFormPage() {
 
   const invalid = {
     title: invalidFields.includes("title"),
+    duplicateName: invalidFields.includes("duplicateName"),
     type: invalidFields.includes("type"),
     level: invalidFields.includes("level"),
     muscles: invalidFields.includes("muscles"),
@@ -1716,6 +1847,14 @@ export default function ExerciseFormPage() {
               });
               setAnatomyImage(message ? null : file);
               setAnatomyImageError(message);
+            }}
+            showPhysiology
+            physiology={physiology}
+            onPhysiologyChange={setPhysiology}
+            physiologyEnabled={physiologyEnabled}
+            onPhysiologyEnabledChange={(next) => {
+              setPhysiologyEnabled(next);
+              clearField("physiology");
             }}
           />
         ) : (

@@ -251,6 +251,17 @@ export default {
     reviewLetsGo: "Let's go →",
     reviewWorkoutMeta: "{level} · {count} exercises",
     reviewSummarySets: "{sets} × {count}",
+    replayWorkout: "Repeat this session",
+    congratsEyebrow: "TODAY'S PLAN COMPLETED",
+    congratsTitle: "Great job!",
+    congratsText:
+      "You have finished every workout scheduled for today. Your body needs time to recover — but if you still want to train more, the exercise library is always open for you.",
+    congratsExercises: "Exercises done",
+    congratsAccuracy: "Accuracy",
+    congratsStreak: "Day streak",
+    congratsBackDashboard: "Back to dashboard",
+    congratsGoLibrary: "Train more in the library",
+    congratsReviewPlan: "Review today's plan",
   },
 
   tracking: {
@@ -558,7 +569,7 @@ export default {
     uploadHint: "MP4, MOV · max 500 MB",
     chooseVideo: "Click to upload a demo video",
     changeVideo: "Click to choose a different video",
-    pageTitle: "Exercise & Skill library",
+    pageTitle: "Exercise & Workout library",
     pageDescription: "Choose a section to open its list.",
     loadError: "Unable to load latest library statistics. Showing cached or default view.",
     exerciseSection: "Exercise",
@@ -834,6 +845,7 @@ export default {
     muscleGroup: "MUSCLE GROUP",
     all: "All",
     allLevels: "All levels",
+    backToLibrary: "← Back to Library",
     beginner: "Beginner",
     intermediate: "Intermediate",
     advanced: "Advanced",
@@ -964,6 +976,20 @@ export default {
     toggleFullscreen: "Toggle Fullscreen",
     anatomyAlt: "Muscle anatomy for {{name}}",
     targetMuscleGroups: "Target muscle groups",
+    physiology: {
+      title: "Exercise Physiology",
+      estimated: "Estimated — not device measurement",
+      contraction: "Contraction type",
+      lever: "Lever arm",
+      cardio: "Cardiovascular load",
+      hrZone: "Estimated HR zone (%HRmax)",
+      bp: "Blood pressure",
+      valsalva: "Breath-holding (Valsalva) risk",
+      tendon: "Tendon load / loaded joint",
+      gi: "Digestive risk",
+      breathing: "Breathing",
+      caution: "Caution if you have",
+    },
   },
 
   /** Xem trước bài tập trong buổi tập. */
@@ -1010,6 +1036,8 @@ export default {
     addExercise: "+ Add",
     noExercisesFound: "No exercises found.",
     showingAccepted: "Showing {{from}}–{{to}} of {{count}} accepted exercises",
+    showingRange: "Showing {{from}}–{{to}} of {{total}} {{noun}}",
+    workoutExercisePagesAria: "Workout exercises pages",
     acceptedPagesAria: "Accepted exercises pages",
     previous: "Previous",
     next: "Next",
@@ -1069,6 +1097,9 @@ export default {
     totalSets: "Total sets",
     totalTime: "Total time",
     summaryNote: "Level and totals update automatically when you change the exercises.",
+    summaryLevelNote: "You can pick a different level in the workout details section.",
+    invalidExerciseIds:
+      "Cannot save: these exercises are not part of the system — {{names}}. Remove them and add them again from the accepted exercise list.",
     unsavedChanges: "You have unsaved changes",
     allChangesSaved: "All changes saved",
     saveChanges: "Save changes",
@@ -1599,6 +1630,14 @@ export default {
     demoBadge: "Demo mode",
     demoTooltip:
       "The AI service is unavailable right now, so this answer comes from the built-in rules instead of the AI model.",
+    medicalRedFlagBadge: "Medical warning",
+    medicalRedFlagTitle: "Please see a doctor",
+    medicalRedFlagFallback:
+      "Please see a doctor. AI Support only covers exercise technique — it cannot diagnose or give medical advice.",
+    physiologyAlertsTitle: "Physiology notes for this exercise",
+    physiologyAlertDanger: "Serious",
+    physiologyAlertWarn: "Caution",
+    physiologyAlertInfo: "Info",
   },
 
   /** Popup upload / kiểm tra camera. */

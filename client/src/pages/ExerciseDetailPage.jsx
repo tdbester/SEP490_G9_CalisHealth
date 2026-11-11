@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { getExerciseDetail, getSystemExerciseDetail } from "../api/library";
 import { FAVORITE_ITEM_TYPES } from "../api/favorites";
 import FavoriteButton from "../components/favorites/FavoriteButton";
+import PhysiologyPanel from "../components/exercise/PhysiologyPanel";
+import PhysiologyAlerts from "../components/exercise/PhysiologyAlerts";
 import { mockSystemWorkouts } from "./WorkoutSystemListPage";
 import { getAnatomyImage } from "../utils/anatomyImages";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
@@ -475,6 +477,13 @@ export default function ExerciseDetailPage() {
    * Bài do Member cung cấp (community / personal) không có cây progression nên không hiện nút này.
    */
   const canOpenExerciseTree = isSystemExercise && !isMemberExercise && !isCustomExercise;
+
+  /**
+   * Hồ sơ sinh lý (V76) CHỈ dành cho bài của hệ thống do Content Manager duyệt.
+   * Bài do Member tải lên không có hồ sơ được đối chiếu với nguồn học thuật
+   * nên không hiện panel này.
+   */
+  const canShowPhysiology = isSystemExercise && !isMemberExercise && !isCustomExercise;
 
   /**
    * Loại favorite của bài đang xem. Dựa trên URL vì API chi tiết không trả về
@@ -1018,6 +1027,16 @@ export default function ExerciseDetailPage() {
               {localizedExercise.description}
             </p>
           </section>
+
+          {/* KHỐI 4 - SINH LÝ VẬN ĐỘNG (V76): chỉ bài SYSTEM của hệ thống mới có hồ sơ */}
+          {canShowPhysiology && (
+            <PhysiologyPanel physiology={exercise.physiology || localizedExercise.physiology} />
+          )}
+
+          {/* KHỐI 5 - CẢNH BÁO SINH LÝ (V76): luật cảnh báo khớp bài tập */}
+          {canShowPhysiology && (
+            <PhysiologyAlerts exerciseCode={exercise?.code} />
+          )}
         </div>
 
         {/* CỘT BÊN PHẢI: GUIDE - HƯỚNG DẪN CÁC BƯỚC */}

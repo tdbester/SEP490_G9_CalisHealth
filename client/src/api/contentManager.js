@@ -71,6 +71,13 @@ export function requestError(error) {
 export const contentManagerApi = {
   exercises: () => contentApi.get("/content/exercises").then((r) => r.data),
 
+  /** Thư viện nguồn học thuật dùng cho hồ sơ sinh lý (Content Manager chọn nguồn trích dẫn). */
+  physiologyEvidence: (keyword) =>
+    contentApi
+      .get("/content/physiology/evidence", { params: keyword ? { keyword } : undefined })
+      .then((r) => r.data)
+      .catch((error) => { throw requestError(error); }),
+
   levelBenchmarkConfiguration: () =>
     contentApi.get("/content/level-benchmarks").then((r) => r.data).catch((error) => { throw requestError(error); }),
 
