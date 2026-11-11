@@ -48,6 +48,7 @@ public class ProfileService {
     private final MediaRegistryService registry;
     private final PasswordEncoder encoder;
     private final UserActivityRepository activity;
+    private final MemberFitnessLevelService fitnessLevelsService;
 
     private static final String AGE_QUESTION = "AGE";
 
@@ -239,7 +240,7 @@ public class ProfileService {
             FitnessLevel level = fitnessLevels.findByNameIgnoreCase(r.fitnessLevel().trim())
                     .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
                     .orElseThrow(() -> err(HttpStatus.BAD_REQUEST, "Choose a valid active fitness level"));
-            profile.setFitnessLevel(level);
+            fitnessLevelsService.changeLevel(profile, level);
         }
         // The onboarding answer is only the starting value; once saved here it wins.
         if (r.daysPerWeek() != null) profile.setDaysPerWeek(r.daysPerWeek());

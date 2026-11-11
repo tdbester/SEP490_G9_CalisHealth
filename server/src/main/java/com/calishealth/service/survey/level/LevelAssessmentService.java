@@ -68,6 +68,7 @@ public class LevelAssessmentService {
     private final com.calishealth.repository.MemberTrackingRepository trackingRepository;
     private final LevelBenchmarkService benchmarks;
     private final RecommendedPlanService plans;
+    private final com.calishealth.service.MemberFitnessLevelService fitnessLevelsService;
 
     /** Câu hỏi "bạn muốn tập mấy buổi/tuần" -> member_profiles.days_per_week. */
     private static final String DAYS_PER_WEEK_QUESTION = "HOW_MANY_DAYS_PER_WEEK_DO_YOU_WANT_TO_TRAIN_WITH_CALISHE";
@@ -90,7 +91,8 @@ public class LevelAssessmentService {
             return;
         }
         if (assessment.level() != null && assessment.level().id() != null) {
-            fitnessLevels.findById(assessment.level().id()).ifPresent(profile::setFitnessLevel);
+            fitnessLevels.findById(assessment.level().id())
+                    .ifPresent(level -> fitnessLevelsService.changeLevel(profile, level));
         }
         if (assessment.plan() != null && assessment.plan().sessionsPerWeek() > 0) {
             profile.setDaysPerWeek(assessment.plan().sessionsPerWeek());
@@ -345,7 +347,7 @@ public class LevelAssessmentService {
         });
 
         if (level != null) {
-            profile.setFitnessLevel(level);
+            fitnessLevelsService.changeLevel(profile, level);
         }
 
         java.math.BigDecimal weight = null;

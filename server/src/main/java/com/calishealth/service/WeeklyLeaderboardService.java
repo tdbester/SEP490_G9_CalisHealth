@@ -61,15 +61,95 @@ public class WeeklyLeaderboardService {
         // Xếp hạng: tổng điểm giảm dần, id member tăng dần làm tie-breaker.
         // Lưu ý: dùng id của member chứ không dùng id của score, vì score mới
         // tạo chưa được persist nên getId() còn null -> NPE.
+        scoreRepository.saveAll(weekScores);
+        scoreRepository.flush();
+
+        reassignRanks(weekStart);
+        log.info("Completed: {} member scores computed for week {}", weekScores.size(), weekStart);
+    }
+
+    /**
+     * Tính lại điểm của 1 member ngay sau khi họ hoàn thành buổi tập.
+     *
+     * <p>Điểm leaderboard phải phản ánh hoạt động mới nhất, không đợi tới
+     * job thứ 2 00:00 hay lần khởi động server. Vì vậy sau mỗi buổi tập
+     * hoàn thành, điểm của member đó trong tuần hiện tại được tính lại và
+     * thứ hạng của cả tuần được xếp lại theo level.</p>
+     *
+     * @param memberProfileId id member vừa tập xong
+     */
+    @Transactional
+    public void refreshMemberScore(Long memberProfileId) {
+        MemberProfile member = memberProfileRepository.findById(memberProfileId).orElse(null);
+        if (member == null) {
+            return;
+        }
+
+        LocalDate weekStart = mondayOf(LocalDate.now());
+        MemberWeeklyScore score = computeScoreForMember(member, weekStart);
+        // Lưu trước để score có id, cần cho bước xếp hạng bên dưới.
+        scoreRepository.saveAndFlush(score);
+
+        reassignRanks(weekStart);
+        log.info("Refreshed leaderboard score for member {} in week {}", memberProfileId, weekStart);
+    }
+
+    /**
+     * Xóa toàn bộ điểm tuần của 1 member rồi tính lại từ đầu.
+     *
+     * <p>Dùng khi member đổi fitness level giữa tuần. Bảng điểm có ràng buộc
+     * duy nhất gồm member + tuần + level, nên nếu không xóa dòng cũ thì member
+     * sẽ có hai dòng điểm trong cùng tuần: một dòng treo lơ lửng ở level cũ
+     * và một dòng mới ở level mới. Xóa hết rồi tính lại giúp điểm của tuần
+     * luôn nhất quán với level hiện tại.</p>
+     *
+     * @param memberProfileId id member vừa đổi level
+     */
+    @Transactional
+    public void resetAndRecomputeMemberScore(Long memberProfileId) {
+        MemberProfile member = memberProfileRepository.findById(memberProfileId).orElse(null);
+        if (member == null) {
+            return;
+        }
+
+        LocalDate weekStart = mondayOf(LocalDate.now());
+
+        // Xóa mọi dòng điểm của member trong tuần (kể cả dòng ở level cũ).
+        List<MemberWeeklyScore> existingRows =
+                scoreRepository.findAllByMember_IdAndWeekStart(memberProfileId, weekStart);
+        if (!existingRows.isEmpty()) {
+            scoreRepository.deleteAll(existingRows);
+            scoreRepository.flush();
+            log.info("Deleted {} stale leaderboard score row(s) for member {} after a level change",
+                    existingRows.size(), memberProfileId);
+        }
+
+        // Tính lại từ đầu dưới level hiện tại.
+        MemberWeeklyScore score = computeScoreForMember(member, weekStart);
+        scoreRepository.saveAndFlush(score);
+
+        reassignRanks(weekStart);
+        log.info("Recomputed leaderboard score for member {} in week {} under level {}",
+                memberProfileId, weekStart,
+                member.getFitnessLevel() != null ? member.getFitnessLevel().getName() : "none");
+    }
+
+    /**
+     * Xếp lại thứ hạng của mọi member trong 1 tuần, theo từng level.
+     *
+     * <p>Dùng chung cho {@link #computeScoresForWeek(LocalDate)} và
+     * {@link #refreshMemberScore(Long)} để thứ hạng luôn khớp với tổng điểm
+     * mới nhất, kể cả khi chỉ một member vừa tập xong.</p>
+     */
+    private void reassignRanks(LocalDate weekStart) {
+        List<MemberWeeklyScore> weekScores = scoreRepository.findByWeekStart(weekStart);
+
         weekScores.sort((a, b) -> {
             int cmp = b.getTotalScore().compareTo(a.getTotalScore());
             if (cmp != 0) return cmp;
             return a.getMember().getId().compareTo(b.getMember().getId());
         });
 
-        // Rank lưu theo từng level, vì leaderboard luôn lọc theo level:
-        // thành viên đứng đầu level Beginner phải là #1 của level đó, không
-        // phải #1 toàn bảng.
         LocalDate previousWeek = weekStart.minusWeeks(1);
         Map<Long, Integer> rankByLevel = new java.util.HashMap<>();
         for (MemberWeeklyScore score : weekScores) {
@@ -77,23 +157,41 @@ public class WeeklyLeaderboardService {
             int rankInLevel = rankByLevel.merge(levelId, 1, Integer::sum);
             score.setRank(rankInLevel);
 
-            var prevScore = scoreRepository.findByMember_IdAndWeekStart(score.getMember().getId(), previousWeek);
-            if (prevScore.isPresent()) {
-                Integer prevRank = prevScore.get().getRank();
+            var prevRows = scoreRepository.findAllByMember_IdAndWeekStart(score.getMember().getId(), previousWeek);
+            if (!prevRows.isEmpty()) {
+                Integer prevRank = prevRows.get(0).getRank();
                 score.setPreviousRank(prevRank);
                 score.setRankChange(prevRank != null ? prevRank - score.getRank() : null);
+            } else {
+                score.setPreviousRank(null);
+                score.setRankChange(null);
             }
         }
 
         scoreRepository.saveAll(weekScores);
-        log.info("Completed: {} member scores computed for week {}", weekScores.size(), weekStart);
+    }
+
+    /** Thứ 2 của tuần chứa date. */
+    private static LocalDate mondayOf(LocalDate date) {
+        return date.with(java.time.DayOfWeek.MONDAY);
     }
 
     private MemberWeeklyScore computeScoreForMember(MemberProfile member, LocalDate weekStart) {
         LocalDate weekEnd = weekStart.plusDays(LeaderboardScoringRepository.DAYS_PER_WEEK - 1L);
 
-        var existing = scoreRepository.findByMember_IdAndWeekStart(member.getId(), weekStart);
-        MemberWeeklyScore score = existing.orElse(new MemberWeeklyScore());
+        // Member đổi level giữa tuần thì có thể có nhiều dòng điểm trong tuần
+        // (ràng buộc duy nhất gồm member + week + level). Lấy dòng ứng với
+        // level hiện tại; nếu chưa có thì tạo mới.
+        Long currentLevelId = member.getFitnessLevel() != null ? member.getFitnessLevel().getId() : null;
+        List<MemberWeeklyScore> existingRows =
+                scoreRepository.findAllByMember_IdAndWeekStart(member.getId(), weekStart);
+        MemberWeeklyScore score = existingRows.stream()
+                .filter(row -> {
+                    Long rowLevelId = row.getFitnessLevel() != null ? row.getFitnessLevel().getId() : null;
+                    return java.util.Objects.equals(rowLevelId, currentLevelId);
+                })
+                .findFirst()
+                .orElseGet(() -> existingRows.isEmpty() ? new MemberWeeklyScore() : existingRows.get(0));
 
         score.setMember(member);
         score.setWeekStart(weekStart);

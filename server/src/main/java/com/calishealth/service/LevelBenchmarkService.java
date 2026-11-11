@@ -80,6 +80,7 @@ public class LevelBenchmarkService {
     private final MemberProfileRepository memberProfiles;
     private final WorkoutRepository workouts;
     private final BenchmarkSurveySync surveySync;
+    private final MemberFitnessLevelService fitnessLevelsService;
 
     @Transactional(readOnly = true)
     public BenchmarkConfiguration getConfiguration() {
@@ -332,8 +333,7 @@ public class LevelBenchmarkService {
             
             // Downgrade each member
             for (MemberProfile profile : membersToDowngrade) {
-                profile.setFitnessLevel(targetLevel);
-                memberProfiles.save(profile);
+                fitnessLevelsService.changeLevel(profile, targetLevel);
             }
         } catch (Exception e) {
             System.err.println("Warning: Failed to downgrade members: " + e.getMessage());
@@ -514,8 +514,7 @@ public class LevelBenchmarkService {
             created.setUser(users.getReferenceById(userId));
             return created;
         });
-        profile.setFitnessLevel(level);
-        memberProfiles.save(profile);
+        fitnessLevelsService.changeLevel(profile, level);
         return Optional.of(level.getName());
     }
 

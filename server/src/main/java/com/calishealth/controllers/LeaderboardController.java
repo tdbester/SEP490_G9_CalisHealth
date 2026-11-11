@@ -100,7 +100,8 @@ public class LeaderboardController {
         LocalDate week = weekStart == null ? getMondayOfCurrentWeek() : weekStart;
         Map<String, BigDecimal> breakdown = leaderboardService.explainScore(memberId, week);
 
-        MemberWeeklyScore stored = scoreRepository.findByMember_IdAndWeekStart(memberId, week).orElse(null);
+        List<MemberWeeklyScore> storedRows = scoreRepository.findAllByMember_IdAndWeekStart(memberId, week);
+        MemberWeeklyScore stored = storedRows.isEmpty() ? null : storedRows.get(0);
         Integer rank = stored == null ? null : stored.getRank();
         BigDecimal total = stored == null
                 ? breakdown.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add)
