@@ -5,6 +5,7 @@ import com.calishealth.dtos.ExerciseDtos.ExerciseResponse;
 import com.calishealth.dtos.ExerciseDtos.ExerciseModerationHistoryResponse;
 import com.calishealth.dtos.ExerciseFilterRequestDTO;
 import com.calishealth.dtos.ExerciseItemResponseDTO;
+import com.calishealth.dtos.ExercisePhysiologyDTO;
 import com.calishealth.dtos.PageResponseDTO;
 import com.calishealth.dtos.SystemExerciseDetailResponseDTO;
 import com.calishealth.models.Exercise;
@@ -59,6 +60,7 @@ public class ExerciseService {
     private final FitnessLevelRepository fitnessLevels;
     private final ExerciseMuscleGroupCatalog muscleGroupCatalog;
     private final SystemNotificationService systemNotifications;
+    private final ExercisePhysiologyService physiologyService;
 
     @Transactional(readOnly = true)
     public PageResponseDTO<ExerciseItemResponseDTO> getSystemExercises(ExerciseFilterRequestDTO filter) {
@@ -144,6 +146,8 @@ public class ExerciseService {
                 .toList();
         boolean hasTree = exercise.getExerciseTreeId() != null || !connected.isEmpty();
 
+        ExercisePhysiologyDTO physiology = loadPhysiology(exercise.getId());
+
         return new SystemExerciseDetailResponseDTO(
                 exercise.getId(),
                 exercise.getCode(),
@@ -166,7 +170,23 @@ public class ExerciseService {
                 hasTree,
                 exercise.getMovementGroup() == null ? null : exercise.getMovementGroup().name(),
                 previous,
-                next);
+                next,
+                physiology);
+    }
+
+    /**
+     * Đọc hồ sơ sinh lý của bài tập (V76) kèm thư viện bằng chứng.
+     * Không có hồ sơ -> trả null để FE ẩn panel, không vỡ trang cũ.
+     *
+     * CHỈ bài của hệ thống (source = SYSTEM) mới có hồ sơ sinh lý.
+     * Bài do Member tải lên không có hồ sơ được duyệt bằng chứng học thuật
+     * nên tuyệt đối không được gán sẵn.
+     *
+     * Logic đọc nằm trong {@link ExercisePhysiologyService} để dùng chung với
+     * AI Support (ground câu trả lời bằng hồ sơ sinh lý).
+     */
+    private ExercisePhysiologyDTO loadPhysiology(Long exerciseId) {
+        return physiologyService.loadProfile(exerciseId);
     }
 
     private static String label(String value) {
@@ -228,7 +248,7 @@ public class ExerciseService {
     @Transactional(readOnly = true)
     public ExerciseResponse findByCode(String code) {
         return exercises.findByCode(code)
-                .map(this::toResponse)
+                .map(exercise -> toResponse(exercise, levelActivity(), true))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Exercise or skill not found"));
     }
 
@@ -273,6 +293,11 @@ public class ExerciseService {
         if (request.name() == null || request.name().isBlank() || request.name().length() > 120) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exercise title is required and must be at most 120 characters");
         }
+        // Tên bài tập phải là duy nhất trong DB (không phân biệt hoa thường, bỏ khoảng trắng thừa).
+        if (exercises.existsNotDeletedByNameIgnoreCase(request.name())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Exercise title already exists. Choose a different title.");
+        }
         if (request.muscleGroup() == null || request.muscleGroup().isBlank() || request.muscleGroup().length() > 120) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select one or more muscle groups");
         }
@@ -314,7 +339,9 @@ public class ExerciseService {
 
         saved.setCode(systemExerciseCode(saved.getId()));
         muscleGroupCatalog.assign(saved, request.muscleGroup());
-        return toResponse(exercises.save(saved));
+        Exercise result = exercises.save(saved);
+        physiologyService.upsert(result.getId(), result.getSource(), request.physiology());
+        return toResponse(result, levelActivity(), true);
     }
 
     @Transactional
@@ -331,6 +358,14 @@ public class ExerciseService {
         }
         if (request == null || request.name() == null || request.name().isBlank() || request.name().length() > 120) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exercise title is required and must be at most 120 characters");
+        }
+        // Đổi tên sang tên đã có bài khác trong DB thì bị chặn. Giữ nguyên tên cũ thì vẫn sửa được
+        // (đồng bộ dữ liệu cũ đã có bài trùng tên từ trước).
+        String requestedName = request.name().trim();
+        boolean nameChanged = !requestedName.equalsIgnoreCase(exercise.getName() == null ? "" : exercise.getName().trim());
+        if (nameChanged && exercises.existsOtherNotDeletedByNameIgnoreCase(exercise.getId(), requestedName)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Exercise title already exists. Choose a different title.");
         }
         if (request.muscleGroup() == null || request.muscleGroup().isBlank() || request.muscleGroup().length() > 120) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select one or more muscle groups");
@@ -364,9 +399,10 @@ public class ExerciseService {
         if (anatomyImageUrl != null) exercise.setAnatomyImageUrl(anatomyImageUrl);
         muscleGroupCatalog.assign(exercise, request.muscleGroup());
         Exercise saved = exercises.save(exercise);
+        physiologyService.upsert(saved.getId(), saved.getSource(), request.physiology());
         if (demoVideoUrl != null && !demoVideoUrl.equals(previousVideoUrl)) mediaRegistry.release(previousVideoUrl, "Replaced by a newer video");
         if (anatomyImageUrl != null && !anatomyImageUrl.equals(previousAnatomyImageUrl)) mediaRegistry.release(previousAnatomyImageUrl, "Replaced by a newer image");
-        return toResponse(saved);
+        return toResponse(saved, levelActivity(), true);
     }
 
     @Transactional
@@ -479,11 +515,19 @@ public class ExerciseService {
     }
 
     private ExerciseResponse toResponse(Exercise exercise) {
-        return toResponse(exercise, levelActivity());
+        return toResponse(exercise, levelActivity(), false);
     }
 
     /** {@code active} is the effective status: the exercise is active AND its level is active. */
     private ExerciseResponse toResponse(Exercise exercise, Map<String, Boolean> activity) {
+        return toResponse(exercise, activity, false);
+    }
+
+    /**
+     * Danh sách (findAll / pending) không kèm physiology để tránh N+1 query.
+     * Chỉ trang chi tiết (findByCode) mới nạp hồ sơ sinh lý V76.
+     */
+    private ExerciseResponse toResponse(Exercise exercise, Map<String, Boolean> activity, boolean includePhysiology) {
         boolean levelActive = isLevelActive(exercise.getDifficultyLevel(), activity);
         String type = "SKILL".equalsIgnoreCase(exercise.getType()) ? "Skill" : "Health";
         String source = responseSource(exercise);
@@ -509,7 +553,8 @@ public class ExerciseService {
                 autoCheckStatus(exercise),
                 exercise.getDefaultSets(),
                 exercise.isActive(),
-                levelActive
+                levelActive,
+                (includePhysiology && exercise.getId() != null) ? loadPhysiology(exercise.getId()) : null
         );
     }
 }

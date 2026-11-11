@@ -132,9 +132,16 @@ class AiSupportEndToEndTest {
                     "", "gemini-2.0-flash",
                     "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, true);
 
+            ExercisePhysiologyService physiologyService = mock(ExercisePhysiologyService.class);
+            PhysiologyAlertService physiologyAlerts = mock(PhysiologyAlertService.class);
+            ExerciseSafetyService safetyService = new ExerciseSafetyService();
+            when(physiologyService.loadProfile(anyLong())).thenReturn(null);
+            when(physiologyAlerts.evaluate(any())).thenReturn(List.of());
+
             AiSupportService service = new AiSupportService(
                     usageRepository, messageRepository, sessionRepository,
-                    users, exercises, formRules, chatService, geminiService, moderation, "openai");
+                    users, exercises, formRules, chatService, geminiService, moderation,
+                    physiologyService, physiologyAlerts, safetyService, "openai");
 
             var response = service.ask("member@example.com", new AskQuestionRequest(
                     "SQUAT",
@@ -229,9 +236,16 @@ class AiSupportEndToEndTest {
                     "", "gemini-2.0-flash",
                     "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, false);
 
+            ExercisePhysiologyService physiologyService = mock(ExercisePhysiologyService.class);
+            PhysiologyAlertService physiologyAlerts = mock(PhysiologyAlertService.class);
+            ExerciseSafetyService safetyService = new ExerciseSafetyService();
+            when(physiologyService.loadProfile(anyLong())).thenReturn(null);
+            when(physiologyAlerts.evaluate(any())).thenReturn(List.of());
+
             AiSupportService service = new AiSupportService(
                     usageRepository, messageRepository, sessionRepository,
-                    users, exercises, formRules, chatService, geminiService, moderation, "openai");
+                    users, exercises, formRules, chatService, geminiService, moderation,
+                    physiologyService, physiologyAlerts, safetyService, "openai");
 
             var exception = assertThrows(RuntimeException.class,
                     () -> service.ask("member@example.com", new AskQuestionRequest(
@@ -305,9 +319,16 @@ class AiSupportEndToEndTest {
                     "", "gemini-2.0-flash",
                     "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, true);
 
+            ExercisePhysiologyService physiologyService = mock(ExercisePhysiologyService.class);
+            PhysiologyAlertService physiologyAlerts = mock(PhysiologyAlertService.class);
+            ExerciseSafetyService safetyService = new ExerciseSafetyService();
+            when(physiologyService.loadProfile(anyLong())).thenReturn(null);
+            when(physiologyAlerts.evaluate(any())).thenReturn(List.of());
+
             AiSupportService service = new AiSupportService(
                     usageRepository, messageRepository, sessionRepository,
-                    users, exercises, formRules, chatService, geminiService, moderation, "openai");
+                    users, exercises, formRules, chatService, geminiService, moderation,
+                    physiologyService, physiologyAlerts, safetyService, "openai");
 
             var response = service.ask("member@example.com", new AskQuestionRequest(
                     "SQUAT", "Why do my knees cave in?", "sess-42", List.of("Knees caved inward"), 68.0));

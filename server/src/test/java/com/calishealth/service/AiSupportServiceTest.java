@@ -2,6 +2,9 @@ package com.calishealth.service;
 
 import com.calishealth.dtos.AiSupportDtos.AskQuestionRequest;
 import com.calishealth.dtos.AiSupportDtos.QuotaResponse;
+import com.calishealth.dtos.ExercisePhysiologyDTO;
+import com.calishealth.dtos.PhysiologyAlertDTO;
+import com.calishealth.dtos.PhysiologyEvidenceDTO;
 import com.calishealth.exception.OpenAiException;
 import com.calishealth.models.AiSupportMessage;
 import com.calishealth.models.AiSupportSession;
@@ -53,10 +56,14 @@ class AiSupportServiceTest {
     private final ContentModerationService moderation = mock(ContentModerationService.class);
     private final OpenAiChatService openAi = mock(OpenAiChatService.class);
     private final GeminiChatService gemini = mock(GeminiChatService.class);
+    private final ExercisePhysiologyService physiologyService = mock(ExercisePhysiologyService.class);
+    private final PhysiologyAlertService physiologyAlerts = mock(PhysiologyAlertService.class);
+    private final ExerciseSafetyService safetyService = new ExerciseSafetyService();
 
     private final AiSupportService service = new AiSupportService(
             usageRepository, messageRepository, sessionRepository,
-            users, exercises, formRules, openAi, gemini, moderation, "openai");
+            users, exercises, formRules, openAi, gemini, moderation,
+            physiologyService, physiologyAlerts, safetyService, "openai");
 
     private User member;
     private Exercise exercise;
@@ -76,6 +83,8 @@ class AiSupportServiceTest {
         when(exercises.findByCode("SQUAT")).thenReturn(Optional.of(exercise));
         when(formRules.findByExerciseCode("SQUAT")).thenReturn(List.of());
         when(moderation.findFlaggedWords(anyString(), any(), any(), any())).thenReturn(List.of());
+        when(physiologyService.loadProfile(anyLong())).thenReturn(null);
+        when(physiologyAlerts.evaluate(any())).thenReturn(List.of());
         when(messageRepository.findByUser_IdAndSessionIdOrderByCreatedAtAsc(anyLong(), anyString()))
                 .thenReturn(List.of());
     }
@@ -328,7 +337,8 @@ class AiSupportServiceTest {
 
         AiSupportService autoService = new AiSupportService(
                 usageRepository, messageRepository, sessionRepository,
-                users, exercises, formRules, openAi, gemini, moderation, "auto");
+                users, exercises, formRules, openAi, gemini, moderation,
+                physiologyService, physiologyAlerts, safetyService, "auto");
 
         var response = autoService.ask("member@example.com",
                 new AskQuestionRequest("SQUAT", "Why do my knees cave in?", "session-1", List.of(), 70.0));
@@ -354,7 +364,8 @@ class AiSupportServiceTest {
 
         AiSupportService autoService = new AiSupportService(
                 usageRepository, messageRepository, sessionRepository,
-                users, exercises, formRules, openAi, gemini, moderation, "auto");
+                users, exercises, formRules, openAi, gemini, moderation,
+                physiologyService, physiologyAlerts, safetyService, "auto");
 
         var response = autoService.ask("member@example.com",
                 new AskQuestionRequest("SQUAT", "Why is my depth low?", "session-1", List.of(), 70.0));
@@ -373,11 +384,99 @@ class AiSupportServiceTest {
 
         AiSupportService autoService = new AiSupportService(
                 usageRepository, messageRepository, sessionRepository,
-                users, exercises, formRules, openAi, gemini, moderation, "auto");
+                users, exercises, formRules, openAi, gemini, moderation,
+                physiologyService, physiologyAlerts, safetyService, "auto");
 
         QuotaResponse response = autoService.quota("member@example.com", "session-1");
 
         assertTrue(response.aiEnabled());
         assertEquals("gemini-3.5-flash", response.model());
+    }
+
+    /** Hồ sơ sinh lý mẫu của một bài co tĩnh (plank). */
+    private ExercisePhysiologyDTO plankProfile() {
+        return new ExercisePhysiologyDTO(
+                "ISOMETRIC", 4, 3, 60, 75, "RAISES", "HIGH", "NONE", 3, "SPINE",
+                "Thở đều, không nín thở quá 5 giây",
+                List.of("hypertension"),
+                "Bài co tĩnh làm nghẽn mạch máu ngoại vi nên huyết áp tăng.",
+                List.of("EV_PLANK_2026"),
+                List.of(new PhysiologyEvidenceDTO(
+                        "EV_PLANK_2026", "Static exercise and blood pressure", null, null,
+                        2026, null, null, "A", "Meta-analysis", "Tóm tắt")));
+    }
+
+    @Test
+    void blocksMedicalRedFlagQuestionWithoutCallingAi() {
+        when(usageRepository.findForUpdate(7L, LocalDate.now())).thenReturn(Optional.of(usage(0)));
+        when(sessionRepository.findForUpdate(7L, "session-1")).thenReturn(Optional.of(session(0)));
+        when(openAi.isConfigured()).thenReturn(true);
+        when(openAi.model()).thenReturn("gpt-4o-mini");
+
+        var response = service.ask("member@example.com", new AskQuestionRequest(
+                "SQUAT", "Tôi bị đau ngực khi tập squat, tôi có bị gì không?",
+                "session-1", List.of(), 70.0));
+
+        // Không gọi AI, không dùng token, trả lời hướng tới bác sĩ.
+        verify(openAi, never()).chat(anyString(), anyList());
+        assertEquals("safety-guard", response.provider());
+        assertEquals("MEDICAL_RED_FLAG", response.notice());
+        assertEquals(0, response.totalTokens());
+        assertTrue(response.answer().tip().contains("bác sĩ"));
+        assertEquals(1, response.answer().causes().size());
+    }
+
+    @Test
+    void groundsAnswerWithPhysiologyProfileAndAlertRules() {
+        when(usageRepository.findForUpdate(7L, LocalDate.now())).thenReturn(Optional.of(usage(0)));
+        when(sessionRepository.findForUpdate(7L, "session-1")).thenReturn(Optional.of(session(0)));
+        when(openAi.isConfigured()).thenReturn(true);
+        when(openAi.model()).thenReturn("gpt-4o-mini");
+        when(physiologyService.loadProfile(3L)).thenReturn(plankProfile());
+        when(physiologyAlerts.evaluate(any())).thenReturn(List.of(new PhysiologyAlertDTO(
+                "R1_STATIC_ACCUMULATION",
+                "Tích lũy bài giữ tĩnh trong một buổi",
+                "DANGER",
+                "Cơ co tĩnh làm nghẽn mạch máu ngoại vi nên huyết áp tăng rõ rệt.")));
+        when(openAi.chat(anyString(), anyList())).thenReturn(new AiChatProvider.ChatResult("{}", 42));
+        when(openAi.toAnswer(anyString())).thenReturn(new com.calishealth.dtos.AiSupportDtos.AnswerResponse(
+                List.of(new com.calishealth.dtos.AiSupportDtos.LikelyCause("Core fatigue", "Hips drop.")),
+                "Slow down.",
+                List.of()));
+
+        var response = service.ask("member@example.com", new AskQuestionRequest(
+                "SQUAT", "Tại sao tôi không giữ được plank lâu?", "session-1", List.of(), 70.0));
+
+        var captor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(openAi).chat(captor.capture(), anyList());
+        String prompt = captor.getValue();
+        assertTrue(prompt.contains("contraction type: ISOMETRIC"), prompt);
+        assertTrue(prompt.contains("breath-holding (Valsalva) risk: HIGH"), prompt);
+        assertTrue(prompt.contains("R1_STATIC_ACCUMULATION"), prompt);
+        // Cảnh báo sinh lý được trả về cho frontend hiển thị.
+        assertEquals(1, response.alerts().size());
+        assertEquals("DANGER", response.alerts().get(0).severity());
+    }
+
+    @Test
+    void warnsWhenMemberMentionsAContraindicatedCondition() {
+        when(usageRepository.findForUpdate(7L, LocalDate.now())).thenReturn(Optional.of(usage(0)));
+        when(sessionRepository.findForUpdate(7L, "session-1")).thenReturn(Optional.of(session(0)));
+        when(openAi.isConfigured()).thenReturn(true);
+        when(openAi.model()).thenReturn("gpt-4o-mini");
+        when(physiologyService.loadProfile(3L)).thenReturn(plankProfile());
+        when(openAi.chat(anyString(), anyList())).thenReturn(new AiChatProvider.ChatResult("{}", 42));
+        when(openAi.toAnswer(anyString())).thenReturn(new com.calishealth.dtos.AiSupportDtos.AnswerResponse(
+                List.of(), "", List.of()));
+
+        service.ask("member@example.com", new AskQuestionRequest(
+                "SQUAT", "Tôi bị cao huyết áp, tôi có nên tập plank không?",
+                "session-1", List.of(), 70.0));
+
+        var captor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(openAi).chat(captor.capture(), anyList());
+        String prompt = captor.getValue();
+        assertTrue(prompt.contains("contraindication"), prompt);
+        assertTrue(prompt.contains("cao huyết áp"), prompt);
     }
 }

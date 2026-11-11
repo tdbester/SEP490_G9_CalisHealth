@@ -6,6 +6,8 @@ import com.calishealth.dtos.AiSupportDtos.AskQuestionRequest;
 import com.calishealth.dtos.AiSupportDtos.AskQuestionResponse;
 import com.calishealth.dtos.AiSupportDtos.LikelyCause;
 import com.calishealth.dtos.AiSupportDtos.QuotaResponse;
+import com.calishealth.dtos.ExercisePhysiologyDTO;
+import com.calishealth.dtos.PhysiologyAlertDTO;
 import com.calishealth.exception.OpenAiException;
 import com.calishealth.models.AiSupportMessage;
 import com.calishealth.models.AiSupportSession;
@@ -62,6 +64,12 @@ public class AiSupportService {
     private final OpenAiChatService openAi;
     private final GeminiChatService gemini;
     private final ContentModerationService moderation;
+    /** Đọc hồ sơ sinh lý (V76) của bài tập để ground câu trả lời AI. */
+    private final ExercisePhysiologyService physiologyService;
+    /** Chọn luật cảnh báo sinh lý khớp với bài tập (V76). */
+    private final PhysiologyAlertService physiologyAlerts;
+    /** Chặn red flag y tế và đối chiếu chống chỉ định của bài. */
+    private final ExerciseSafetyService safetyService;
     /**
      * Provider AI đang dùng: "gemini", "openai" hoặc null (không có API nào).
      *
@@ -80,6 +88,9 @@ public class AiSupportService {
             OpenAiChatService openAi,
             GeminiChatService gemini,
             ContentModerationService moderation,
+            ExercisePhysiologyService physiologyService,
+            PhysiologyAlertService physiologyAlerts,
+            ExerciseSafetyService safetyService,
             @Value("${app.ai.provider:auto}") String aiProvider) {
         this.usageRepository = usageRepository;
         this.messageRepository = messageRepository;
@@ -90,6 +101,9 @@ public class AiSupportService {
         this.openAi = openAi;
         this.gemini = gemini;
         this.moderation = moderation;
+        this.physiologyService = physiologyService;
+        this.physiologyAlerts = physiologyAlerts;
+        this.safetyService = safetyService;
         this.aiProvider = aiProvider == null ? "" : aiProvider.trim().toLowerCase(Locale.ROOT);
     }
 
@@ -187,6 +201,22 @@ public class AiSupportService {
     }
 
     /**
+     * Cảnh báo sinh lý (V76) của một bài tập.
+     *
+     * <p>Member xem được cảnh báo mà không cần mở popup hỏi AI — ví dụ ở màn
+     * chi tiết bài tập trước khi bắt đầu buổi tập.
+     *
+     * @param exerciseCode mã bài tập
+     * @return danh sách luật cảnh báo khớp (rỗng nếu bài không có hồ sơ sinh lý)
+     */
+    @Transactional(readOnly = true)
+    public List<PhysiologyAlertDTO> alertsFor(String exerciseCode) {
+        Exercise exercise = exercises.findByCode(exerciseCode)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Exercise not found"));
+        return physiologyAlerts.evaluate(physiologyService.loadProfile(exercise.getId()));
+    }
+
+    /**
      * Member đặt câu hỏi — trả về câu trả lời có cấu trúc.
      *
      * @param email  email member đang đăng nhập
@@ -234,7 +264,27 @@ public class AiSupportService {
         }
 
         List<FormRule> rules = formRules.findByExerciseCode(exercise.getCode());
-        String systemPrompt = buildSystemPrompt(exercise, rules, request.formIssues(), request.accuracy());
+
+        // Hồ sơ sinh lý (V76) của bài tập — chỉ bài SYSTEM mới có. Dùng để
+        // ground câu trả lời AI bằng dữ liệu sinh lý có trích dẫn bằng chứng.
+        ExercisePhysiologyDTO physiology = physiologyService.loadProfile(exercise.getId());
+        List<PhysiologyAlertDTO> alerts = physiologyAlerts.evaluate(physiology);
+
+        // Lớp bảo vệ 1: red flag y tế -> KHÔNG gọi AI, hướng member tới bác sĩ.
+        String redFlag = safetyService.redFlagMessage(question);
+        if (redFlag != null) {
+            AnswerResponse safe = redFlagAnswer(redFlag);
+            return finishAsk(user, exercise, sessionId, question, safe,
+                    usage, sessionIndex, "safety-guard", 0, "MEDICAL_RED_FLAG", alerts);
+        }
+
+        // Lớp bảo vệ 2: member nhắc tới bệnh nền nằm trong chống chỉ định của bài.
+        List<String> contraindicationHits =
+                safetyService.matchedContraindications(physiology, question);
+
+        String systemPrompt = buildSystemPrompt(
+                exercise, rules, request.formIssues(), request.accuracy(),
+                physiology, alerts, contraindicationHits);
 
         AnswerResponse answer;
         int tokens;
@@ -269,6 +319,30 @@ public class AiSupportService {
             notice = "AI_NOT_CONFIGURED";
         }
 
+        return finishAsk(user, exercise, sessionId, question, answer,
+                usage, sessionIndex, provider, tokens, notice, alerts);
+    }
+
+    /**
+     * Lưu lịch sử, cập nhật bộ đếm quota và dựng response trả về cho client.
+     *
+     * @param user       member đang hỏi
+     * @param exercise   bài tập liên quan
+     * @param sessionId  id phiên chat
+     * @param question   câu hỏi của member
+     * @param answer     câu trả lời đã cấu trúc
+     * @param usage      dòng quota hôm nay (đã khoá)
+     * @param sessionIndex số thứ tự câu hỏi trong phiên
+     * @param provider   nguồn câu trả lời
+     * @param tokens     số token đã dùng
+     * @param notice     mã lý do dùng câu trả lời nội bộ (null nếu AI thật)
+     * @param alerts     luật cảnh báo sinh lý khớp với bài tập
+     */
+    private AskQuestionResponse finishAsk(User user, Exercise exercise, String sessionId,
+                                          String question, AnswerResponse answer,
+                                          AiSupportUsage usage, int sessionIndex,
+                                          String provider, int tokens, String notice,
+                                          List<PhysiologyAlertDTO> alerts) {
         // Ghi lại lịch sử + bộ đếm quota.
         AiSupportMessage message = new AiSupportMessage();
         message.setUser(user);
@@ -292,7 +366,25 @@ public class AiSupportService {
                 AiSupportUsage.SESSION_QUESTION_LIMIT,
                 provider,
                 tokens,
-                notice);
+                notice,
+                alerts);
+    }
+
+    /**
+     * Câu trả lời an toàn khi câu hỏi chứa triệu chứng red flag y tế.
+     *
+     * <p>Không gọi AI và không đưa vào prompt — AI Support không được phép chẩn
+     * đoán hay tư vấn y tế. Member được hướng dẫn tới chuyên gia.
+     */
+    private AnswerResponse redFlagAnswer(String guidance) {
+        List<LikelyCause> causes = List.of(new LikelyCause(
+                "Cần bác sĩ đánh giá trực tiếp",
+                guidance));
+        return new AnswerResponse(
+                causes,
+                "Hãy dừng bài này và đi khám bác sĩ. AI Support chỉ hỗ trợ về kỹ thuật "
+                        + "tập, không thể chẩn đoán hay tư vấn y tế.",
+                List.of("Làm sao để tôi tập lại an toàn sau khi đã khám?"));
     }
 
     /**
@@ -392,11 +484,18 @@ public class AiSupportService {
     /**
      * System prompt — persona AI coach + ngữ cảnh bài tập.
      *
-     * Ngữ cảnh lấy từ dữ liệu thật (form rules do Content Manager khai báo)
+     * <p>Ngữ cảnh lấy từ dữ liệu thật (form rules do Content Manager khai báo)
      * để AI không nói chung chung mà bám đúng bài member vừa tập.
+     *
+     * <p>Ngoài ra prompt được ground bằng hồ sơ sinh lý (V76) của bài tập và các
+     * luật cảnh báo sinh lý đã được kiểm chứng, để AI giải thích đúng cơ chế
+     * (VD: bài co tĩnh làm huyết áp tĩnh tăng) thay vì đoán mò.
      */
     private String buildSystemPrompt(Exercise exercise, List<FormRule> rules,
-                                     List<String> formIssues, Double accuracy) {
+                                     List<String> formIssues, Double accuracy,
+                                     ExercisePhysiologyDTO physiology,
+                                     List<PhysiologyAlertDTO> alerts,
+                                     List<String> contraindicationHits) {
         StringBuilder prompt = new StringBuilder();
         prompt.append("""
                 You are CalisHealth AI Support, a calisthenics form coach.
@@ -444,6 +543,8 @@ public class AiSupportService {
             }
         }
 
+        appendPhysiologyContext(prompt, physiology, alerts, contraindicationHits);
+
         // Lỗi form AI đã phát hiện trong buổi tập — đây là ngữ cảnh quan trọng nhất.
         if (formIssues != null && !formIssues.isEmpty()) {
             prompt.append("\n\nForm issues detected for this member in the session just finished:");
@@ -459,6 +560,91 @@ public class AiSupportService {
                     .append("%");
         }
         return prompt.toString();
+    }
+
+    /**
+     * Thêm ngữ cảnh sinh lý (V76) vào system prompt.
+     *
+     * <p>Hồ sơ sinh lý do Content Manager khai báo và đã đối chiếu với nguồn học
+     * thuật. AI được phép dùng các dữ kiện này để giải thích cơ chế, nhưng vẫn
+     * không được chẩn đoán hay khuyến nghị điều trị.
+     */
+    private void appendPhysiologyContext(StringBuilder prompt, ExercisePhysiologyDTO physiology,
+                                         List<PhysiologyAlertDTO> alerts,
+                                         List<String> contraindicationHits) {
+        if (physiology == null && (alerts == null || alerts.isEmpty())) {
+            return;
+        }
+        prompt.append("\n\nPhysiology profile for this exercise");
+        prompt.append(" (declared by the content team and checked against published evidence).");
+        prompt.append(" Use it to explain WHY a form error happens and how to train safely.");
+
+        if (physiology != null) {
+            if (physiology.contractionType() != null) {
+                prompt.append("\n- contraction type: ").append(physiology.contractionType());
+            }
+            if (physiology.leverGrade() != null) {
+                prompt.append("\n- lever grade (1-5, higher means further from the joint axis): ")
+                        .append(physiology.leverGrade());
+            }
+            if (physiology.cardiovascularLoad() != null) {
+                prompt.append("\n- cardiovascular load (1-5): ").append(physiology.cardiovascularLoad());
+            }
+            if (physiology.hrZoneLow() != null && physiology.hrZoneHigh() != null) {
+                prompt.append("\n- estimated target heart-rate zone: ")
+                        .append(physiology.hrZoneLow()).append("-").append(physiology.hrZoneHigh())
+                        .append("% of max HR (HRmax = 208 - 0.7 x age, Tanaka 2001)");
+            }
+            if (physiology.bloodPressureEffect() != null) {
+                prompt.append("\n- blood-pressure effect: ").append(physiology.bloodPressureEffect());
+            }
+            if (physiology.valsalvaRisk() != null) {
+                prompt.append("\n- breath-holding (Valsalva) risk: ").append(physiology.valsalvaRisk());
+            }
+            if (physiology.giRisk() != null) {
+                prompt.append("\n- digestive discomfort risk: ").append(physiology.giRisk());
+            }
+            if (physiology.tendonLoad() != null) {
+                prompt.append("\n- tendon load (1-5): ").append(physiology.tendonLoad());
+            }
+            if (physiology.primaryJoint() != null) {
+                prompt.append("\n- primary joint: ").append(physiology.primaryJoint());
+            }
+            if (physiology.breathingCue() != null && !physiology.breathingCue().isBlank()) {
+                prompt.append("\n- breathing cue: \"").append(physiology.breathingCue()).append('"');
+            }
+            if (physiology.physiologyNote() != null && !physiology.physiologyNote().isBlank()) {
+                prompt.append("\n- note: \"").append(physiology.physiologyNote()).append('"');
+            }
+            if (physiology.evidences() != null && !physiology.evidences().isEmpty()) {
+                prompt.append("\n- evidence sources (cite by name when you explain the mechanism): ");
+                prompt.append(physiology.evidences().stream()
+                        .map(com.calishealth.dtos.PhysiologyEvidenceDTO::title)
+                        .filter(java.util.Objects::nonNull)
+                        .limit(4)
+                        .collect(java.util.stream.Collectors.joining("; ")));
+            }
+        }
+
+        if (alerts != null && !alerts.isEmpty()) {
+            prompt.append("\n\nSafety alerts for this exercise (severity in brackets):");
+            for (PhysiologyAlertDTO alert : alerts) {
+                prompt.append("\n- [").append(alert.severity()).append("] ")
+                        .append(alert.title()).append(" (").append(alert.ruleCode()).append("): ")
+                        .append(alert.messageTemplate());
+            }
+            prompt.append("\nMention the relevant alert when it explains the member's issue, "
+                    + "and always include the practical advice it contains.");
+        }
+
+        if (contraindicationHits != null && !contraindicationHits.isEmpty()) {
+            prompt.append("\n\nIMPORTANT: the member mentioned a health condition that is listed "
+                    + "as a contraindication for this exercise (")
+                    .append(String.join(", ", contraindicationHits)).append(").");
+            prompt.append(" Do NOT diagnose and do NOT tell them to continue or stop medically.");
+            prompt.append(" Advise them to consult a qualified clinician before training this exercise,");
+            prompt.append(" and keep your technique advice general.");
+        }
     }
 
     /** User prompt — câu hỏi của member kèm ngữ cảnh ngắn gọn. */

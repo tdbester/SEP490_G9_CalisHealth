@@ -25,5 +25,6 @@ public record SystemExerciseDetailResponseDTO(
         Boolean hasExerciseTree,
         String movementGroup,
         List<String> previousExercises,
-        List<String> nextExercises
+        List<String> nextExercises,
+        ExercisePhysiologyDTO physiology
 ) {}
