@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
-import { getMemberExercises, createMemberExercise } from "../api/library";
+import { getMemberExercises, createMemberExercise, findExerciseByName } from "../api/library";
 import { FAVORITE_ITEM_TYPES } from "../api/favorites";
 import FavoriteButton from "../components/favorites/FavoriteButton";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
@@ -207,12 +207,18 @@ export default function MemberExerciseListPage() {
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     if (!createForm.name.trim()) {
-        toast.warning(t("member.customExercise.requiredFields"));
+      toast.warning(t("member.customExercise.requiredFields"));
       return;
     }
 
     setSubmitting(true);
     try {
+      // Check trùng tên ngay trên form (nhanh hơn chờ server trả 409).
+      const duplicated = await findExerciseByName(createForm.name);
+      if (duplicated) {
+        toast.error(t("member.customExercise.duplicateName"));
+        return;
+      }
       await createMemberExercise(createForm);
       setShowCreateModal(false);
       setCreateForm({
@@ -228,7 +234,12 @@ export default function MemberExerciseListPage() {
       toast.success(t("member.customExercise.createdSuccess"));
     } catch (err) {
       console.error("Failed to create exercise:", err);
-      toast.error(t("member.customExercise.createFailed"));
+      // Server trả 409 khi tên bài tập đã tồn tại -> báo rõ thay vì lỗi chung chung.
+      if (err?.response?.status === 409) {
+        toast.error(t("member.customExercise.duplicateName"));
+      } else {
+        toast.error(t("member.customExercise.createFailed"));
+      }
     } finally {
       setSubmitting(false);
     }

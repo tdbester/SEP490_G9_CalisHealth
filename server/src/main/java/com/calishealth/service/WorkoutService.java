@@ -103,6 +103,8 @@ public class WorkoutService {
         boolean nameChanged = !requestedName.equalsIgnoreCase(workout.getName() == null ? "" : workout.getName().trim());
         if (nameChanged) {
             contentNameGuard.assertWorkoutNameNotUsedByExercise(requestedName, null);
+            // Tên workout hệ thống phải duy nhất trong nhóm workout hệ thống.
+            contentNameGuard.assertSystemWorkoutNameNotUsedByWorkout(requestedName, workout.getId());
         }
         List<WorkoutExerciseItemRequest> requestedItems = resolveItemRequests(request);
         Map<String, Exercise> exercisesByCode = loadSystemExercises(requestedItems);
@@ -139,6 +141,12 @@ public class WorkoutService {
                 : cloneName(source.getName(), month);
         if (name.length() > 60) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Workout title must be at most 60 characters");
+        }
+        // Chỉ chặn khi Content Manager TỰ đặt tên (tên tự sinh "X - Month N" có thể
+        // trùng khi clone nhiều lần cùng tháng — đó là thao tác hợp lệ).
+        if (request != null && request.name() != null && !request.name().isBlank()) {
+            contentNameGuard.assertWorkoutNameNotUsedByExercise(name, null);
+            contentNameGuard.assertSystemWorkoutNameNotUsedByWorkout(name, null);
         }
 
         WorkoutEntry copy = new WorkoutEntry();
@@ -214,6 +222,8 @@ public class WorkoutService {
         validateWorkoutRequest(request);
         // Tên workout không được trùng tuyệt đối với tên của một bài tập nào.
         contentNameGuard.assertWorkoutNameNotUsedByExercise(request.name(), null);
+        // Tên workout hệ thống phải duy nhất trong nhóm workout hệ thống.
+        contentNameGuard.assertSystemWorkoutNameNotUsedByWorkout(request.name(), null);
         String type = resolveWorkoutType(request.type());
         List<WorkoutExerciseItemRequest> requestedItems = resolveItemRequests(request);
         Map<String, Exercise> exercisesByCode = loadSystemExercises(requestedItems);

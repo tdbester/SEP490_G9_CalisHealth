@@ -128,10 +128,10 @@ class AiSupportEndToEndTest {
 
             OpenAiChatService chatService = new OpenAiChatService(
                     "sk-real-key", "gpt-4o-mini",
-                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, true);
+                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, 700, true);
             GeminiChatService geminiService = new GeminiChatService(
                     "", "gemini-2.0-flash",
-                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, true);
+                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, 1024, true);
 
             ExercisePhysiologyService physiologyService = mock(ExercisePhysiologyService.class);
             PhysiologyAlertService physiologyAlerts = mock(PhysiologyAlertService.class);
@@ -232,10 +232,10 @@ class AiSupportEndToEndTest {
             // Demo tắt -> lỗi phải nổi lên, không được giấu bằng câu trả lời giả.
             OpenAiChatService chatService = new OpenAiChatService(
                     "sk-wrong", "gpt-4o-mini",
-                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, false);
+                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, 700, false);
             GeminiChatService geminiService = new GeminiChatService(
                     "", "gemini-2.0-flash",
-                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, false);
+                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, 1024, false);
 
             ExercisePhysiologyService physiologyService = mock(ExercisePhysiologyService.class);
             PhysiologyAlertService physiologyAlerts = mock(PhysiologyAlertService.class);
@@ -315,10 +315,10 @@ class AiSupportEndToEndTest {
             // Demo bật -> trả lời bằng rule nội bộ, gắn cờ để member biết.
             OpenAiChatService chatService = new OpenAiChatService(
                     "sk-out-of-credits", "gpt-4o-mini",
-                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, true);
+                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, 700, true);
             GeminiChatService geminiService = new GeminiChatService(
                     "", "gemini-2.0-flash",
-                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, true);
+                    "http://127.0.0.1:" + openAi.getAddress().getPort(), 10, 1024, true);
 
             ExercisePhysiologyService physiologyService = mock(ExercisePhysiologyService.class);
             PhysiologyAlertService physiologyAlerts = mock(PhysiologyAlertService.class);

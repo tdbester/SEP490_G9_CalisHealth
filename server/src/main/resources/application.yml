@@ -14,8 +14,10 @@ spring:
       max-request-size: 520MB
   datasource:
     url: jdbc:mysql://localhost:3306/calishealth?createDatabaseIfNotExist=true
+    # KHÔNG hard-code mật khẩu trong repo. Đặt DB_USERNAME / DB_PASSWORD trong
+    # file .env ở thư mục gốc dự án (xem .env.example).
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:12345678}
+    password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
   flyway:
     enabled: true
@@ -30,10 +32,12 @@ spring:
       hibernate:
         format_sql: true
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: duongnthe180584@fpt.edu.vn
-    password: opta dpyv jwkq ijox
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    # KHÔNG hard-code tài khoản email trong repo. Đặt MAIL_USERNAME /
+    # MAIL_PASSWORD trong file .env ở thư mục gốc dự án (xem .env.example).
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -53,9 +57,11 @@ app:
     # Job ghi lại mức dùng thật của Cloudinary vào storage_usage_daily mỗi ngày (Admin > Storage).
     usage-cron: ${STORAGE_USAGE_CRON:0 15 3 * * *}
   cloudinary:
-    cloud-name: ${CLOUDINARY_CLOUD_NAME:u9vojlr2}
-    api-key: ${CLOUDINARY_API_KEY:722157934773437}
-    api-secret: ${CLOUDINARY_API_SECRET:RCWUbVn9XT46SYBFmwN_f46vcl4}
+    # KHÔNG hard-code API key/secret trong repo. Đặt CLOUDINARY_* trong file
+    # .env ở thư mục gốc dự án (xem .env.example).
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+    api-key: ${CLOUDINARY_API_KEY:}
+    api-secret: ${CLOUDINARY_API_SECRET:}
     secure: true
     # blank cloud-name = store uploads on the local disk instead
     # Thư mục gốc trên Cloudinary. Mọi media của app nằm dưới thư mục này, mỗi loại media một
@@ -81,7 +87,9 @@ app:
     # Ngày trong tháng mà bộ đếm của gói Cloudinary được reset (mặc định là ngày 1).
     usage-reset-day: ${CLOUDINARY_USAGE_RESET_DAY:1}
   jwt:
-    secret: clh-demo-secret-key-please-change-this-32-chars-min
+    # Đặt JWT_SECRET trong file .env ở thư mục gốc dự án (xem .env.example).
+    # Giá trị mặc định chỉ dùng cho dev — KHÔNG dùng khi triển khai thật.
+    secret: ${JWT_SECRET:clh-demo-secret-key-please-change-this-32-chars-min}
     expiration-ms: 86400000
   # AI Support (màn popup hỏi AI về lỗi form sau buổi tập).
   #
@@ -103,6 +111,9 @@ app:
     model: ${GEMINI_MODEL:gemini-3.5-flash}
     base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
     timeout-seconds: ${GEMINI_TIMEOUT_SECONDS:45}
+    # Ngân sách token cho câu trả lời (JSON 3 nguyên nhân + mẹp sửa + 2 câu hỏi gợi ý).
+    # Nếu prompt dài (nhiều form rule + hồ sơ sinh lý) thì tăng giá trị này.
+    max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:1024}
     # Chế độ demo: khi API lỗi (hết quota, mất mạng) thì trả lời bằng rule
     # nội bộ kèm cờ báo rõ cho member, thay vì báo lỗi.
     demo-fallback: ${GEMINI_DEMO_FALLBACK:true}
@@ -115,6 +126,8 @@ app:
     model: ${OPENAI_MODEL:gpt-4o-mini}
     base-url: ${OPENAI_BASE_URL:https://api.openai.com}
     timeout-seconds: ${OPENAI_TIMEOUT_SECONDS:45}
+    # Ngân sách token cho câu trả lời (JSON 3 nguyên nhân + mẹp sửa + 2 câu hỏi gợi ý).
+    max-output-tokens: ${OPENAI_MAX_OUTPUT_TOKENS:700}
     # Chế độ demo: khi API lỗi (hết credit, mất mạng, rate limit) thì trả lời
     # bằng rule nội bộ kèm cờ báo rõ cho member, thay vì báo lỗi.
     # Đặt false để member thấy lỗi thật (dùng khi đã nạp credit).

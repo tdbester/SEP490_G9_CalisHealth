@@ -63,6 +63,39 @@ public interface AiChatProvider {
      */
     AnswerResponse toAnswer(String rawContent);
 
+    /**
+     * Bỏ vỏ markdown (```json ... ```) quanh nội dung AI trả về.
+     *
+     * <p>Một số model vẫn bọc JSON trong fence dù đã yêu cầu
+     * {@code responseMimeType: application/json}. Nếu không bỏ vỏ, JSON không
+     * parse được và member chỉ nhận được 1 mẩu text thô thay vì 3 nguyên nhân
+     * + mẹp sửa + câu hỏi gợi ý.
+     *
+     * @param raw nội dung thô (null/rỗng -> trả về nguyên trạng)
+     * @return nội dung đã bỏ vỏ markdown
+     */
+    static String stripMarkdownFence(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String text = raw.trim();
+        if (!text.startsWith("```")) {
+            return text;
+        }
+        // Bỏ dòng mở fence đầu tiên (kèm ngôn ngữ nếu có).
+        int firstNewline = text.indexOf('\n');
+        if (firstNewline < 0) {
+            return text;
+        }
+        text = text.substring(firstNewline + 1).trim();
+        // Bỏ fence đóng ở cuối.
+        int closing = text.lastIndexOf("```");
+        if (closing >= 0) {
+            text = text.substring(0, closing).trim();
+        }
+        return text;
+    }
+
     /** Một tin nhắn trong hội thoại (system/user/assistant). */
     record ChatMessage(String role, String content) {
         public static ChatMessage user(String content) {

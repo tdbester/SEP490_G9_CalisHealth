@@ -697,6 +697,8 @@ export default {
     requiredFields: "Vui lòng điền đầy đủ các trường bắt buộc.",
     createdSuccess: "Tạo bài tập thành công!",
     createFailed: "Tạo thất bại. Vui lòng thử lại.",
+    duplicateName:
+      "Tên bài tập này đã tồn tại. Vui lòng chọn một tên khác.",
     discardTitle: "Bỏ bài tập này?",
     discardMessage:
       "Bạn có chắc muốn đóng biểu mẫu? Thông tin bài tập chưa lưu sẽ bị mất.",

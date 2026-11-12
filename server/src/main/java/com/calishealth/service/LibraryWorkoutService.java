@@ -147,6 +147,8 @@ public class LibraryWorkoutService {
         User member = requireMember(memberEmail);
         // Tên workout không được trùng tuyệt đối với tên của một bài tập nào.
         contentNameGuard.assertWorkoutNameNotUsedByExercise(request.title(), null);
+        // Một member không được có hai workout riêng cùng tên.
+        contentNameGuard.assertMemberWorkoutNameNotUsedByWorkout(request.title(), member.getId(), null);
         validateItems(request.items());
         Map<Long, Exercise> selectedExercises = getAllowedExercises(
                 member.getId(), request.items().stream().map(WorkoutItemDTO::exerciseId).toList());
@@ -183,6 +185,8 @@ public class LibraryWorkoutService {
                 workout.getName() == null ? "" : workout.getName().trim());
         if (titleChanged) {
             contentNameGuard.assertWorkoutNameNotUsedByExercise(requestedTitle, null);
+            // Một member không được có hai workout riêng cùng tên.
+            contentNameGuard.assertMemberWorkoutNameNotUsedByWorkout(requestedTitle, member.getId(), workout.getId());
         }
         validateItems(request.items());
         Map<Long, Exercise> selectedExercises = getAllowedExercises(

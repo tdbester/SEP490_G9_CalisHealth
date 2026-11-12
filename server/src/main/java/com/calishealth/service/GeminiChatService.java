@@ -35,10 +35,19 @@ import java.util.Locale;
 @Slf4j
 public class GeminiChatService implements AiChatProvider {
 
+    /** Trần ngân sách token khi thử lại sau khi bị cắt cụt. */
+    private static final int MAX_RETRY_OUTPUT_TOKENS = 4096;
+
     private final RestClient restClient;
     private final String apiKey;
     private final String model;
     private final String baseUrl;
+    /**
+     * Ngân sách token cho câu trả lời.
+     *
+     * <p>Cố định (không đổi theo request) để service vẫn an toàn khi chạy
+     * song song nhiều request AI.
+     */
     private final int maxOutputTokens;
     private final boolean demoFallbackEnabled;
     private final ObjectMapper mapper = new ObjectMapper();
@@ -48,6 +57,7 @@ public class GeminiChatService implements AiChatProvider {
             @Value("${app.gemini.model:gemini-3.5-flash}") String model,
             @Value("${app.gemini.base-url:https://generativelanguage.googleapis.com}") String baseUrl,
             @Value("${app.gemini.timeout-seconds:45}") int timeoutSeconds,
+            @Value("${app.gemini.max-output-tokens:1024}") int maxOutputTokens,
             @Value("${app.gemini.demo-fallback:true}") boolean demoFallbackEnabled
     ) {
         this.apiKey = apiKey == null ? "" : apiKey.trim();
@@ -55,7 +65,10 @@ public class GeminiChatService implements AiChatProvider {
         this.baseUrl = (baseUrl == null || baseUrl.isBlank())
                 ? "https://generativelanguage.googleapis.com"
                 : baseUrl.trim();
-        this.maxOutputTokens = 1024;
+        // Ngân sách token cho câu trả lời. Nếu prompt dài (nhiều form rule +
+        // hồ sơ sinh lý) thì 1024 token có thể hơi chật; nên cho phép chỉnh
+        // qua biến môi trường GEMINI_MAX_OUTPUT_TOKENS.
+        this.maxOutputTokens = maxOutputTokens <= 0 ? 1024 : maxOutputTokens;
         this.demoFallbackEnabled = demoFallbackEnabled;
 
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
@@ -108,6 +121,26 @@ public class GeminiChatService implements AiChatProvider {
             throw new IllegalArgumentException("At least one chat message is required");
         }
 
+        int budget = maxOutputTokens;
+        try {
+            return execute(systemPrompt, messages, budget);
+        } catch (OpenAiException exception) {
+            // Bị cắt cụt vì hết ngân sách token -> thử lại với ngân sách gấp đôi
+            // (một lần duy nhất) trước khi báo lỗi cho member.
+            if (!"AI_TRUNCATED".equals(exception.getCode())) {
+                throw exception;
+            }
+            int biggerBudget = Math.min(budget * 2, MAX_RETRY_OUTPUT_TOKENS);
+            if (biggerBudget <= budget) {
+                throw exception;
+            }
+            log.warn("Retrying Gemini with a larger token budget: {} -> {}", budget, biggerBudget);
+            return execute(systemPrompt, messages, biggerBudget);
+        }
+    }
+
+    /** Gọi Gemini một lần với ngân sách token cho trước. */
+    private ChatResult execute(String systemPrompt, List<ChatMessage> messages, int outputTokens) {
         ObjectNode payload = mapper.createObjectNode();
         ArrayNode contents = payload.putArray("contents");
 
@@ -126,7 +159,7 @@ public class GeminiChatService implements AiChatProvider {
         // System instruction nằm riêng trong Gemini (systemInstruction).
         ObjectNode generationConfig = payload.putObject("generationConfig");
         generationConfig.put("temperature", 0.4);
-        generationConfig.put("maxOutputTokens", maxOutputTokens);
+        generationConfig.put("maxOutputTokens", outputTokens);
         generationConfig.put("responseMimeType", "application/json");
         // Gemini 3.x mặc định bật "thinking" -> thoughtsTokenCount có thể ăn hết
         // maxOutputTokens và cắt cụt JSON trả về. Tắt thinking để câu trả lời
@@ -234,9 +267,19 @@ public class GeminiChatService implements AiChatProvider {
             JsonNode candidate = root.path("candidates").path(0);
             JsonNode part = candidate.path("content").path("parts").path(0);
             String content = part.path("text").asText("");
+            String finishReason = candidate.path("finishReason").asText("");
             if (content.isBlank()) {
                 throw new OpenAiException(
                         "AI_EMPTY_RESPONSE",
+                        "AI Support could not answer right now. Please try again.",
+                        null);
+            }
+            // Bị cắt cụt vì hết ngân sách token -> JSON thường thiếu nốt -> không
+            // parse được. Báo lỗi rõ ràng để tầng trên có thể thử lại.
+            if ("MAX_TOKENS".equalsIgnoreCase(finishReason)) {
+                log.warn("Gemini response was truncated (finishReason=MAX_TOKENS)");
+                throw new OpenAiException(
+                        "AI_TRUNCATED",
                         "AI Support could not answer right now. Please try again.",
                         null);
             }
@@ -266,8 +309,10 @@ public class GeminiChatService implements AiChatProvider {
         String tip = "";
         List<String> followUps = new ArrayList<>();
 
+        // Bỏ vỏ markdown trước khi parse: model đôi khi bọc JSON trong ```json.
+        String cleaned = AiChatProvider.stripMarkdownFence(rawContent);
         try {
-            JsonNode root = mapper.readTree(rawContent == null ? "{}" : rawContent);
+            JsonNode root = mapper.readTree(cleaned == null ? "{}" : cleaned);
             for (JsonNode node : root.path("causes")) {
                 String title = node.path("title").asText("").trim();
                 String detail = node.path("detail").asText("").trim();
@@ -288,7 +333,7 @@ public class GeminiChatService implements AiChatProvider {
 
         // Không parse được -> dùng chính nội dung text làm 1 nguyên nhân.
         if (causes.isEmpty()) {
-            String plain = rawContent == null ? "" : rawContent.trim();
+            String plain = cleaned == null ? "" : cleaned.trim();
             if (!plain.isEmpty()) {
                 causes.add(new LikelyCause("AI coach feedback", plain));
             }

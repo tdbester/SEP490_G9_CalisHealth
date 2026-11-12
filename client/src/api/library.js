@@ -44,6 +44,47 @@ export const getMemberExerciseList = async (params = {}) => {
 };
 
 /**
+ * Tìm bài tập đã tồn tại theo tên (không phân biệt hoa thường, bỏ khoảng trắng thừa).
+ *
+ * Dùng để check phía client trước khi gửi form tạo bài tập: server trả 409 khi
+ * trùng tên, nhưng báo lỗi ngay tại form giúp member không phải chờ round-trip.
+ *
+ * Kiểm tra cả 2 nguồn:
+ *  - `/library/exercises`      : bài hệ thống + bài của chính member.
+ *  - `/v1/library/member-exercises` (tab COMMUNITY): bài cộng đồng của các member khác.
+ */
+export const findExerciseByName = async (name) => {
+  const target = String(name || "").trim().toLowerCase();
+  if (!target) return null;
+
+  try {
+    const response = await api.get("/library/exercises", {
+      params: { search: target, size: 100 },
+    });
+    const own = (response.data?.items || []).find(
+      (item) => String(item?.name || "").trim().toLowerCase() === target,
+    );
+    if (own) return own;
+  } catch {
+    // Bỏ qua lỗi mạng: server vẫn kiểm tra lại và trả 409 nếu thực sự trùng.
+  }
+
+  try {
+    const community = await api.get("/v1/library/member-exercises", {
+      params: { tab: "COMMUNITY", search: target, page: 0, size: 100 },
+    });
+    const shared = (community.data?.content || []).find(
+      (item) => String(item?.name || item?.title || "").trim().toLowerCase() === target,
+    );
+    if (shared) return shared;
+  } catch {
+    // Tương tự: để server là nguồn quyết định cuối cùng.
+  }
+
+  return null;
+};
+
+/**
  * Danh sách level của hệ thống (động). Level do Content Manager tạo/đổi tên trong
  * Level & Benchmark Criteria nên client không hard-code Beginner / Intermediate / Advanced.
  */
@@ -257,6 +298,7 @@ export default {
   getExercises,
   getMemberExercises,
   getMemberExerciseList,
+  findExerciseByName,
   createPersonalExercise,
   getPersonalExercises,
   getPersonalExercise,

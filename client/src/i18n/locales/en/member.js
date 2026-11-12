@@ -694,6 +694,8 @@ export default {
     requiredFields: "Please fill in all required fields correctly.",
     createdSuccess: "Exercise created successfully!",
     createFailed: "Failed to create. Please try again.",
+    duplicateName:
+      "This exercise name already exists. Please choose a different one.",
     discardTitle: "Discard this exercise?",
     discardMessage:
       "Are you sure you want to close the form? Your unsaved exercise details will be lost.",

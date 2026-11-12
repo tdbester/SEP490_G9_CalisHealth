@@ -226,7 +226,7 @@ public class AiSupportService {
         Exercise exercise = exercises.findByCode(exerciseCode)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Exercise not found"));
         int staticCount = physiologyAlerts.countStaticExercisesInLatestSession(userId);
-        return physiologyAlerts.evaluate(physiologyService.loadProfile(exercise.getId()), staticCount);
+        return physiologyAlerts.evaluate(physiologyService.loadProfile(exercise.getId()), staticCount, userId);
     }
 
     /**
@@ -282,7 +282,7 @@ public class AiSupportService {
         // ground câu trả lời AI bằng dữ liệu sinh lý có trích dẫn bằng chứng.
         ExercisePhysiologyDTO physiology = physiologyService.loadProfile(exercise.getId());
         int staticCount = physiologyAlerts.countStaticExercisesInLatestSession(user.getId());
-        List<PhysiologyAlertDTO> alerts = physiologyAlerts.evaluate(physiology, staticCount);
+        List<PhysiologyAlertDTO> alerts = physiologyAlerts.evaluate(physiology, staticCount, user.getId());
 
         // Lớp bảo vệ 1: red flag y tế -> KHÔNG gọi AI, hướng member tới bác sĩ.
         String redFlag = safetyService.redFlagMessage(question);

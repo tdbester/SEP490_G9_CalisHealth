@@ -99,6 +99,7 @@ export default function WorkoutDetailPage() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [form, setForm] = useState(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [exerciseLevel, setExerciseLevel] = useState("all");
   const { data: availableExercises = [], isLoading: isLoadingExercises, error: exerciseLoadError } = useApiQuery(
@@ -107,7 +108,20 @@ export default function WorkoutDetailPage() {
   );
   const saveMutation = useApiMutation(
     (data) => contentManagerApi.updateWorkout(code, data),
-    { onSuccess: () => { setEditing(false); setHasSubmitted(false); refetch(); } },
+    {
+      onSuccess: () => { setEditing(false); setHasSubmitted(false); refetch(); },
+      // Server trả 409 khi tên workout trùng với bài tập/workout khác -> hiện thông báo
+      // đã bản dịch thay vì để lộ message kỹ thuật của backend.
+      onError: (requestError) => {
+        const status = requestError?.response?.status;
+        const message = requestError?.response?.data?.message || requestError?.message || "";
+        if (status === 409 || /already exists|already used|duplicate/i.test(message)) {
+          setSaveError(t("contentManager.form.errDuplicateName"));
+          return;
+        }
+        setSaveError(message || t("contentManager.detail.saveFailed"));
+      },
+    },
   );
   const exerciseCodes = Array.isArray(workout?.exercises)
     ? workout.exercises.map((exercise) => exercise.code).filter(Boolean).sort().join(",")
@@ -200,10 +214,12 @@ export default function WorkoutDetailPage() {
     setHasSubmitted(false);
     setExerciseSearch("");
     setExerciseLevel("all");
+    setSaveError("");
     saveMutation.reset();
   };
   const submitEdit = () => {
     setHasSubmitted(true);
+    setSaveError("");
     if (!form?.name.trim() || form.name.length > 60 || !form.description.trim()
       || form.description.length > 300
       || !["HEALTH", "SKILL", "FLEX"].includes(form.type)
@@ -266,7 +282,7 @@ export default function WorkoutDetailPage() {
                 selectedDay={1}
                 onSelectedDayChange={() => {}}
               />
-              {saveMutation.error && <Alert severity="error">{saveMutation.error.message}</Alert>}
+              {saveError && <Alert severity="error">{saveError}</Alert>}
               <Divider sx={{ mt: 1, borderColor: CM.border }} />
               <Stack
                 direction="row"
