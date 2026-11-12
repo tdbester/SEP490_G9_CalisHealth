@@ -15,8 +15,21 @@ import org.springframework.web.bind.annotation.RestController;
 public class LibraryOverviewController {
     private final LibraryService libraryService;
 
+    /**
+     * Số liệu tổng quan của Library. Mở cho GUEST (chưa đăng nhập) nên khi không
+     * có phiên đăng nhập thì các nhóm nội dung của Member trả về 0.
+     */
     @GetMapping("/overview")
     public ResponseEntity<LibraryOverviewDTO> getOverview(Authentication authentication) {
-        return ResponseEntity.ok(libraryService.getOverview(authentication.getName()));
+        String email = null;
+        if (authentication != null && authentication.isAuthenticated()) {
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof String value
+                    && !value.isBlank()
+                    && !"anonymousUser".equals(value)) {
+                email = value;
+            }
+        }
+        return ResponseEntity.ok(libraryService.getOverview(email));
     }
 }

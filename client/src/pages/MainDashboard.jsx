@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { toast } from "react-toastify";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import ArrowBackIosNewRoundedIcon from "@mui/icons-material/ArrowBackIosNewRounded";
 import ArrowForwardIosRoundedIcon from "@mui/icons-material/ArrowForwardIosRounded";
@@ -21,6 +22,7 @@ import { FAVORITE_ITEM_TYPES } from "../api/favorites";
 import { useFavorites } from "../context/FavoritesContext";
 import OnboardingRedirect from "../components/survey/OnboardingRedirect";
 import { surveyApi, isMemberSession } from "../api/survey";
+import { isGuestSession, loginPath } from "../utils/authState";
 import "./MainDashboard.css";
 
 const MUSCLE_ICONS = {
@@ -152,6 +154,21 @@ export default function MainDashboard() {
     navigate({ pathname: "/library/exercises", search: params });
   };
 
+  /**
+   * Mở màn chi tiết bài tập.
+   *
+   * GUEST (chưa đăng nhập) được xem danh sách ở Library nhưng bấm vào XEM CHI TIẾT
+   * thì bị chặn và phải đăng nhập trước khi tiếp tục.
+   */
+  const openSkillDetail = (path) => {
+    if (isGuestSession()) {
+      toast.info(t("member.library.loginRequiredDetail"));
+      navigate(loginPath(path));
+      return;
+    }
+    navigate(path);
+  };
+
   /** Nút Start workout: member chưa từng hoàn thành survey (kể cả đã skip lúc
    * đầu) thì đưa sang Health & Progress để thực hiện survey, thay vì vào
    * thẳng lịch tập khi chưa có level/kế hoạch gợi ý.
@@ -281,7 +298,7 @@ export default function MainDashboard() {
               key={skill.id}
               className={`dash-skill-card tone-${skill.tone}`}
               onClick={() =>
-                navigate(`/library/exercises/system/${skill.exerciseId}`)
+                openSkillDetail(`/library/exercises/system/${skill.exerciseId}`)
               }
             >
               <span className="dash-skill-head">

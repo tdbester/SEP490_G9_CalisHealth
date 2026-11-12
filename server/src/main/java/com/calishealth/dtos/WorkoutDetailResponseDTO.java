@@ -8,6 +8,8 @@ public record WorkoutDetailResponseDTO(
         String title,
         String description,
         String level,
+        /** HEALTH / SKILL / FLEX — FLEX hiển thị ở cả tab Health và tab Skill. */
+        String type,
         boolean isSharedWithCommunity,
         int saveCount,
         String authorName,

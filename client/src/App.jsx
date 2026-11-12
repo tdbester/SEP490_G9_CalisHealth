@@ -51,6 +51,8 @@ import AdminFeedbackPage from "./pages/AdminFeedbackPage";
 import AdminFeedbackDetailPage from "./pages/AdminFeedbackDetailPage";
 import { FavoritesProvider } from "./context/FavoritesContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import GuestBlockedRoute from "./components/GuestBlockedRoute";
+import LibraryRoute from "./components/LibraryRoute";
 import ContentManagerDashboard from "./pages/ContentManagerDashboard";
 import ExerciseTreePage from "./pages/ExerciseTreePage";
 import DailyPlanTemplateListPage from "./pages/DailyPlanTemplateListPage";
@@ -99,6 +101,20 @@ export default function App() {
     <ProtectedRoute>
       <AdminLayout>{page}</AdminLayout>
     </ProtectedRoute>
+  );
+  // ── Library: GUEST (chưa đăng nhập) cũng xem được trang tổng quan và các
+  // trang DANH SÁCH bài tập / workout hệ thống. Bấm vào XEM CHI TIẾT thì bị
+  // chặn và yêu cầu đăng nhập (xem `guestBlockedPage`).
+  const libraryPage = (page) => (
+    <LibraryRoute>
+      <AdminLayout>{page}</AdminLayout>
+    </LibraryRoute>
+  );
+  // Trang CHỈ MEMBER mới xem được chi tiết: guest bị chặn và mời đăng nhập.
+  const guestBlockedPage = (page) => (
+    <GuestBlockedRoute>
+      <AdminLayout>{page}</AdminLayout>
+    </GuestBlockedRoute>
   );
   return (
     <>
@@ -183,12 +199,23 @@ export default function App() {
           <Route path="*" element={<Navigate to="/content/dashboard" replace />} />
         </Route>
 
-        <Route path="/library" element={memberPage(<Library />)} />
-        <Route path="/library/exercises" element={memberPage(<LibraryExerciseListPage />)} />
-        <Route path="/library/exercises/system/:exerciseId" element={memberPage(<ExerciseDetailPage />)} />
-        <Route path="/library/exercises/:tab" element={memberPage(<LibraryExerciseListPage />)} />
+        {/* ── Library ────────────────────────────────────────────────────────
+            Mở cho GUEST: xem tổng quan + danh sách bài tập / workout hệ thống.
+            CHỈ các trang CHI TIẾT mới yêu cầu đăng nhập (guestBlockedPage). */}
+        <Route path="/library" element={libraryPage(<Library />)} />
+        <Route path="/library/exercises" element={libraryPage(<LibraryExerciseListPage />)} />
+        <Route path="/library/exercises/:tab" element={libraryPage(<LibraryExerciseListPage />)} />
+        <Route path="/library/workouts/system" element={libraryPage(<WorkoutSystemListPage />)} />
+        <Route path="/library/workouts/health" element={libraryPage(<WorkoutSystemListPage />)} />
+        <Route path="/library/workouts/skill" element={libraryPage(<WorkoutSystemListPage />)} />
+        {/* Chi tiết bài tập hệ thống — guest bị chặn, phải đăng nhập. */}
+        <Route path="/library/exercises/system/:exerciseId" element={guestBlockedPage(<ExerciseDetailPage />)} />
+        <Route path="/library/exercise/:id" element={guestBlockedPage(<ExerciseDetailPage />)} />
+        {/* Chi tiết workout hệ thống — guest bị chặn, phải đăng nhập. */}
+        <Route path="/library/workouts/system/:workoutId" element={guestBlockedPage(<SystemWorkoutDetailPage />)} />
+        <Route path="/library/system-workouts/:id" element={guestBlockedPage(<SystemWorkoutDetailPage />)} />
+
         <Route path="/library/exercises/member" element={memberPage(<CommunityExerciseListPage />)} />
-        <Route path="/library/exercise/:id" element={memberPage(<ExerciseDetailPage />)} />
         <Route path="/library/community" element={memberPage(<CommunityExerciseListPage />)} />
         <Route path="/library/member-exercises" element={memberPage(<CommunityExerciseListPage />)} />
         <Route path="/library/community/:id" element={memberPage(<ExerciseDetailPage />)} />
@@ -200,11 +227,6 @@ export default function App() {
         <Route path="/library/personal-exercises/new" element={memberPage(<CreatePersonalExercisePage />)} />
         <Route path="/library/personal-exercises/:id/edit" element={memberPage(<UpdatePersonalExercisePage />)} />
         <Route path="/library/workouts" element={memberPage(<MyCustomWorkoutListPage />)} />
-        <Route path="/library/workouts/system" element={memberPage(<WorkoutSystemListPage />)} />
-        <Route path="/library/workouts/system/:workoutId" element={memberPage(<SystemWorkoutDetailPage />)} />
-        <Route path="/library/workouts/health" element={memberPage(<WorkoutSystemListPage />)} />
-        <Route path="/library/workouts/skill" element={memberPage(<WorkoutSystemListPage />)} />
-        <Route path="/library/system-workouts/:id" element={memberPage(<SystemWorkoutDetailPage />)} />
         <Route path="/library/workouts/new" element={memberPage(<CreatePersonalWorkoutPage />)} />
         <Route path="/library/workouts/:id/edit" element={memberPage(<UpdateMyCustomWorkoutPage />)} />
         <Route path="/library/custom" element={memberPage(<CustomWorkoutListPage />)} />

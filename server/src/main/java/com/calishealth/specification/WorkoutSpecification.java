@@ -5,6 +5,7 @@ import com.calishealth.models.WorkoutEntry;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
@@ -55,14 +56,18 @@ public final class WorkoutSpecification {
 
     public static Specification<WorkoutEntry> withSystemFilters(
             WorkoutFilterRequestDTO filter,
-            String type
+            Collection<String> types
     ) {
         return (root, query, builder) -> {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
             predicates.add(builder.equal(root.get("source"), "SYSTEM"));
             predicates.add(builder.equal(root.get("templateStatus"), "PUBLISHED"));
             predicates.add(builder.equal(root.get("moderationStatus"), "ACTIVE"));
-            predicates.add(builder.equal(builder.upper(root.get("type")), type));
+            // Workout FLEX hiển thị ở cả tab Health và tab Skill nên type là
+            // danh sách (HEALTH) hoặc (SKILL, FLEX).
+            predicates.add(root.get("type").in(types.stream()
+                    .map(type -> type.toUpperCase(Locale.ROOT))
+                    .toList()));
 
             if (filter.getLevel() != null && !filter.getLevel().isBlank()
                     && !"ALL".equalsIgnoreCase(filter.getLevel())) {

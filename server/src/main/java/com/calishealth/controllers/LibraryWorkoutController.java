@@ -20,11 +20,28 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/library")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('MEMBER')")
 public class LibraryWorkoutController {
     private final LibraryWorkoutService workoutService;
 
+    /**
+     * Email của người đang đăng nhập, hoặc null khi là GUEST (chưa đăng nhập).
+     * Endpoint danh sách workout hệ thống mở cho guest nên không được phép
+     * gọi authentication.getName() trực tiếp — token "anonymousUser" sẽ làm
+     * requireMember() ném lỗi 404.
+     */
+    private static String emailOf(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof String email)) {
+            return null;
+        }
+        return email.isBlank() || "anonymousUser".equals(email) ? null : email;
+    }
+
     @GetMapping("/custom-workouts")
+    @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<PageResponseDTO<WorkoutListItemDTO>> community(
             @Valid @ModelAttribute WorkoutFilterRequestDTO filter,
             Authentication authentication
@@ -32,16 +49,21 @@ public class LibraryWorkoutController {
         return ResponseEntity.ok(workoutService.getCommunityWorkouts(authentication.getName(), filter));
     }
 
+    /**
+     * Danh sách workout hệ thống (HEALTH / SKILL) — công khai để GUEST xem
+     * được. Mỗi bài khi bấm vào xem chi tiết vẫn bị chặn ở frontend.
+     */
     @GetMapping("/system-workouts")
     public ResponseEntity<PageResponseDTO<WorkoutListItemDTO>> system(
             @RequestParam String type,
             @Valid @ModelAttribute WorkoutFilterRequestDTO filter,
             Authentication authentication
     ) {
-        return ResponseEntity.ok(workoutService.getSystemWorkouts(authentication.getName(), type, filter));
+        return ResponseEntity.ok(workoutService.getSystemWorkouts(emailOf(authentication), type, filter));
     }
 
     @GetMapping("/system-workouts/{id}")
+    @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<WorkoutDetailResponseDTO> systemDetail(
             @PathVariable Long id,
             Authentication authentication
@@ -50,6 +72,7 @@ public class LibraryWorkoutController {
     }
 
     @GetMapping("/custom-workouts/{id}")
+    @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<WorkoutDetailResponseDTO> communityDetail(
             @PathVariable Long id,
             Authentication authentication
@@ -58,6 +81,7 @@ public class LibraryWorkoutController {
     }
 
     @GetMapping("/my-workouts")
+    @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<PageResponseDTO<WorkoutListItemDTO>> mine(
             @Valid @ModelAttribute WorkoutFilterRequestDTO filter,
             Authentication authentication
@@ -66,6 +90,7 @@ public class LibraryWorkoutController {
     }
 
     @GetMapping("/my-workouts/{id}")
+    @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<WorkoutDetailResponseDTO> detail(
             @PathVariable Long id,
             Authentication authentication
@@ -74,6 +99,7 @@ public class LibraryWorkoutController {
     }
 
     @PostMapping("/my-workouts")
+    @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<WorkoutDetailResponseDTO> create(
             @Valid @RequestBody CreateUpdateWorkoutRequestDTO request,
             Authentication authentication
@@ -83,6 +109,7 @@ public class LibraryWorkoutController {
     }
 
     @PutMapping("/my-workouts/{id}")
+    @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<WorkoutDetailResponseDTO> update(
             @PathVariable Long id,
             @Valid @RequestBody CreateUpdateWorkoutRequestDTO request,
@@ -92,12 +119,14 @@ public class LibraryWorkoutController {
     }
 
     @DeleteMapping("/my-workouts/{id}")
+    @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<Void> delete(@PathVariable Long id, Authentication authentication) {
         workoutService.deleteWorkout(authentication.getName(), id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/workout-exercises/available")
+    @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<List<AvailableWorkoutExerciseDTO>> available(Authentication authentication) {
         return ResponseEntity.ok(workoutService.getAvailableExercises(authentication.getName()));
     }

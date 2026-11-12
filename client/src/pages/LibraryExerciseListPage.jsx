@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { toast } from "react-toastify";
 import { getExercises, getMuscleGroups, getExerciseCounts } from "../api/library";
 import { FAVORITE_ITEM_TYPES } from "../api/favorites";
 import FavoriteButton from "../components/favorites/FavoriteButton";
@@ -8,6 +9,7 @@ import BackButton from "../components/common/BackButton";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { getLevelLabel } from "../utils/levelLabel";
 import { localizeSeed } from "../utils/seedText";
+import { isGuestSession, loginPath } from "../utils/authState";
 import "./ExerciseListPage.css";
 
 // SVG Icons matching Figma design
@@ -532,6 +534,13 @@ export default function ExerciseListPage() {
   };
 
   const handleCardClick = (item) => {
+    // GUEST (chưa đăng nhập) được xem danh sách nhưng bấm vào XEM CHI TIẾT
+    // thì bị chặn và mời đăng nhập trước khi mở màn chi tiết.
+    if (isGuestSession()) {
+      toast.info(t("member.library.loginRequiredDetail"));
+      navigate(loginPath(`/library/exercise/${item.id}`));
+      return;
+    }
     navigate(`/library/exercise/${item.id}`);
   };
 

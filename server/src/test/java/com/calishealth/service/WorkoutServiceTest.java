@@ -29,6 +29,7 @@ class WorkoutServiceTest {
     @Mock private ExerciseRepository exercises;
     @Mock private UserRepository users;
     @Mock private FitnessLevelRepository fitnessLevels;
+    @Mock private ContentNameGuardService contentNameGuard;
     @InjectMocks private WorkoutService service;
 
     @Test

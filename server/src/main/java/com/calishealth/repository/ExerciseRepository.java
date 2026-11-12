@@ -29,6 +29,20 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long>, JpaSp
             + "and lower(trim(e.name)) = lower(trim(:name)) "
             + "and (e.moderationStatus is null or upper(e.moderationStatus) <> 'DELETED')")
     boolean existsOtherNotDeletedByNameIgnoreCase(@Param("id") Long id, @Param("name") String name);
+
+    /**
+     * True khi còn bài tập đang hoạt động dùng đúng tên này.
+     *
+     * So sánh không phân biệt hoa thường và bỏ khoảng trắng thừa ở hai đầu.
+     * Dùng để chặn tên bài tập trùng với tên workout (và ngược lại).
+     *
+     * @param name            tên cần kiểm tra
+     * @param excludeExerciseId id bài tập đang sửa để bỏ qua, null khi tạo mới
+     */
+    @Query("select count(e) > 0 from Exercise e where lower(trim(e.name)) = lower(trim(:name)) "
+            + "and (e.moderationStatus is null or upper(e.moderationStatus) <> 'DELETED') "
+            + "and (:excludeId is null or e.id <> :excludeId)")
+    boolean existsActiveByNameIgnoreCase(@Param("name") String name, @Param("excludeId") Long excludeId);
     Optional<Exercise> findByIdAndCreatedBy_IdAndSource(Long id, Long authorId, String source);
     @Query("""
             SELECT e FROM Exercise e
