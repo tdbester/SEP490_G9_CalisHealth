@@ -40,7 +40,7 @@ class AdminNotificationControllerTest {
     @Test
     void getsNotificationById() throws Exception {
         when(notifications.getNotification(12L)).thenReturn(new NotificationResponseDto(
-                12L, "Holiday challenge", "Train three days.", "ANNOUNCEMENT", "DRAFT",
+                12L, "Holiday challenge", "Train three days.", "ANNOUNCEMENT", "PUBLISHED",
                 LocalDateTime.of(2026, 10, 14, 9, 0)
         ));
 
@@ -49,7 +49,7 @@ class AdminNotificationControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(12))
                 .andExpect(jsonPath("$.title").value("Holiday challenge"))
-                .andExpect(jsonPath("$.status").value("DRAFT"));
+                .andExpect(jsonPath("$.status").value("PUBLISHED"));
 
         verify(notifications).getNotification(12L);
     }
@@ -134,15 +134,9 @@ class AdminNotificationControllerTest {
         );
     }
 
+    /** Module Admin Notification không còn trạng thái nháp — request DRAFT bị từ chối. */
     @Test
-    void createsDraftNotificationAsAdmin() throws Exception {
-        when(notifications.createNotification(
-                new CreateNotificationRequestDto("Draft", "Draft message.", "ANNOUNCEMENT", "DRAFT"),
-                "admin@example.com"
-        )).thenReturn(new NotificationResponseDto(
-                18L, "Draft", "Draft message.", "ANNOUNCEMENT", "DRAFT", LocalDateTime.now()
-        ));
-
+    void rejectsDraftNotificationStatus() throws Exception {
         mockMvc.perform(post("/api/admin/notifications")
                         .contentType("application/json")
                         .content("""
@@ -154,8 +148,7 @@ class AdminNotificationControllerTest {
                                 }
                                 """)
                         .with(SecurityMockMvcRequestPostProcessors.user("admin@example.com").roles("ADMIN")))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("DRAFT"));
+                .andExpect(status().isBadRequest());
     }
 
     @Test

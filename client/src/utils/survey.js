@@ -9,6 +9,30 @@ import i18n from "../i18n";
  */
 const t = (key, options) => i18n.t(key, options);
 
+/**
+ * Dịch chuỗi của khảo sát theo ngôn ngữ đang chọn, có fallback về giá trị
+ * gốc do backend trả về.
+ *
+ * Backend lưu câu hỏi / lựa chọn bằng tiếng Anh (nội dung do Content Manager
+ * soạn), nên bản dịch tiếng Việt nằm ở file locale của client. Key dịch theo
+ * mã câu hỏi / mã lựa chọn nên ổn định kể cả khi CM sửa nội dung gốc.
+ *
+ * @param {string} key key trong namespace `member`
+ * @param {string} [fallback] giá trị gốc khi chưa có bản dịch
+ * @returns {string}
+ */
+function translate(key, fallback) {
+  // Sentinel: i18next trả về chính key khi không tìm thấy, nên cần một giá trị
+  // đặc biệt để phân biệt "chưa có bản dịch" với "bản dịch rỗng".
+  const MISSING = "\u0000missing";
+  const value = i18n.t(key, { defaultValue: MISSING });
+  if (typeof value === "string" && value !== MISSING && value.trim()) return value;
+  return fallback;
+}
+
+/** Key dịch của 1 câu hỏi. */
+const questionKey = (question) => `member:survey.questions.${question.questionCode}`;
+
 /*
  * Logic khảo sát dùng chung cho các màn onboarding. Mọi câu hỏi, lựa chọn, ràng buộc và điều kiện
  * hiển thị đều đến từ GET /api/surveys/{code}; file này chỉ diễn giải chúng giống hệt backend
@@ -28,10 +52,27 @@ export function stepCopy(step) {
   const key = STEP_COPY_KEYS[step.stepCode];
   const copy = key ? t(`member:survey.stepTitles.${key}`) : null;
   return {
-    label: step.stepName,
+    label: translate(`member:survey.steps.${step.stepCode}.label`, step.stepName),
     title: copy?.title ?? step.stepName,
     subtitle: copy?.subtitle ?? step.description ?? "",
   };
+}
+
+/**
+ * Đơn vị của câu hỏi (kg, cm, reps…) — ưu tiên bản dịch.
+ */
+export function unitLabel(question) {
+  if (!question.unit) return "";
+  return translate(`member:survey.units.${question.unit}`, question.unit);
+}
+
+/**
+ * Đơn vị hiển thị ở màn kết quả (unit do backend gửi kèm tiêu chí) — ưu tiên
+ * bản dịch.
+ */
+export function unitText(unit) {
+  if (!unit) return "";
+  return translate(`member:survey.units.${unit}`, unit);
 }
 
 /** BODY_INFORMATION <-> body-information (URL giống Figma: /survey/body-information). */
@@ -41,8 +82,50 @@ export const findStepBySlug = (steps, slug) => steps.find((s) => stepSlug(s.step
 /** display_config của câu hỏi (JSON tùy ý do content manager cấu hình). */
 export const displayOf = (question) => question.displayConfig ?? {};
 
-/** Tiêu đề ngắn hiển thị trên màn hình. */
-export const questionLabel = (question) => displayOf(question).label ?? question.questionText;
+/**
+ * Tiêu đề ngắn hiển thị trên màn hình — ưu tiên bản dịch theo ngôn ngữ đang chọn.
+ */
+export function questionLabel(question) {
+  const translated = translate(`${questionKey(question)}.label`, "");
+  if (translated) return translated;
+  return displayOf(question).label ?? question.questionText;
+}
+
+/**
+ * Nội dung mô tả của câu hỏi (dòng phụ) — ưu tiên bản dịch.
+ */
+export function questionDescription(question) {
+  const translated = translate(`${questionKey(question)}.description`, "");
+  if (translated) return translated;
+  return question.description ?? "";
+}
+
+/**
+ * Nhãn của 1 lựa chọn — ưu tiên bản dịch theo mã lựa chọn.
+ */
+export function optionLabel(question, option) {
+  const translated = translate(`${questionKey(question)}.options.${option.optionCode}`, "");
+  if (translated) return translated;
+  return option.label;
+}
+
+/**
+ * Dòng phụ (hint) hiển thị dưới tiêu đề của câu hỏi — ưu tiên bản dịch.
+ */
+export function questionHint(question) {
+  const translated = translate(`${questionKey(question)}.hint`, "");
+  if (translated) return translated;
+  return displayOf(question).hint ?? "";
+}
+
+/**
+ * Chữ mờ trong ô nhập / dropdown — ưu tiên bản dịch.
+ */
+export function questionPlaceholder(question) {
+  const translated = translate(`${questionKey(question)}.placeholder`, "");
+  if (translated) return translated;
+  return displayOf(question).placeholder ?? "";
+}
 
 /** Kiểu hiển thị: theo display_config.widget, mặc định theo loại câu hỏi. */
 export function widgetOf(question) {
@@ -185,7 +268,7 @@ export function validateAnswer(question, formValue) {
         return t("member:survey.validation.decimalPlaces", { count: rules.maxDecimals });
       }
       if ((rules.min !== undefined && value < rules.min) || (rules.max !== undefined && value > rules.max)) {
-        return rangeMessage(rules.min, rules.max, question.unit);
+        return rangeMessage(rules.min, rules.max, unitLabel(question));
       }
       return null;
     }

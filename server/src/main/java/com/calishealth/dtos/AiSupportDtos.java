@@ -69,6 +69,15 @@ public class AiSupportDtos {
      * @param remaining     số câu còn lại hôm nay
      * @param sessionIndex  số thứ tự câu hỏi trong phiên chat
      * @param sessionLimit  hạn mức câu/phiên chat
+     * @param provider      nguồn câu trả lời ("gpt-4o-mini" khi dùng API thật,
+     *                     "local-rules" khi server chưa cấu hình API key,
+     *                     "safety-guard" khi câu hỏi chứa triệu chứng y tế)
+     * @param totalTokens   số token đã dùng cho lượt hỏi này
+     * @param notice        mã lý do server phải trả lời bằng rule nội bộ
+     *                     (null khi câu trả lời đến từ AI thật) — frontend
+     *                     dùng để hiện cảnh báo demo/offline
+     * @param alerts        luật cảnh báo sinh lý (V76) khớp với bài tập — frontend
+     *                     hiển thị dưới câu trả lời
      */
     public record AskQuestionResponse(
             AnswerResponse answer,
@@ -76,7 +85,11 @@ public class AiSupportDtos {
             int dailyLimit,
             int remaining,
             int sessionIndex,
-            int sessionLimit
+            int sessionLimit,
+            String provider,
+            int totalTokens,
+            String notice,
+            List<PhysiologyAlertDTO> alerts
     ) {}
 
     /**
@@ -87,13 +100,20 @@ public class AiSupportDtos {
      * @param remaining    số câu còn lại hôm nay
      * @param sessionLimit hạn mức câu/phiên chat
      * @param sessionUsed  số câu đã hỏi trong phiên chat hiện tại
+     * @param aiEnabled    server đã cấu hình API thật (gpt-4o-mini) hay chưa
+     * @param model        model AI đang dùng (null khi chưa cấu hình)
+     * @param demoFallback server có bật chế độ demo (trả lời bằng rule nội bộ
+     *                    khi API lỗi) hay không
      */
     public record QuotaResponse(
             int questionCount,
             int dailyLimit,
             int remaining,
             int sessionLimit,
-            int sessionUsed
+            int sessionUsed,
+            boolean aiEnabled,
+            String model,
+            boolean demoFallback
     ) {}
 
     /**

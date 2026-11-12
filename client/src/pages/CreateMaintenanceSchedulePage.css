@@ -1,0 +1,44 @@
+/*
+ * Create maintenance schedule (Admin) — đồng bộ font chữ với phần còn lại của app.
+ *
+ * Vì global.css không nạp Tailwind preflight, thẻ <input>/<textarea>/<select>
+ * dùng font mặc định của trình duyệt (khác với chữ Arial của trang), nên
+ * placeholder và phần giờ trong ô datetime-local bị lệch font. Các rule dưới
+ * đây ép toàn bộ control kế thừa font của trang.
+ */
+.maintenance-create-form input,
+.maintenance-create-form textarea,
+.maintenance-create-form select {
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.maintenance-create-form input::placeholder,
+.maintenance-create-form textarea::placeholder,
+.maintenance-create-form select::placeholder {
+  font-family: inherit;
+  font-style: normal;
+  opacity: 1;
+  color: #81769d;
+}
+
+/* Ô chọn giờ / ngày của trình duyệt cũng kế thừa font của trang. */
+.maintenance-create-form input[type="datetime-local"],
+.maintenance-create-form input[type="date"],
+.maintenance-create-form input[type="time"] {
+  font-family: inherit;
+}
+
+.maintenance-create-form input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.maintenance-create-form input[type="date"]::-webkit-calendar-picker-indicator,
+.maintenance-create-form input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.75);
+  cursor: pointer;
+}
+
+/* Option của <select> không kế thừa font theo mặc định ở một số trình duyệt. */
+.maintenance-create-form select option {
+  font-family: inherit;
+  font-size: 0.875rem;
+}

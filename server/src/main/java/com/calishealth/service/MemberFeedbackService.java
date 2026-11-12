@@ -55,13 +55,6 @@ public class MemberFeedbackService {
             MemberFeedback.Status.REJECTED
     );
 
-    /** Các đơn Admin cần thấy: đã chuyển tiếp lên và các đơn đã đóng. */
-    private static final Set<MemberFeedback.Status> ADMIN_VISIBLE = EnumSet.of(
-            MemberFeedback.Status.ESCALATED,
-            MemberFeedback.Status.RESOLVED,
-            MemberFeedback.Status.REJECTED
-    );
-
     private final MemberFeedbackRepository feedbacks;
     private final UserRepository users;
     private final NotificationRepository notifications;
@@ -211,7 +204,12 @@ public class MemberFeedbackService {
     /**
      * Admin xem các đơn đã được chuyển tiếp lên.
      *
-     * @param status lọc theo trạng thái (null = tất cả đơn liên quan tới admin)
+     * <p>Admin chỉ quản lý những đơn Content Manager đã chuyển tiếp, nên danh
+     * sách mặc định chỉ gồm các đơn có {@code escalatedAt} — tức đã từng được
+     * chuyển tiếp lên Admin. Lọc theo trạng thái cũng giữ nguyên điều kiện này
+     * để Admin không thấy đơn chưa từng chuyển tiếp.
+     *
+     * @param status lọc theo trạng thái (null = mọi đơn đã chuyển tiếp)
      * @param category lọc theo nhóm nội dung (null = tất cả)
      * @param search tìm theo tên/email thành viên hoặc tiêu đề/nội dung đơn
      * @param fromDate chỉ lấy đơn gửi từ ngày này (bao gồm)
@@ -224,8 +222,8 @@ public class MemberFeedbackService {
                                              LocalDate fromDate,
                                              LocalDate toDate) {
         List<MemberFeedback> rows = status == null
-                ? feedbacks.findAllByStatusInOrderByCreatedAtDesc(ADMIN_VISIBLE)
-                : feedbacks.findAllByStatusOrderByCreatedAtDesc(status);
+                ? feedbacks.findAllByEscalatedAtIsNotNullOrderByCreatedAtDesc()
+                : feedbacks.findAllByEscalatedAtIsNotNullAndStatusOrderByCreatedAtDesc(status);
         return buildListResponse(filterRows(rows, category, search, fromDate, toDate));
     }
 

@@ -36,7 +36,22 @@ const useRef = (init) => ({ current: init });
 const useCallback = (fn) => fn;
 const useEffect = noop;
 
-const sandbox = { useState, useRef, useCallback, useEffect, console, Math, Date, JSON };
+const sandbox = {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  console,
+  Math,
+  Date,
+  JSON,
+  i18n: {
+    t: (key) =>
+      key === "member:tracking.feedback.stepIntoFrame"
+        ? "Step into the frame so I can track you."
+        : key,
+  },
+};
 vm.createContext(sandbox);
 
 // Nạp usePoseDetection.js để có POSE_LANDMARKS / angleBetween / midpoint.
@@ -47,6 +62,7 @@ const poseSource = readFileSync(
 vm.runInContext(
   poseSource
     .replace(/import\s+\{[^}]+\}\s+from\s+"[^"]+";/g, "")
+    .replace(/import\s+\w+\s+from\s+"[^"]+";/g, "")
     .replace(/export const (\w+) =/g, "globalThis.$1 =")
     .replace(/export function (\w+)\(/g, "globalThis.$1 = function (")
     .replace(/export default function /g, "globalThis.__usePoseDetection = function "),
@@ -66,6 +82,8 @@ const trackerSource = readFileSync(
 vm.runInContext(
   trackerSource
     .replace(/import\s+\{[^}]+\}\s+from\s+"[^"]+";/g, "")
+    .replace(/import\s+\w+\s+from\s+"[^"]+";/g, "")
+    .replace(/export const (\w+) =/g, "globalThis.$1 =")
     .replace(/export function (\w+)\(/g, "globalThis.$1 = function (")
     .replace(/export default /, "globalThis.__tracker = "),
   sandbox,

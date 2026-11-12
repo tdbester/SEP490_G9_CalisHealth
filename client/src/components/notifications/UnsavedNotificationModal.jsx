@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-export default function UnsavedNotificationModal({ onCancel, onDiscard, onSaveDraft, saving }) {
+export default function UnsavedNotificationModal({ onCancel, onDiscard, onPublish, saving }) {
   const { t } = useTranslation();
   return (
     <div
@@ -42,10 +42,10 @@ export default function UnsavedNotificationModal({ onCancel, onDiscard, onSaveDr
           <button
             type="button"
             disabled={saving}
-            onClick={onSaveDraft}
+            onClick={onPublish}
             className="rounded-lg bg-[#7c5dfa] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#6c4dce] disabled:opacity-50"
           >
-            {saving ? t("common.ui.working") : t("admin.notifications.saveAsDraft")}
+            {saving ? t("common.ui.working") : t("admin.notifications.publishAndLeave")}
           </button>
         </div>
       </section>

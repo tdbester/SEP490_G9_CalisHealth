@@ -26,10 +26,14 @@ import { CONTENT_PATHS, ContentPageHeader } from "../components/ContentShared";
 import { CM } from "../theme-content";
 import MediaWithFallback from "../components/common/MediaWithFallback";
 import ConfirmDialog from "../components/common/ConfirmDialog";
+import PhysiologyPanel from "../components/exercise/PhysiologyPanel";
 import {
   ExerciseFields,
+  buildPhysiologyPayload,
   validateExerciseUpload,
+  validatePhysiology,
 } from "./ExerciseFormPage";
+import { EMPTY_PHYSIOLOGY } from "../components/exercise/ExercisePhysiologyFields";
 
 function getUploadedDemoVideoUrl(value) {
   if (typeof value !== "string" || !value.trim()) return null;
@@ -211,6 +215,8 @@ function SystemExerciseDetailContent() {
   const [saveError, setSaveError] = useState("");
   const [videoError, setVideoError] = useState(null);
   const [imageError, setImageError] = useState(null);
+  const [physiology, setPhysiology] = useState(EMPTY_PHYSIOLOGY);
+  const [physiologyEnabled, setPhysiologyEnabled] = useState(false);
   const demoVideoUrl = entry
     ? getUploadedDemoVideoUrl(entry.videoUrl || entry.demoVideoUrl || entry.video_url)
     : null;
@@ -230,6 +236,15 @@ function SystemExerciseDetailContent() {
         : [],
       guide: entry.guide || "",
     });
+    // Nạp hồ sơ sinh lý sẵn có của bài tập hệ thống để CM chỉnh sửa tiếp.
+    const current = entry.physiology || null;
+    setPhysiologyEnabled(Boolean(current));
+    setPhysiology({
+      ...EMPTY_PHYSIOLOGY,
+      ...(current || {}),
+      contraindications: Array.isArray(current?.contraindications) ? current.contraindications : [],
+      evidenceRefs: Array.isArray(current?.evidenceRefs) ? current.evidenceRefs : [],
+    });
   }, [entry]);
 
   const saveMutation = useApiMutation(
@@ -242,7 +257,10 @@ function SystemExerciseDetailContent() {
         setSaveError("");
         refetch();
       },
-      onError: (requestError) => setSaveError(requestError.message),
+      onError: (requestError) => {
+        const message = requestError.message || "";
+        setSaveError(/already exists|duplicate/i.test(message) ? t("contentManager.form.errDuplicateName") : message);
+      },
     },
   );
 
@@ -277,6 +295,14 @@ function SystemExerciseDetailContent() {
           ? entry.muscleGroup.split(" · ").filter(Boolean)
           : [],
         guide: entry.guide || "",
+      });
+      const current = entry.physiology || null;
+      setPhysiologyEnabled(Boolean(current));
+      setPhysiology({
+        ...EMPTY_PHYSIOLOGY,
+        ...(current || {}),
+        contraindications: Array.isArray(current?.contraindications) ? current.contraindications : [],
+        evidenceRefs: Array.isArray(current?.evidenceRefs) ? current.evidenceRefs : [],
       });
     }
   };
@@ -337,14 +363,7 @@ function SystemExerciseDetailContent() {
               <>
                 <Button
                   component={RouterLink}
-                  to={{
-                    pathname: "/library/skills/tree",
-                    search: new URLSearchParams({
-                      ...(entry.movementGroup ? { group: entry.movementGroup } : {}),
-                      highlight: entry.code,
-                      exerciseName: entry.name,
-                    }).toString(),
-                  }}
+                  to={`${CONTENT_PATHS.progressionRules}/tree?highlight=${encodeURIComponent(entry.code || "")}`}
                   variant="contained"
                   sx={{
                     backgroundColor: "#7c5dfa",
@@ -393,6 +412,10 @@ function SystemExerciseDetailContent() {
               setSaveError(t("contentManager.detail.pleaseCorrectBeforeSaving"));
               return;
             }
+            if (physiologyEnabled && !validatePhysiology(physiology)) {
+              setSaveError(t("contentManager.form.physiology.errInvalidProfile"));
+              return;
+            }
             saveMutation.mutate({
               data: {
                 ...form,
@@ -400,6 +423,7 @@ function SystemExerciseDetailContent() {
                 defaultReps: form.category === "REPS" ? Number(form.value) : null,
                 duration: form.category === "HOLD" ? Number(form.value) : null,
                 muscleGroup: form.muscleGroup.join(" · "),
+                physiology: physiologyEnabled ? buildPhysiologyPayload(physiology) : null,
               },
               demoVideo: video,
               anatomyImage: image,
@@ -435,6 +459,14 @@ function SystemExerciseDetailContent() {
                 {t("contentManager.detail.currentImageKept")}
               </Typography>
             ) : null}
+            showPhysiology
+            physiology={physiology}
+            onPhysiologyChange={setPhysiology}
+            physiologyEnabled={physiologyEnabled}
+            onPhysiologyEnabledChange={(next) => {
+              setPhysiologyEnabled(next);
+              setSaveError("");
+            }}
           />
           {saveError && <Alert severity="error" sx={{ mt: 2 }}>{saveError}</Alert>}
           <Divider sx={{ mt: 3 }} />
@@ -573,6 +605,13 @@ function SystemExerciseDetailContent() {
             )}
             {entry.source === "CUSTOM" && <DetailField label={t("contentManager.detail.createdBy")} value={entry.createdByName} />}
           </Grid>
+
+          {/* Hồ sơ sinh lý (V76) chỉ có ở bài của hệ thống — bài Member tải lên không có nguồn học thuật. */}
+          {entry.source === "SYSTEM" && (
+            <Box sx={{ mt: 2.5 }}>
+              <PhysiologyPanel physiology={entry.physiology} />
+            </Box>
+          )}
         </CardContent>
       </Card>
       )}

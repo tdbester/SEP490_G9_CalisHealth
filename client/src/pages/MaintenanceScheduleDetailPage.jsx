@@ -5,9 +5,13 @@ import BuildRoundedIcon from "@mui/icons-material/BuildRounded";
 import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import CheckCircleOutlineRoundedIcon from "@mui/icons-material/CheckCircleOutlineRounded";
 import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsActiveRounded";
+import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import ScheduleRoundedIcon from "@mui/icons-material/ScheduleRounded";
+import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
 import { useTranslation } from "react-i18next";
 import api from "../api/client";
+import notificationToast from "../utils/notificationToast";
+import { apiErrorMessage } from "../utils/apiError";
 
 const AREA_LABEL_KEYS = {
   MEMBER_APP_ACCESS: "admin.maintenance.detail.areaMemberApp",
@@ -18,6 +22,9 @@ const AREA_LABEL_KEYS = {
 };
 
 const STATUS_STYLES = {
+  PENDING: "border-violet-400/30 bg-violet-400/10 text-violet-200",
+  READY: "border-rose-400/40 bg-rose-500/15 text-rose-200",
+  IN_PROGRESS: "border-rose-400/40 bg-rose-500/15 text-rose-200",
   UPCOMING: "border-violet-400/30 bg-violet-400/10 text-violet-200",
   ONGOING: "border-emerald-400/30 bg-emerald-400/10 text-emerald-200",
   COMPLETED: "border-slate-400/30 bg-slate-400/10 text-slate-300",
@@ -25,10 +32,13 @@ const STATUS_STYLES = {
 };
 
 const STATUS_LABEL_KEYS = {
-  UPCOMING: "admin.maintenance.detail.statusUpcoming",
-  ONGOING: "admin.maintenance.detail.statusOngoing",
+  PENDING: "admin.maintenance.detail.statusPending",
+  READY: "admin.maintenance.detail.statusReady",
+  IN_PROGRESS: "admin.maintenance.detail.statusInProgress",
   COMPLETED: "admin.maintenance.detail.statusCompleted",
   CANCELLED: "admin.maintenance.detail.statusCancelled",
+  UPCOMING: "admin.maintenance.detail.statusUpcoming",
+  ONGOING: "admin.maintenance.detail.statusOngoing",
 };
 
 function formatDate(value, locale, options = {}) {
@@ -58,6 +68,7 @@ export default function MaintenanceScheduleDetailPage() {
   const navigate = useNavigate();
   const [schedule, setSchedule] = useState(null);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -67,11 +78,41 @@ export default function MaintenanceScheduleDetailPage() {
       })
       .catch((requestError) => {
         if (active) {
-          setError(requestError.response?.data?.message || t("admin.maintenance.detail.loadFailed"));
+          setError(apiErrorMessage(requestError, "admin.maintenance.detail.loadFailed"));
         }
       });
     return () => { active = false; };
   }, [id, t]);
+
+  const handleStart = async () => {
+    setBusy(true);
+    try {
+      const { data } = await api.patch(`/admin/maintenance/${id}/start`);
+      setSchedule(data);
+      notificationToast.success(t("admin.maintenance.startSuccess"));
+    } catch (requestError) {
+      notificationToast.error(
+        apiErrorMessage(requestError, "admin.maintenance.startFailed"),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleComplete = async () => {
+    setBusy(true);
+    try {
+      const { data } = await api.patch(`/admin/maintenance/${id}/complete`);
+      setSchedule(data);
+      notificationToast.success(t("admin.maintenance.completeSuccess"));
+    } catch (requestError) {
+      notificationToast.error(
+        apiErrorMessage(requestError, "admin.maintenance.completeFailed"),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
 
   if (error) {
     return (
@@ -101,10 +142,12 @@ export default function MaintenanceScheduleDetailPage() {
 
   const affectedAreas = schedule.affectedAreas || [];
   const notificationPublished = Boolean(schedule.notificationSent);
-  const statusClass = STATUS_STYLES[schedule.status] || STATUS_STYLES.UPCOMING;
+  const statusClass = STATUS_STYLES[schedule.status] || STATUS_STYLES.PENDING;
   const statusLabel = STATUS_LABEL_KEYS[schedule.status]
     ? t(STATUS_LABEL_KEYS[schedule.status])
     : schedule.status;
+  const isRunning = schedule.status === "IN_PROGRESS";
+  const canAct = schedule.status !== "CANCELLED" && schedule.status !== "COMPLETED";
 
   return (
     <section className="mx-auto w-full max-w-[980px] px-4 py-5 font-[Arial,sans-serif] text-slate-100 sm:px-7 sm:py-7">
@@ -144,6 +187,38 @@ export default function MaintenanceScheduleDetailPage() {
                 {t("admin.maintenance.detail.duration", { duration: formatDuration(schedule.startsAt, schedule.endsAt) })}
               </span>
             </div>
+            {schedule.dueForExecution ? (
+              <p className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-rose-400/40 bg-rose-500/15 px-3 py-1.5 text-xs font-bold text-rose-200">
+                {t("admin.maintenance.dueBadge")}
+              </p>
+            ) : null}
+            {canAct ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {isRunning ? (
+                  <button
+                    type="button"
+                    onClick={handleComplete}
+                    disabled={busy}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-emerald-400/30 px-3.5 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-500/10 disabled:opacity-60"
+                    style={{ backgroundColor: "#10241d" }}
+                  >
+                    <TaskAltRoundedIcon sx={{ fontSize: 15 }} />
+                    {t("admin.maintenance.completeAction")}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleStart}
+                    disabled={busy}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-amber-400/30 px-3.5 text-xs font-semibold text-amber-200 transition hover:bg-amber-500/10 disabled:opacity-60"
+                    style={{ backgroundColor: "#241c0d" }}
+                  >
+                    <PlayArrowRoundedIcon sx={{ fontSize: 15 }} />
+                    {t("admin.maintenance.startAction")}
+                  </button>
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
       </header>

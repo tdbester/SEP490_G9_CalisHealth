@@ -1,15 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert, Button, CircularProgress } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import client from "../api/client";
 import { avatarUrl, profileApi } from "../api/profile";
+import { getLevelLabel } from "../utils/levelLabel";
 import "./LeaderboardPage.css";
 
+/**
+ * Các trình độ thể lực của hệ thống.
+ *
+ * `name` là tên gốc trong DB (bảng `fitness_levels`) — dùng để khớp với
+ * `profile.member.levelName` và với `fitnessLevel` mà API trả về.
+ * `labelKey` là key i18n để hiển thị nhãn đã dịch.
+ */
 const LEVELS = [
-  { value: 1, label: "Beginner" },
-  { value: 2, label: "Intermediate" },
-  { value: 3, label: "Advanced" },
-  { value: 4, label: "Expert" },
+  { value: 1, name: "Beginner", labelKey: "member.catalog.beginner" },
+  { value: 2, name: "Intermediate", labelKey: "member.catalog.intermediate" },
+  { value: 3, name: "Advanced", labelKey: "member.catalog.advanced" },
+  { value: 4, name: "Expert", labelKey: "member.catalog.expert" },
 ];
 
 const MEDALS = ["🥇", "🥈", "🥉"];
@@ -39,6 +48,7 @@ function MemberAvatar({ memberName, source, className }) {
 
 export default function LeaderboardPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [entries, setEntries] = useState([]);
   const [myEntry, setMyEntry] = useState(null);
   const [totalMembers, setTotalMembers] = useState(0);
@@ -48,6 +58,21 @@ export default function LeaderboardPage() {
   // Mặc định là level của chính member đang đăng nhập.
   const [levelFilter, setLevelFilter] = useState(null);
 
+  /**
+   * Nhãn trình độ đã dịch.
+   *
+   * API trả về tên level gốc trong DB ("Beginner", "Intermediate", ...) nên
+   * dùng `getLevelLabel` để tra key i18n tương ứng.  Level "Global" là giá trị
+   * mặc định khi member chưa có level, không nằm trong bảng tra nên dịch riêng.
+   */
+  const levelLabel = (value) => {
+    const name = String(value || "").trim();
+    if (!name || name.toLowerCase() === "global") {
+      return t("member.leaderboard.globalLevel");
+    }
+    return getLevelLabel(name);
+  };
+
   // Lấy level của member để đặt mặc định cho dropdown.
   useEffect(() => {
     let cancelled = false;
@@ -56,7 +81,7 @@ export default function LeaderboardPage() {
       .then((profile) => {
         if (cancelled) return;
         const levelName = profile?.member?.levelName;
-        const match = LEVELS.find((level) => level.label === levelName);
+        const match = LEVELS.find((level) => level.name === levelName);
         if (match) setLevelFilter(match.value);
         else setLevelFilter(LEVELS[0].value);
       })
@@ -68,6 +93,11 @@ export default function LeaderboardPage() {
       cancelled = true;
     };
   }, []);
+
+  // Đồng bộ tiêu đề tab khi người dùng đổi ngôn ngữ.
+  useEffect(() => {
+    document.title = t("member.leaderboard.documentTitle");
+  }, [t]);
 
   useEffect(() => {
     if (levelFilter == null) return undefined;
@@ -90,14 +120,15 @@ export default function LeaderboardPage() {
         }
       } catch (requestError) {
         if (!cancelled) {
-          const message = requestError.response?.data?.message
-            || (requestError.response
-              ? `Server error: ${requestError.response.status}`
-              : requestError.request
-                ? "Unable to connect to the server."
-                : requestError.message)
-            || "Unable to load the leaderboard.";
-          setError(message);
+          // Lưu mô tả lỗi thay vì chuỗi đã dịch, để đổi ngôn ngữ không phải
+          // gọi lại API.  Chuỗi được dịch lúc render.
+          setError({
+            // Message do backend trả về đã đúng ngôn ngữ nhờ header
+            // Accept-Language -> dùng nguyên xi.
+            message: requestError.response?.data?.message || null,
+            status: requestError.response?.status || null,
+            network: Boolean(requestError.request),
+          });
           setEntries([]);
           setMyEntry(null);
           setTotalMembers(0);
@@ -113,6 +144,12 @@ export default function LeaderboardPage() {
     };
   }, [levelFilter]);
 
+  const podiumEntries = useMemo(
+    () => [entries[1], entries[0], entries[2]],
+    [entries],
+  );
+  const myEntryIsInTop50 = myEntry && entries.some((entry) => entry.memberId === myEntry.memberId);
+
   if (loading) {
     return (
       <main className="leaderboard-page leaderboard-page--centered">
@@ -122,16 +159,22 @@ export default function LeaderboardPage() {
   }
 
   if (error) {
+    const errorMessage = error.message
+      || (error.status
+        ? t("member.leaderboard.serverError", { status: error.status })
+        : error.network
+          ? t("member.leaderboard.networkError")
+          : t("member.leaderboard.loadFailed"));
     return (
       <main className="leaderboard-page">
         <div className="leaderboard-error">
-          <Alert severity="error">{error}</Alert>
+          <Alert severity="error">{errorMessage}</Alert>
           <div className="leaderboard-error-actions">
             <Button variant="contained" onClick={() => window.location.reload()}>
-              Try again
+              {t("member.leaderboard.tryAgain")}
             </Button>
             <Button variant="outlined" onClick={() => navigate("/")}>
-              Back to dashboard
+              {t("member.leaderboard.backToDashboard")}
             </Button>
           </div>
         </div>
@@ -139,8 +182,6 @@ export default function LeaderboardPage() {
     );
   }
 
-  const podiumEntries = [entries[1], entries[0], entries[2]];
-  const myEntryIsInTop50 = myEntry && entries.some((entry) => entry.memberId === myEntry.memberId);
   return (
     <main className="leaderboard-page">
       <header className="leaderboard-hero">
@@ -150,18 +191,18 @@ export default function LeaderboardPage() {
           <span className="leaderboard-hero-trophy">🏆</span>
         </div>
         <div className="leaderboard-hero-copy">
-          <p className="leaderboard-eyebrow">COMMUNITY CHALLENGE</p>
-          <h1>Weekly leaderboard</h1>
-          <p className="leaderboard-subtitle">The top 50 members making the most progress this week.</p>
+          <p className="leaderboard-eyebrow">{t("member.leaderboard.eyebrow")}</p>
+          <h1>{t("member.leaderboard.title")}</h1>
+          <p className="leaderboard-subtitle">{t("member.leaderboard.subtitle")}</p>
         </div>
         <div className="leaderboard-week-badge">
           <span className="leaderboard-week-dot" />
-          Updated weekly
+          {t("member.leaderboard.updatedWeekly")}
         </div>
       </header>
 
       {entries.length > 0 && (
-        <section className="leaderboard-podium" aria-label="Top three members">
+        <section className="leaderboard-podium" aria-label={t("member.leaderboard.podiumAria")}>
           {podiumEntries.map((row, slotIndex) => {
             if (!row) return (
               <div
@@ -178,10 +219,10 @@ export default function LeaderboardPage() {
                   source={row.avatarUrl}
                   className="podium-avatar"
                 />
-                <strong>{row.memberName || "Anonymous member"}</strong>
-                <span className="podium-level">{row.fitnessLevel || "Global"}</span>
+                <strong>{row.memberName || t("member.leaderboard.anonymousMember")}</strong>
+                <span className="podium-level">{levelLabel(row.fitnessLevel)}</span>
                 <b>{formatScore(row.totalScore)}</b>
-                <small>points</small>
+                <small>{t("member.leaderboard.points")}</small>
                 <span className="podium-rank">#{rank}</span>
               </article>
             );
@@ -191,34 +232,36 @@ export default function LeaderboardPage() {
 
       <div className="leaderboard-list-heading">
         <div>
-          <p className="leaderboard-section-label">Weekly rankings</p>
+          <p className="leaderboard-section-label">{t("member.leaderboard.weeklyRankings")}</p>
         </div>
         <div className="leaderboard-list-actions">
           <label className="leaderboard-select">
-            <span>Fitness level</span>
+            <span>{t("member.leaderboard.fitnessLevel")}</span>
             <select
               value={levelFilter ?? ""}
               onChange={(event) => setLevelFilter(Number(event.target.value))}
             >
               {LEVELS.map((level) => (
-                <option key={level.value} value={level.value}>{level.label}</option>
+                <option key={level.value} value={level.value}>{t(level.labelKey)}</option>
               ))}
             </select>
           </label>
-          <span className="leaderboard-count">{totalMembers} members</span>
+          <span className="leaderboard-count">
+            {t("member.leaderboard.memberCount", { count: totalMembers })}
+          </span>
         </div>
       </div>
 
-      <section className="leaderboard-card" aria-label="Weekly member rankings">
+      <section className="leaderboard-card" aria-label={t("member.leaderboard.rankingsAria")}>
         <div className="leaderboard-table-wrap">
           <table className="leaderboard-table">
             <thead>
               <tr>
-                <th scope="col">Rank</th>
-                <th scope="col">Member</th>
-                <th scope="col">Level</th>
-                <th scope="col" className="numeric">Total score</th>
-                <th scope="col" className="numeric">Last week</th>
+                <th scope="col">{t("member.leaderboard.colRank")}</th>
+                <th scope="col">{t("member.leaderboard.colMember")}</th>
+                <th scope="col">{t("member.leaderboard.colLevel")}</th>
+                <th scope="col" className="numeric">{t("member.leaderboard.colTotalScore")}</th>
+                <th scope="col" className="numeric">{t("member.leaderboard.colLastWeek")}</th>
               </tr>
             </thead>
             <tbody>
@@ -237,13 +280,16 @@ export default function LeaderboardPage() {
                         className="leaderboard-avatar"
                       />
                       <span>
-                        <strong>{row.memberName || "Anonymous member"}</strong>
-                        <small>Member #{row.memberId}</small>
+                        <strong>{row.memberName || t("member.leaderboard.anonymousMember")}</strong>
+                        <small>{t("member.leaderboard.memberNumber", { id: row.memberId })}</small>
                       </span>
                     </div>
                   </td>
-                  <td><span className="leaderboard-level">{row.fitnessLevel || "Global"}</span></td>
-                  <td className="numeric"><strong className="leaderboard-score">{formatScore(row.totalScore)}</strong><small className="leaderboard-points"> pts</small></td>
+                  <td><span className="leaderboard-level">{levelLabel(row.fitnessLevel)}</span></td>
+                  <td className="numeric">
+                    <strong className="leaderboard-score">{formatScore(row.totalScore)}</strong>
+                    <small className="leaderboard-points"> {t("member.leaderboard.points")}</small>
+                  </td>
                   <td className="numeric">
                     {row.previousRank ? (
                       <span className="leaderboard-previous-rank">
@@ -254,15 +300,15 @@ export default function LeaderboardPage() {
                           </span>
                         ) : null}
                       </span>
-                    ) : <span className="leaderboard-muted">New</span>}
+                    ) : <span className="leaderboard-muted">{t("member.leaderboard.newRank")}</span>}
                   </td>
                 </tr>
               )) : (
                 <tr>
                   <td colSpan="5" className="leaderboard-empty">
                     <span className="leaderboard-empty-icon">📊</span>
-                    <strong>No rankings yet</strong>
-                    <span>Complete a workout to be the first member on the board.</span>
+                    <strong>{t("member.leaderboard.emptyTitle")}</strong>
+                    <span>{t("member.leaderboard.emptyHint")}</span>
                   </td>
                 </tr>
               )}
@@ -270,18 +316,20 @@ export default function LeaderboardPage() {
           </table>
         </div>
         {myEntry && !myEntryIsInTop50 && (
-          <div className="leaderboard-self-row" aria-label="Your ranking">
-            <span className="leaderboard-self-label">Your ranking</span>
+          <div className="leaderboard-self-row" aria-label={t("member.leaderboard.yourRankingAria")}>
+            <span className="leaderboard-self-label">{t("member.leaderboard.yourRanking")}</span>
             <span className="leaderboard-rank">#{myEntry.rank || "—"}</span>
             <div className="leaderboard-member">
               <MemberAvatar memberName={myEntry.memberName} source={myEntry.avatarUrl} className="leaderboard-avatar" />
               <span>
-                <strong>{myEntry.memberName || "You"}</strong>
-                <small>Member #{myEntry.memberId}</small>
+                <strong>{myEntry.memberName || t("member.leaderboard.you")}</strong>
+                <small>{t("member.leaderboard.memberNumber", { id: myEntry.memberId })}</small>
               </span>
             </div>
-            <span className="leaderboard-level">{myEntry.fitnessLevel || "Global"}</span>
-            <span className="leaderboard-self-score">{formatScore(myEntry.totalScore)} <small>pts</small></span>
+            <span className="leaderboard-level">{levelLabel(myEntry.fitnessLevel)}</span>
+            <span className="leaderboard-self-score">
+              {formatScore(myEntry.totalScore)} <small>{t("member.leaderboard.points")}</small>
+            </span>
           </div>
         )}
       </section>

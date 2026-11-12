@@ -35,7 +35,8 @@ class SystemExerciseDetailTest {
                 mock(ExerciseTreeEdgeRepository.class),
                 mock(FitnessLevelRepository.class),
                 mock(ExerciseMuscleGroupCatalog.class),
-                mock(SystemNotificationService.class));
+                mock(SystemNotificationService.class),
+                mock(ExercisePhysiologyService.class));
     }
 
     @Test

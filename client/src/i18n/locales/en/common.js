@@ -126,10 +126,10 @@ export default {
 
   nav: {
     dashboard: "Dashboard",
-    library: "Library",
-    leaderboard: "Leaderboard",
-    favorites: "Favorites",
-    feedback: "Feedback & Complaints",
+      library: "Library",
+      leaderboard: "Leaderboard",
+      favorites: "Favorites",
+    feedback: "Feedback",
     tracking: "Health & Progress",
     dailyTrainingPlans: "Daily Training Plans",
     healthProgress: "Health & Progress",

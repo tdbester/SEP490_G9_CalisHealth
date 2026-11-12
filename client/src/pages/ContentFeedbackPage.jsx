@@ -57,14 +57,20 @@ const CATEGORY_LABEL = {
   OTHER: "contentManager.feedback.categoryOther",
 };
 
-/** Chiều rộng cột — dùng chung cho `colgroup` để header và body khớp tuyệt đối. */
+/**
+ * Chiều rộng cột — dùng chung cho `colgroup` để header và body khớp tuyệt đối.
+ *
+ * Cột "Feedback" là nội dung chữ nên căn trái; các cột còn lại là dữ liệu ngắn
+ * (member / category / status / thời gian) nên căn giữa để nhìn thành hàng lề
+ * đều. Cột action để đủ chỗ cho nút "View" không bị bó.
+ */
 const CONTENT_COL_SIZES = [
-  { key: "feedback", width: "32%" },
-  { key: "member", width: "20%" },
-  { key: "category", width: "14%" },
-  { key: "status", width: "15%" },
-  { key: "submitted", width: "12%" },
-  { key: "action", width: "7%" },
+  { key: "feedback", width: "36%" },
+  { key: "member", width: "17%" },
+  { key: "category", width: "13%" },
+  { key: "status", width: "13%" },
+  { key: "processed", width: "13%" },
+  { key: "action", width: "8%" },
 ];
 
 /** Các bộ lọc trạng thái trên thanh công cụ. */
@@ -345,7 +351,20 @@ export default function ContentFeedbackPage() {
           />
         ) : (
           <TableContainer>
-            <Table size="small" sx={{ minWidth: 900, tableLayout: "fixed" }}>
+            <Table
+              size="small"
+              sx={{
+                minWidth: { xs: 720, md: 880 },
+                tableLayout: "fixed",
+                "& .MuiTableCell-root": {
+                  borderBottom: `1px solid ${CM.border}`,
+                  verticalAlign: "middle",
+                  py: 1.5,
+                },
+                // Cột nội dung chữ căn trái; các cột dữ liệu ngắn căn giữa.
+                "& th:not(:first-of-type), & td:not(:first-of-type)": { textAlign: "center" },
+              }}
+            >
               <colgroup>
                 {CONTENT_COL_SIZES.map((col) => (
                   <col key={col.key} style={{ width: col.width }} />
@@ -359,7 +378,7 @@ export default function ContentFeedbackPage() {
                   <TableCell>{t("contentManager.feedback.colMember")}</TableCell>
                   <TableCell>{t("contentManager.feedback.colCategory")}</TableCell>
                   <TableCell>{t("contentManager.feedback.colStatus")}</TableCell>
-                  <TableCell>{t("contentManager.feedback.colSubmitted")}</TableCell>
+                  <TableCell>{t("contentManager.feedback.colProcessed")}</TableCell>
                   <TableCell align="center">{t("contentManager.feedback.colAction")}</TableCell>
                 </TableRow>
               </TableHead>
@@ -372,11 +391,10 @@ export default function ContentFeedbackPage() {
                         sx={{
                           textAlign: "left !important",
                           pl: 3,
-                          maxWidth: 380,
                           "& > .MuiStack-root": { justifyContent: "flex-start" },
                         }}
                       >
-                        <Stack direction="row" spacing={1.25} alignItems="flex-start">
+                        <Stack direction="row" spacing={1.25} alignItems="center">
                           <Box
                             sx={{
                               width: 32,
@@ -392,21 +410,20 @@ export default function ContentFeedbackPage() {
                             <ChatBubbleOutlineRoundedIcon sx={{ fontSize: 17 }} />
                           </Box>
                           <Box sx={{ minWidth: 0, textAlign: "left" }}>
-                            <Typography variant="body2" fontWeight={600} sx={{ color: "#fff" }}>
+                            <Typography variant="body2" fontWeight={600} noWrap sx={{ color: "#fff" }}>
                               {row.title}
                             </Typography>
                             <Typography
                               variant="caption"
+                              noWrap
                               sx={{ color: CM.textDim, display: "block", mt: 0.25 }}
                             >
-                              {row.content.length > 120
-                                ? `${row.content.slice(0, 120)}…`
-                                : row.content}
+                              {row.content}
                             </Typography>
                           </Box>
                         </Stack>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ textAlign: "center !important" }}>
                         <Typography variant="caption" sx={{ color: CM.textMuted }}>
                           {row.memberName || t("contentManager.feedback.unknown")}
                         </Typography>
@@ -414,17 +431,17 @@ export default function ContentFeedbackPage() {
                           {row.memberEmail}
                         </Typography>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ textAlign: "center !important" }}>
                         <DarkPill tone="neutral">
                           {t(CATEGORY_LABEL[row.category] || CATEGORY_LABEL.OTHER)}
                         </DarkPill>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ textAlign: "center !important" }}>
                         <DarkPill tone={meta.tone}>{t(meta.labelKey)}</DarkPill>
                       </TableCell>
-                      <TableCell sx={{ whiteSpace: "nowrap" }}>
+                      <TableCell sx={{ whiteSpace: "nowrap", textAlign: "center !important" }}>
                         <Typography variant="caption" sx={{ color: CM.textDim }}>
-                          {formatDateTime(row.createdAt)}
+                          {formatDateTime(row.resolvedAt)}
                         </Typography>
                       </TableCell>
                       <TableCell align="center">
@@ -433,7 +450,7 @@ export default function ContentFeedbackPage() {
                           to={`${CONTENT_PATHS.feedback}/${encodeURIComponent(row.id)}`}
                           size="small"
                           variant="outlined"
-                          sx={{ py: 0.25, px: 1.25, fontSize: 11.5, minWidth: 0 }}
+                          sx={{ py: 0.25, px: 1.25, fontSize: 11.5, minWidth: 0, whiteSpace: "nowrap" }}
                         >
                           {t("contentManager.feedback.view")}
                         </Button>

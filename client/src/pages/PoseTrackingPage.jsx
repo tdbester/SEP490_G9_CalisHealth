@@ -10,6 +10,8 @@ import SessionTopbar from "../components/session/SessionTopbar";
 import VoiceToggleButton from "../components/session/VoiceToggleButton";
 import { addWorkoutResult } from "../utils/workoutResults";
 import { useVoiceMuted } from "../utils/voiceCoach";
+import { getAnatomyImage } from "../utils/anatomyImages";
+import { mediaUrl } from "../api/contentManager";
 import { toast } from "react-toastify";
 import "./PoseTrackingPage.css";
 
@@ -37,6 +39,27 @@ function formatClock(totalSeconds) {
   const m = Math.floor(totalSeconds / 60);
   const s = Math.floor(totalSeconds % 60);
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/**
+ * Tách nhóm cơ từ dữ liệu bài tập (nhiều shape khác nhau giữa các nguồn dữ liệu).
+ *
+ * @param {object} exercise
+ * @returns {string[]}
+ */
+function readMuscleGroups(exercise) {
+  const raw = exercise?.muscleGroup
+    ?? exercise?.targetMuscle
+    ?? exercise?.muscleGroups
+    ?? exercise?.targetMuscles
+    ?? "";
+  if (Array.isArray(raw)) {
+    return raw.map((item) => String(item).trim()).filter(Boolean);
+  }
+  return String(raw || "")
+    .split(/[,·;|&]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 /** Key lưu cấu hình phiên để sống sót khi F5 (location.state mất khi reload). */
@@ -78,6 +101,9 @@ function useSessionConfig() {
   const config = {
     exerciseCode: state?.exerciseCode || saved?.exerciseCode || "",
     exerciseName: state?.exerciseName || saved?.exerciseName || "Squat",
+    // Thông tin bài tập đầy đủ (nhóm cơ, ảnh giải phẫu) — dùng để vẽ ảnh
+    // anatomy ở màn tracking.
+    exercise: state?.exercise || saved?.exercise || null,
     reps: state?.reps || saved?.reps || DEFAULT_REPS,
     sets: state?.sets || saved?.sets || DEFAULT_SETS,
     index: state?.index || saved?.index || 1,
@@ -160,10 +186,30 @@ export default function PoseTrackingPage() {
   const [kneeRule, setKneeRule] = useState(null);
   const [landmarkCount, setLandmarkCount] = useState(0);
   const kneeTipRef = useRef(null);
+  /** Ảnh anatomy do Content Manager tải lên — nếu lỗi thì fallback sang hình vẽ mặc định. */
+  const [failedAnatomyImageUrl, setFailedAnatomyImageUrl] = useState("");
+  /**
+   * Thông tin bài tập đầy đủ (nhóm cơ, ảnh giải phẫu). Ưu tiên dữ liệu đi kèm
+   * route state; nếu không có (bài tiếp theo trong workout) thì gọi API lấy.
+   */
+  const [exerciseDetail, setExerciseDetail] = useState(config.exercise || null);
 
   /** Bài HOLD (plank) đếm theo thời gian giữ + set, không tính rep. */
   const isHold = config.category === "HOLD";
   const targetHoldSeconds = config.durationSeconds || DEFAULT_HOLD_SECONDS;
+
+  /** Nhóm cơ của bài đang tập — dùng để vẽ ảnh giải phẫu. */
+  const muscleGroups = useMemo(
+    () => readMuscleGroups(exerciseDetail),
+    [exerciseDetail],
+  );
+  const uploadedAnatomyImageUrl = exerciseDetail?.anatomyImageUrl || "";
+  const anatomyImageUrl = useMemo(() => {
+    if (uploadedAnatomyImageUrl && failedAnatomyImageUrl !== uploadedAnatomyImageUrl) {
+      return mediaUrl(uploadedAnatomyImageUrl) || uploadedAnatomyImageUrl;
+    }
+    return getAnatomyImage(muscleGroups);
+  }, [uploadedAnatomyImageUrl, failedAnatomyImageUrl, muscleGroups]);
 
   const {
     state: squat,
@@ -208,6 +254,39 @@ export default function PoseTrackingPage() {
     }
     setRunning(true);
   }, [config.exerciseCode, config.reps, isHold, restoreHold, restore]);
+
+  /**
+   * Bài đang tập có sẵn trong route state không (bài đầu tiên mở từ màn chi tiết
+   * bài tập) — nếu không thì gọi API lấy để có nhóm cơ + ảnh giải phẫu.
+   */
+  useEffect(() => {
+    if (config.exercise) {
+      setExerciseDetail(config.exercise);
+      return undefined;
+    }
+    if (!config.exerciseCode) return undefined;
+
+    let cancelled = false;
+    // Bỏ dữ liệu của bài trước trước khi lấy bài mới để không hiển thị nhầm.
+    setExerciseDetail(null);
+    api
+      .get(`/public/library/exercises/${encodeURIComponent(config.exerciseCode)}`)
+      .then(({ data }) => {
+        if (!cancelled && data) {
+          setExerciseDetail({
+            name: data.name,
+            muscleGroup: data.muscleGroup,
+            anatomyImageUrl: data.anatomyImageUrl,
+          });
+        }
+      })
+      .catch(() => {
+        // Không lấy được thì dùng hình giải phẫu vẽ mặc định theo suy luận.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [config.exercise, config.exerciseCode]);
 
   // Lấy cấu hình chấm form do Content Manager khai báo cho bài này.
   useEffect(() => {
@@ -389,6 +468,11 @@ export default function PoseTrackingPage() {
       state: {
         exerciseCode: next.exerciseCode,
         exerciseName: next.exerciseName,
+        exercise: {
+          name: next.exerciseName,
+          muscleGroup: next.muscleGroup,
+          anatomyImageUrl: next.anatomyImageUrl,
+        },
         category: next.category || "REPS",
         sets: next.sets ?? DEFAULT_SETS,
         reps: next.reps ?? DEFAULT_REPS,
@@ -780,6 +864,30 @@ export default function PoseTrackingPage() {
 
         {/* ---------------------------------------------------- stats panel */}
         <aside className="pt-panel">
+          {/* Ảnh giải phẫu của bài đang tập — giúp member nhớ đúng nhóm cơ cần dùng. */}
+          <section className="pt-card pt-card--anatomy">
+            <p className="pt-card-label">{t("member.tracking.anatomyTitle")}</p>
+            <div className="pt-anatomy">
+              <img
+                src={anatomyImageUrl}
+                alt={t("member.tracking.anatomyAlt", { name: config.exerciseName || "" })}
+                onError={() => {
+                  if (uploadedAnatomyImageUrl && failedAnatomyImageUrl !== uploadedAnatomyImageUrl) {
+                    setFailedAnatomyImageUrl(uploadedAnatomyImageUrl);
+                  }
+                }}
+                className="pt-anatomy-image"
+              />
+            </div>
+            {muscleGroups.length > 0 && (
+              <div className="pt-anatomy-chips">
+                {muscleGroups.map((muscle) => (
+                  <span key={muscle} className="pt-anatomy-chip">{muscle}</span>
+                ))}
+              </div>
+            )}
+          </section>
+
           <section className="pt-card">
             <p className="pt-card-label">{primaryMetric.label}</p>
             <p className="pt-reps">{primaryMetric.value}</p>

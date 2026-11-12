@@ -323,7 +323,6 @@ export default function NotificationListPage() {
               visibleNotifications.map((notification) => {
                 const normalizedType = String(notification.type || "").toUpperCase();
                 const audience = getNotificationAudience(notification);
-                const isPublished = String(notification.status || "").toUpperCase() === "PUBLISHED";
                 return (
                   <tr key={notification.id} className="transition hover:bg-white/[0.025]">
                     <td className="px-4 py-3.5 align-middle">
@@ -374,13 +373,9 @@ export default function NotificationListPage() {
                       </span>
                     </td>
                     <td className="px-3 py-3.5 text-center">
-                      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
-                        isPublished
-                          ? "border-emerald-500/40 bg-emerald-500/10 text-[#10B981]"
-                          : "border-slate-500/40 bg-slate-500/10 text-[#9CA3AF]"
-                      }`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${isPublished ? "bg-[#10B981]" : "bg-[#9CA3AF]"}`} />
-                        {isPublished ? t("admin.notifications.published") : t("admin.notifications.draft")}
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-[#10B981]">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#10B981]" />
+                        {t("admin.notifications.published")}
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-3 py-3.5 text-xs text-[#d2ccdf]">

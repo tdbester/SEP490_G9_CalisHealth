@@ -44,6 +44,7 @@ public class MediaCleanupService {
     private final StorageSettingsRepository settingsRepository;
     private final MediaRegistryService registry;
     private final ExerciseVideoStorageService storage;
+    private final ProfileAvatarStorageService avatars;
     private final ExerciseRepository exercises;
     private final UserRepository users;
     private final JdbcTemplate jdbc;
@@ -89,20 +90,33 @@ public class MediaCleanupService {
         for (MediaFile file : media.findAllByIdIn(ids)) {
             if (!MediaFile.TRASHED.equals(file.getStatus())) continue;
             String previous = file.getPreviousStatus() == null ? MediaFile.ORPHANED : file.getPreviousStatus();
+            // A file on Cloudinary sits in the trash folder while it waits; it goes back to its own folder.
+            restoreCloudinaryFile(file);
             file.setStatus(previous);
             file.setPreviousStatus(null);
             file.setTrashedAt(null);
             file.setTrashedBy(null);
             file.setPurgeAt(null);
             if (MediaFile.ACTIVE.equals(previous)) {
-                // An expired form-check video: give it a new expiry instead of re-trashing it tonight.
-                file.setExpiresAt(later(file.getExpiresAt(), keepUntil));
+                // The file was already active before it went to the trash: nothing expires on its own.
+                file.setDeletableAt(null);
             } else {
                 file.setDeletableAt(later(file.getDeletableAt(), keepUntil));
             }
             restored.add(file);
         }
         return restored;
+    }
+
+    /** Moves a trashed Cloudinary file back to the folder it came from and updates its URL. */
+    private void restoreCloudinaryFile(MediaFile file) {
+        String url = file.getFileUrl();
+        if (url == null) return;
+        Optional<String> restored = storage.restoreFromTrash(url);
+        if (restored.isPresent() && !restored.get().equals(url)) {
+            replaceReferences(url, restored.get());
+            file.setFileUrl(restored.get());
+        }
     }
 
     /** Keeps an ORPHANED / REJECTED file longer, e.g. when the member asked for more time to resubmit. */
@@ -149,7 +163,6 @@ public class MediaCleanupService {
         }
         LocalDateTime now = LocalDateTime.now();
         List<MediaFile> expired = new ArrayList<>(media.findExpiredInactive(now));
-        expired.addAll(media.findExpiredFormChecks(now));
 
         int trashed = 0;
         List<MediaFile> toPurge = new ArrayList<>(media.findTrashDue(now));
@@ -218,7 +231,7 @@ public class MediaCleanupService {
             for (CloudFile cloud : cloudFiles.get().values()) {
                 if (knownKeys.contains(cloud.key()) || cloud.uploadedAt().isAfter(now.minusMinutes(10))) continue;
                 MediaFile file = registry.register(cloud.url(), null, cloud.sizeBytes(), cloud.category(),
-                        cloud.format(), null, null, cloud.uploadedAt());
+                        cloud.format(), null, null, cloud.uploadedAt(), cloud.durationSeconds());
                 rows.put(cloud.url(), file);
             }
         }
@@ -256,12 +269,41 @@ public class MediaCleanupService {
         return MediaFile.ORPHANED.equals(file.getStatus()) || MediaFile.REJECTED.equals(file.getStatus());
     }
 
-    private static void moveToTrash(MediaFile file, User by, LocalDateTime now, LocalDateTime purgeAt) {
+    private void moveToTrash(MediaFile file, User by, LocalDateTime now, LocalDateTime purgeAt) {
         file.setPreviousStatus(file.getStatus());
         file.setStatus(MediaFile.TRASHED);
         file.setTrashedAt(now);
         file.setTrashedBy(by);
         file.setPurgeAt(purgeAt);
+        moveFileToTrash(file);
+    }
+
+    /**
+     * Moves a file into the trash folder of the Cloudinary account, so the admin sees the deleted
+     * files in one place and the file can be restored later. The URL changes with the move, so the
+     * row and every link to it are updated too.
+     */
+    private void moveFileToTrash(MediaFile file) {
+        String url = file.getFileUrl();
+        if (url == null) return;
+        // The folder the file is in now is kept inside the trash folder, so the way back is known.
+        String currentFolder = storage.folderOf(url).orElse(null);
+        String target = currentFolder != null
+                ? storage.trashFolderFor(currentFolder)
+                : storage.trashFolderForCategory(file.getCategory());
+        Optional<String> moved = storage.moveToFolder(url, target);
+        if (moved.isPresent() && !moved.get().equals(url)) {
+            replaceReferences(url, moved.get());
+            file.setFileUrl(moved.get());
+        }
+    }
+
+    /** Points every row that links to a file at the new URL, after the file moved on Cloudinary. */
+    private void replaceReferences(String oldUrl, String newUrl) {
+        jdbc.update("UPDATE exercises SET video_url = ? WHERE video_url = ?", newUrl, oldUrl);
+        jdbc.update("UPDATE exercises SET anatomy_image_url = ? WHERE anatomy_image_url = ?", newUrl, oldUrl);
+        jdbc.update("UPDATE exercise_moderation_history SET demo_video_url = ? WHERE demo_video_url = ?", newUrl, oldUrl);
+        jdbc.update("UPDATE exercise_moderation_history SET anatomy_image_url = ? WHERE anatomy_image_url = ?", newUrl, oldUrl);
     }
 
     /**
@@ -270,6 +312,21 @@ public class MediaCleanupService {
      * A file a live exercise uses again is reactivated instead of deleted.
      */
     private PurgeOutcome purgeAll(List<MediaFile> files, LocalDateTime now) {
+        PurgeOutcome outcome = purgeAll(files, now, this::removeFile);
+        return outcome;
+    }
+
+    /** Removes a managed file: a Cloudinary asset, an exercise file on disk or a profile photo. */
+    private boolean removeFile(String mediaUrl) {
+        if (mediaUrl != null && mediaUrl.startsWith(ProfileAvatarStorageService.URL_PREFIX)) {
+            avatars.delete(mediaUrl);
+            return true;
+        }
+        return storage.deleteFile(mediaUrl);
+    }
+
+    /** Same as {@link #purgeAll(List, LocalDateTime)}, but the caller decides how a file is removed. */
+    PurgeOutcome purgeAll(List<MediaFile> files, LocalDateTime now, Function<String, Boolean> remover) {
         List<MediaFile> purged = new ArrayList<>();
         long freed = 0;
         for (MediaFile file : files) {
@@ -277,7 +334,7 @@ public class MediaCleanupService {
                 registry.activate(file);
                 continue;
             }
-            if (!storage.deleteFile(file.getFileUrl())) continue;
+            if (!Boolean.TRUE.equals(remover.apply(file.getFileUrl()))) continue;
             if (!MediaFile.TRASHED.equals(file.getStatus())) file.setPreviousStatus(file.getStatus());
             file.setStatus(MediaFile.PURGED);
             file.setPurgedAt(now);

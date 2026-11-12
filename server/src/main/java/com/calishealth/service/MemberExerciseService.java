@@ -74,6 +74,7 @@ public class MemberExerciseService {
                 exercise.getCategory(),
                 exercise.getEquipment(),
                 exercise.getVideoUrl(),
+                exercise.getAnatomyImageUrl(),
                 steps,
                 exercise.getAuthor() == null ? null : exercise.getAuthor().getFullName(),
                 timeAgo(exercise.getCreatedAt()),

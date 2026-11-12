@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { getSystemWorkouts } from "../api/library";
 import { FAVORITE_ITEM_TYPES } from "../api/favorites";
 import FavoriteButton from "../components/favorites/FavoriteButton";
+import BackButton from "../components/common/BackButton";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { getLevelLabel } from "../utils/levelLabel";
 import { useSystemLevels } from "../useSystemLevels";
@@ -613,6 +614,7 @@ export default function WorkoutSystemListPage() {
 
   return (
     <div className="exercise-list-page w-full max-w-7xl mx-auto text-white">
+      <BackButton to="/library">{t("member.catalog.backToLibrary")}</BackButton>
       <header className="exercise-header mb-4">
         <h1 className="exercise-title text-xl md:text-2xl font-bold text-white tracking-tight mb-1">
           {t("member.catalog.workoutListTitle")}

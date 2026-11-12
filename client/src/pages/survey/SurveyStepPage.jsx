@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { surveyApi, surveyErrorMessage } from "../../api/survey";
 import QuestionField from "../../components/survey/QuestionField";
 import SurveyProgress from "../../components/survey/SurveyProgress";
+import SurveyTopBar from "../../components/survey/SurveyTopBar";
 import { ArrowLeft, ArrowRight, ArrowRightLarge } from "../../components/survey/SurveyIcons";
 import { useTranslation } from "react-i18next";
 import { answerValues, isApplicable, prepareStep, serverFieldErrors, stepCopy, stepSlug } from "../../utils/survey";
@@ -111,7 +112,8 @@ export default function SurveyStepPage() {
           : t("survey.continue");
 
   return (
-    <div className={`survey-page${isFirst ? " survey-page--intro" : ""}`}>
+    <div className="survey-page">
+      <SurveyTopBar />
       <form className="survey-column" onSubmit={handleContinue} noValidate>
         <SurveyProgress current={index + 1} total={steps.length} />
 
@@ -139,17 +141,10 @@ export default function SurveyStepPage() {
           </p>
         )}
 
-        {/* key riêng cho 2 nhánh: nếu không React dùng lại thẻ <button> Back (type="button") làm nút Continue
-            (type="submit") khi lùi về bước 1, trình duyệt submit form ngay trong cú click đó -> nhảy lại bước 2 */}
-        {isFirst ? (
-          <div key="intro-actions" className="survey-intro-actions">
-            <button type="submit" className="survey-btn survey-btn--gradient" disabled={Boolean(busy)}>
-              <span>{continueLabel}</span>
-              <ArrowRightLarge />
-            </button>
-          </div>
-        ) : (
-          <div key="step-actions" className="survey-actions">
+        {/* Mọi bước dùng chung một bố cục: hàng nút Back (nếu có) + Continue.
+            Bước đầu không có Back nên nút Continue chiếm hết bề rộng. */}
+        <div key="step-actions" className={`survey-actions${isFirst ? " survey-actions--first" : ""}`}>
+          {!isFirst && (
             <button
               type="button"
               className="survey-btn survey-btn--ghost"
@@ -159,12 +154,16 @@ export default function SurveyStepPage() {
               <ArrowLeft />
               <span>{t("survey.back")}</span>
             </button>
-            <button type="submit" className="survey-btn survey-btn--primary" disabled={Boolean(busy)}>
-              <span>{continueLabel}</span>
-              <ArrowRight />
-            </button>
-          </div>
-        )}
+          )}
+          <button
+            type="submit"
+            className={`survey-btn ${isFirst ? "survey-btn--gradient" : "survey-btn--primary"}`}
+            disabled={Boolean(busy)}
+          >
+            <span>{continueLabel}</span>
+            {isFirst ? <ArrowRightLarge /> : <ArrowRight />}
+          </button>
+        </div>
 
         <button type="button" className="survey-skip" onClick={handleSkip} disabled={Boolean(busy)}>
           {busy === "skip" ? t("survey.skipping") : isFirst ? t("survey.skipSurvey") : t("survey.skipForNow")}

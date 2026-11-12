@@ -24,7 +24,12 @@ public interface MemberWeeklyScoreRepository extends JpaRepository<MemberWeeklyS
     @Query("SELECT m FROM MemberWeeklyScore m WHERE m.member.id = :memberId ORDER BY m.weekStart DESC")
     List<MemberWeeklyScore> findRecentWeeksForMember(@Param("memberId") Long memberId, Pageable pageable);
 
-    Optional<MemberWeeklyScore> findByMember_IdAndWeekStart(Long memberId, LocalDate weekStart);
+    /**
+     * Một member có thể có nhiều dòng điểm trong cùng tuần nếu đổi level giữa
+     * tuần (ràng buộc duy nhất gồm member + week + level). Dùng list để tránh
+     * lỗi khi truy vấn trả về nhiều dòng.
+     */
+    List<MemberWeeklyScore> findAllByMember_IdAndWeekStart(Long memberId, LocalDate weekStart);
 
     @Query("SELECT m FROM MemberWeeklyScore m JOIN FETCH m.member mem JOIN FETCH mem.user JOIN FETCH m.fitnessLevel WHERE m.member.id = :memberId AND m.weekStart = :weekStart AND m.fitnessLevel.id = :levelId")
     Optional<MemberWeeklyScore> findForMemberAndWeekAndLevel(

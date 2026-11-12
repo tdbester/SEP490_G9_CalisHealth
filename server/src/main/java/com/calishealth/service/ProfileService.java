@@ -45,8 +45,10 @@ public class ProfileService {
     private final FitnessLevelRepository fitnessLevels;
     private final AssessmentAnswerRepository answers;
     private final ProfileAvatarStorageService avatars;
+    private final MediaRegistryService registry;
     private final PasswordEncoder encoder;
     private final UserActivityRepository activity;
+    private final MemberFitnessLevelService fitnessLevelsService;
 
     private static final String AGE_QUESTION = "AGE";
 
@@ -92,10 +94,14 @@ public class ProfileService {
     public ProfileResponse updateAvatar(String email, MultipartFile file) {
         User u = require(email);
         String previous = u.getAvatarUrl();
-        u.setAvatarUrl(avatars.store(file));
+        String url = avatars.store(file);
+        u.setAvatarUrl(url);
         users.save(u);
+        // The photo is written to the registry too, so it counts toward the storage of the system.
+        registry.registerAvatar(url, file.getOriginalFilename(), avatars.sizeOf(url), u);
         // Only remove our own uploads; a legacy external URL is left alone.
         avatars.delete(previous);
+        registry.purgeAvatar(previous);
         return build(u);
     }
 
@@ -103,6 +109,7 @@ public class ProfileService {
     public ProfileResponse removeAvatar(String email) {
         User u = require(email);
         avatars.delete(u.getAvatarUrl());
+        registry.purgeAvatar(u.getAvatarUrl());
         u.setAvatarUrl(null);
         users.save(u);
         return build(u);
@@ -233,7 +240,7 @@ public class ProfileService {
             FitnessLevel level = fitnessLevels.findByNameIgnoreCase(r.fitnessLevel().trim())
                     .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
                     .orElseThrow(() -> err(HttpStatus.BAD_REQUEST, "Choose a valid active fitness level"));
-            profile.setFitnessLevel(level);
+            fitnessLevelsService.changeLevel(profile, level);
         }
         // The onboarding answer is only the starting value; once saved here it wins.
         if (r.daysPerWeek() != null) profile.setDaysPerWeek(r.daysPerWeek());

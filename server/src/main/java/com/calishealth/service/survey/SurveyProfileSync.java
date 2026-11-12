@@ -62,6 +62,7 @@ public class SurveyProfileSync {
     private final MemberProfileRepository profiles;
     private final MemberTrackingRepository tracking;
     private final AssessmentOptionRepository options;
+    private final com.calishealth.service.MemberFitnessLevelService fitnessLevelsService;
 
     /**
      * Which survey questions end up in a profile or body-metrics column, and which do not.
@@ -90,7 +91,7 @@ public class SurveyProfileSync {
         });
 
         if (level != null) {
-            profile.setFitnessLevel(level);
+            fitnessLevelsService.changeLevel(profile, level);
         }
 
         Map<String, JsonNode> values = answers == null ? Map.of() : answers;

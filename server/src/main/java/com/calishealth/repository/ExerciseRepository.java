@@ -15,6 +15,20 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long>, JpaSp
     List<Exercise> findAllByCodeIn(List<String> codes);
     Optional<Exercise> findByNameIgnoreCase(String name);
     boolean existsByNameIgnoreCaseAndSource(String name, String source);
+
+    /**
+     * True when a (not soft-deleted) exercise already uses this exact title.
+     * So sánh không phân biệt hoa thường và bỏ khoảng trắng thừa ở hai đầu.
+     */
+    @Query("select count(e) > 0 from Exercise e where lower(trim(e.name)) = lower(trim(:name)) "
+            + "and (e.moderationStatus is null or upper(e.moderationStatus) <> 'DELETED')")
+    boolean existsNotDeletedByNameIgnoreCase(@Param("name") String name);
+
+    /** Cùng trên nhưng bỏ qua chính bài đang sửa (id = -1 khi tạo mới). */
+    @Query("select count(e) > 0 from Exercise e where e.id <> :id "
+            + "and lower(trim(e.name)) = lower(trim(:name)) "
+            + "and (e.moderationStatus is null or upper(e.moderationStatus) <> 'DELETED')")
+    boolean existsOtherNotDeletedByNameIgnoreCase(@Param("id") Long id, @Param("name") String name);
     Optional<Exercise> findByIdAndCreatedBy_IdAndSource(Long id, Long authorId, String source);
     @Query("""
             SELECT e FROM Exercise e

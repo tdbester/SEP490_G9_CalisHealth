@@ -69,6 +69,20 @@ public class MaintenanceSchedule {
     @Column(name = "reminder_notification_id")
     private Long reminderNotificationId;
 
+    /** Set when an admin actually starts the maintenance work by hand. */
+    @Column(name = "started_at")
+    private LocalDateTime startedAt;
+
+    /** Set when an admin marks the maintenance work as finished. */
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
+    @Column(name = "started_by")
+    private Long startedBy;
+
+    @Column(name = "completed_by")
+    private Long completedBy;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

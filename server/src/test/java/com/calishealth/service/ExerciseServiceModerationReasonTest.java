@@ -35,7 +35,8 @@ class ExerciseServiceModerationReasonTest {
             mock(ExerciseTreeEdgeRepository.class),
             mock(FitnessLevelRepository.class),
             mock(ExerciseMuscleGroupCatalog.class),
-            systemNotifications
+            systemNotifications,
+            mock(ExercisePhysiologyService.class)
     );
 
     @Test

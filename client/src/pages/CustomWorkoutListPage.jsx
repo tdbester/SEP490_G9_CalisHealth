@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { getCommunityWorkouts } from "../api/library";
 import { FAVORITE_ITEM_TYPES } from "../api/favorites";
 import FavoriteButton from "../components/favorites/FavoriteButton";
+import BackButton from "../components/common/BackButton";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { getLevelLabel } from "../utils/levelLabel";
 import { localizeSeed } from "../utils/seedText";
@@ -332,6 +333,7 @@ export default function CustomWorkoutListPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-5 pb-12">
+      <BackButton to="/library">{t("member.catalog.backToLibrary")}</BackButton>
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">{t("member.catalog.communityWorkoutTitle")}</h1>

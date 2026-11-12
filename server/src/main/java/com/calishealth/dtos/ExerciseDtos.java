@@ -31,7 +31,9 @@ public final class ExerciseDtos {
             /** The exercise's own flag, ignoring its level. {@code active} = selfActive && levelActive. */
             boolean selfActive,
             /** False when the exercise's level is inactive in Level &amp; Benchmark Criteria. */
-            boolean levelActive
+            boolean levelActive,
+            /** Hồ sơ sinh lý V76 (null khi chưa có) — CM xem nguồn trích dẫn. */
+            ExercisePhysiologyDTO physiology
     ) {}
 
     public record CreateExerciseRequest(
@@ -44,7 +46,9 @@ public final class ExerciseDtos {
             String guide,
             Integer defaultSets,
             Integer defaultReps,
-            Integer duration
+            Integer duration,
+            /** Hồ sơ sinh lý (chỉ dùng cho bài SYSTEM). Null = không tạo/cập nhật hồ sơ. */
+            ExercisePhysiologyInputDTO physiology
     ) {}
 
     public record ExerciseStatusRequest(boolean active, String rejectionReason) {}

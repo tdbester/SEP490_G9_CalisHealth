@@ -74,8 +74,9 @@ class PersonalExerciseServiceTest {
                 temporaryDirectory.resolve("videos").toString(),
                 temporaryDirectory.resolve("anatomy").toString(),
                 "",
-                "calishealth",
                 mediaRegistry,
+                new CloudinaryFolderService("calishealth"),
+                new CloudinaryOptimizationService(true, 1600, 1280, "auto:good", "auto:good", "", ""),
                 mock(Cloudinary.class));
         service = new PersonalExerciseService(
                 exercises,

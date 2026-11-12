@@ -1,0 +1,192 @@
+/* Màn chúc mừng — hiện sau khi member hoàn thành kế hoạch tập hôm nay. */
+.dp-congrats {
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  padding: 3rem 2rem 2.5rem;
+  border-radius: 20px;
+  border: 1px solid #2E2459;
+  background: linear-gradient(160deg, #14102A 0%, #1B1440 55%, #150F2E 100%);
+}
+
+/* Quầng sáng tím phía sau icon, tạo cảm giác "vừa hoàn thành" */
+.dp-congrats__glow {
+  position: absolute;
+  top: -140px;
+  left: 50%;
+  width: 380px;
+  height: 380px;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    circle,
+    rgba(124, 58, 237, 0.38) 0%,
+    rgba(124, 58, 237, 0) 68%
+  );
+  pointer-events: none;
+}
+
+.dp-congrats__badge {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 1.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(52, 211, 153, 0.16);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  color: #6EE7B7;
+  box-shadow: 0 0 0 8px rgba(52, 211, 153, 0.07);
+}
+
+.dp-congrats__badge svg {
+  width: 36px;
+  height: 36px;
+}
+
+.dp-congrats__eyebrow {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #A78BFA;
+}
+
+.dp-congrats__title {
+  position: relative;
+  margin: 0 0 0.75rem;
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.dp-congrats__text {
+  position: relative;
+  max-width: 520px;
+  margin: 0 auto;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: #A79BD6;
+}
+
+/* Số liệu tổng kết buổi tập */
+.dp-congrats__stats {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  max-width: 560px;
+  margin: 2rem auto 0;
+}
+
+.dp-congrats__stat {
+  padding: 1rem 0.75rem;
+  border-radius: 14px;
+  border: 1px solid #241C48;
+  background: linear-gradient(135deg, #120E24 0%, #170F33 100%);
+}
+
+.dp-congrats__stat-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin: 0 0 0.35rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.dp-congrats__stat-value svg {
+  width: 20px;
+  height: 20px;
+  color: #FB923C;
+}
+
+.dp-congrats__stat-label {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #9A8FCB;
+}
+
+.dp-congrats__actions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.875rem;
+  margin-top: 2rem;
+}
+
+.dp-congrats__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.9rem 1.5rem;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.dp-congrats__btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.dp-congrats__btn--primary {
+  border: none;
+  color: #FFFFFF;
+  background: linear-gradient(90deg, #7C3AED 0%, #C13ECD 60%, #E07AB5 100%);
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.32);
+}
+
+.dp-congrats__btn--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.45);
+}
+
+.dp-congrats__btn--ghost {
+  border: 1px solid #3A2E6E;
+  background: rgba(30, 22, 60, 0.7);
+  color: #D8CFFF;
+}
+
+.dp-congrats__btn--ghost:hover {
+  transform: translateY(-2px);
+  border-color: #5B4AA8;
+}
+
+.dp-congrats__btn:focus-visible {
+  outline: 2px solid #A78BFA;
+  outline-offset: 3px;
+}
+
+@media (max-width: 768px) {
+  .dp-congrats {
+    padding: 2.25rem 1.25rem 2rem;
+  }
+
+  .dp-congrats__title {
+    font-size: 1.5rem;
+  }
+
+  .dp-congrats__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .dp-congrats__actions {
+    flex-direction: column;
+  }
+
+  .dp-congrats__btn {
+    justify-content: center;
+    width: 100%;
+  }
+}

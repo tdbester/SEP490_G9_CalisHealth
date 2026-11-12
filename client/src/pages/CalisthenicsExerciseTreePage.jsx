@@ -270,6 +270,18 @@ export default function CalisthenicsExerciseTreePage() {
     navigate(`/library/exercise/${slug}`);
   };
 
+  /**
+   * Quay lại màn trước. Nếu member mở cây bài tập từ trang chi tiết bài tập
+   * thì quay lại đúng bài đó, ngược lại về danh sách bài tập trong thư viện.
+   */
+  const goBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate("/library/exercises");
+  };
+
   return (
       <div className="exercise-tree-page w-full max-w-7xl mx-auto text-white pb-12">
         <style>{`
@@ -307,6 +319,26 @@ export default function CalisthenicsExerciseTreePage() {
 
         {/* 1. HEADER */}
         <header className="mb-6">
+          <button
+            type="button"
+            onClick={goBack}
+            className="mb-4 inline-flex items-center gap-1.5 border-0 bg-transparent p-0 text-xs text-slate-400 transition-colors hover:text-white"
+            aria-label={t("member.exerciseTree.backAria")}
+          >
+            <svg
+              className="h-3.5 w-3.5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <span>{t("member.exerciseTree.back")}</span>
+          </button>
           <h1 className="text-2xl font-bold text-white tracking-tight">
             {t("member.exerciseTree.title")}
           </h1>

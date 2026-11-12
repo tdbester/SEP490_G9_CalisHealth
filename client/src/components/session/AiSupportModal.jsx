@@ -3,7 +3,6 @@ import { toast } from "react-toastify";
 import { aiSupportApi } from "../../api/aiSupport";
 import { useTranslation } from "react-i18next";
 import "./AiSupportModal.css";
-
 /** Hạn mức câu hỏi trong một phiên chat (badge "n/5" ở header). */
 const SESSION_LIMIT = 5;
 
@@ -109,6 +108,10 @@ export default function AiSupportModal({
   const [quota, setQuota] = useState(null);
   /** Id phiên chat — sinh mỗi lần mở popup, dùng để server đếm lượt/phiên. */
   const [sessionId, setSessionId] = useState("");
+  /** Server đã cấu hình API AI thật (gpt-4o-mini) hay chưa. */
+  const [aiEnabled, setAiEnabled] = useState(true);
+  /** Model AI đang dùng — hiển thị trong header. */
+  const [aiModel, setAiModel] = useState(null);
   const listRef = useRef(null);
   const inputRef = useRef(null);
   const { t } = useTranslation(["member", "common"]);
@@ -150,7 +153,10 @@ export default function AiSupportModal({
     aiSupportApi
       .getQuota(currentSessionId)
       .then((data) => {
-        if (!cancelled) setQuota(data);
+        if (cancelled) return;
+        setQuota(data);
+        setAiEnabled(data?.aiEnabled !== false);
+        setAiModel(data?.model ?? null);
       })
       .catch(() => {
         // Không lấy được quota thì vẫn cho member chat, chỉ mất badge số lượt.
@@ -252,6 +258,13 @@ export default function AiSupportModal({
             causes: data.answer?.causes ?? [],
             tip: data.answer?.tip ?? "",
             followUps: data.answer?.followUps ?? [],
+            // Cờ báo câu trả lời đến từ rule nội bộ (chế độ demo) thay vì AI thật.
+            demo: data.provider === "local-rules",
+            notice: data.notice ?? null,
+            // Câu hỏi chứa triệu chứng cần bác sĩ đánh giá -> server không gọi AI.
+            medicalRedFlag: data.provider === "safety-guard",
+            // Luật cảnh báo sinh lý của bài tập (V76).
+            alerts: Array.isArray(data.alerts) ? data.alerts : [],
           },
         ]);
         setQuota({
@@ -263,6 +276,7 @@ export default function AiSupportModal({
       } catch (error) {
         const status = error?.response?.status;
         const serverMessage = error?.response?.data?.message;
+        const errorCode = error?.response?.data?.code;
         if (status === 429) {
           // Server trả 429 cho cả hết quota ngày lẫn hết lượt phiên chat.
           toast.error(serverMessage || t("member:aiSupport.toastDailyExhausted"));
@@ -273,6 +287,17 @@ export default function AiSupportModal({
           }
         } else if (status === 400) {
           toast.error(serverMessage || t("member:aiSupport.toastRephrase"));
+        } else if (status === 503) {
+          // Lỗi phía OpenAI (hết credit, rate limit, sai key) -> báo đúng lý do.
+          if (errorCode === "AI_RATE_LIMITED") {
+            toast.error(t("member:aiSupport.toastRateLimited"));
+          } else if (errorCode === "AI_INVALID_KEY") {
+            toast.error(t("member:aiSupport.toastInvalidKey"));
+          } else if (errorCode === "AI_OUT_OF_CREDITS") {
+            toast.error(t("member:aiSupport.toastOutOfCredits"));
+          } else {
+            toast.error(serverMessage || t("member:aiSupport.toastUnavailable"));
+          }
         } else {
           toast.error(t("member:aiSupport.toastUnavailable"));
         }
@@ -314,6 +339,10 @@ export default function AiSupportModal({
           <div className="ais-head-text">
             <h2 className="ais-title">{t("member:aiSupport.title")}</h2>
             <p className="ais-subtitle">{t("member:aiSupport.subtitle")}</p>
+            {/* Badge model AI đang dùng (gpt-4o-mini) hoặc cảnh báo offline. */}
+            {aiEnabled && aiModel ? (
+              <p className="ais-model">{t("member:aiSupport.poweredBy", { model: aiModel })}</p>
+            ) : null}
           </div>
 
           <div className="ais-head-right">
@@ -368,6 +397,11 @@ export default function AiSupportModal({
           <span className="ais-context-text">{contextLabel}</span>
         </div>
 
+        {/* Server chưa cấu hình API thật -> báo rõ cho member biết đang offline. */}
+        {!aiEnabled ? (
+          <p className="ais-offline">{t("member:aiSupport.offlineNotice")}</p>
+        ) : null}
+
         {/* ------------------------------------------------------ messages */}
         <div className="ais-list" ref={listRef}>
           {messages.length === 0 && (
@@ -403,8 +437,22 @@ export default function AiSupportModal({
                       </svg>
                     </span>
                     <p className="ais-answer-title">
-                      {t("member:aiSupport.likelyCauses", { count: item.causes.length })}
+                      {item.medicalRedFlag
+                        ? t("member:aiSupport.medicalRedFlagTitle")
+                        : t("member:aiSupport.likelyCauses", { count: item.causes.length })}
                     </p>
+                    {/* Cờ báo câu trả lời đến từ rule nội bộ (chế độ demo). */}
+                    {item.demo ? (
+                      <span className="ais-demo-badge" title={item.notice ?? ""}>
+                        {t("member:aiSupport.demoBadge")}
+                      </span>
+                    ) : null}
+                    {/* Cờ báo câu hỏi có triệu chứng cần bác sĩ đánh giá. */}
+                    {item.medicalRedFlag ? (
+                      <span className="ais-medical-badge">
+                        {t("member:aiSupport.medicalRedFlagBadge")}
+                      </span>
+                    ) : null}
                   </header>
 
                   <ul className="ais-causes">
@@ -424,6 +472,30 @@ export default function AiSupportModal({
                       <div className="ais-divider" />
                       <p className="ais-tip">{item.tip}</p>
                     </>
+                  ) : null}
+
+                  {/* Luật cảnh báo sinh lý (V76) của bài tập. */}
+                  {Array.isArray(item.alerts) && item.alerts.length > 0 ? (
+                    <div className="ais-alerts">
+                      <p className="ais-alerts-title">
+                        {t("member:aiSupport.physiologyAlertsTitle")}
+                      </p>
+                      {item.alerts.map((alert) => (
+                        <div
+                          key={alert.ruleCode}
+                          className={`ais-alert ais-alert--${String(alert.severity || "INFO").toLowerCase()}`}
+                        >
+                          <span className="ais-alert-sev">
+                            {alert.severity === "DANGER"
+                              ? t("member:aiSupport.physiologyAlertDanger")
+                              : alert.severity === "WARN"
+                                ? t("member:aiSupport.physiologyAlertWarn")
+                                : t("member:aiSupport.physiologyAlertInfo")}
+                          </span>
+                          <span className="ais-alert-text">{alert.messageTemplate}</span>
+                        </div>
+                      ))}
+                    </div>
                   ) : null}
                 </div>
               </div>

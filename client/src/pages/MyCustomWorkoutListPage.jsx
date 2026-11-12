@@ -6,6 +6,7 @@ import LibraryDetailPlaceholder from "./LibraryDetailPlaceholder";
 import { deleteMyWorkout, getMyWorkout, getMyWorkouts } from "../api/library";
 import { FAVORITE_ITEM_TYPES } from "../api/favorites";
 import FavoriteButton from "../components/favorites/FavoriteButton";
+import BackButton from "../components/common/BackButton";
 import useUndoDelete from "../hooks/useUndoDelete";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { getLevelLabel } from "../utils/levelLabel";
@@ -285,6 +286,7 @@ export default function MyCustomWorkoutListPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 pb-12 text-white">
+      <BackButton to="/library">{t("member.catalog.backToLibrary")}</BackButton>
       <header className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("member.catalog.myWorkoutTitle")}</h1>

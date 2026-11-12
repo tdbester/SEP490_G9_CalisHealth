@@ -13,6 +13,7 @@ import com.calishealth.dtos.ProgressionRuleDtos.SaveRuleRequest;
 import com.calishealth.dtos.ProgressionRuleDtos.SetResultInput;
 import com.calishealth.dtos.ProgressionRuleDtos.SubmitExerciseResultRequest;
 import com.calishealth.dtos.ProgressionRuleDtos.UpdateRuleRequest;
+import com.calishealth.events.WorkoutCompletedEvent;
 import com.calishealth.models.Exercise;
 import com.calishealth.models.ProgressionRule;
 import com.calishealth.repository.ExerciseRepository;
@@ -23,6 +24,8 @@ import com.calishealth.repository.SessionExerciseResultRepository;
 import com.calishealth.repository.SessionSetResultRepository;
 import com.calishealth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -54,6 +57,7 @@ import java.util.Set;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProgressionRuleService {
     public static final String STATUS_ACTIVE = "ACTIVE";
     public static final String STATUS_INACTIVE = "INACTIVE";
@@ -70,6 +74,7 @@ public class ProgressionRuleService {
     private final UserRepository users;
     private final SessionExerciseResultRepository exerciseResults;
     private final SessionSetResultRepository setResults;
+    private final ApplicationEventPublisher events;
     private final JdbcTemplate jdbc;
 
     @Transactional(readOnly = true)
@@ -231,6 +236,14 @@ public class ProgressionRuleService {
         }
 
         recordBest(profile, exercise, request.sets(), cleanRate);
+
+        // Cộng điểm leaderboard ngay khi buổi tập hoàn thành, không đợi job
+        // cuối tuần — điểm phải phản ánh hoạt động mới nhất.
+        //
+        // Event được xử lý sau khi transaction commit (listener chạy trong
+        // transaction riêng): nếu tính điểm chạy trong cùng transaction mà
+        // gặp lỗi, cả buổi tập của member sẽ bị rollback mất.
+        events.publishEvent(new WorkoutCompletedEvent(profile.getId()));
 
         List<RuleEvaluation> evaluations = new ArrayList<>();
         List<ExerciseRef> newlyUnlocked = new ArrayList<>();

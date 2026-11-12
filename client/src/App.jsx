@@ -43,7 +43,8 @@ import UpdateMyCustomWorkoutPage from "./pages/UpdateMyCustomWorkoutPage";
 import WorkoutSystemListPage from "./pages/WorkoutSystemListPage";
 import SystemWorkoutDetailPage from "./pages/SystemWorkoutDetailPage";
 import FavoritesPage from "./pages/FavoritesPage";
-import MemberFeedbackPage from "./pages/MemberFeedbackPage";
+import MemberFeedbackListPage from "./pages/MemberFeedbackListPage";
+import MemberFeedbackCreatePage from "./pages/MemberFeedbackCreatePage";
 import ContentFeedbackPage from "./pages/ContentFeedbackPage";
 import ContentFeedbackDetailPage from "./pages/ContentFeedbackDetailPage";
 import AdminFeedbackPage from "./pages/AdminFeedbackPage";
@@ -215,8 +216,10 @@ export default function App() {
         <Route path="/library/skills/tree" element={memberPage(<CalisthenicsExerciseTreePage />)} />
         <Route path="/library/favorites" element={memberPage(<FavoritesPage />)} />
         <Route path="/favorites" element={memberPage(<FavoritesPage />)} />
-        <Route path="/library/feedback" element={memberPage(<MemberFeedbackPage />)} />
-        <Route path="/feedback" element={memberPage(<MemberFeedbackPage />)} />
+        <Route path="/library/feedback" element={memberPage(<MemberFeedbackListPage />)} />
+        <Route path="/library/feedback/new" element={memberPage(<MemberFeedbackCreatePage />)} />
+        <Route path="/feedback" element={memberPage(<MemberFeedbackListPage />)} />
+        <Route path="/feedback/new" element={memberPage(<MemberFeedbackCreatePage />)} />
         <Route path="/explore" element={memberPage(<CalisthenicsExerciseTreePage />)} />
 
         {/* Admin area (role ADMIN) - the guard reads /auth/me, same pattern as /content. */}

@@ -4,8 +4,9 @@
 .survey-page {
   min-height: 100vh;
   display: flex;
-  justify-content: center;
-  padding: 40px 16px 32px;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 32px;
   background: linear-gradient(180deg, #0d071b 0%, #0a0618 100%);
   color: #ffffff;
   font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
@@ -13,6 +14,7 @@
 
 .survey-page--center {
   align-items: center;
+  justify-content: center;
 }
 
 .survey-page h1,
@@ -29,12 +31,9 @@
   flex-direction: column;
 }
 
-.survey-page--intro .survey-column {
-  max-width: 488px;
-}
-
+/* Màn Result dùng chung khung rộng với các bước khảo sát khác. */
 .survey-column--result {
-  max-width: 560px;
+  max-width: 420px;
 }
 
 /* ── Tiến độ ──────────────────────────────────────────────────── */
@@ -62,19 +61,6 @@
   background: #8b7cf6;
 }
 
-.survey-page--intro .survey-progress-label {
-  font-size: 17px;
-  color: #b4a0e5;
-}
-
-.survey-page--intro .survey-progress-bar span {
-  height: 7px;
-}
-
-.survey-page--intro .survey-progress-bar span.is-done {
-  background: #a78bfa;
-}
-
 /* ── Tiêu đề bước ─────────────────────────────────────────────── */
 .survey-header {
   margin-top: 28px;
@@ -98,26 +84,6 @@
   font-size: 15px;
   line-height: 1.4;
   color: #a39ec4;
-}
-
-.survey-page--intro .survey-header {
-  margin-top: 20px;
-}
-
-.survey-page--intro .survey-header-label {
-  font-size: 19px;
-  color: #b4a0e5;
-}
-
-.survey-page--intro .survey-header-title {
-  margin-top: 2px !important;
-  font-size: 34px;
-}
-
-.survey-page--intro .survey-header-subtitle {
-  margin-top: 6px !important;
-  font-size: 19px;
-  color: #b4a0e5;
 }
 
 /* ── Danh sách câu hỏi ────────────────────────────────────────── */
@@ -552,16 +518,17 @@
   font-size: 20px;
 }
 
-.survey-intro-actions {
-  margin-top: 20px;
-}
-
 .survey-actions {
   display: flex;
   gap: 16px;
   margin-top: 36px;
   padding-top: 22px;
   border-top: 1px solid #2a2545;
+}
+
+/* Bước đầu không có nút Back -> nút Continue chiếm hết bề rộng hàng. */
+.survey-actions--first .survey-btn--gradient {
+  flex: 1;
 }
 
 .survey-actions .survey-btn--ghost {
@@ -753,23 +720,13 @@
 
 .result-scores {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-top: 14px;
 }
 
-.result-scores--count-2,
-.result-scores--count-4 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.result-scores--count-5,
-.result-scores--count-6 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.result-scores--count-7 {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+.result-scores--count-1 {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .result-score {
@@ -868,7 +825,7 @@
 
 .result-rhythm {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin: 12px 0 0;
   padding: 0;
@@ -939,11 +896,10 @@
 
 @media (max-width: 480px) {
   .survey-page {
-    padding-top: 24px;
+    padding-top: 16px;
   }
 
-  .survey-header-title,
-  .survey-page--intro .survey-header-title {
+  .survey-header-title {
     font-size: 26px;
   }
 
@@ -962,6 +918,6 @@
 
   .result-scores,
   .result-rhythm {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
 }

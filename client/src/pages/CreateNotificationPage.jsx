@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
-import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import api from "../api/client";
 import UnsavedNotificationModal from "../components/notifications/UnsavedNotificationModal";
@@ -63,7 +62,7 @@ export default function CreateNotificationPage() {
     completeSave,
   } = useUnsavedNotificationNavigation(isDirty);
 
-  const saveDraftAndLeave = async () => {
+  const publishAndLeave = async () => {
     const errors = {};
     if (!title.trim()) errors.title = t("admin.notifications.titleRequired");
     if (!message.trim()) errors.message = t("admin.notifications.messageRequired");
@@ -77,13 +76,14 @@ export default function CreateNotificationPage() {
         title: title.trim(),
         message: message.trim(),
         type,
-        status: "DRAFT",
+        status: "PUBLISHED",
         targetAudience,
       });
-      notificationToast.success(t("admin.notifications.draftSaved"));
+      notificationToast.success(t("admin.notifications.published"));
+      window.dispatchEvent(new Event("member-notifications-updated"));
       completeSave();
     } catch (error) {
-      const errorMessage = error.response?.data?.message || t("admin.notifications.draftSaveFailed");
+      const errorMessage = error.response?.data?.message || t("admin.notifications.createFailed");
       setRequestError(errorMessage);
       notificationToast.error(errorMessage);
     } finally {
@@ -93,7 +93,6 @@ export default function CreateNotificationPage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const submitStatus = event.nativeEvent.submitter?.value || "PUBLISHED";
     const errors = {};
     if (!title.trim()) errors.title = t("admin.notifications.titleRequired");
     if (!message.trim()) errors.message = t("admin.notifications.messageRequired");
@@ -108,17 +107,11 @@ export default function CreateNotificationPage() {
         title: title.trim(),
         message: message.trim(),
         type,
-        status: submitStatus,
+        status: "PUBLISHED",
         targetAudience,
       });
-      notificationToast.success(
-        submitStatus === "PUBLISHED"
-          ? t("admin.notifications.published")
-          : t("admin.notifications.draftSaved"),
-      );
-      if (submitStatus === "PUBLISHED") {
-        window.dispatchEvent(new Event("member-notifications-updated"));
-      }
+      notificationToast.success(t("admin.notifications.published"));
+      window.dispatchEvent(new Event("member-notifications-updated"));
       completeSave();
     } catch (error) {
       const validationErrors = error.response?.data?.errors;
@@ -158,17 +151,6 @@ export default function CreateNotificationPage() {
           >
             <ArrowBackRoundedIcon sx={{ fontSize: 18 }} />
             {t("common.back")}
-          </button>
-          <button
-            type="submit"
-            form="create-notification-form"
-            name="status"
-            value="DRAFT"
-            disabled={submitting}
-            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-violet-400/30 bg-violet-500/10 px-3.5 text-sm font-medium text-violet-200 transition hover:bg-violet-500/20 disabled:opacity-50"
-          >
-            <SaveOutlinedIcon sx={{ fontSize: 18 }} />
-            {t("admin.notifications.saveDraft")}
           </button>
           <button
             type="submit"
@@ -344,7 +326,7 @@ export default function CreateNotificationPage() {
           saving={submitting}
           onCancel={cancelLeave}
           onDiscard={discardChanges}
-          onSaveDraft={saveDraftAndLeave}
+          onPublish={publishAndLeave}
         />
       )}
     </section>

@@ -126,10 +126,10 @@ export default {
 
   nav: {
     dashboard: "Bảng điều khiển",
-    library: "Thư viện",
-    leaderboard: "Bảng xếp hạng",
-    favorites: "Yêu thích",
-    feedback: "Góp ý & Khiếu nại",
+      library: "Thư viện",
+      leaderboard: "Bảng xếp hạng",
+      favorites: "Yêu thích",
+    feedback: "Góp ý",
     tracking: "Sức khỏe & Tiến độ",
     dailyTrainingPlans: "Kế hoạch tập hằng ngày",
     healthProgress: "Sức khỏe & Tiến độ",

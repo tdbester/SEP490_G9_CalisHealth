@@ -17,7 +17,7 @@ public record CreateNotificationRequestDto(
         String type,
 
         @NotBlank(message = "Status is required")
-        @Pattern(regexp = "PUBLISHED|DRAFT", message = "Status must be PUBLISHED or DRAFT")
+        @Pattern(regexp = "PUBLISHED", message = "Status must be PUBLISHED")
         String status,
 
         @Pattern(

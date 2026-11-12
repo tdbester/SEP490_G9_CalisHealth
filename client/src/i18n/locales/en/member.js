@@ -89,10 +89,18 @@ export default {
 
   /** Feedback & complaints screen: members submit tickets and track their status. */
   feedback: {
-    title: "Feedback & Complaints",
+    title: "Feedback",
     subtitle:
       "Send your feedback or complaint. Every ticket goes to the content team first; system-level issues are escalated to the administrators.",
-    pageTitle: "Feedback & Complaints",
+    pageTitle: "Feedback",
+    createTitle: "Submit new feedback",
+    createNew: "Submit new feedback",
+    backToList: "Back to ticket list",
+    cancel: "Cancel",
+    discard: "Discard",
+    discardTitle: "Discard this feedback ticket?",
+    discardMessage:
+      "Are you sure you want to cancel? The title and content you entered will be lost.",
     formTitle: "Submit new feedback",
     formHint:
       "Describe the problem clearly so we can act faster. You will be notified once the ticket is handled.",
@@ -124,7 +132,7 @@ export default {
     resolutionTitle: "Resolution",
     emptyTitle: "You have not submitted any tickets yet",
     emptyDesc:
-      "Use the form above to send your feedback or complaint to the management team.",
+      "Tap “Submit new feedback” to send your feedback or complaint to the management team.",
     loadFailed: "Could not load your feedback tickets.",
   },
 
@@ -243,6 +251,17 @@ export default {
     reviewLetsGo: "Let's go →",
     reviewWorkoutMeta: "{level} · {count} exercises",
     reviewSummarySets: "{sets} × {count}",
+    replayWorkout: "Repeat this session",
+    congratsEyebrow: "TODAY'S PLAN COMPLETED",
+    congratsTitle: "Great job!",
+    congratsText:
+      "You have finished every workout scheduled for today. Your body needs time to recover — but if you still want to train more, the exercise library is always open for you.",
+    congratsExercises: "Exercises done",
+    congratsAccuracy: "Accuracy",
+    congratsStreak: "Day streak",
+    congratsBackDashboard: "Back to dashboard",
+    congratsGoLibrary: "Train more in the library",
+    congratsReviewPlan: "Review today's plan",
   },
 
   tracking: {
@@ -301,6 +320,8 @@ export default {
     restFor: "Rest for {{seconds}} seconds.",
     restHintContinue: "Rest {{seconds}}s, then continue",
     restHintNextSet: "Rest {{seconds}}s, then start set {{set}}",
+    anatomyTitle: "Muscle anatomy",
+    anatomyAlt: "Muscle anatomy for {{name}}",
   },
 
   healthTracking: {
@@ -548,7 +569,7 @@ export default {
     uploadHint: "MP4, MOV · max 500 MB",
     chooseVideo: "Click to upload a demo video",
     changeVideo: "Click to choose a different video",
-    pageTitle: "Exercise & Skill library",
+    pageTitle: "Exercise & Workout library",
     pageDescription: "Choose a section to open its list.",
     loadError: "Unable to load latest library statistics. Showing cached or default view.",
     exerciseSection: "Exercise",
@@ -726,6 +747,8 @@ export default {
     nextLabel: "Next",
     none: "None",
     viewExercise: "View exercise",
+    back: "Back",
+    backAria: "Go back to the previous page",
     documentTitle: "CalisHealth - Explore",
   },
 
@@ -822,6 +845,7 @@ export default {
     muscleGroup: "MUSCLE GROUP",
     all: "All",
     allLevels: "All levels",
+    backToLibrary: "← Back to Library",
     beginner: "Beginner",
     intermediate: "Intermediate",
     advanced: "Advanced",
@@ -952,6 +976,20 @@ export default {
     toggleFullscreen: "Toggle Fullscreen",
     anatomyAlt: "Muscle anatomy for {{name}}",
     targetMuscleGroups: "Target muscle groups",
+    physiology: {
+      title: "Exercise Physiology",
+      estimated: "Estimated — not device measurement",
+      contraction: "Contraction type",
+      lever: "Lever arm",
+      cardio: "Cardiovascular load",
+      hrZone: "Estimated HR zone (%HRmax)",
+      bp: "Blood pressure",
+      valsalva: "Breath-holding (Valsalva) risk",
+      tendon: "Tendon load / loaded joint",
+      gi: "Digestive risk",
+      breathing: "Breathing",
+      caution: "Caution if you have",
+    },
   },
 
   /** Xem trước bài tập trong buổi tập. */
@@ -998,6 +1036,8 @@ export default {
     addExercise: "+ Add",
     noExercisesFound: "No exercises found.",
     showingAccepted: "Showing {{from}}–{{to}} of {{count}} accepted exercises",
+    showingRange: "Showing {{from}}–{{to}} of {{total}} {{noun}}",
+    workoutExercisePagesAria: "Workout exercises pages",
     acceptedPagesAria: "Accepted exercises pages",
     previous: "Previous",
     next: "Next",
@@ -1057,6 +1097,9 @@ export default {
     totalSets: "Total sets",
     totalTime: "Total time",
     summaryNote: "Level and totals update automatically when you change the exercises.",
+    summaryLevelNote: "You can pick a different level in the workout details section.",
+    invalidExerciseIds:
+      "Cannot save: these exercises are not part of the system — {{names}}. Remove them and add them again from the accepted exercise list.",
     unsavedChanges: "You have unsaved changes",
     allChangesSaved: "All changes saved",
     saveChanges: "Save changes",
@@ -1270,6 +1313,140 @@ export default {
         subtitle: "Do each move with good form and stop when it breaks.",
       },
     },
+    /** Step labels (small line above the title) — keyed by the backend step code. */
+    steps: {
+      BODY_INFORMATION: { label: "Body information" },
+      GOALS_AND_MOTIVATION: { label: "Goals & motivation" },
+      CURRENT_TRAINING_ROUTINE: { label: "Current training routine" },
+      LEVEL_TEST: { label: "Level test" },
+    },
+    /** Units (the `unit` column of a question in the backend). */
+    units: {
+      years: "years",
+      cm: "cm",
+      kg: "kg",
+      days: "days",
+      reps: "reps",
+      seconds: "seconds",
+      sec: "sec",
+    },
+    /**
+     * Survey question / option translations.
+     *
+     * Keys follow the backend `question_code` and `option_code`; when a
+     * translation is missing the UI falls back to the original copy written by
+     * the Content Manager.
+     */
+    questions: {
+      GENDER: {
+        label: "What is your gender?",
+        placeholder: "Select gender",
+        options: {
+          MALE: "Male",
+          FEMALE: "Female",
+          OTHER: "Other",
+        },
+      },
+      AGE: {
+        label: "How old are you?",
+        placeholder: "22",
+      },
+      HEIGHT: {
+        label: "What is your height?",
+        placeholder: "170",
+      },
+      WEIGHT: {
+        label: "What is your weight?",
+        placeholder: "65",
+      },
+      GOAL_TYPE: {
+        label: "What is your main goal?",
+        options: {
+          HEALTH: "For health",
+          SKILLS: "For skills",
+        },
+      },
+      HEALTH_GOAL: {
+        label: "Which health goal fits you best?",
+        options: {
+          LOSE_WEIGHT: "Lose weight",
+          BUILD_MUSCLE: "Build muscle",
+          STAY_FIT: "Stay fit",
+        },
+      },
+      TRAINING_SKILLS: {
+        label: "Which skills do you want to learn?",
+        description: "Pick up to 3 skills.",
+        options: {
+          MUSCLE_UP: "Muscle-up",
+          HANDSTAND: "Handstand",
+          PLANCHE: "Planche",
+          FRONT_LEVER: "Front lever",
+          HUMAN_FLAG: "Human flag",
+          L_SIT: "L-sit",
+        },
+      },
+      MOTIVATIONS: {
+        label: "What motivates you to train?",
+        description: "Pick up to 3 answers.",
+        options: {
+          HEALTH: "Health",
+          ENERGY: "More energy",
+          CONFIDENCE: "More confidence",
+          APPEARANCE: "Look better",
+          STRESS_RELIEF: "Stress relief",
+        },
+      },
+      TRAINING_EXPERIENCE: {
+        label: "How long have you been training?",
+        options: {
+          NONE: "Never",
+          NEVER: "Never",
+          UNDER_6_MONTHS: "Under 6 months",
+          MONTHS_6_TO_12: "6–12 months",
+          OVER_1_YEAR: "Over 1 year",
+        },
+      },
+      TRAINING_DAYS_PER_WEEK: {
+        label: "How many days per week have you trained?",
+      },
+      HOW_MANY_DAYS_PER_WEEK_DO_YOU_WANT_TO_TRAIN_WITH_CALISHE: {
+        label: "How many days per week do you want to train with Calishealth",
+      },
+      TRAINING_MINUTES_PER_SESSION: {
+        label: "How long is each training session?",
+        options: {
+          MIN_15: "About 15 minutes",
+          MIN_30: "About 30 minutes",
+          MIN_45: "About 45 minutes",
+          MIN_60_PLUS: "60 minutes or more",
+        },
+      },
+      PUSH_UP_MAX_REPS: {
+        label: "Push-up",
+        hint: "Max reps in a row",
+      },
+      SQUAT_MAX_REPS: {
+        label: "Squat",
+        hint: "Max reps in a row",
+      },
+      PLANK_MAX_SECONDS: {
+        label: "Plank",
+        hint: "Max hold time",
+      },
+      BURPEE_MAX_REPS: {
+        label: "Burpee",
+        hint: "Max reps in a row",
+      },
+      DIPS_MAX_REPS: {
+        label: "Dips",
+        hint: "Max reps in a row",
+      },
+      PULL_UP_MAX_REPS: {
+        label: "Pull-up",
+        hint: "Max reps in a row",
+      },
+    },
     validation: {
       chooseOption: "Please choose an option",
       required: "This field is required",
@@ -1349,6 +1526,40 @@ export default {
     },
   },
 
+  /** Weekly member leaderboard. */
+  leaderboard: {
+    documentTitle: "CalisHealth - Leaderboard",
+    eyebrow: "COMMUNITY CHALLENGE",
+    title: "Weekly leaderboard",
+    subtitle: "The top 50 members making the most progress this week.",
+    updatedWeekly: "Updated weekly",
+    podiumAria: "Top three members",
+    rankingsAria: "Weekly member rankings",
+    yourRankingAria: "Your ranking",
+    weeklyRankings: "Weekly rankings",
+    fitnessLevel: "Fitness level",
+    memberCount: "{count} members",
+    colRank: "Rank",
+    colMember: "Member",
+    colLevel: "Level",
+    colTotalScore: "Total score",
+    colLastWeek: "Last week",
+    memberNumber: "Member #{id}",
+    anonymousMember: "Anonymous member",
+    you: "You",
+    globalLevel: "Global",
+    points: "pts",
+    newRank: "New",
+    emptyTitle: "No rankings yet",
+    emptyHint: "Complete a workout to be the first member on the board.",
+    yourRanking: "Your ranking",
+    tryAgain: "Try again",
+    backToDashboard: "Back to dashboard",
+    loadFailed: "Unable to load the leaderboard.",
+    serverError: "Server error: {status}",
+    networkError: "Unable to connect to the server.",
+  },
+
   /** Trường chọn fitness level ở trang Profile. */
   fitnessLevel: {
     label: "Fitness level",
@@ -1408,9 +1619,25 @@ export default {
     toastNoExercise: "No exercise selected for AI support.",
     toastRephrase: "Please rephrase your question.",
     toastUnavailable: "AI support is unavailable right now. Please try again.",
+    toastRateLimited: "AI support is busy right now. Please try again in a moment.",
+    toastInvalidKey: "AI support is not configured correctly on the server right now.",
+    toastOutOfCredits: "AI support has run out of server credits right now. Please try again later.",
     aiCoachFeedback: "AI coach feedback",
     sourceCamera: "AI camera session",
     sourceVideo: "AI video scan session",
+    poweredBy: "Powered by {model}",
+    offlineNotice: "AI coach is running in offline mode — answers come from built-in rules.",
+    demoBadge: "Demo mode",
+    demoTooltip:
+      "The AI service is unavailable right now, so this answer comes from the built-in rules instead of the AI model.",
+    medicalRedFlagBadge: "Medical warning",
+    medicalRedFlagTitle: "Please see a doctor",
+    medicalRedFlagFallback:
+      "Please see a doctor. AI Support only covers exercise technique — it cannot diagnose or give medical advice.",
+    physiologyAlertsTitle: "Physiology notes for this exercise",
+    physiologyAlertDanger: "Serious",
+    physiologyAlertWarn: "Caution",
+    physiologyAlertInfo: "Info",
   },
 
   /** Popup upload / kiểm tra camera. */

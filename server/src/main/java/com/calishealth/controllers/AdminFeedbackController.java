@@ -25,8 +25,7 @@ import java.time.LocalDate;
  * API xử lý góp ý & khiếu nại phía Admin.
  *
  * <p>Admin thấy các đơn đã được Content Manager chuyển tiếp lên
- * (trạng thái {@code ESCALATED}) cùng các đơn đã đóng, và đưa ra quyết định
- * cuối cùng.
+ * (có dấu vết {@code escalatedAt}) và đưa ra quyết định cuối cùng.
  */
 @RestController
 @RequestMapping("/api/admin/feedback")
@@ -38,8 +37,9 @@ public class AdminFeedbackController {
     /**
      * Danh sách đơn liên quan tới Admin.
      *
-     * <p>Mặc định trả về các đơn đã chuyển tiếp lên Admin ({@code ESCALATED}) và
-     * các đơn đã đóng ({@code RESOLVED}, {@code REJECTED}).
+     * <p>Mặc định trả về các đơn đã được Content Manager chuyển tiếp lên Admin
+     * (đơn có {@code escalatedAt}); các đơn chưa từng chuyển tiếp thuộc về
+     * Content Manager và không xuất hiện ở đây.
      *
      * @param status lọc theo trạng thái (mặc định trả về các đơn liên quan tới Admin)
      * @param category lọc theo nhóm nội dung (GENERAL | EXERCISE_CONTENT | WORKOUT_CONTENT | TECHNICAL | OTHER)

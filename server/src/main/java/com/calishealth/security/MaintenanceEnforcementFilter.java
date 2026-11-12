@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-@RequiredArgsConstructor
 public class MaintenanceEnforcementFilter extends OncePerRequestFilter {
     private static final String MEMBER_ROLE = "ROLE_MEMBER";
     private static final Map<String, String> SERVICE_MESSAGES = Map.of(
@@ -28,6 +27,10 @@ public class MaintenanceEnforcementFilter extends OncePerRequestFilter {
     );
 
     private final MaintenanceScheduleService schedules;
+
+    public MaintenanceEnforcementFilter(MaintenanceScheduleService schedules) {
+        this.schedules = schedules;
+    }
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override

@@ -63,6 +63,52 @@ public class AdminStorageController {
         return service.settings();
     }
 
+    /** Where the quota comes from: the Cloudinary plan, or the local disk when there is no account. */
+    @GetMapping("/quota")
+    public QuotaInfo quota() {
+        return service.quotaInfo();
+    }
+
+    /** The folders of the Cloudinary account the app writes into, with their file count and size. */
+    @GetMapping("/folders")
+    public FolderSetup folders() {
+        return service.folders();
+    }
+
+    /** Creates the folders of the app that are not in the account yet. */
+    @PostMapping("/folders/setup")
+    public FolderSetup setupFolders(Authentication a) {
+        return service.setupFolders(a.getName());
+    }
+
+    /** The rules that shrink the media before it is stored on the CDN. */
+    @GetMapping("/optimization")
+    public OptimizationInfo optimization() {
+        return service.optimization();
+    }
+
+    /** The credit guard: what it would free right now and whether it is switched on. */
+    @GetMapping("/credit-guard")
+    public CreditGuardInfo creditGuard() {
+        return service.creditGuard();
+    }
+
+    /** Frees space right away: deletes the media that is in the trash and moves the rest to it. */
+    @PostMapping("/credit-guard/free")
+    public CreditGuardResult freeSpace(Authentication a) {
+        return service.freeSpace(a.getName());
+    }
+
+    /**
+     * Reads the usage of the provider right now and stores it as the snapshot of the day.
+     * The daily job does this at night; the button lets an admin refresh the numbers without
+     * waiting for it.
+     */
+    @PostMapping("/usage/refresh")
+    public Overview refreshUsage(Authentication a) {
+        return service.refreshUsage(a.getName());
+    }
+
     @PutMapping("/settings")
     public Settings updateSettings(Authentication a, @Valid @RequestBody UpdateSettingsRequest r) {
         return service.updateSettings(a.getName(), r);

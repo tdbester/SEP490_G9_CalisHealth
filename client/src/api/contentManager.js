@@ -1,6 +1,10 @@
 import axios from "axios";
 import i18n from "../i18n";
 import { handleMaintenanceError } from "../utils/maintenanceNotifications";
+import {
+  messageFromPayload as sharedMessageFromPayload,
+  statusMessage as sharedStatusMessage,
+} from "../utils/apiError";
 
 /**
  * API client riêng cho khu Content Manager. Không tự đăng xuất khi nhận 401
@@ -46,33 +50,12 @@ export class ApiRequestError extends Error {
 }
 
 function messageFromPayload(payload) {
-  if (payload && typeof payload === "object" && typeof payload.message === "string") {
-    return payload.message.trim() || null;
-  }
-  if (payload && typeof payload === "object" && typeof payload.error === "string") {
-    return payload.error.trim() || null;
-  }
-  return typeof payload === "string" && payload.trim() ? payload.trim() : null;
+  return sharedMessageFromPayload(payload);
 }
 
 function statusMessage(status) {
-  const t = (key, options) => i18n.t(key, options);
-  if (status == null) {
-    return t("common.apiError.network");
-  }
-  if (status === 401) {
-    return t("common.apiError.unauthorized");
-  }
-  if (status === 403) {
-    return t("common.apiError.forbidden");
-  }
-  if (status === 404) return t("common.apiError.notFound");
-  if (status === 409) return t("common.apiError.conflict");
-  if (status === 413) return t("common.apiError.tooLarge");
-  if (status >= 500) return t("common.apiError.serverError");
-  return t("common.apiError.rejectedStatus", { status });
+  return sharedStatusMessage(status);
 }
-
 export function requestError(error) {
   if (error instanceof ApiRequestError) return error;
   if (axios.isAxiosError(error)) {
@@ -87,6 +70,13 @@ export function requestError(error) {
 
 export const contentManagerApi = {
   exercises: () => contentApi.get("/content/exercises").then((r) => r.data),
+
+  /** Thư viện nguồn học thuật dùng cho hồ sơ sinh lý (Content Manager chọn nguồn trích dẫn). */
+  physiologyEvidence: (keyword) =>
+    contentApi
+      .get("/content/physiology/evidence", { params: keyword ? { keyword } : undefined })
+      .then((r) => r.data)
+      .catch((error) => { throw requestError(error); }),
 
   levelBenchmarkConfiguration: () =>
     contentApi.get("/content/level-benchmarks").then((r) => r.data).catch((error) => { throw requestError(error); }),

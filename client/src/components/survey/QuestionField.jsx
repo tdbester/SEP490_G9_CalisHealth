@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { displayOf, questionLabel, widgetOf } from "../../utils/survey";
+import { displayOf, optionLabel, questionDescription, questionHint, questionLabel, questionPlaceholder, unitLabel, widgetOf } from "../../utils/survey";
 import { ChevronDown, SurveyIcon } from "./SurveyIcons";
 
 /*
@@ -35,7 +35,9 @@ function IconCard({ question, compact, children, error, errorId }) {
         </span>
         <span className="survey-icon-card-titles">
           <span className="survey-icon-card-title">{questionLabel(question)}</span>
-          {display.hint && <span className="survey-icon-card-hint">{display.hint}</span>}
+          {questionHint(question) && (
+            <span className="survey-icon-card-hint">{questionHint(question)}</span>
+          )}
         </span>
       </div>
       {children}
@@ -48,7 +50,7 @@ function NumberField({ question, value, error, onChange, errorId }) {
   const display = displayOf(question);
   const rules = question.validationRules ?? {};
   return (
-    <IconCard question={question} compact={Boolean(display.hint)} error={error} errorId={errorId}>
+    <IconCard question={question} compact={Boolean(questionHint(question))} error={error} errorId={errorId}>
       <label className="survey-input">
         <input
           type="number"
@@ -56,14 +58,14 @@ function NumberField({ question, value, error, onChange, errorId }) {
           min={rules.min}
           max={rules.max}
           step={rules.integerOnly ? 1 : "any"}
-          placeholder={display.placeholder ?? ""}
+          placeholder={questionPlaceholder(question)}
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
           aria-label={questionLabel(question)}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? errorId : undefined}
         />
-        {question.unit && <span className="survey-input-unit">{question.unit}</span>}
+        {question.unit && <span className="survey-input-unit">{unitLabel(question)}</span>}
       </label>
     </IconCard>
   );
@@ -84,11 +86,11 @@ function SelectField({ question, value, error, onChange, errorId }) {
           className={value ? "" : "is-placeholder"}
         >
           <option value="" disabled>
-            {display.placeholder ?? t("survey.selectOption")}
+            {questionPlaceholder(question) || t("survey.selectOption")}
           </option>
           {question.options.map((o) => (
             <option key={o.optionCode} value={o.optionCode}>
-              {o.label}
+              {optionLabel(question, o)}
             </option>
           ))}
         </select>
@@ -110,7 +112,9 @@ function ChoiceGroup({ question, error, errorId, showTitle = true, children }) {
           {questionLabel(question)}
         </h2>
       )}
-      {question.description && multiple && <p className="survey-question-hint">{question.description}</p>}
+      {questionDescription(question) && multiple && (
+        <p className="survey-question-hint">{questionDescription(question)}</p>
+      )}
       {children}
       <FieldError id={errorId} message={error} />
     </section>
@@ -131,7 +135,7 @@ function OptionButtons({ question, value, onChange, className, renderOption }) {
           aria-pressed={selected(option.optionCode)}
           onClick={() => onChange(multiple ? toggle(value ?? [], option.optionCode) : option.optionCode)}
         >
-          {renderOption ? renderOption(option) : option.label}
+          {renderOption ? renderOption(option) : optionLabel(question, option)}
         </button>
       ))}
     </div>
@@ -182,7 +186,7 @@ export default function QuestionField({ question, value, error, onChange }) {
                 <span className="survey-path-card-icon">
                   <SurveyIcon name={icons[option.optionCode]} />
                 </span>
-                <span className="survey-path-card-label">{option.label}</span>
+                <span className="survey-path-card-label">{optionLabel(question, option)}</span>
               </>
             )}
           />
@@ -199,7 +203,7 @@ export default function QuestionField({ question, value, error, onChange }) {
                 <span className="survey-option-list-icon">
                   <SurveyIcon name={icons[option.optionCode]} />
                 </span>
-                <span className="survey-option-list-label">{option.label}</span>
+                <span className="survey-option-list-label">{optionLabel(question, option)}</span>
               </>
             )}
           />

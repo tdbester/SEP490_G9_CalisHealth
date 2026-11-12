@@ -258,6 +258,49 @@
   background: #1c0f26;
 }
 
+/* -------------------------------------------------- anatomy (nhóm cơ) */
+.pt-card--anatomy {
+  border-color: #2f2a55;
+  background: #141029;
+}
+
+.pt-anatomy {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid #241d45;
+  background: #0f0b22;
+  padding: 8px;
+}
+
+.pt-anatomy-image {
+  max-height: 190px;
+  width: 100%;
+  object-fit: contain;
+}
+
+.pt-anatomy-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.pt-anatomy-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  background: rgba(139, 92, 246, 0.14);
+  padding: 3px 10px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #c4b5fd;
+}
+
 .pt-voice-head {
   display: flex;
   align-items: center;

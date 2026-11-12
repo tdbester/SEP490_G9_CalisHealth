@@ -9,14 +9,16 @@ import enCommon from "./locales/en/common.js";
 import enMember from "./locales/en/member.js";
 import enAdmin from "./locales/en/admin.js";
 import enContentManager from "./locales/en/contentManager.js";
+import enStorage from "./locales/en/storage.js";
 
 import viCommon from "./locales/vi/common.js";
 import viMember from "./locales/vi/member.js";
 import viAdmin from "./locales/vi/admin.js";
 import viContentManager from "./locales/vi/contentManager.js";
+import viStorage from "./locales/vi/storage.js";
 
 /** Danh sách namespace đang có — dùng để kiểm tra khi phát triển. */
-export const NAMESPACES = ["common", "member", "admin", "contentManager"];
+export const NAMESPACES = ["common", "member", "admin", "contentManager", "storage"];
 
 /**
  * Chuỗi của namespace `common` được dùng ở hai kiểu key:
@@ -37,7 +39,7 @@ function flattenCommon(file) {
  * `member.profile.title` / `common.ui.close` / `admin.users.title` tra được
  * đúng chuỗi, bất kể component dùng `useTranslation()` hay `useTranslation("member")`.
  */
-function buildDefaultNamespace({ common, member, admin, contentManager }) {
+function buildDefaultNamespace({ common, member, admin, contentManager, storage }) {
   const flatCommon = flattenCommon(common);
   return {
     // Các khối dùng không có tiền tố (nav.*, auth.*, date.*, survey.*, ...)
@@ -48,6 +50,7 @@ function buildDefaultNamespace({ common, member, admin, contentManager }) {
     member,
     admin,
     contentManager,
+    storage,
   };
 }
 
@@ -57,11 +60,13 @@ export const resources = {
     member: enMember,
     admin: enAdmin,
     contentManager: enContentManager,
+    storage: enStorage,
     translation: buildDefaultNamespace({
       common: enCommon,
       member: enMember,
       admin: enAdmin,
       contentManager: enContentManager,
+      storage: enStorage,
     }),
   },
   vi: {
@@ -69,11 +74,13 @@ export const resources = {
     member: viMember,
     admin: viAdmin,
     contentManager: viContentManager,
+    storage: viStorage,
     translation: buildDefaultNamespace({
       common: viCommon,
       member: viMember,
       admin: viAdmin,
       contentManager: viContentManager,
+      storage: viStorage,
     }),
   },
 };

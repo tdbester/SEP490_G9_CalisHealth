@@ -22,8 +22,8 @@ public class MediaFile {
     public static final String PURGED = "PURGED";
 
     public static final String DEMO_VIDEO = "DEMO_VIDEO";
-    public static final String FORM_CHECK_VIDEO = "FORM_CHECK_VIDEO";
     public static final String ANATOMY_IMAGE = "ANATOMY_IMAGE";
+    public static final String PROFILE_AVATAR = "PROFILE_AVATAR";
 
     public static final String SOURCE_SYSTEM = "SYSTEM";
     public static final String SOURCE_MEMBER = "MEMBER";
@@ -56,9 +56,6 @@ public class MediaFile {
     @Column(name = "duration_seconds")
     private Integer durationSeconds;
 
-    @Column(length = 100)
-    private String purpose;
-
     @Column(length = 30)
     private String category;
 
@@ -89,9 +86,6 @@ public class MediaFile {
 
     @Column(name = "deletable_at")
     private LocalDateTime deletableAt;
-
-    @Column(name = "expires_at")
-    private LocalDateTime expiresAt;
 
     @Column(name = "trashed_at")
     private LocalDateTime trashedAt;

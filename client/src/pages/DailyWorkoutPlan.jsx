@@ -3,6 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { memberScheduleApi } from '../api/memberSchedule';
 import { startWorkoutSession, setWorkoutOrigin } from '../utils/workoutResults';
+import {
+  isDailyPlanCompleted,
+  readDailyPlanProgress,
+  setActiveDailyWorkout,
+  syncDailyPlanWorkouts,
+} from '../utils/dailyPlanProgress';
+import DailyPlanCongrats from './DailyPlanCongrats';
 import './DailyWorkoutPlan.css';
 
 function formatDate(locale) {
@@ -80,6 +87,10 @@ export default function DailyWorkoutPlan() {
   const [hasSchedule, setHasSchedule] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  /** Đã tập xong hết kế hoạch hôm nay -> hiện màn chúc mừng. */
+  const [celebrating, setCelebrating] = useState(false);
+  /** Tiến độ tập hôm nay (dùng để đánh dấu buổi tập đã xong). */
+  const [progress, setProgress] = useState(() => readDailyPlanProgress());
 
   const load = useCallback(() => {
     let cancelled = false;
@@ -92,8 +103,14 @@ export default function DailyWorkoutPlan() {
     ])
       .then(([today, month]) => {
         if (cancelled) return;
-        setWorkouts(Array.isArray(today) ? today : []);
+        const list = Array.isArray(today) ? today : [];
+        setWorkouts(list);
         setHasSchedule(Boolean(month));
+        // Đồng bộ danh sách buổi tập hôm nay để biết khi nào đã tập xong hết.
+        syncDailyPlanWorkouts(list.map((item) => item.workoutCode));
+        setProgress(readDailyPlanProgress());
+        // Đã tập xong tất cả buổi tập hôm nay -> hiện màn chúc mừng.
+        setCelebrating(isDailyPlanCompleted());
       })
       .catch(() => {
         if (!cancelled) setError(t('member.plan.loadError'));
@@ -119,9 +136,14 @@ export default function DailyWorkoutPlan() {
     // để màn kết quả cuối chỉ tổng hợp đúng các bài của buổi này.
     if (index === 0) {
       startWorkoutSession();
-      // Màn kết quả cuối buổi quay lại "/plan".
-      setWorkoutOrigin('/plan');
     }
+    // Luôn ghi nhớ nơi bắt đầu và buổi tập đang thực hiện: màn kết quả cuối
+    // buổi quay lại "/plan" và đánh dấu buổi tập này là đã hoàn thành.
+    setWorkoutOrigin('/plan');
+    setActiveDailyWorkout(
+      workout.workoutCode,
+      (workout.exercises || []).map((item) => item.exerciseCode),
+    );
     navigate(`/exercises/${encodeURIComponent(exercise.exerciseCode)}`, {
       state: {
         sets: exercise.sets,
@@ -310,7 +332,12 @@ export default function DailyWorkoutPlan() {
       <div className="daily-plan-container">
         {header}
 
-        {workouts.map((workout) => (
+        {/* Đã tập xong kế hoạch hôm nay -> màn chúc mừng, kèm nút về dashboard
+            và nút gợi ý sang thư viện nếu member muốn tập thêm. */}
+        {celebrating ? (
+          <DailyPlanCongrats onReviewPlan={() => setCelebrating(false)} />
+        ) : (
+          workouts.map((workout) => (
           <section key={workout.workoutCode} className="plan-workout">
             <div className="workout-card">
               <h2 className="workout-title">{workout.workoutName}</h2>
@@ -417,11 +444,14 @@ export default function DailyWorkoutPlan() {
                 onClick={() => startWorkout(workout)}
                 disabled={workout.exercises.length === 0}
               >
-                {t('member.plan.startWorkout')}
+                {progress.completed.includes(workout.workoutCode)
+                  ? t('member.plan.replayWorkout')
+                  : t('member.plan.startWorkout')}
               </button>
             </div>
           </section>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import com.calishealth.models.MaintenanceSchedule;
 import com.calishealth.models.Notification;
 import com.calishealth.models.User;
 import com.calishealth.models.AffectedArea;
+import com.calishealth.repository.MaintenanceAreaLockRepository;
 import com.calishealth.repository.MaintenanceScheduleRepository;
 import com.calishealth.repository.NotificationRepository;
 import com.calishealth.repository.UserRepository;
@@ -22,20 +23,27 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.same;
 
 class MaintenanceScheduleServiceTest {
     private final MaintenanceScheduleRepository schedules = mock(MaintenanceScheduleRepository.class);
     private final NotificationRepository notifications = mock(NotificationRepository.class);
     private final UserRepository users = mock(UserRepository.class);
+    private final MaintenanceAreaLockRepository locks = mock(MaintenanceAreaLockRepository.class);
+    private final MaintenanceAreaLockService areaLocks = new MaintenanceAreaLockService(locks);
     private final MaintenanceScheduleService service =
-            new MaintenanceScheduleService(schedules, notifications, users);
+            new MaintenanceScheduleService(schedules, notifications, users, areaLocks);
 
     @BeforeEach
     void setUp() {
@@ -48,6 +56,7 @@ class MaintenanceScheduleServiceTest {
             return notification;
         });
         when(schedules.save(any(MaintenanceSchedule.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(locks.findByArea(anyString())).thenReturn(java.util.Optional.empty());
     }
 
     @Test
@@ -64,7 +73,7 @@ class MaintenanceScheduleServiceTest {
         assertEquals("Scheduled maintenance", notification.getTitle());
         assertEquals("MAINTENANCE", notification.getType());
         assertEquals("PUBLISHED", notification.getStatus());
-        assertEquals("UPCOMING", response.status());
+        assertEquals("PENDING", response.status());
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d, yyyy hh:mm a", java.util.Locale.ENGLISH);
         assertEquals("Improving performance. Member App Access will be unavailable from "
                         + start.format(formatter) + " to " + start.plusHours(2).format(formatter) + ".",
@@ -163,47 +172,179 @@ class MaintenanceScheduleServiceTest {
 
     @Test
     void listsMaintenanceSchedulesInPagesOfFive() {
-        when(schedules.findAll(any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(), Pageable.ofSize(5), 0));
+        when(schedules.searchSchedules(
+                isNull(), isNull(), isNull(), any(), any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of(), Pageable.ofSize(5), 0));
 
-        service.getSchedules(2);
+        service.getSchedules(2, null, null, null);
 
         org.mockito.ArgumentCaptor<Pageable> pageableCaptor = forClass(Pageable.class);
-        verify(schedules).findAll(pageableCaptor.capture());
+        verify(schedules).searchSchedules(
+                isNull(), isNull(), isNull(), any(), pageableCaptor.capture()
+        );
         assertEquals(2, pageableCaptor.getValue().getPageNumber());
         assertEquals(5, pageableCaptor.getValue().getPageSize());
     }
 
     @Test
-    void reportsAreaUnderMaintenanceOnlyWhenAnActiveScheduleMatches() {
-        when(schedules.countActiveSchedulesByArea(
-                org.mockito.ArgumentMatchers.eq("MEMBER_VIDEO_UPLOADS"),
-                any(LocalDateTime.class)
-        )).thenReturn(1L);
+    void forwardsTheAdminFiltersToTheRepository() {
+        LocalDateTime startsFrom = LocalDateTime.now().minusDays(3);
+        LocalDateTime startsBefore = LocalDateTime.now().plusDays(3);
+        when(schedules.searchSchedules(
+                any(), any(), any(), any(), any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of(), Pageable.ofSize(5), 0));
 
-        assertEquals(true, service.isServiceUnderMaintenance("MEMBER_VIDEO_UPLOADS"));
-        verify(schedules).countActiveSchedulesByArea(
-                org.mockito.ArgumentMatchers.eq("MEMBER_VIDEO_UPLOADS"),
-                any(LocalDateTime.class)
+        service.getSchedules(0, "upgrade", startsFrom, startsBefore);
+
+        verify(schedules).searchSchedules(
+                eq("upgrade"),
+                eq(startsFrom),
+                eq(startsBefore),
+                any(),
+                any(Pageable.class)
         );
     }
 
     @Test
+    void reportsAreaUnderMaintenanceOnlyWhenTheAdminLockedItByHand() {
+        when(locks.findByArea("MEMBER_VIDEO_UPLOADS")).thenReturn(java.util.Optional.of(
+                lockedArea("MEMBER_VIDEO_UPLOADS")
+        ));
+
+        assertEquals(true, service.isServiceUnderMaintenance("MEMBER_VIDEO_UPLOADS"));
+        verify(locks).findByArea("MEMBER_VIDEO_UPLOADS");
+    }
+
+    @Test
+    void reportsAreaAvailableWhenTheAdminDidNotLockIt() {
+        assertEquals(false, service.isServiceUnderMaintenance("MEMBER_VIDEO_UPLOADS"));
+    }
+
+    @Test
     void reportsAllDomainMaintenanceFlagsForAdmin() {
-        when(schedules.findActiveAreas(any(LocalDateTime.class)))
-                .thenReturn(Set.of("ADMIN_MANAGEMENT_PORTAL", "SYSTEM_STORAGE_CDN"));
+        when(locks.findByArea("ADMIN_MANAGEMENT_PORTAL")).thenReturn(java.util.Optional.of(
+                lockedArea("ADMIN_MANAGEMENT_PORTAL")
+        ));
 
         var status = service.getServiceMaintenanceStatus();
 
         assertEquals(5, status.size());
         assertEquals(true, status.get("ADMIN_MANAGEMENT_PORTAL"));
-        assertEquals(true, status.get("SYSTEM_STORAGE_CDN"));
+        assertEquals(false, status.get("SYSTEM_STORAGE_CDN"));
         assertEquals(false, status.get("AI_POSE_ASSESSMENT"));
     }
 
     @Test
     void rejectsUnknownMaintenanceServiceKey() {
         assertThrows(IllegalArgumentException.class, () -> service.isServiceUnderMaintenance("UNKNOWN"));
+    }
+
+    @Test
+    void startingAScheduleLocksTheAffectedAreasByHand() {
+        MaintenanceSchedule schedule = new MaintenanceSchedule();
+        schedule.setId(9L);
+        schedule.setTitle("Database upgrade");
+        schedule.setStartsAt(startsAt());
+        schedule.setEndsAt(startsAt().plusHours(2));
+        schedule.setAffectedAreas(Set.of("MEMBER_APP_ACCESS"));
+        when(schedules.findById(9L)).thenReturn(java.util.Optional.of(schedule));
+
+        var response = service.start(9L, "admin@example.com");
+
+        assertEquals("IN_PROGRESS", response.status());
+        assertTrue(schedule.getStartedAt() != null);
+        verify(locks).save(any(com.calishealth.models.MaintenanceAreaLock.class));
+    }
+
+    @Test
+    void completingAScheduleReleasesTheAffectedAreas() {
+        MaintenanceSchedule schedule = new MaintenanceSchedule();
+        schedule.setId(9L);
+        schedule.setTitle("Database upgrade");
+        schedule.setStartsAt(startsAt());
+        schedule.setEndsAt(startsAt().plusHours(2));
+        schedule.setAffectedAreas(Set.of("MEMBER_APP_ACCESS"));
+        schedule.setStartedAt(LocalDateTime.now().minusMinutes(10));
+        when(schedules.findById(9L)).thenReturn(java.util.Optional.of(schedule));
+
+        var response = service.complete(9L, "admin@example.com");
+
+        assertEquals("COMPLETED", response.status());
+        assertTrue(schedule.getCompletedAt() != null);
+    }
+
+    @Test
+    void marksAScheduleAsDueThirtyMinutesBeforeItsWindowStarts() {
+        MaintenanceSchedule schedule = new MaintenanceSchedule();
+        schedule.setId(9L);
+        schedule.setTitle("Database upgrade");
+        schedule.setStartsAt(LocalDateTime.now().plusMinutes(20));
+        schedule.setEndsAt(LocalDateTime.now().plusHours(3));
+        when(schedules.findById(9L)).thenReturn(java.util.Optional.of(schedule));
+
+        var response = service.getSchedule(9L);
+
+        assertEquals("READY", response.status());
+        assertEquals(true, response.dueForExecution());
+    }
+
+    @Test
+    void keepsASchedulePendingWhenItsWindowIsStillFarAway() {
+        MaintenanceSchedule schedule = new MaintenanceSchedule();
+        schedule.setId(9L);
+        schedule.setTitle("Database upgrade");
+        schedule.setStartsAt(LocalDateTime.now().plusHours(2));
+        schedule.setEndsAt(LocalDateTime.now().plusHours(4));
+        when(schedules.findById(9L)).thenReturn(java.util.Optional.of(schedule));
+
+        var response = service.getSchedule(9L);
+
+        assertEquals("PENDING", response.status());
+        assertEquals(false, response.dueForExecution());
+    }
+
+    @Test
+    void keepsAScheduleRedThroughoutTheWholeMaintenanceWindow() {
+        MaintenanceSchedule schedule = new MaintenanceSchedule();
+        schedule.setId(9L);
+        schedule.setTitle("Database upgrade");
+        schedule.setStartsAt(LocalDateTime.now().minusMinutes(10));
+        schedule.setEndsAt(LocalDateTime.now().plusMinutes(30));
+        when(schedules.findById(9L)).thenReturn(java.util.Optional.of(schedule));
+
+        var response = service.getSchedule(9L);
+
+        assertEquals(true, response.dueForExecution());
+    }
+
+    private static com.calishealth.models.MaintenanceAreaLock lockedArea(String area) {
+        com.calishealth.models.MaintenanceAreaLock lock = new com.calishealth.models.MaintenanceAreaLock();
+        lock.setArea(area);
+        lock.setLocked(true);
+        lock.setLockedAt(LocalDateTime.now());
+        return lock;
+    }
+
+    @Test
+    void rejectsAMessageLongerThanTheDatabaseColumnAllows() {
+        LocalDateTime start = startsAt();
+        CreateMaintenanceScheduleRequestDto tooLong = new CreateMaintenanceScheduleRequestDto(
+                "Database upgrade",
+                "x".repeat(2001),
+                start,
+                start.plusHours(2),
+                Set.of(AffectedArea.MEMBER_APP_ACCESS),
+                true,
+                24
+        );
+
+        RequestValidationException exception = assertThrows(
+                RequestValidationException.class,
+                () -> service.create(tooLong, "admin@example.com")
+        );
+
+        assertEquals("message", exception.getField());
+        verify(schedules, never()).save(any(MaintenanceSchedule.class));
     }
 
     private static CreateMaintenanceScheduleRequestDto request(

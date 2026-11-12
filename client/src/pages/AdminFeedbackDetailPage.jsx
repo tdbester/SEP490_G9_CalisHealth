@@ -254,10 +254,7 @@ export default function AdminFeedbackDetailPage() {
           </Typography>
           <Typography sx={{ mt: 0.75, fontSize: 14, color: CM.textMuted }}>
             {t("admin.feedback.detailMeta", {
-              member:
-                feedback.memberName ||
-                feedback.memberEmail ||
-                t("admin.feedback.unknown"),
+              member: feedback.memberEmail || t("admin.feedback.unknown"),
             })}
           </Typography>
         </Box>
@@ -320,27 +317,15 @@ export default function AdminFeedbackDetailPage() {
           <Grid container spacing={1.5}>
             <DetailField
               label={t("admin.feedback.colMember")}
-              value={
-                feedback.memberName
-                  ? `${feedback.memberName}\n${feedback.memberEmail || ""}`
-                  : feedback.memberEmail
-              }
+              value={feedback.memberEmail}
             />
             <DetailField
               label={t("admin.feedback.detailSubmitted")}
               value={formatDateTime(feedback.createdAt)}
             />
             <DetailField
-              label={t("admin.feedback.detailLastUpdated")}
-              value={formatDateTime(feedback.updatedAt)}
-            />
-            <DetailField
               label={t("admin.feedback.detailEscalatedAt")}
               value={formatDateTime(feedback.escalatedAt)}
-            />
-            <DetailField
-              label={t("admin.feedback.detailResolvedAt")}
-              value={formatDateTime(feedback.resolvedAt)}
             />
           </Grid>
 

@@ -1,8 +1,9 @@
 import api from "./client";
 
 /*
- * Admin > Media storage & infrastructure (backend: AdminStorageController, /api/admin/storage):
+ * Admin > Storage (backend: AdminStorageController, /api/admin/storage):
  *   GET    /admin/storage/overview                     -> capacity, breakdowns, 6-month history, top members, auto-cleanup
+ *   GET    /admin/storage/quota                        -> { provider, plan, planLimitBytes, quotaEditable }
  *   GET    /admin/storage/media?view&status&source&type&sort&page&size
  *          view=inactive (ORPHANED / REJECTED) | trash (TRASHED; status then filters previousStatus)
  *          -> { items, page, size, totalElements, totalPages, summary }
@@ -14,9 +15,26 @@ import api from "./client";
  *   DELETE /admin/storage/trash                        -> { deleted, freedBytes, skipped }   (empty trash)
  *   GET    /admin/storage/settings                     -> settings
  *   PUT    /admin/storage/settings body settings        -> settings
+ *   POST   /admin/storage/usage/refresh                  -> overview (reads the provider right now)
+ *   GET    /admin/storage/folders                      -> { folders, created, existing, failed }
+ *          the folders of the Cloudinary account the app writes into
+ *   POST   /admin/storage/folders/setup                -> creates the folders that are missing
+ *   GET    /admin/storage/optimization                 -> { enabled, imageRule, videoRule, deliveryRule, ... }
+ *          the rules that shrink the media before it is stored on the CDN
+ *   GET    /admin/storage/credit-guard                  -> { enabled, threshold, usedPercent, reclaimableBytes, active }
+ *          the part of the app that frees space when the account is close to its limit
+ *   POST   /admin/storage/credit-guard/free             -> { purged, freedBytes, trashed, usedPercent, message }
+ *          frees space right away
  */
 export const adminStorageApi = {
   overview: () => api.get("/admin/storage/overview").then((res) => res.data),
+  quota: () => api.get("/admin/storage/quota").then((res) => res.data),
+  folders: () => api.get("/admin/storage/folders").then((res) => res.data),
+  setupFolders: () => api.post("/admin/storage/folders/setup").then((res) => res.data),
+  optimization: () => api.get("/admin/storage/optimization").then((res) => res.data),
+  creditGuard: () => api.get("/admin/storage/credit-guard").then((res) => res.data),
+  freeSpace: () => api.post("/admin/storage/credit-guard/free").then((res) => res.data),
+  refreshUsage: () => api.post("/admin/storage/usage/refresh").then((res) => res.data),
   media: ({ view, status, source, type, sort, page, size } = {}) =>
     api
       .get("/admin/storage/media", {

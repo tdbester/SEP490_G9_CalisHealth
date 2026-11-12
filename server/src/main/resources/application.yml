@@ -1,4 +1,13 @@
 spring:
+  # Nạp biến môi trường từ file .env ở thư mục gốc dự án (hoặc thư mục cha
+  # của server/). Nhờ vậy chỉ cần điền OPENAI_API_KEY vào .env là AI Support
+  # dùng được API thật, không cần set biến môi trường thủ công.
+  # "optional" -> thiếu file .env thì app vẫn chạy bình thường.
+  config:
+    import:
+      - "optional:file:.env[.properties]"
+      - "optional:file:../.env[.properties]"
+      - "optional:file:../client/.env[.properties]"
   servlet:
     multipart:
       max-file-size: 500MB # upper bound; the real limit is the admin setting (storage_settings)
@@ -41,21 +50,75 @@ app:
     exercise-video-dir: ${EXERCISE_VIDEO_DIR:${user.home}/calishealth/uploads/exercise-videos}
     exercise-anatomy-dir: ${EXERCISE_ANATOMY_DIR:${user.home}/calishealth/uploads/exercise-anatomy}
     profile-avatar-dir: ${PROFILE_AVATAR_DIR:${user.home}/calishealth/uploads/profile-avatars}
+    # Job ghi lại mức dùng thật của Cloudinary vào storage_usage_daily mỗi ngày (Admin > Storage).
+    usage-cron: ${STORAGE_USAGE_CRON:0 15 3 * * *}
   cloudinary:
     cloud-name: ${CLOUDINARY_CLOUD_NAME:u9vojlr2}
     api-key: ${CLOUDINARY_API_KEY:722157934773437}
     api-secret: ${CLOUDINARY_API_SECRET:RCWUbVn9XT46SYBFmwN_f46vcl4}
     secure: true
-    folder: ${CLOUDINARY_FOLDER:calishealth} # blank cloud-name = store uploads on the local disk instead
+    # blank cloud-name = store uploads on the local disk instead
+    # Thư mục gốc trên Cloudinary. Mọi media của app nằm dưới thư mục này, mỗi loại media một
+    # thư mục con (exercise-demos, exercise-anatomy, profile-avatars, member-exercises, trash).
+    folder: ${CLOUDINARY_FOLDER:calishealth}
+    # Tối ưu media trước khi lưu lên Cloudinary. File được thu nhỏ ngay lúc upload (upload
+    # transformation), nên tài khoản chỉ phải trả tiền cho bản nhỏ chứ không phải bản gốc.
+    # Đo thực tế trên tài khoản Cloudinary Free của dự án:
+    #   ảnh 1600x1200 :  8462 B  ->   226 B   (c_limit,w_1200,q_auto:good)
+    #   ảnh 2400x1800 : 27740 B  ->  5937 B   (c_limit,w_1600,q_auto:good)
+    #   video 10 s    : 3018 KB  ->  549 KB   (vc_auto,c_limit,w_1280,q_auto:good)
+    # Đặt enabled=false để tắt (khi cần giữ nguyên file gốc).
+    optimize:
+      enabled: ${CLOUDINARY_OPTIMIZE_ENABLED:true}
+      image-max-width: ${CLOUDINARY_IMAGE_MAX_WIDTH:1600}
+      video-max-width: ${CLOUDINARY_VIDEO_MAX_WIDTH:1280}
+      image-quality: ${CLOUDINARY_IMAGE_QUALITY:auto:good}
+      video-quality: ${CLOUDINARY_VIDEO_QUALITY:auto:good}
+      # Để trống = giữ nguyên định dạng gốc khi lưu. Ảnh dạng này chỉ nén lại, không đổi phần mở rộng.
+      image-format: ${CLOUDINARY_IMAGE_FORMAT:}
+      # Video: để trống thì vc_auto tự chọn codec (MOV sẽ thành MP4).
+      video-format: ${CLOUDINARY_VIDEO_FORMAT:}
+    # Ngày trong tháng mà bộ đếm của gói Cloudinary được reset (mặc định là ngày 1).
+    usage-reset-day: ${CLOUDINARY_USAGE_RESET_DAY:1}
   jwt:
     secret: clh-demo-secret-key-please-change-this-32-chars-min
     expiration-ms: 86400000
   # AI Support (màn popup hỏi AI về lỗi form sau buổi tập).
-  # Chưa có OPENAI_API_KEY thì API vẫn chạy, trả lời bằng rule nội bộ.
+  #
+  # Chọn nhà cung cấp AI:
+  #   "auto"   -> ưu tiên Gemini (free tier, không cần nạp credit),
+  #               fallback sang OpenAI nếu Gemini chưa có key.
+  #   "gemini" -> chỉ dùng Gemini.
+  #   "openai" -> chỉ dùng OpenAI (cần nạp credit).
+  #
+  # Đặt GEMINI_API_KEY (biến môi trường hoặc file .env) để dùng Gemini thật.
+  # Chưa có key nào thì API vẫn chạy, trả lời bằng rule nội bộ.
+  ai:
+    provider: ${AI_PROVIDER:auto}
+
+  # Gemini — Google Generative Language API (free tier).
+  # Lấy key miễn phí tại https://aistudio.google.com/apikey
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-3.5-flash}
+    base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+    timeout-seconds: ${GEMINI_TIMEOUT_SECONDS:45}
+    # Chế độ demo: khi API lỗi (hết quota, mất mạng) thì trả lời bằng rule
+    # nội bộ kèm cờ báo rõ cho member, thay vì báo lỗi.
+    demo-fallback: ${GEMINI_DEMO_FALLBACK:true}
+
+  # OpenAI Chat Completions (gpt-4o-mini) — cần nạp credit mới dùng được.
+  # Đặt OPENAI_API_KEY (biến môi trường hoặc file .env) để dùng API thật.
+  # Chưa có key thì API vẫn chạy, trả lời bằng rule nội bộ.
   openai:
     api-key: ${OPENAI_API_KEY:}
     model: ${OPENAI_MODEL:gpt-4o-mini}
     base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+    timeout-seconds: ${OPENAI_TIMEOUT_SECONDS:45}
+    # Chế độ demo: khi API lỗi (hết credit, mất mạng, rate limit) thì trả lời
+    # bằng rule nội bộ kèm cờ báo rõ cho member, thay vì báo lỗi.
+    # Đặt false để member thấy lỗi thật (dùng khi đã nạp credit).
+    demo-fallback: ${OPENAI_DEMO_FALLBACK:true}
 
 # OpenAPI / Swagger UI
 springdoc:

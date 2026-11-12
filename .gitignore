@@ -76,3 +76,10 @@ calishealth@0.1.0
 # ===== Log chay server local (khong commit) =====
 server/server-run.out
 server/server-run.err
+boot.out
+boot.err
+vite.out
+vite.err
+
+# ===== Prototype local (khong commit) =====
+prototype/

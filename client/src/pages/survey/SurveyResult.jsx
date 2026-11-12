@@ -2,9 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { surveyApi, surveyErrorMessage } from "../../api/survey";
 import SurveyProgress from "../../components/survey/SurveyProgress";
+import SurveyTopBar from "../../components/survey/SurveyTopBar";
 import TrainingPlanPreviewModal from "../../components/survey/TrainingPlanPreviewModal";
 import { ArrowLeft, ArrowRight, MedalIcon, RefreshIcon, SparkleIcon } from "../../components/survey/SurveyIcons";
 import { useTranslation } from "react-i18next";
+import { unitText } from "../../utils/survey";
 import "./Survey.css";
 
 /** Số đẹp cho kết quả: 35 -> "35", 12.5 -> "12.5". */
@@ -111,6 +113,7 @@ export default function SurveyResult() {
 
   return (
     <div className="survey-page">
+      <SurveyTopBar />
       <div className="survey-column survey-column--result">
         {/* mọi bước đã xong */}
         <SurveyProgress current={state.stepCount} total={state.stepCount} />
@@ -178,7 +181,7 @@ export default function SurveyResult() {
                   <p className="result-score-label">{item.label}</p>
                   <p className="result-score-value">
                     <strong>{formatNumber(item.value)}</strong>
-                    {item.unit && <span>{item.unit}</span>}
+                    {item.unit && <span>{unitText(item.unit)}</span>}
                   </p>
                   {item.bandLabel && <p className="result-score-band">{item.bandLabel}</p>}
                   {item.score !== null && item.score !== undefined && (

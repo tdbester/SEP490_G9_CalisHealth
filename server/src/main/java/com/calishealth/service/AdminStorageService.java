@@ -3,9 +3,11 @@ package com.calishealth.service;
 import com.calishealth.dtos.AdminStorageDtos.*;
 import com.calishealth.models.MediaFile;
 import com.calishealth.models.StorageSettings;
+import com.calishealth.models.StorageUsageDaily;
 import com.calishealth.models.User;
 import com.calishealth.repository.MediaFileRepository;
 import com.calishealth.repository.StorageSettingsRepository;
+import com.calishealth.repository.StorageUsageDailyRepository;
 import com.calishealth.repository.UserActivityRepository;
 import com.calishealth.repository.UserRepository;
 import jakarta.persistence.criteria.Predicate;
@@ -19,6 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -29,9 +33,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
-/** Backs the three tabs of Admin > Media storage & infrastructure. Every change is written to the admin's activity log. */
+/** Backs the three tabs of Admin > Storage. Every change is written to the admin's activity log. */
 @Service
 @RequiredArgsConstructor
 public class AdminStorageService {
@@ -39,7 +44,8 @@ public class AdminStorageService {
     private static final long GB = MediaRegistryService.GB;
     private static final Set<String> VIDEO_FORMATS = Set.of("MP4", "MOV", "WEBM");
     private static final Set<String> IMAGE_FORMATS = Set.of("JPG", "PNG", "WEBP");
-    private static final List<String> CATEGORIES = List.of(MediaFile.DEMO_VIDEO, MediaFile.FORM_CHECK_VIDEO, MediaFile.ANATOMY_IMAGE);
+    private static final List<String> CATEGORIES = List.of(
+            MediaFile.DEMO_VIDEO, MediaFile.ANATOMY_IMAGE, MediaFile.PROFILE_AVATAR);
     private static final List<String> SOURCES = List.of(MediaFile.SOURCE_SYSTEM, MediaFile.SOURCE_MEMBER);
     private static final Map<String, Sort> SORTS = Map.of(
             "size_desc", Sort.by(Sort.Direction.DESC, "sizeBytes"),
@@ -51,8 +57,15 @@ public class AdminStorageService {
 
     private final MediaFileRepository media;
     private final StorageSettingsRepository settingsRepository;
+    private final StorageUsageDailyRepository usageDaily;
     private final MediaRegistryService registry;
     private final MediaCleanupService cleanup;
+    private final ExerciseVideoStorageService storage;
+    private final CloudinaryUsageService cloudinary;
+    private final CloudinarySetupService cloudinarySetup;
+    private final CloudinaryOptimizationService optimization;
+    private final CreditGuardService guard;
+    private final StorageUsageJob usageJob;
     private final UserRepository users;
     private final UserActivityRepository activity;
 
@@ -60,12 +73,27 @@ public class AdminStorageService {
     // Capacity
     // ---------------------------------------------------------------------------------
 
+    /**
+     * The overview of the Storage tab.
+     * <p>
+     * The numbers that cost money come from the provider (Cloudinary): the registry only knows the
+     * files this app manages. When the provider cannot be reached the registry numbers are used,
+     * and the screen says so.
+     */
     @Transactional(readOnly = true)
     public Overview overview() {
         StorageSettings s = registry.settings();
         LocalDateTime now = LocalDateTime.now();
-        long quota = s.getQuotaGb() * GB;
-        long used = media.sumBytesOnDisk();
+        long registryBytes = media.sumBytesOnDisk();
+
+        Optional<CloudinaryUsageService.Usage> cloud = cloudinary.usage();
+        String provider = cloud.isPresent() ? "CLOUDINARY" : "LOCAL";
+        long used = cloud.map(CloudinaryUsageService.Usage::storageUsedBytes).orElse(registryBytes);
+        // The plan decides the real limit; the admin setting is only the fallback for the local disk.
+        boolean quotaLimited = cloud.map(CloudinaryUsageService.Usage::storageLimitBytes).orElse(0L) > 0;
+        long quota = quotaLimited
+                ? cloud.get().storageLimitBytes()
+                : s.getQuotaGb() * GB;
 
         Map<String, long[]> byCategory = usage(media.usageByCategory());
         Map<String, long[]> bySource = usage(media.usageBySource());
@@ -98,11 +126,59 @@ public class AdminStorageService {
                 s.getLastCleanupFreedBytes(), media.sumExpiringBy(nextRun), trash[0], trash[1], s.getTrashRetentionDays(),
                 orphaned[0] + rejected[0], orphaned[1] + rejected[1]);
 
-        return new Overview(quota, used, s.getWarningPercent(), s.getCriticalPercent(), videos + images, videos, images,
+        CloudinaryUsageService.Usage cloudUsage = cloud.orElse(null);
+        CloudinaryUsageService.ConsoleLinks links = cloudinary.consoleLinks();
+        return new Overview(
+                provider,
+                cloudUsage == null ? null : cloudUsage.plan(),
+                cloudinary.cloudName(),
+                links.mediaLibrary() == null ? null : new ConsoleLinks(
+                        links.mediaLibrary(),
+                        links.usage(),
+                        links.uploadSettings(),
+                        links.plan()),
+                cloudinary.isEnabled(),
+                quota,
+                quotaLimited,
+                used,
+                registryBytes,
+                cloudUsage == null ? 0 : cloudUsage.bandwidthUsedBytes(),
+                cloudUsage == null ? 0 : cloudUsage.bandwidthLimitBytes(),
+                cloudUsage == null || cloudUsage.creditsUsed() == null ? null : cloudUsage.creditsUsed().doubleValue(),
+                cloudUsage == null || cloudUsage.creditsLimit() == null ? null : cloudUsage.creditsLimit().doubleValue(),
+                cloudUsage == null ? 0 : cloudUsage.creditsUsedPercent(),
+                s.getWarningPercent(), s.getCriticalPercent(), videos + images, videos, images,
                 growth, estimatedFull, s.getMemberQuotaMb() * MB,
                 CATEGORIES.stream().map(key -> toUsage(key, byCategory)).toList(),
                 SOURCES.stream().map(key -> toUsage(key, bySource)).toList(),
-                history, top, autoCleanup);
+                history, dailyUsage(now), top, autoCleanup);
+    }
+
+    /**
+     * The last 30 days of the real usage. The rows come from the daily snapshot; the current day
+     * is added live so the chart is not one day behind.
+     */
+    private List<DayUsage> dailyUsage(LocalDateTime now) {
+        LocalDate from = now.toLocalDate().minusDays(29);
+        Map<LocalDate, StorageUsageDaily> rows = new HashMap<>();
+        usageDaily.findByDayGreaterThanEqualOrderByDayAsc(from).forEach(row -> rows.put(row.getDay(), row));
+
+        List<DayUsage> result = new ArrayList<>();
+        for (int i = 0; i < 30; i++) {
+            LocalDate day = from.plusDays(i);
+            StorageUsageDaily row = rows.get(day);
+            if (row != null) {
+                result.add(new DayUsage(day.toString(), row.getStorageUsed(), row.getBandwidthUsed(),
+                        row.getCreditsUsed() == null ? null : row.getCreditsUsed().doubleValue(), row.getRegistryBytes()));
+            }
+        }
+        // Today has no snapshot yet when the job did not run: show the live numbers instead.
+        LocalDate today = now.toLocalDate();
+        if (!rows.containsKey(today)) {
+            long liveStorage = media.sumBytesOnDisk();
+            result.add(new DayUsage(today.toString(), liveStorage, 0, null, liveStorage));
+        }
+        return result;
     }
 
     private static Map<String, long[]> usage(List<Object[]> rows) {
@@ -147,7 +223,7 @@ public class AdminStorageService {
         Sort order = (sort == null ? fallback : SORTS.getOrDefault(sort, fallback)).and(Sort.by("id"));
         int pageSize = Math.min(Math.max(size, 1), 100);
         Page<MediaFile> result = media.findAll(spec, PageRequest.of(Math.max(page, 0), pageSize, order));
-        return new MediaPage(result.getContent().stream().map(AdminStorageService::toItem).toList(),
+        return new MediaPage(result.getContent().stream().map(this::toItem).toList(),
                 result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages(), summary());
     }
 
@@ -163,17 +239,19 @@ public class AdminStorageService {
                 media.sumTrashDue(now.plusDays(1)), registry.settings().getTrashRetentionDays());
     }
 
-    private static MediaItem toItem(MediaFile file) {
+    private MediaItem toItem(MediaFile file) {
         User uploader = file.getUploadedBy();
         String sourceLabel = MediaFile.SOURCE_MEMBER.equals(file.getSource())
                 ? (uploader == null ? "Unknown member" : uploader.getEmail())
                 : "Exercise library";
         String trashedBy = file.getTrashedAt() == null ? null
                 : file.getTrashedBy() == null ? "Auto-cleanup" : file.getTrashedBy().getEmail();
+        // The picture of the file, so the admin sees what it is without opening it.
+        String thumbnail = storage.thumbnailUrl(file.getFileUrl(), "VIDEO".equals(file.getFileType())).orElse(null);
         return new MediaItem(file.getId(), file.getOriginalName(), file.getFileType(), file.getStatus(),
                 file.getPreviousStatus(), file.getReason(), file.getSource(), sourceLabel, file.getUploadedAt(),
                 file.getInactiveSince(), file.getDeletableAt(), file.getTrashedAt(), trashedBy, file.getPurgeAt(),
-                file.getSizeBytes(), file.getFileUrl());
+                file.getSizeBytes(), file.getFileUrl(), thumbnail);
     }
 
     @Transactional
@@ -234,49 +312,161 @@ public class AdminStorageService {
         return toSettings(registry.settings());
     }
 
+    /**
+     * Where the quota comes from. With Cloudinary the plan decides the limit (in bytes or in
+     * credits), so the admin cannot type a number of gigabytes that has nothing to do with the real
+     * account.
+     */
+    @Transactional(readOnly = true)
+    public QuotaInfo quotaInfo() {
+        Optional<CloudinaryUsageService.Usage> cloud = cloudinary.usage();
+        if (cloud.isPresent()) {
+            return new QuotaInfo("CLOUDINARY", cloud.get().plan(), cloud.get().storageLimitBytes(), false);
+        }
+        return new QuotaInfo("LOCAL", null, 0, true);
+    }
+
+    /**
+     * The folders of the Cloudinary account the app writes into, with the number of files and their
+     * size, so the admin sees the structure of the account without opening the Media Library.
+     */
+    @Transactional(readOnly = true)
+    public FolderSetup folders() {
+        List<FolderInfo> infos = new ArrayList<>();
+        for (Map.Entry<String, String> entry : cloudinarySetup.folderLabels().entrySet()) {
+            String path = entry.getKey();
+            String label = entry.getValue();
+            boolean exists = cloudinarySetup.folderExists(path);
+            int files = exists ? cloudinarySetup.fileCount(path) : 0;
+            long bytes = exists ? cloudinarySetup.folderBytes(path) : 0;
+            infos.add(new FolderInfo(path, label, exists, files, bytes));
+        }
+        return new FolderSetup(infos, List.of(), List.of(), List.of());
+    }
+    /**
+     * Creates the folders the app needs that are not in the account yet. Cloudinary creates a folder
+     * by itself when the first file is uploaded into it, so this is only needed when the admin wants
+     * the structure to be visible in the console right away.
+     */
+    @Transactional
+    public FolderSetup setupFolders(String adminEmail) {
+        User admin = admin(adminEmail);
+        CloudinarySetupService.SetupResult result = cloudinarySetup.setupFolders();
+        List<FolderInfo> infos = new ArrayList<>();
+        Map<String, String> labels = cloudinarySetup.folderLabels();
+        for (CloudinarySetupService.FolderStatus status : result.folders()) {
+            infos.add(new FolderInfo(status.path(), labels.getOrDefault(status.path(), status.path()),
+                    status.exists(), status.files(), status.bytes()));
+        }
+        log(admin, "Created " + result.created().size() + " Cloudinary folders");
+        return new FolderSetup(infos, result.created(), result.existing(), result.failed());
+    }
+
+    /**
+     * The rules that shrink the media before it is stored, so the admin sees what happens to an
+     * upload and knows that the account only pays for the small version.
+     */
+    @Transactional(readOnly = true)
+    public OptimizationInfo optimization() {
+        return new OptimizationInfo(
+                optimization.enabled(),
+                optimization.imageTransformation(),
+                optimization.videoTransformation(),
+                optimization.deliveryTransformation(),
+                optimization.imageMaxWidth(),
+                optimization.videoMaxWidth());
+    }
+
+    /**
+     * The credit guard: what it would free right now and whether it is switched on.
+     */
+    @Transactional(readOnly = true)
+    public CreditGuardInfo creditGuard() {
+        StorageSettings s = registry.settings();
+        double usedPercent = cloudinary.usage().map(CloudinaryUsageService.Usage::planPercent).orElse(0d);
+        return new CreditGuardInfo(s.isCreditGuardEnabled(), s.getCreditGuardThreshold(), usedPercent,
+                guard.reclaimableBytes(), s.isCreditGuardEnabled() && usedPercent >= s.getCreditGuardThreshold());
+    }
+
+    /**
+     * Frees space right away: the media that is already deleted is purged and the media that no
+     * exercise uses any more is moved to the trash.
+     */
+    @Transactional
+    public CreditGuardResult freeSpace(String adminEmail) {
+        User admin = admin(adminEmail);
+        CreditGuardService.GuardOutcome outcome = guard.run(true);
+        if (outcome.freed()) {
+            log(admin, "Freed " + mb(outcome.freedBytes()) + " of storage: " + outcome.purged()
+                    + " file(s) deleted, " + outcome.trashed() + " file(s) moved to the trash");
+        }
+        return new CreditGuardResult(outcome.purged(), outcome.freedBytes(), outcome.trashed(),
+                outcome.usedPercent(), outcome.reason());
+    }
+
+    /**
+     * Reads the usage of the provider right now and stores the snapshot of the day, so the admin
+     * does not have to wait for the nightly job to see fresh numbers.
+     */
+    @Transactional
+    public Overview refreshUsage(String adminEmail) {
+        usageJob.snapshot();
+        log(admin(adminEmail), "Refreshed the storage usage from the provider");
+        return overview();
+    }
+
     @Transactional
     public Settings updateSettings(String adminEmail, UpdateSettingsRequest r) {
         User admin = admin(adminEmail);
         range("Maximum video size", r.maxVideoMb(), 10, 500);
         range("Maximum image size", r.maxImageMb(), 1, 20);
-        range("Form-check video length", r.formCheckMaxSeconds(), 10, 180);
-        range("Exercise demo video length", r.demoMaxSeconds(), 30, 600);
+        range("Video length", r.demoMaxSeconds(), 10, 600);
         range("Storage quota per member", r.memberQuotaMb(), 50, 2000);
         range("Uploads per member per day", r.uploadsPerDay(), 1, 50);
-        range("Form-check video retention", r.formCheckRetentionDays(), 1, 30);
         range("Rejected media retention", r.rejectedRetentionDays(), 7, 90);
         range("Orphaned file grace period", r.orphanGraceHours(), 1, 72);
         range("Trash retention", r.trashRetentionDays(), 0, 30);
         range("Restored file protection", r.restoreGraceDays(), 0, 30);
+        range("Credit guard threshold", r.creditGuardThreshold(), 50, 100);
         range("Total storage quota", r.quotaGb(), 1, 1000);
         range("Warning threshold", r.warningPercent(), 50, 95);
         range("Critical threshold", r.criticalPercent(), 51, 99);
         if (r.criticalPercent() <= r.warningPercent()) {
             throw badRequest("Critical threshold must be higher than the warning threshold");
         }
-        long used = media.sumBytesOnDisk();
-        if (r.quotaGb() * GB <= used) {
-            throw badRequest("Total storage quota must be higher than current usage (" + mb(used) + ")");
+        // The guard acts without asking, so it must not run before the admins were warned.
+        if (Boolean.TRUE.equals(r.creditGuardEnabled()) && r.creditGuardThreshold() <= r.criticalPercent()) {
+            throw badRequest("The credit guard threshold must be higher than the critical threshold");
+        }
+        StorageSettings s = registry.settings();
+        // With Cloudinary the plan decides how much space there is, so the admin cannot set it.
+        boolean quotaEditable = quotaInfo().quotaEditable();
+        if (quotaEditable) {
+            long used = media.sumBytesOnDisk();
+            if (r.quotaGb() * GB <= used) {
+                throw badRequest("Total storage quota must be higher than current usage (" + mb(used) + ")");
+            }
         }
         List<String> videoFormats = formats("video", r.videoFormats(), VIDEO_FORMATS);
         List<String> imageFormats = formats("image", r.imageFormats(), IMAGE_FORMATS);
 
-        StorageSettings s = registry.settings();
         s.setMaxVideoMb(r.maxVideoMb());
         s.setMaxImageMb(r.maxImageMb());
         s.setVideoFormats(String.join(",", videoFormats));
         s.setImageFormats(String.join(",", imageFormats));
-        s.setFormCheckMaxSeconds(r.formCheckMaxSeconds());
         s.setDemoMaxSeconds(r.demoMaxSeconds());
         s.setMemberQuotaMb(r.memberQuotaMb());
         s.setUploadsPerDay(r.uploadsPerDay());
-        s.setFormCheckRetentionDays(r.formCheckRetentionDays());
         s.setRejectedRetentionDays(r.rejectedRetentionDays());
         s.setOrphanGraceHours(r.orphanGraceHours());
         s.setTrashRetentionDays(r.trashRetentionDays());
         s.setRestoreGraceDays(r.restoreGraceDays());
         s.setAutoCleanupEnabled(r.autoCleanupEnabled());
-        s.setQuotaGb(r.quotaGb());
+        s.setCreditGuardEnabled(r.creditGuardEnabled());
+        s.setCreditGuardThreshold(r.creditGuardThreshold());
+        if (quotaEditable) {
+            s.setQuotaGb(r.quotaGb());
+        }
         s.setWarningPercent(r.warningPercent());
         s.setCriticalPercent(r.criticalPercent());
         s.setUpdatedBy(admin);
@@ -287,11 +477,15 @@ public class AdminStorageService {
     }
 
     private Settings toSettings(StorageSettings s) {
+        long used = cloudinary.usage()
+                .map(CloudinaryUsageService.Usage::storageUsedBytes)
+                .orElseGet(() -> media.sumBytesOnDisk());
         return new Settings(s.getMaxVideoMb(), s.getMaxImageMb(), s.videoFormatList(), s.imageFormatList(),
-                s.getFormCheckMaxSeconds(), s.getDemoMaxSeconds(), s.getMemberQuotaMb(), s.getUploadsPerDay(),
-                s.getFormCheckRetentionDays(), s.getRejectedRetentionDays(), s.getOrphanGraceHours(),
-                s.getTrashRetentionDays(), s.getRestoreGraceDays(), s.isAutoCleanupEnabled(), s.getQuotaGb(), s.getWarningPercent(),
-                s.getCriticalPercent(), media.sumBytesOnDisk(),
+                s.getDemoMaxSeconds(), s.getMemberQuotaMb(), s.getUploadsPerDay(),
+                s.getRejectedRetentionDays(), s.getOrphanGraceHours(),
+                s.getTrashRetentionDays(), s.getRestoreGraceDays(), s.isAutoCleanupEnabled(),
+                s.isCreditGuardEnabled(), s.getCreditGuardThreshold(),
+                s.getQuotaGb(), s.getWarningPercent(), s.getCriticalPercent(), used,
                 s.getUpdatedBy() == null ? null : s.getUpdatedBy().getEmail(), s.getUpdatedAt());
     }
 
