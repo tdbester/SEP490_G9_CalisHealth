@@ -80,7 +80,7 @@ public class ExerciseSafetyService {
         if (contraindications == null || contraindications.isEmpty()) {
             return List.of();
         }
-        String lower = question.toLowerCase(Locale.ROOT);
+        String lower = MedicalRedFlagDetector.normalize(question);
         List<String> matched = new ArrayList<>();
         for (String raw : contraindications) {
             if (raw == null || raw.isBlank()) {
@@ -90,7 +90,8 @@ public class ExerciseSafetyService {
             List<String> keywords = CONDITION_KEYWORDS.get(code);
             List<String> candidates = keywords != null ? keywords : List.of(code.replace('_', ' '));
             for (String keyword : candidates) {
-                if (!keyword.isBlank() && lower.contains(keyword.toLowerCase(Locale.ROOT))) {
+                String normalizedKeyword = MedicalRedFlagDetector.normalize(keyword);
+                if (!normalizedKeyword.isBlank() && lower.contains(normalizedKeyword)) {
                     matched.add(displayName(raw.trim()));
                     break;
                 }

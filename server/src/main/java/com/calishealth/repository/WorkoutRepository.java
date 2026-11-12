@@ -50,6 +50,49 @@ public interface WorkoutRepository extends JpaRepository<WorkoutEntry, Long>, Jp
             """)
     boolean existsActiveByNameIgnoreCase(@Param("name") String name, @Param("excludeId") Long excludeId);
 
+    /**
+     * True khi còn một workout HỆ THỐNG đang hoạt động dùng đúng tên này.
+     *
+     * <p>Dùng để chặn trùng tên giữa các workout do Content Manager quản lý.
+     * Workout do member tự tạo ({@code source = 'CUSTOM'}) không tính vào đây
+     * vì mỗi member có bộ workout riêng.</p>
+     *
+     * @param name            tên cần kiểm tra
+     * @param excludeWorkoutId id workout đang sửa để bỏ qua, null khi tạo mới
+     */
+    @Query("""
+            SELECT COUNT(w) > 0 FROM WorkoutEntry w
+            WHERE UPPER(w.source) = 'SYSTEM'
+              AND lower(trim(w.name)) = lower(trim(:name))
+              AND (w.moderationStatus IS NULL OR UPPER(w.moderationStatus) <> 'DELETED')
+              AND (:excludeId IS NULL OR w.id <> :excludeId)
+            """)
+    boolean existsActiveSystemByNameIgnoreCase(@Param("name") String name, @Param("excludeId") Long excludeId);
+
+    /**
+     * True khi CHÍNH member này đang có workout riêng dùng đúng tên này.
+     *
+     * <p>Chỉ so trong phạm vi sở hữu: hai member khác nhau được phép đặt cùng
+     * tên workout riêng. Ngược lại, một member sẽ không thấy workout của
+     * người khác trong "My workouts" nên trùng tên không gây nhầm lẫn.</p>
+     *
+     * @param authorId        id member sở hữu workout
+     * @param name            tên cần kiểm tra
+     * @param excludeWorkoutId id workout đang sửa để bỏ qua, null khi tạo mới
+     */
+    @Query("""
+            SELECT COUNT(w) > 0 FROM WorkoutEntry w
+            WHERE UPPER(w.source) = 'CUSTOM'
+              AND w.createdBy.id = :authorId
+              AND lower(trim(w.name)) = lower(trim(:name))
+              AND (w.moderationStatus IS NULL OR UPPER(w.moderationStatus) <> 'DELETED')
+              AND (:excludeId IS NULL OR w.id <> :excludeId)
+            """)
+    boolean existsActiveCustomByAuthorAndNameIgnoreCase(
+            @Param("authorId") Long authorId,
+            @Param("name") String name,
+            @Param("excludeId") Long excludeId);
+
     @Query("""
             SELECT COUNT(w) FROM WorkoutEntry w
             WHERE w.source = 'CUSTOM' AND w.createdBy.id = :authorId

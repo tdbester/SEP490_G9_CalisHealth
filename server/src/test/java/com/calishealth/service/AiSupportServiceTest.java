@@ -33,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -84,7 +85,7 @@ class AiSupportServiceTest {
         when(formRules.findByExerciseCode("SQUAT")).thenReturn(List.of());
         when(moderation.findFlaggedWords(anyString(), any(), any(), any())).thenReturn(List.of());
         when(physiologyService.loadProfile(anyLong())).thenReturn(null);
-        when(physiologyAlerts.evaluate(any())).thenReturn(List.of());
+        when(physiologyAlerts.evaluate(any(), anyInt(), any())).thenReturn(List.of());
         when(messageRepository.findByUser_IdAndSessionIdOrderByCreatedAtAsc(anyLong(), anyString()))
                 .thenReturn(List.of());
     }
@@ -433,7 +434,8 @@ class AiSupportServiceTest {
         when(openAi.isConfigured()).thenReturn(true);
         when(openAi.model()).thenReturn("gpt-4o-mini");
         when(physiologyService.loadProfile(3L)).thenReturn(plankProfile());
-        when(physiologyAlerts.evaluate(any())).thenReturn(List.of(new PhysiologyAlertDTO(
+        when(physiologyAlerts.countStaticExercisesInLatestSession(7L)).thenReturn(0);
+        when(physiologyAlerts.evaluate(any(), anyInt(), any())).thenReturn(List.of(new PhysiologyAlertDTO(
                 "R1_STATIC_ACCUMULATION",
                 "Tích lũy bài giữ tĩnh trong một buổi",
                 "DANGER",

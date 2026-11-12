@@ -929,6 +929,7 @@ export default {
     notSet: "Not set",
     discardWorkoutTitle: "Discard your changes?",
     discardWorkoutMessage: "Are you sure you want to cancel? Any unsaved workout changes will be lost.",
+    saveFailed: "Could not save the workout. Please try again.",
 
     // Daily plan template builder
     dailyPlanUnavailable: "Daily plan unavailable",

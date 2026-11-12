@@ -50,10 +50,8 @@ export default function Library() {
   const [searchParams] = useSearchParams();
   const queryType = searchParams.get("type");
 
-  if (queryType) {
-    return <Navigate to={`/library/exercises?type=${queryType}`} replace />;
-  }
-
+  // Hooks phải được gọi theo đúng thứ tự mọi lần render -> không được return
+  // sớm trước khi khai báo hết useState/useEffect.
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [counts, setCounts] = useState({
@@ -97,8 +95,17 @@ export default function Library() {
   };
 
   useEffect(() => {
+    if (queryType) {
+      return undefined;
+    }
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryType]);
+
+  // Chuyển hướng tới tab bài tập tương ứng khi vào /library?type=...
+  if (queryType) {
+    return <Navigate to={`/library/exercises?type=${queryType}`} replace />;
+  }
 
   const handleNavigate = (path) => {
     navigate(path);

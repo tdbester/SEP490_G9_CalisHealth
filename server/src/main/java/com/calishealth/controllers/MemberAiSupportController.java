@@ -5,6 +5,7 @@ import com.calishealth.dtos.AiSupportDtos.AskQuestionResponse;
 import com.calishealth.dtos.AiSupportDtos.HistoryItem;
 import com.calishealth.dtos.AiSupportDtos.QuotaResponse;
 import com.calishealth.dtos.PhysiologyAlertDTO;
+import com.calishealth.models.User;
 import com.calishealth.service.AiSupportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -59,7 +60,11 @@ public class MemberAiSupportController {
     @Operation(summary = "Cảnh báo sinh lý của bài tập",
             description = "Các luật cảnh báo sinh lý (V76) khớp với hồ sơ sinh lý của bài tập")
     @GetMapping("/alerts/{exerciseCode}")
-    public List<PhysiologyAlertDTO> alerts(@PathVariable String exerciseCode) {
-        return aiSupport.alertsFor(exerciseCode);
+    public List<PhysiologyAlertDTO> alerts(@PathVariable String exerciseCode, Authentication authentication) {
+        Long userId = null;
+        if (authentication != null && authentication.getPrincipal() instanceof User user) {
+            userId = user.getId();
+        }
+        return aiSupport.alertsFor(exerciseCode, userId);
     }
 }

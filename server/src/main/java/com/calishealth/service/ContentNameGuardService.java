@@ -57,4 +57,46 @@ public class ContentNameGuardService {
                     "This title is already used by an exercise. Choose a different title.");
         }
     }
+
+    /**
+     * Kiểm tra tên workout HỆ THỐNG mới (đang tạo/sửa) có trùng tên workout
+     * hệ thống khác không.
+     *
+     * <p>Chỉ so trong nhóm workout hệ thống: workout của member là nội dung riêng
+     * nên không gây nhầm lẫn với template do Content Manager quản lý.</p>
+     *
+     * @param name              tên workout mới
+     * @param excludeWorkoutId  id workout đang sửa (bỏ qua chính nó), null khi tạo mới
+     */
+    public void assertSystemWorkoutNameNotUsedByWorkout(String name, Long excludeWorkoutId) {
+        if (name == null || name.isBlank()) {
+            return;
+        }
+        if (workouts.existsActiveSystemByNameIgnoreCase(name.trim(), excludeWorkoutId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "This title is already used by another workout. Choose a different title.");
+        }
+    }
+
+    /**
+     * Kiểm tra tên workout CÁ NHÂN mới của một member có trùng tên workout
+     * cá nhân khác CỦA CHÍNH member đó không.
+     *
+     * <p>Chặn trùng trong phạm vi sở hữu: một member không thể có hai workout
+     * cùng tên (dễ gây nhầm khi mở từ danh sách "My workouts"). Hai member
+     * khác nhau vẫn được phép dùng cùng một tên.</p>
+     *
+     * @param name             tên workout mới
+     * @param memberId         id member sở hữu workout
+     * @param excludeWorkoutId id workout đang sửa (bỏ qua chính nó), null khi tạo mới
+     */
+    public void assertMemberWorkoutNameNotUsedByWorkout(String name, Long memberId, Long excludeWorkoutId) {
+        if (name == null || name.isBlank() || memberId == null) {
+            return;
+        }
+        if (workouts.existsActiveCustomByAuthorAndNameIgnoreCase(memberId, name.trim(), excludeWorkoutId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "You already have a workout with this title. Choose a different title.");
+        }
+    }
 }

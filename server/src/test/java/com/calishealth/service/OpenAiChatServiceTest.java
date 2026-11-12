@@ -65,7 +65,7 @@ class OpenAiChatServiceTest {
     }
 
     private OpenAiChatService service(String apiKey) {
-        return new OpenAiChatService(apiKey, "gpt-4o-mini", baseUrl, 10, true);
+        return new OpenAiChatService(apiKey, "gpt-4o-mini", baseUrl, 10, 700, true);
     }
 
     @Test
@@ -79,7 +79,7 @@ class OpenAiChatServiceTest {
     @Test
     void exposesDemoFallbackFlag() {
         assertTrue(service("sk-test-key").isDemoFallbackEnabled());
-        assertFalse(new OpenAiChatService("sk-test-key", "gpt-4o-mini", baseUrl, 10, false)
+        assertFalse(new OpenAiChatService("sk-test-key", "gpt-4o-mini", baseUrl, 10, 700, false)
                 .isDemoFallbackEnabled());
     }
 
@@ -211,5 +211,72 @@ class OpenAiChatServiceTest {
         assertEquals(1, answer.causes().size());
         assertTrue(answer.causes().get(0).detail().contains("elbows flared"));
         assertNotNull(answer.tip());
+    }
+
+    // ------------------------------------------------------- M3: hardening AI
+
+    @Test
+    void stripsMarkdownFenceAroundJsonAnswer() {
+        OpenAiChatService service = service("sk-test-key");
+
+        AnswerResponse answer = service.toAnswer("""
+                ```json
+                {"causes":[{"title":"Core fatigue","detail":"Hips drop."},
+                            {"title":"Insufficient ROM","detail":"Not deep enough."},
+                            {"title":"Tempo","detail":"Too fast."}],
+                 "tip":"Slow the set down.",
+                 "followUps":["How do I warm up?","How long to rest?"]}
+                ```
+                """);
+
+        assertEquals(3, answer.causes().size());
+        assertEquals("Core fatigue", answer.causes().get(0).title());
+        assertEquals("Slow the set down.", answer.tip());
+        assertEquals(2, answer.followUps().size());
+    }
+
+    @Test
+    void stripsMarkdownFenceWithoutLanguageTag() {
+        OpenAiChatService service = service("sk-test-key");
+
+        AnswerResponse answer = service.toAnswer("""
+                ```
+                {"causes":[{"title":"Core fatigue","detail":"Hips drop."}],"tip":"Rest more.","followUps":[]}
+                ```
+                """);
+
+        assertEquals(1, answer.causes().size());
+        assertEquals("Core fatigue", answer.causes().get(0).title());
+        assertEquals("Rest more.", answer.tip());
+    }
+
+    @Test
+    void usesConfiguredMaxOutputTokens() {
+        responseBody = """
+                {"choices":[{"message":{"content":"answer"}}],"usage":{"total_tokens":10}}
+                """;
+        OpenAiChatService service = new OpenAiChatService("sk-test-key", "gpt-4o-mini", baseUrl, 10, 1234, true);
+
+        service.chat("system", "hello");
+
+        assertTrue(receivedBodies.get(0).contains("\"max_completion_tokens\":1234"), receivedBodies.get(0));
+    }
+
+    @Test
+    void retriesWithLargerTokenBudgetWhenResponseIsTruncated() {
+        responseBody = """
+                {"choices":[{"message":{"content":"{\\"causes\\":[{\\"title\\":\\"Core fatigue\\"}"},
+                 "finish_reason":"length"}],"usage":{"total_tokens":700}}
+                """;
+        OpenAiChatService service = new OpenAiChatService("sk-test-key", "gpt-4o-mini", baseUrl, 10, 700, true);
+
+        // Lần đầu bị cắt cụt -> service tự thử lại với ngân sách gấp đôi.
+        OpenAiException exception = assertThrows(OpenAiException.class,
+                () -> service.chat("system", "hello"));
+
+        assertEquals("AI_TRUNCATED", exception.getCode());
+        assertEquals(2, receivedBodies.size());
+        assertTrue(receivedBodies.get(0).contains("\"max_completion_tokens\":700"), receivedBodies.get(0));
+        assertTrue(receivedBodies.get(1).contains("\"max_completion_tokens\":1400"), receivedBodies.get(1));
     }
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
-import { createMemberExercise, getMemberExerciseList } from "../api/library";
+import { createMemberExercise, getMemberExerciseList, findExerciseByName } from "../api/library";
 import { FAVORITE_ITEM_TYPES } from "../api/favorites";
 import FavoriteButton from "../components/favorites/FavoriteButton";
 import BackButton from "../components/common/BackButton";
@@ -343,6 +343,12 @@ export default function CommunityExerciseListPage() {
 
     setSubmitting(true);
     try {
+      // Check trùng tên ngay trên form (nhanh hơn chờ server trả 409).
+      const duplicated = await findExerciseByName(createForm.title);
+      if (duplicated) {
+        toast.error(t("member.customExercise.duplicateName"));
+        return;
+      }
       await createMemberExercise({
         name: createForm.title.trim(),
         level: createForm.level,
@@ -369,7 +375,12 @@ export default function CommunityExerciseListPage() {
       }, 1200);
     } catch (error) {
       console.error("Failed to submit member exercise:", error);
-      toast.error(t("member.customExercise.createFailed"));
+      // Server trả 409 khi tên bài tập đã tồn tại -> báo rõ thay vì lỗi chung chung.
+      if (error?.response?.status === 409) {
+        toast.error(t("member.customExercise.duplicateName"));
+      } else {
+        toast.error(t("member.customExercise.createFailed"));
+      }
     } finally {
       setSubmitting(false);
     }

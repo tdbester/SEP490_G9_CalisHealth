@@ -88,6 +88,77 @@ class MaintenanceEnforcementFilterTest {
     }
 
     @Test
+    void blocksMemberPrivateExerciseListDuringMemberAppMaintenance() throws Exception {
+        authenticateAs("MEMBER");
+        when(schedules.isServiceUnderMaintenance("MEMBER_APP_ACCESS")).thenReturn(true);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/library/member-exercises");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, (req, res) -> {
+            throw new AssertionError("Member-private exercise list must be blocked during app maintenance");
+        });
+
+        assertEquals(503, response.getStatus());
+        assertTrue(response.getContentAsString().contains("MEMBER_APP_ACCESS"));
+    }
+
+    @Test
+    void blocksMemberPrivateExerciseDetailDuringMemberAppMaintenance() throws Exception {
+        authenticateAs("MEMBER");
+        when(schedules.isServiceUnderMaintenance("MEMBER_APP_ACCESS")).thenReturn(true);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/library/exercises/42");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, (req, res) -> {
+            throw new AssertionError("Member-private exercise detail must be blocked during app maintenance");
+        });
+
+        assertEquals(503, response.getStatus());
+        assertTrue(response.getContentAsString().contains("MEMBER_APP_ACCESS"));
+    }
+
+    @Test
+    void blocksMemberPrivateExerciseCreateDuringMemberAppMaintenance() throws Exception {
+        authenticateAs("MEMBER");
+        when(schedules.isServiceUnderMaintenance("MEMBER_APP_ACCESS")).thenReturn(true);
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/library/exercises");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, (req, res) -> {
+            throw new AssertionError("Exercise write must be blocked during app maintenance");
+        });
+
+        assertEquals(503, response.getStatus());
+    }
+
+    @Test
+    void keepsGuestCatalogLevelsAvailableDuringMemberAppMaintenance() throws Exception {
+        authenticateAs("MEMBER");
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/library/levels");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        boolean[] continued = {false};
+
+        filter.doFilter(request, response, (req, res) -> continued[0] = true);
+
+        assertTrue(continued[0]);
+        verify(schedules, never()).isServiceUnderMaintenance(anyString());
+    }
+
+    @Test
+    void blocksUnknownLibrarySubPathDuringMemberAppMaintenance() throws Exception {
+        authenticateAs("MEMBER");
+        when(schedules.isServiceUnderMaintenance("MEMBER_APP_ACCESS")).thenReturn(true);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/library/private-notes");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, (req, res) -> {
+            throw new AssertionError("Unknown library sub-path must not bypass maintenance");
+        });
+
+        assertEquals(503, response.getStatus());
+    }
+
+    @Test
     void keepsMemberAuthenticationCheckAvailableDuringMemberAppMaintenance() throws Exception {
         authenticateAs("MEMBER");
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/auth/me");

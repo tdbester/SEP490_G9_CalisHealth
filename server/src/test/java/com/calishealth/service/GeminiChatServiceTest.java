@@ -66,7 +66,7 @@ class GeminiChatServiceTest {
     }
 
     private GeminiChatService service(String apiKey) {
-        return new GeminiChatService(apiKey, "gemini-3.5-flash", baseUrl, 10, true);
+        return new GeminiChatService(apiKey, "gemini-3.5-flash", baseUrl, 10, 1024, true);
     }
 
     @Test
@@ -80,7 +80,7 @@ class GeminiChatServiceTest {
     @Test
     void exposesDemoFallbackFlag() {
         assertTrue(service("gemini-test-key").isDemoFallbackEnabled());
-        assertFalse(new GeminiChatService("gemini-test-key", "gemini-3.5-flash", baseUrl, 10, false)
+        assertFalse(new GeminiChatService("gemini-test-key", "gemini-3.5-flash", baseUrl, 10, 1024, false)
                 .isDemoFallbackEnabled());
     }
 
@@ -223,5 +223,75 @@ class GeminiChatServiceTest {
         assertEquals(1, answer.causes().size());
         assertTrue(answer.causes().get(0).detail().contains("elbows flared"));
         assertNotNull(answer.tip());
+    }
+
+    // ------------------------------------------------------- M3: hardening AI
+
+    @Test
+    void stripsMarkdownFenceAroundJsonAnswer() {
+        GeminiChatService service = service("gemini-test-key");
+
+        AnswerResponse answer = service.toAnswer("""
+                ```json
+                {"causes":[{"title":"Core fatigue","detail":"Hips drop."},
+                            {"title":"Insufficient ROM","detail":"Not deep enough."},
+                            {"title":"Tempo","detail":"Too fast."}],
+                 "tip":"Slow the set down.",
+                 "followUps":["How do I warm up?","How long to rest?"]}
+                ```
+                """);
+
+        assertEquals(3, answer.causes().size());
+        assertEquals("Core fatigue", answer.causes().get(0).title());
+        assertEquals("Slow the set down.", answer.tip());
+        assertEquals(2, answer.followUps().size());
+    }
+
+    @Test
+    void stripsMarkdownFenceWithoutLanguageTag() {
+        GeminiChatService service = service("gemini-test-key");
+
+        AnswerResponse answer = service.toAnswer("""
+                ```
+                {"causes":[{"title":"Core fatigue","detail":"Hips drop."}],"tip":"Rest more.","followUps":[]}
+                ```
+                """);
+
+        assertEquals(1, answer.causes().size());
+        assertEquals("Core fatigue", answer.causes().get(0).title());
+        assertEquals("Rest more.", answer.tip());
+    }
+
+    @Test
+    void usesConfiguredMaxOutputTokens() {
+        responseBody = """
+                {"candidates":[{"content":{"parts":[{"text":"answer"}],"role":"model"}}],
+                 "usageMetadata":{"totalTokenCount":10}}
+                """;
+        GeminiChatService service = new GeminiChatService(
+                "gemini-test-key", "gemini-3.5-flash", baseUrl, 10, 2048, true);
+
+        service.chat("system", "hello");
+
+        assertTrue(receivedBodies.get(0).contains("\"maxOutputTokens\":2048"), receivedBodies.get(0));
+    }
+
+    @Test
+    void retriesWithLargerTokenBudgetWhenResponseIsTruncated() {
+        responseBody = """
+                {"candidates":[{"content":{"parts":[{"text":"{\\"causes\\":[{\\"title\\":\\"Core fatigue\\"}]}"}],
+                 "role":"model"},"finishReason":"MAX_TOKENS"}],
+                 "usageMetadata":{"totalTokenCount":1024}}
+                """;
+        GeminiChatService service = new GeminiChatService(
+                "gemini-test-key", "gemini-3.5-flash", baseUrl, 10, 1024, true);
+
+        OpenAiException exception = assertThrows(OpenAiException.class,
+                () -> service.chat("system", "hello"));
+
+        assertEquals("AI_TRUNCATED", exception.getCode());
+        assertEquals(2, receivedBodies.size());
+        assertTrue(receivedBodies.get(0).contains("\"maxOutputTokens\":1024"), receivedBodies.get(0));
+        assertTrue(receivedBodies.get(1).contains("\"maxOutputTokens\":2048"), receivedBodies.get(1));
     }
 }

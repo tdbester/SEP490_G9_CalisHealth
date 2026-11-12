@@ -53,6 +53,20 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long>, JpaSp
             @Param("id") Long id,
             @Param("source") String source);
 
+    /**
+     * Bài tập HỆ THỐNG đang publish theo id.
+     *
+     * <p>Dùng cho endpoint đọc công khai của thư viện: chỉ trả bài đã duyệt và
+     * đang hiển thị, không bao giờ trả bài cá nhân (kể cả bài đang chờ duyệt).
+     */
+    @Query("""
+            SELECT e FROM Exercise e
+            WHERE e.id = :id AND e.source = 'SYSTEM'
+              AND UPPER(e.moderationStatus) IN ('ACTIVE', 'ACCEPTED')
+              AND e.active = true
+            """)
+    Optional<Exercise> findAcceptedSystemById(@Param("id") Long id);
+
     @Query("""
             SELECT COUNT(e) FROM Exercise e
             WHERE e.type = :type AND e.source = 'SYSTEM'

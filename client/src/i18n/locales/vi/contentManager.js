@@ -926,6 +926,7 @@ export default {
     notSet: "Chưa đặt",
     discardWorkoutTitle: "Bỏ các thay đổi?",
     discardWorkoutMessage: "Bạn có chắc muốn huỷ? Mọi thay đổi workout chưa lưu sẽ bị mất.",
+    saveFailed: "Không lưu được workout. Vui lòng thử lại.",
 
     // Trình dựng kế hoạch tập hằng ngày
     dailyPlanUnavailable: "Không tải được kế hoạch",

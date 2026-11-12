@@ -35,10 +35,19 @@ public class OpenAiChatService implements AiChatProvider {
 
     private static final String CHAT_COMPLETIONS_PATH = "/v1/chat/completions";
 
+    /** Trần ngân sách token khi thử lại sau khi bị cắt cụt. */
+    private static final int MAX_RETRY_OUTPUT_TOKENS = 4096;
+
     private final RestClient restClient;
     private final String apiKey;
     private final String model;
     private final String baseUrl;
+    /**
+     * Ngân sách token cho câu trả lời.
+     *
+     * <p>Cố định (không đổi theo request) để service vẫn an toàn khi chạy
+     * song song nhiều request AI.
+     */
     private final int maxOutputTokens;
     private final boolean demoFallbackEnabled;
     private final ObjectMapper mapper = new ObjectMapper();
@@ -48,6 +57,7 @@ public class OpenAiChatService implements AiChatProvider {
             @Value("${app.openai.model:gpt-4o-mini}") String model,
             @Value("${app.openai.base-url:https://api.openai.com}") String baseUrl,
             @Value("${app.openai.timeout-seconds:45}") int timeoutSeconds,
+            @Value("${app.openai.max-output-tokens:700}") int maxOutputTokens,
             @Value("${app.openai.demo-fallback:true}") boolean demoFallbackEnabled
     ) {
         this.apiKey = apiKey == null ? "" : apiKey.trim();
@@ -55,7 +65,9 @@ public class OpenAiChatService implements AiChatProvider {
         this.baseUrl = (baseUrl == null || baseUrl.isBlank())
                 ? "https://api.openai.com"
                 : baseUrl.trim();
-        this.maxOutputTokens = 700;
+        // Ngân sách token cho câu trả lời (JSON 3 nguyên nhân + mẹp sửa +
+        // 2 câu hỏi gợi ý). Cho phép chỉnh qua OPENAI_MAX_OUTPUT_TOKENS.
+        this.maxOutputTokens = maxOutputTokens <= 0 ? 700 : maxOutputTokens;
         this.demoFallbackEnabled = demoFallbackEnabled;
 
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
@@ -129,10 +141,30 @@ public class OpenAiChatService implements AiChatProvider {
             throw new IllegalArgumentException("At least one chat message is required");
         }
 
+        int budget = maxOutputTokens;
+        try {
+            return execute(systemPrompt, messages, budget);
+        } catch (OpenAiException exception) {
+            // Bị cắt cụt vì hết ngân sách token -> thử lại với ngân sách gấp đôi
+            // (một lần duy nhất) trước khi báo lỗi cho member.
+            if (!"AI_TRUNCATED".equals(exception.getCode())) {
+                throw exception;
+            }
+            int biggerBudget = Math.min(budget * 2, MAX_RETRY_OUTPUT_TOKENS);
+            if (biggerBudget <= budget) {
+                throw exception;
+            }
+            log.warn("Retrying OpenAI with a larger token budget: {} -> {}", budget, biggerBudget);
+            return execute(systemPrompt, messages, biggerBudget);
+        }
+    }
+
+    /** Gọi OpenAI một lần với ngân sách token cho trước. */
+    private ChatResult execute(String systemPrompt, List<ChatMessage> messages, int outputTokens) {
         ObjectNode payload = mapper.createObjectNode();
         payload.put("model", model);
         payload.put("temperature", 0.4);
-        payload.put("max_completion_tokens", maxOutputTokens);
+        payload.put("max_completion_tokens", outputTokens);
         payload.set("response_format", mapper.createObjectNode().put("type", "json_object"));
 
         ArrayNode array = payload.putArray("messages");
@@ -251,6 +283,15 @@ public class OpenAiChatService implements AiChatProvider {
                         null);
             }
             int tokens = root.path("usage").path("total_tokens").asInt(0);
+            String finishReason = root.path("choices").path(0).path("finish_reason").asText("");
+            // Bị cắt cụt vì hết ngân sách token -> JSON thường thiếu nốt.
+            if ("length".equalsIgnoreCase(finishReason)) {
+                log.warn("OpenAI response was truncated (finish_reason=length)");
+                throw new OpenAiException(
+                        "AI_TRUNCATED",
+                        "AI Support could not answer right now. Please try again.",
+                        null);
+            }
             return new ChatResult(content, tokens);
         } catch (OpenAiException exception) {
             throw exception;
@@ -276,8 +317,10 @@ public class OpenAiChatService implements AiChatProvider {
         String tip = "";
         List<String> followUps = new ArrayList<>();
 
+        // Bỏ vỏ markdown trước khi parse: model đôi khi bọc JSON trong ```json.
+        String cleaned = AiChatProvider.stripMarkdownFence(rawContent);
         try {
-            JsonNode root = mapper.readTree(rawContent == null ? "{}" : rawContent);
+            JsonNode root = mapper.readTree(cleaned == null ? "{}" : cleaned);
             for (JsonNode node : root.path("causes")) {
                 String title = node.path("title").asText("").trim();
                 String detail = node.path("detail").asText("").trim();
@@ -298,7 +341,7 @@ public class OpenAiChatService implements AiChatProvider {
 
         // Không parse được -> dùng chính nội dung text làm 1 nguyên nhân.
         if (causes.isEmpty()) {
-            String plain = rawContent == null ? "" : rawContent.trim();
+            String plain = cleaned == null ? "" : cleaned.trim();
             if (!plain.isEmpty()) {
                 causes.add(new LikelyCause("AI coach feedback", plain));
             }
