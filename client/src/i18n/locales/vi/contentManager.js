@@ -795,7 +795,7 @@ export default {
     workoutTitlePlaceholder: "vd: Beginner full body",
     workoutDescPlaceholder: "Mô tả ngắn hiển thị trong danh sách workout",
     errTitleLength: "Nhập tiêu đề từ 1\u2013120 ký tự.",
-    errDuplicateName: "Tên bài tập đã tồn tại trong hệ thống. Hãy chọn tên khác.",
+    errDuplicateName: "Tên này đã được dùng cho một bài tập hoặc workout khác. Hãy chọn tên khác.",
     errType: "Hãy chọn Sức khoẻ hoặc Kỹ năng.",
     errValueRange: "Nhập số nguyên từ 1 đến 3600.",
     errSetsRange: "Nhập số nguyên từ 1 đến 20.",

@@ -39,6 +39,7 @@ public class LibraryService {
     private final ExerciseMuscleGroupCatalog muscleGroupCatalog;
     private final FitnessLevelRepository fitnessLevels;
     private final SystemNotificationService systemNotifications;
+    private final ContentNameGuardService contentNameGuard;
 
     // Temporary session cache for member exercises created in memory if DB user record not found
     private final List<ExerciseListItem> customSessionExercises = new ArrayList<>();
@@ -95,8 +96,10 @@ public class LibraryService {
     @Transactional(readOnly = true)
     public LibrarySummaryResponse getSummary(String userEmail) {
         ExerciseCounts exerciseCounts = getExerciseCounts(userEmail);
-        long healthWorkouts = workoutRepository.countSystemWorkoutsByType("HEALTH");
-        long skillWorkouts = workoutRepository.countSystemWorkoutsByType("SKILL");
+        // Workout FLEX xuất hiện ở cả tab Health và tab Skill nên số liệu
+        // tổng quan cũng tính FLEX vào cả hai bên (khớp với danh sách).
+        long healthWorkouts = workoutRepository.countSystemWorkoutsByTypes(List.of("HEALTH", "FLEX"));
+        long skillWorkouts = workoutRepository.countSystemWorkoutsByTypes(List.of("SKILL", "FLEX"));
         long customWorkouts = workoutRepository
                 .countBySourceAndTemplateStatusAndModerationStatusAndSharedWithCommunityTrue(
                         "CUSTOM", "PUBLISHED", "ACTIVE");
@@ -107,21 +110,34 @@ public class LibraryService {
         );
     }
 
+    /**
+     * Số liệu tổng quan của Library.
+     *
+     * GUEST (chưa đăng nhập) cũng xem được trang Library nên {@code userEmail}
+     * có thể null — khi đó các nhóm nội dung do Member tạo (bài tập cá nhân,
+     * workout tuỳ chỉnh) trả về 0 vì guest không sở hữu nội dung nào.
+     */
     @Transactional(readOnly = true)
     public LibraryOverviewDTO getOverview(String userEmail) {
-        User member = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "The signed-in user no longer exists"));
-        if (member.getRole() != UserRole.MEMBER) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only members can access the library overview");
+        Long memberId = null;
+        if (userEmail != null && !userEmail.isBlank()) {
+            User member = userRepository.findByEmail(userEmail).orElse(null);
+            if (member == null) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "The signed-in user no longer exists");
+            }
+            if (member.getRole() != UserRole.MEMBER) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only members can access the library overview");
+            }
+            memberId = member.getId();
         }
 
         return new LibraryOverviewDTO(
                 exerciseRepository.countAcceptedSystemExercisesByType("HEALTH"),
                 exerciseRepository.countAcceptedSystemExercisesByType("SKILL"),
-                exerciseRepository.countAcceptedMemberExercisesByAuthorId(member.getId()),
-                workoutRepository.countSystemWorkoutsByType("HEALTH"),
-                workoutRepository.countSystemWorkoutsByType("SKILL"),
-                workoutRepository.countCustomWorkoutsByAuthorId(member.getId())
+                memberId == null ? 0L : exerciseRepository.countAcceptedMemberExercisesByAuthorId(memberId),
+                workoutRepository.countSystemWorkoutsByTypes(List.of("HEALTH", "FLEX")),
+                workoutRepository.countSystemWorkoutsByTypes(List.of("SKILL", "FLEX")),
+                memberId == null ? 0L : workoutRepository.countCustomWorkoutsByAuthorId(memberId)
         );
     }
 
@@ -261,6 +277,8 @@ public class LibraryService {
     @Transactional
     public ExerciseListItem createMemberExercise(CreateMemberExerciseRequest req, String userEmail) {
         String name = req.name() != null ? req.name().trim() : "Untitled Custom Exercise";
+        // Tên bài tập không được trùng tuyệt đối với tên của một workout nào.
+        contentNameGuard.assertExerciseNameNotUsedByWorkout(name, null);
         String mg = req.muscleGroup() != null && !req.muscleGroup().isBlank() ? req.muscleGroup().trim() : "Full body";
         muscleGroupCatalog.validate(mg);
         String lvl = resolveLevelName(req.level());

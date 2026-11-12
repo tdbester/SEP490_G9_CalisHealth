@@ -38,6 +38,7 @@ public class WorkoutService {
     private final ExerciseRepository exercises;
     private final UserRepository users;
     private final FitnessLevelRepository fitnessLevels;
+    private final ContentNameGuardService contentNameGuard;
     private static final String REGULAR_WORKOUT = "WORKOUT";
     private static final String DAILY_TRAINING_PLAN = "DAILY_TRAINING_PLAN";
     private static final Set<String> ALLOWED_TYPES = Set.of(REGULAR_WORKOUT, "HEALTH", "SKILL", "FLEX", DAILY_TRAINING_PLAN);
@@ -95,6 +96,8 @@ public class WorkoutService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only regular workouts can be edited here");
         }
         validateWorkoutRequest(request);
+        // Đổi tên sang tên một bài tập đang dùng thì bị chặn (trùng tuyệt đối).
+        contentNameGuard.assertWorkoutNameNotUsedByExercise(request.name(), null);
         List<WorkoutExerciseItemRequest> requestedItems = resolveItemRequests(request);
         Map<String, Exercise> exercisesByCode = loadSystemExercises(requestedItems);
 
@@ -203,6 +206,8 @@ public class WorkoutService {
     @Transactional
     public WorkoutResponse create(CreateWorkoutRequest request, String creatorEmail) {
         validateWorkoutRequest(request);
+        // Tên workout không được trùng tuyệt đối với tên của một bài tập nào.
+        contentNameGuard.assertWorkoutNameNotUsedByExercise(request.name(), null);
         String type = resolveWorkoutType(request.type());
         List<WorkoutExerciseItemRequest> requestedItems = resolveItemRequests(request);
         Map<String, Exercise> exercisesByCode = loadSystemExercises(requestedItems);

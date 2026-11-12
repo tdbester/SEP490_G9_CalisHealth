@@ -1580,6 +1580,22 @@ export default function ExerciseFormPage() {
     error: exerciseLoadError,
   } = useApiQuery(() => contentManagerApi.exercises(), { enabled: true });
 
+  // Danh sách workout hệ thống để chặn trùng tên giữa bài tập và workout.
+  const { data: systemWorkouts } = useApiQuery(() => contentManagerApi.workouts(), { enabled: true });
+
+  // Tên workout đã có (không phân biệt hoa thường, bỏ khoảng trắng thừa).
+  const existingWorkoutNames = useMemo(() => {
+    const names = new Set();
+    (Array.isArray(systemWorkouts) ? systemWorkouts : []).forEach((entry) => {
+      const key = String(entry.name || "").trim().toLowerCase();
+      if (key) names.add(key);
+    });
+    return names;
+  }, [systemWorkouts]);
+
+  const isWorkoutNameTaken = (name) =>
+    existingWorkoutNames.has(String(name || "").trim().toLowerCase());
+
   // Workouts are built from the system library only; user-submitted (CUSTOM) exercises are excluded.
   const allExercises = useMemo(
     () => (Array.isArray(systemExercises) ? systemExercises : []).filter((entry) => entry.source === "SYSTEM"),
@@ -1598,6 +1614,10 @@ export default function ExerciseFormPage() {
 
   const isDuplicateExerciseName = (name) =>
     existingExerciseNames.has(String(name || "").trim().toLowerCase());
+
+  // Tên bài tập trùng tuyệt đối với tên một workout nào cũng bị chặn.
+  const isExerciseNameConflictingWithWorkout = (name) =>
+    isWorkoutNameTaken(name);
 
   useEffect(() => {
     if (kind !== "workout") return;
@@ -1635,7 +1655,11 @@ export default function ExerciseFormPage() {
         replace: true,
         state: { successMessage: t("contentManager.form.workoutCreated", { name: entry.name }) },
       }),
-    onError: (requestError) => setError(requestError.message),
+    onError: (requestError) => {
+      const message = requestError.message || "";
+      const duplicate = /already exists|already used|duplicate/i.test(message);
+      setError(duplicate ? t("contentManager.form.errDuplicateName") : message);
+    },
   });
 
   const isSaving = exerciseMutation.isPending || workoutMutation.isPending;
@@ -1659,6 +1683,7 @@ export default function ExerciseFormPage() {
       const invalid = [];
       if (!exercise.name.trim() || exercise.name.length > 120) invalid.push("title");
       else if (isDuplicateExerciseName(exercise.name)) invalid.push("duplicateName");
+      else if (isExerciseNameConflictingWithWorkout(exercise.name)) invalid.push("duplicateName");
       if (!["HEALTH", "SKILL"].includes(exercise.type)) invalid.push("type");
       if (!activeLevels.includes(exercise.level)) invalid.push("level");
       if (selectedMuscles.length === 0) invalid.push("muscles");
@@ -1709,6 +1734,11 @@ export default function ExerciseFormPage() {
 
     if (!workout.name.trim() || !workout.description.trim()) {
       setError(t("contentManager.form.errWorkoutTitleDesc"));
+      return;
+    }
+    // Tên workout không được trùng tuyệt đối với tên của một bài tập hay workout khác.
+    if (isDuplicateExerciseName(workout.name) || isWorkoutNameTaken(workout.name)) {
+      setError(t("contentManager.form.errDuplicateName"));
       return;
     }
     if (!["HEALTH", "SKILL", "FLEX"].includes(workout.type)) {

@@ -38,6 +38,7 @@ public class LibraryWorkoutService {
     private final ExerciseRepository exercises;
     private final UserRepository users;
     private final FitnessLevelRepository fitnessLevels;
+    private final ContentNameGuardService contentNameGuard;
 
     @Transactional(readOnly = true)
     public PageResponseDTO<WorkoutListItemDTO> getCommunityWorkouts(String memberEmail, WorkoutFilterRequestDTO filter) {
@@ -49,21 +50,32 @@ public class LibraryWorkoutService {
         return getWorkoutPage(memberEmail, filter, false);
     }
 
+    /**
+     * Danh sách workout hệ thống (HEALTH / SKILL).
+     *
+     * Endpoint này mở cho GUEST nên {@code memberEmail} có thể null — khi đó
+     * không cần tra user, chỉ cần lọc theo type/level/search.
+     *
+     * Workout loại FLEX (linh hoạt) hiển thị ở CẢ tab Health và tab Skill,
+     * nên mỗi tab lọc theo {HEALTH, FLEX} hoặc {SKILL, FLEX}.
+     */
     @Transactional(readOnly = true)
     public PageResponseDTO<WorkoutListItemDTO> getSystemWorkouts(
             String memberEmail,
             String type,
             WorkoutFilterRequestDTO filter
     ) {
-        requireMember(memberEmail);
         validateFilter(filter);
         String normalizedType = type == null ? "" : type.trim().toUpperCase(Locale.ROOT);
-        if (!Set.of("HEALTH", "SKILL").contains(normalizedType)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Workout type must be HEALTH or SKILL");
-        }
+        List<String> types = switch (normalizedType) {
+            case "HEALTH" -> List.of("HEALTH", "FLEX");
+            case "SKILL" -> List.of("SKILL", "FLEX");
+            default -> throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Workout type must be HEALTH or SKILL");
+        };
 
         Page<WorkoutEntry> result = workouts.findAll(
-                WorkoutSpecification.withSystemFilters(filter, normalizedType),
+                WorkoutSpecification.withSystemFilters(filter, types),
                 PageRequest.of(filter.getPage(), filter.getSize(),
                         Sort.by(Sort.Order.asc("name"), Sort.Order.asc("id"))));
         return new PageResponseDTO<>(
@@ -83,7 +95,7 @@ public class LibraryWorkoutService {
                 .filter(entry -> entry.isSystem()
                         && entry.isActive()
                         && "ACTIVE".equalsIgnoreCase(entry.getModerationStatus())
-                        && Set.of("HEALTH", "SKILL").contains(
+                        && Set.of("HEALTH", "SKILL", "FLEX").contains(
                                 entry.getType() == null ? "" : entry.getType().toUpperCase(Locale.ROOT)))
                 .orElseThrow(() -> new ResourceNotFoundException("System workout not found"));
         return toDetail(workout);
@@ -133,6 +145,8 @@ public class LibraryWorkoutService {
     @Transactional
     public WorkoutDetailResponseDTO createWorkout(String memberEmail, CreateUpdateWorkoutRequestDTO request) {
         User member = requireMember(memberEmail);
+        // Tên workout không được trùng tuyệt đối với tên của một bài tập nào.
+        contentNameGuard.assertWorkoutNameNotUsedByExercise(request.title(), null);
         validateItems(request.items());
         Map<Long, Exercise> selectedExercises = getAllowedExercises(
                 member.getId(), request.items().stream().map(WorkoutItemDTO::exerciseId).toList());
@@ -146,8 +160,11 @@ public class LibraryWorkoutService {
         workout.setCreatedBy(member);
         workout.setSharedWithCommunity(Boolean.TRUE.equals(request.isSharedWithCommunity()));
         workout.setModerationStatus("ACTIVE");
+        // Level phải có trước lần insert đầu tiên (cột `level` NOT NULL), nên tính
+        // level ngay ở đây thay vì đợi populateWorkout gán sau.
+        workout.setLevel(resolveWorkoutLevel(request.items(), selectedExercises, request.level()));
         workouts.saveAndFlush(workout);
-        populateWorkout(workout, request.items(), selectedExercises, request.level());
+        populateWorkout(workout, request.items(), selectedExercises);
         return toDetail(workouts.saveAndFlush(workout));
     }
 
@@ -159,6 +176,8 @@ public class LibraryWorkoutService {
     ) {
         User member = requireMember(memberEmail);
         WorkoutEntry workout = requireOwnedWorkout(member.getId(), workoutId);
+        // Đổi tên sang tên một bài tập đang dùng thì bị chặn (trùng tuyệt đối).
+        contentNameGuard.assertWorkoutNameNotUsedByExercise(request.title(), null);
         validateItems(request.items());
         Map<Long, Exercise> selectedExercises = getAllowedExercises(
                 member.getId(), request.items().stream().map(WorkoutItemDTO::exerciseId).toList());
@@ -168,7 +187,8 @@ public class LibraryWorkoutService {
             workout.setType(resolveWorkoutType(request.type()));
         }
         workout.setSharedWithCommunity(Boolean.TRUE.equals(request.isSharedWithCommunity()));
-        populateWorkout(workout, request.items(), selectedExercises, request.level());
+        workout.setLevel(resolveWorkoutLevel(request.items(), selectedExercises, request.level()));
+        populateWorkout(workout, request.items(), selectedExercises);
         WorkoutEntry saved = workouts.saveAndFlush(workout);
         return toDetail(saved);
     }
@@ -222,11 +242,35 @@ public class LibraryWorkoutService {
         };
     }
 
-    private void populateWorkout(
-            WorkoutEntry workout,
+    /**
+     * Level của workout: ưu tiên level member chọn, nếu không chọn thì lấy level cao nhất
+     * trong các bài được chọn. Tách riêng để gán level TRƯỚC lần insert đầu tiên
+     * (cột `level` NOT NULL) và dùng lại trong {@link #populateWorkout}.
+     */
+    private String resolveWorkoutLevel(
             List<WorkoutItemDTO> items,
             Map<Long, Exercise> exercisesById,
             String requestedLevel
+    ) {
+        String highestLevel = null;
+        for (WorkoutItemDTO item : items) {
+            Exercise exercise = exercisesById.get(item.exerciseId());
+            if (exercise == null) {
+                continue;
+            }
+            if (isHigherLevel(exercise.getLevel(), highestLevel)) {
+                highestLevel = exercise.getLevel();
+            }
+        }
+        return resolveLevelName(requestedLevel == null || requestedLevel.isBlank()
+                ? highestLevel
+                : requestedLevel);
+    }
+
+    private void populateWorkout(
+            WorkoutEntry workout,
+            List<WorkoutItemDTO> items,
+            Map<Long, Exercise> exercisesById
     ) {
         List<WorkoutItemDTO> ordered = items.stream()
                 .sorted(Comparator.comparingInt(WorkoutItemDTO::orderIndex))
@@ -253,7 +297,6 @@ public class LibraryWorkoutService {
 
         int totalSets = ordered.stream().mapToInt(WorkoutItemDTO::sets).sum();
         long totalSeconds = 0;
-        String highestLevel = null;
         for (int index = 0; index < ordered.size(); index++) {
             WorkoutItemDTO item = ordered.get(index);
             Exercise exercise = selectedExercises.get(index);
@@ -263,17 +306,10 @@ public class LibraryWorkoutService {
                     : (long) item.reps() * 3;
             totalSeconds += effortSeconds * item.sets()
                     + (long) item.restSeconds() * Math.max(0, item.sets() - 1);
-            if (isHigherLevel(exercise.getLevel(), highestLevel)) {
-                highestLevel = exercise.getLevel();
-            }
         }
         workout.setTotalSets(totalSets);
         long estimatedMinutes = (long) Math.ceil(totalSeconds / 60.0);
         workout.setEstimatedDuration((int) Math.min(Integer.MAX_VALUE, estimatedMinutes));
-        workout.setLevel(resolveLevelName(requestedLevel == null || requestedLevel.isBlank()
-                ? highestLevel
-                : requestedLevel));
-
     }
 
     /**
@@ -359,6 +395,7 @@ public class LibraryWorkoutService {
                 workout.getName(),
                 workout.getDescription(),
                 workout.getLevel(),
+                workout.getType(),
                 workout.isSharedWithCommunity(),
                 workout.getSaveCount(),
                 workout.getAuthor() == null ? null : workout.getAuthor().getFullName(),
@@ -375,6 +412,7 @@ public class LibraryWorkoutService {
                 workout.getName(),
                 workout.getDescription(),
                 workout.getLevel(),
+                workout.getType(),
                 workout.getAuthor() == null ? null : workout.getAuthor().getFullName(),
                 workout.getCreatedAt(),
                 workout.getSaveCount(),

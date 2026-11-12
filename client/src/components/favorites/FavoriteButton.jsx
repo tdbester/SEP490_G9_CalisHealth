@@ -1,6 +1,9 @@
 import { useTranslation } from "react-i18next";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 import { normalizeItemId } from "../../api/favorites";
 import { useFavorites } from "../../context/FavoritesContext";
+import { isGuestSession, loginPath } from "../../utils/authState";
 
 /** Ngôi sao rỗng — chưa yêu thích. */
 export function StarIcon({ className = "h-4 w-4", filled = false }) {
@@ -41,6 +44,7 @@ export default function FavoriteButton({
   size = "md",
 }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { isFavorite, toggle, pending } = useFavorites();
   const normalizedId = normalizeItemId(itemId);
   // Id không phải số (vd dữ liệu mẫu có slug) thì server sẽ từ chối —
@@ -54,6 +58,12 @@ export default function FavoriteButton({
     event.preventDefault();
     event.stopPropagation();
     if (busy || !usable) return;
+    // GUEST chưa đăng nhập thì không đánh dấu sao được — mời đăng nhập.
+    if (isGuestSession()) {
+      toast.info(t("member.library.loginRequiredDetail"));
+      navigate(loginPath(window.location.pathname + window.location.search));
+      return;
+    }
     await toggle(itemType, normalizedId);
     if (onClick) onClick(event);
   };

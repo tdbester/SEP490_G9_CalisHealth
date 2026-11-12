@@ -37,6 +37,7 @@ class LibraryWorkoutServiceTest {
     @Mock private ExerciseRepository exercises;
     @Mock private UserRepository users;
     @Mock private FitnessLevelRepository fitnessLevels;
+    @Mock private ContentNameGuardService contentNameGuard;
     @InjectMocks private LibraryWorkoutService service;
 
     /** Level do Content Manager cấu hình động, nên test dựng sẵn các level trong fitness_levels. */
@@ -171,11 +172,6 @@ class LibraryWorkoutServiceTest {
 
     @Test
     void systemWorkoutListReturnsPagedWorkoutData() {
-        User member = new User();
-        member.setId(4L);
-        member.setEmail("member@example.test");
-        when(users.findByEmail(member.getEmail())).thenReturn(Optional.of(member));
-
         WorkoutEntry workout = new WorkoutEntry();
         workout.setId(12L);
         workout.setName("Health circuit");
@@ -196,7 +192,7 @@ class LibraryWorkoutServiceTest {
                 any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(workout), PageRequest.of(0, 6), 1));
 
-        var response = service.getSystemWorkouts(member.getEmail(), "health", new WorkoutFilterRequestDTO());
+        var response = service.getSystemWorkouts(null, "health", new WorkoutFilterRequestDTO());
 
         assertEquals(1, response.totalElements());
         assertEquals(1, response.content().size());
