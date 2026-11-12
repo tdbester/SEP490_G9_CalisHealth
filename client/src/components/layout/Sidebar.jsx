@@ -129,11 +129,16 @@ export default function Sidebar() {
   const { t } = useTranslation();
   const role = currentRole();
   const isMember = role === "MEMBER";
+  // GUEST (chưa đăng nhập) chỉ thấy các mục mở công khai: Dashboard + Library.
+  // Các mục còn lại (Leaderboard, Favorites, Feedback, Tracking) là của MEMBER
+  // nên ẩn đi thay vì để bấm rồi bị đá về trang đăng nhập.
+  const GUEST_NAV_KEYS = new Set(["nav.dashboard", "nav.library"]);
   const baseItems = role === "CONTENT_MANAGER" ? CONTENT_MANAGER_NAV : NAV_ITEMS;
   // Favorites là tính năng riêng của MEMBER — các role khác không gọi được API.
   const items = isMember
     ? baseItems
-    : baseItems.filter((item) => item.labelKey !== "nav.favorites");
+    : baseItems.filter((item) => item.labelKey !== "nav.favorites"
+        && (role === "CONTENT_MANAGER" || GUEST_NAV_KEYS.has(item.labelKey)));
 
   return (
     <aside className="sidebar">

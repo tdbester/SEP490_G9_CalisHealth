@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { toast } from "react-toastify";
 import { getLibraryOverview } from "../api/library";
+import { isGuestSession, loginPath } from "../utils/authState";
 import "./Library.css";
 
 // Icons
@@ -102,6 +104,22 @@ export default function Library() {
     navigate(path);
   };
 
+  // ── GUEST (chưa đăng nhập) ──────────────────────────────────────────────
+  // Guest được xem các trang danh sách của nội dung HỆ THỐNG
+  // (Exercise for health / skill, Workout for health / skill).
+  // Riêng các mục do Member tạo (bài tập cá nhân, workout tuỳ chỉnh) và
+  // mục Favorites thì bị chặn và mời đăng nhập.
+  const isGuest = isGuestSession();
+
+  const requireMember = (path) => {
+    if (!isGuest) {
+      navigate(path);
+      return;
+    }
+    toast.info(t("member.library.loginRequiredDetail"));
+    navigate(loginPath(path));
+  };
+
   return (
     <div className="library-container">
       {/* 2. Tiêu đề trang */}
@@ -110,14 +128,16 @@ export default function Library() {
           <h1 className="library-title">{t("member.library.pageTitle")}</h1>
           <p className="library-description">{t("member.library.pageDescription")}</p>
         </div>
-        <button
-          type="button"
-          className="library-favorites-link"
-          onClick={() => handleNavigate("/library/favorites")}
-        >
-          <StarIcon />
-          <span>{t("member.favorites.title")}</span>
-        </button>
+        {!isGuest && (
+          <button
+            type="button"
+            className="library-favorites-link"
+            onClick={() => handleNavigate("/library/favorites")}
+          >
+            <StarIcon />
+            <span>{t("member.favorites.title")}</span>
+          </button>
+        )}
       </header>
 
       {/* Error state alert */}
@@ -229,9 +249,7 @@ export default function Library() {
               <button
                 type="button"
                 className="card-view-btn"
-                onClick={() =>
-                  handleNavigate("/library/community")
-                }
+                onClick={() => requireMember("/library/community")}
               >
                 <span>{t("member.library.viewList")}</span>
                 <ArrowRightIcon />
@@ -338,7 +356,7 @@ export default function Library() {
               <button
                 type="button"
                 className="card-view-btn"
-                onClick={() => handleNavigate("/library/custom")}
+                onClick={() => requireMember("/library/custom")}
               >
                 <span>{t("member.library.viewList")}</span>
                 <ArrowRightIcon />

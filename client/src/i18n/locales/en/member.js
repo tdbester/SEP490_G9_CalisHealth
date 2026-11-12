@@ -589,6 +589,8 @@ export default {
     workoutForSkillDesc: "Built from exercises for skill.",
     customWorkoutDesc: "System based or member provided workouts.",
     viewList: "View list",
+    loginRequiredDetail:
+      "Please log in to view the full details of this exercise or workout.",
     exerciseCount: "{count} exercises",
     workoutCount: "{count} workouts",
     placeholder: {
@@ -852,6 +854,7 @@ export default {
     expert: "Expert",
     health: "Health",
     skills: "Skills",
+    typeFlex: "Flex",
     exercises: "exercises",
     workouts: "workouts",
     sets: "sets",

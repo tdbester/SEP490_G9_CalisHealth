@@ -45,6 +45,7 @@ public class PersonalExerciseService {
     private final MediaRegistryService mediaRegistry;
     private final ExerciseMuscleGroupCatalog muscleGroupCatalog;
     private final SystemNotificationService systemNotifications;
+    private final ContentNameGuardService contentNameGuard;
 
     /**
      * Level do Content Manager quản lý trong Level & Benchmark Criteria nên tên level lấy động
@@ -87,6 +88,8 @@ public class PersonalExerciseService {
         if (textReason != null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, textReason);
         }
+        // Tên bài tập cá nhân không được trùng tuyệt đối với tên của một workout nào.
+        contentNameGuard.assertExerciseNameNotUsedByWorkout(request.title(), null);
         videoStorage.validateVideoFile(videoFile, true);
         String videoReason = moderation.checkVideo(videoFile);
         ContentModerationService.ModerationResult result = moderation.combine(textReason, videoReason);
@@ -216,6 +219,7 @@ public class PersonalExerciseService {
         if (textReason != null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, textReason);
         }
+        contentNameGuard.assertExerciseNameNotUsedByWorkout(request.title(), null);
         boolean hasNewVideo = videoFile != null && !videoFile.isEmpty();
         if (hasNewVideo) {
             videoStorage.validateVideoFile(videoFile, true);
@@ -309,6 +313,7 @@ public class PersonalExerciseService {
         if (textReason != null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, textReason);
         }
+        contentNameGuard.assertExerciseNameNotUsedByWorkout(request.title(), null);
         boolean hasNewVideo = videoFile != null && !videoFile.isEmpty();
         if (hasNewVideo) {
             videoStorage.validateVideoFile(videoFile, true);

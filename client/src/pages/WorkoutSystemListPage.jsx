@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { toast } from "react-toastify";
 import { getSystemWorkouts } from "../api/library";
 import { FAVORITE_ITEM_TYPES } from "../api/favorites";
 import FavoriteButton from "../components/favorites/FavoriteButton";
@@ -9,6 +10,7 @@ import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { getLevelLabel } from "../utils/levelLabel";
 import { useSystemLevels } from "../useSystemLevels";
 import { localizeSeed, localizeSeedDeep } from "../utils/seedText";
+import { isGuestSession, loginPath } from "../utils/authState";
 import "./ExerciseListPage.css";
 
 const MUSCLE_GROUPS = ["All", "Full body", "Chest", "Back", "Arms", "Core", "Legs"];
@@ -276,6 +278,8 @@ function normalizeWorkout(workout) {
   return {
     id: workout.id,
     title: workout.title,
+    // API trả type thật của workout (HEALTH / SKILL / FLEX). Workout FLEX hiển thị
+    // ở cả tab Health và tab Skill nên không được ghi đè theo tab đang xem.
     type: String(workout.type || "").toLowerCase(),
     level: titleCaseLevel(workout.level),
     muscleGroup: workout.muscleGroup || "Full body",
@@ -521,11 +525,10 @@ export default function WorkoutSystemListPage() {
         ),
       );
       const allWorkouts = [firstPage, ...remainingPages].flatMap((response) => response?.content || []);
+      // Giữ nguyên type thật từ API (HEALTH / SKILL / FLEX) — workout FLEX xuất
+      // hiện ở cả tab Health và tab Skill nên không gộp vào type của tab đang xem.
       const apiWorkouts = Array.isArray(allWorkouts)
-        ? allWorkouts.map((workout) => normalizeWorkout({
-            ...workout,
-            type: activeTab,
-          }))
+        ? allWorkouts.map((workout) => normalizeWorkout(workout))
         : [];
       const matchingApiWorkouts = apiWorkouts.filter((workout) => workout.title);
       setWorkouts(matchingApiWorkouts.length
@@ -601,7 +604,15 @@ export default function WorkoutSystemListPage() {
   const handleCardClick = (workout) => {
     const typeParam = activeTab === "skills" ? "skills" : "health";
     const mockParam = workout.isMock ? "&mock=true" : "";
-    navigate(`/library/workouts/system/${workout.id}?type=${typeParam}${mockParam}`);
+    const target = `/library/workouts/system/${workout.id}?type=${typeParam}${mockParam}`;
+    // GUEST (chưa đăng nhập) được xem danh sách nhưng bấm vào XEM CHI TIẾT
+    // thì bị chặn và mời đăng nhập trước khi mở màn chi tiết.
+    if (isGuestSession()) {
+      toast.info(t("member.library.loginRequiredDetail"));
+      navigate(loginPath(target));
+      return;
+    }
+    navigate(target);
   };
 
   const clearFilters = () => {

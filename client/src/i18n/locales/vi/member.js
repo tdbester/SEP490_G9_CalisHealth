@@ -592,6 +592,8 @@ export default {
     workoutForSkillDesc: "Được xây dựng từ bài tập cho kỹ năng.",
     customWorkoutDesc: "Workout dựa trên hệ thống hoặc do member cung cấp.",
     viewList: "Xem danh sách",
+    loginRequiredDetail:
+      "Vui lòng đăng nhập để xem chi tiết bài tập hoặc workout này.",
     exerciseCount: "{count} bài tập",
     workoutCount: "{count} workout",
     placeholder: {
@@ -855,6 +857,7 @@ export default {
     expert: "Chuyên gia",
     health: "Sức khoẻ",
     skills: "Kỹ năng",
+    typeFlex: "Linh hoạt",
     exercises: "bài tập",
     workouts: "workout",
     sets: "hiệp",

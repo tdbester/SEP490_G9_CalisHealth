@@ -87,7 +87,8 @@ class PersonalExerciseServiceTest {
                 videoStorage,
                 mediaRegistry,
                 mock(ExerciseMuscleGroupCatalog.class),
-                systemNotifications);
+                systemNotifications,
+                mock(ContentNameGuardService.class));
         User member = new User();
         member.setId(7L);
         member.setEmail("member@example.com");

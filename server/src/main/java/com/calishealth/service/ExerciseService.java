@@ -61,6 +61,7 @@ public class ExerciseService {
     private final ExerciseMuscleGroupCatalog muscleGroupCatalog;
     private final SystemNotificationService systemNotifications;
     private final ExercisePhysiologyService physiologyService;
+    private final ContentNameGuardService contentNameGuard;
 
     @Transactional(readOnly = true)
     public PageResponseDTO<ExerciseItemResponseDTO> getSystemExercises(ExerciseFilterRequestDTO filter) {
@@ -298,6 +299,8 @@ public class ExerciseService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Exercise title already exists. Choose a different title.");
         }
+        // Tên bài tập cũng không được trùng tuyệt đối với tên của một workout nào.
+        contentNameGuard.assertExerciseNameNotUsedByWorkout(request.name(), null);
         if (request.muscleGroup() == null || request.muscleGroup().isBlank() || request.muscleGroup().length() > 120) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select one or more muscle groups");
         }
@@ -366,6 +369,10 @@ public class ExerciseService {
         if (nameChanged && exercises.existsOtherNotDeletedByNameIgnoreCase(exercise.getId(), requestedName)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Exercise title already exists. Choose a different title.");
+        }
+        // Đổi tên sang tên một workout đang dùng thì bị chặn (trùng tuyệt đối).
+        if (nameChanged) {
+            contentNameGuard.assertExerciseNameNotUsedByWorkout(requestedName, null);
         }
         if (request.muscleGroup() == null || request.muscleGroup().isBlank() || request.muscleGroup().length() > 120) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select one or more muscle groups");

@@ -798,7 +798,7 @@ export default {
     workoutTitlePlaceholder: "e.g. Beginner full body",
     workoutDescPlaceholder: "A short summary shown in the workout list",
     errTitleLength: "Enter a title of 1\u2013120 characters.",
-    errDuplicateName: "This exercise title already exists in the system. Choose a different one.",
+    errDuplicateName: "This title is already used by another exercise or workout. Choose a different one.",
     errType: "Choose Health or Skill.",
     errValueRange: "Enter a whole number from 1 to 3600.",
     errSetsRange: "Enter a whole number from 1 to 20.",
