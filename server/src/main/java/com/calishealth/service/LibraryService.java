@@ -41,8 +41,10 @@ public class LibraryService {
     private final SystemNotificationService systemNotifications;
     private final ContentNameGuardService contentNameGuard;
 
-    // Temporary session cache for member exercises created in memory if DB user record not found
-    private final List<ExerciseListItem> customSessionExercises = new ArrayList<>();
+    // Không còn cache bài tập trong RAM. Trước đây mọi bài tạo khi không resolve
+    // được user được nhét vào list này và bị trả cho MỌI người gọi API (kể cả
+    // guest), vừa rò rỉ dữ liệu vừa không an toàn khi chạy đa luồng.
+    // Giờ mọi bài tạo đều phải đăng nhập và được lưu vào DB.
 
     @Transactional(readOnly = true)
     public ExerciseCounts getExerciseCounts(String userEmail) {
@@ -125,10 +127,12 @@ public class LibraryService {
             if (member == null) {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "The signed-in user no longer exists");
             }
-            if (member.getRole() != UserRole.MEMBER) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only members can access the library overview");
+            // Chỉ MEMBER mới sở hữu nội dung cá nhân. Content Manager / Admin
+            // vẫn xem được số liệu tổng quan của thư viện (phần nội dung do
+            // họ tạo sẽ là 0) thay vì bị chặn 403.
+            if (member.getRole() == UserRole.MEMBER) {
+                memberId = member.getId();
             }
-            memberId = member.getId();
         }
 
         return new LibraryOverviewDTO(
@@ -276,9 +280,26 @@ public class LibraryService {
 
     @Transactional
     public ExerciseListItem createMemberExercise(CreateMemberExerciseRequest req, String userEmail) {
+        // Bài tập cá nhân luôn thuộc về một member cụ thể nên bắt buộc đăng nhập.
+        // Trước đây khi không có phiên, bài tạo được nhét vào list in-memory dùng
+        // chung và bị trả cho mọi người gọi API (kể cả guest).
+        if (userEmail == null || userEmail.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Sign in to create a custom exercise");
+        }
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                        "The signed-in user no longer exists"));
+
         String name = req.name() != null ? req.name().trim() : "Untitled Custom Exercise";
         // Tên bài tập không được trùng tuyệt đối với tên của một workout nào.
         contentNameGuard.assertExerciseNameNotUsedByWorkout(name, null);
+        // Tên bài tập cũng phải duy nhất trong DB (không phân biệt hoa thường,
+        // bỏ khoảng trắng thừa) — kể cả với bài do chính member đó tạo trước đó.
+        if (exerciseRepository.existsNotDeletedByNameIgnoreCase(name)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Exercise title already exists. Choose a different title.");
+        }
         String mg = req.muscleGroup() != null && !req.muscleGroup().isBlank() ? req.muscleGroup().trim() : "Full body";
         muscleGroupCatalog.validate(mg);
         String lvl = resolveLevelName(req.level());
@@ -291,46 +312,34 @@ public class LibraryService {
         Integer duration = parseDurationSeconds(reps);
         String category = duration != null && defaultReps == null ? "HOLD" : "REPS";
 
-        Long newId = System.currentTimeMillis();
-        String code = "CU_" + newId;
-        boolean persisted = false;
+        Exercise memberEntry = new Exercise();
+        memberEntry.setCode("TMP-" + UUID.randomUUID().toString().replace("-", "").substring(0, 24));
+        memberEntry.setName(name);
+        memberEntry.setDescription(desc);
+        memberEntry.setType("HEALTH");
+        memberEntry.setSystem(false);
+        memberEntry.setAuthor(user);
+        memberEntry.setCreatedBy(user);
+        memberEntry.setSource("CUSTOM");
+        memberEntry.setStatus("PENDING");
+        memberEntry.setActive(false);
+        memberEntry.setCategory(category);
+        memberEntry.setLevel(lvl);
+        memberEntry.setDefaultSets(sets);
+        memberEntry.setDefaultReps(defaultReps);
+        memberEntry.setDefaultDuration(duration);
+        memberEntry.setEquipment(equip);
+        memberEntry.setGuide(desc);
+        memberEntry.setSaveCount(0);
+        Exercise saved = exerciseRepository.save(memberEntry);
+        saved.setCode("CU_" + saved.getId());
+        muscleGroupCatalog.assign(saved, mg);
+        saved = exerciseRepository.save(saved);
+        systemNotifications.notifyContentManagersPendingApproval(saved.getName());
 
-        if (userEmail != null && !userEmail.isBlank()) {
-            User user = userRepository.findByEmail(userEmail).orElse(null);
-            if (user != null) {
-                Exercise memberEntry = new Exercise();
-                memberEntry.setCode("TMP-" + UUID.randomUUID().toString().replace("-", "").substring(0, 24));
-                memberEntry.setName(name);
-                memberEntry.setDescription(desc);
-                memberEntry.setType("HEALTH");
-                memberEntry.setSystem(false);
-                memberEntry.setAuthor(user);
-                memberEntry.setCreatedBy(user);
-                memberEntry.setSource("CUSTOM");
-                memberEntry.setStatus("PENDING");
-                memberEntry.setActive(false);
-                memberEntry.setCategory(category);
-                memberEntry.setLevel(lvl);
-                memberEntry.setDefaultSets(sets);
-                memberEntry.setDefaultReps(defaultReps);
-                memberEntry.setDefaultDuration(duration);
-                memberEntry.setEquipment(equip);
-                memberEntry.setGuide(desc);
-                memberEntry.setSaveCount(0);
-                Exercise saved = exerciseRepository.save(memberEntry);
-                saved.setCode("CU_" + saved.getId());
-                muscleGroupCatalog.assign(saved, mg);
-                saved = exerciseRepository.save(saved);
-                systemNotifications.notifyContentManagersPendingApproval(saved.getName());
-                newId = saved.getId();
-                code = saved.getCode();
-                persisted = true;
-            }
-        }
-
-        ExerciseListItem newItem = new ExerciseListItem(
-                newId,
-                code,
+        return new ExerciseListItem(
+                saved.getId(),
+                saved.getCode(),
                 name,
                 "HEALTH",
                 "CUSTOM",
@@ -345,11 +354,6 @@ public class LibraryService {
                 desc,
                 null
         );
-
-        if (!persisted) {
-            customSessionExercises.add(0, newItem);
-        }
-        return newItem;
     }
 
     /**
@@ -394,7 +398,10 @@ public class LibraryService {
 
         try {
             Long numericId = Long.parseLong(idOrSlug);
-            var found = exerciseRepository.findById(numericId);
+            // Chỉ trả bài tập HỆ THỐNG đang publish. Nếu lấy bất kỳ bài nào theo id
+            // thì bài cá nhân của member (kể cả bài đang chờ duyệt / bị từ chối)
+            // sẽ bị lộ qua endpoint này.
+            var found = exerciseRepository.findAcceptedSystemById(numericId);
             if (found.isPresent()) {
                 return mapExerciseEntityToDto(found.get());
             }
@@ -402,7 +409,6 @@ public class LibraryService {
 
         List<ExerciseListItem> all = new ArrayList<>(getSeedExercises());
         all.addAll(getSeedMemberExercises());
-        all.addAll(customSessionExercises);
 
         for (ExerciseListItem item : all) {
             if (String.valueOf(item.id()).equals(idOrSlug) ||
@@ -536,10 +542,7 @@ public class LibraryService {
             list.addAll(getSeedExercises());
         }
 
-        // 3. Add custom session exercises
-        list.addAll(customSessionExercises);
-
-        // 4. Load Member exercises from database (if member is logged in)
+        // 3. Load Member exercises from database (if member is logged in)
         if (userEmail != null && !userEmail.isBlank()) {
             try {
                 List<Exercise> memberDbExercises = exerciseRepository.findMemberExercisesByEmail(userEmail);
@@ -551,7 +554,7 @@ public class LibraryService {
             }
         }
 
-        // 5. If no member exercises found yet, provide starter seed member exercises
+        // 4. If no member exercises found yet, provide starter seed member exercises
         long memberCount = list.stream().filter(e -> isMemberSource(e.source())).count();
         if (memberCount == 0) {
             list.addAll(getSeedMemberExercises());

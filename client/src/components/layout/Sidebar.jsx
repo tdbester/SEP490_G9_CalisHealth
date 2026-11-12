@@ -112,7 +112,10 @@ const NAV_ITEMS = [
 const CONTENT_MANAGER_NAV = [
   { labelKey: "nav.dashboard", path: "/dashboard", icon: DashboardIcon },
   { labelKey: "nav.dailyTrainingPlans", path: "/content/daily-training-plans", icon: SurveyIcon },
-  { labelKey: "nav.contentLibrary", path: "/library", icon: LibraryIcon },
+  // "Thư viện" của Content Manager là kho nội dung hệ thống (quản lý bài tập /
+  // workout), KHÔNG phải thư viện dành cho member. Trỏ sang /library sẽ vào
+  // màn member và bị chặn 403.
+  { labelKey: "nav.contentLibrary", path: "/content/exercises", icon: LibraryIcon },
 ];
 
 function currentRole() {

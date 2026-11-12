@@ -211,9 +211,22 @@ public class AiSupportService {
      */
     @Transactional(readOnly = true)
     public List<PhysiologyAlertDTO> alertsFor(String exerciseCode) {
+        return alertsFor(exerciseCode, null);
+    }
+
+    /**
+     * Cảnh báo sinh lý của bài tập, có tính ngữ cảnh buổi tập của member.
+     *
+     * @param exerciseCode mã bài tập
+     * @param userId       id member (null nếu chưa đăng nhập)
+     * @return danh sách luật cảnh báo khớp (rỗng nếu bài không có hồ sơ sinh lý)
+     */
+    @Transactional(readOnly = true)
+    public List<PhysiologyAlertDTO> alertsFor(String exerciseCode, Long userId) {
         Exercise exercise = exercises.findByCode(exerciseCode)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Exercise not found"));
-        return physiologyAlerts.evaluate(physiologyService.loadProfile(exercise.getId()));
+        int staticCount = physiologyAlerts.countStaticExercisesInLatestSession(userId);
+        return physiologyAlerts.evaluate(physiologyService.loadProfile(exercise.getId()), staticCount);
     }
 
     /**
@@ -268,7 +281,8 @@ public class AiSupportService {
         // Hồ sơ sinh lý (V76) của bài tập — chỉ bài SYSTEM mới có. Dùng để
         // ground câu trả lời AI bằng dữ liệu sinh lý có trích dẫn bằng chứng.
         ExercisePhysiologyDTO physiology = physiologyService.loadProfile(exercise.getId());
-        List<PhysiologyAlertDTO> alerts = physiologyAlerts.evaluate(physiology);
+        int staticCount = physiologyAlerts.countStaticExercisesInLatestSession(user.getId());
+        List<PhysiologyAlertDTO> alerts = physiologyAlerts.evaluate(physiology, staticCount);
 
         // Lớp bảo vệ 1: red flag y tế -> KHÔNG gọi AI, hướng member tới bác sĩ.
         String redFlag = safetyService.redFlagMessage(question);

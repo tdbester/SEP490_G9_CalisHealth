@@ -97,7 +97,13 @@ public class WorkoutService {
         }
         validateWorkoutRequest(request);
         // Đổi tên sang tên một bài tập đang dùng thì bị chặn (trùng tuyệt đối).
-        contentNameGuard.assertWorkoutNameNotUsedByExercise(request.name(), null);
+        // Giữ nguyên tên cũ thì vẫn sửa được — dữ liệu cũ đã có workout trùng tên
+        // bài tập từ trước, không nên khoá người dùng khi chỉ muốn sửa nội dung.
+        String requestedName = request.name().trim();
+        boolean nameChanged = !requestedName.equalsIgnoreCase(workout.getName() == null ? "" : workout.getName().trim());
+        if (nameChanged) {
+            contentNameGuard.assertWorkoutNameNotUsedByExercise(requestedName, null);
+        }
         List<WorkoutExerciseItemRequest> requestedItems = resolveItemRequests(request);
         Map<String, Exercise> exercisesByCode = loadSystemExercises(requestedItems);
 

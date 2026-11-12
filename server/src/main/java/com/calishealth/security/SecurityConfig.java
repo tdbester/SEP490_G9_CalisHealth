@@ -76,8 +76,18 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/library/custom-workouts/**").hasRole("MEMBER")
                         .requestMatchers("/api/v1/library/my-workouts/**").hasRole("MEMBER")
                         .requestMatchers("/api/v1/library/workout-exercises/**").hasRole("MEMBER")
-                        .requestMatchers("/api/library/**").permitAll()
-                        .requestMatchers("/api/exercises/**").permitAll()
+                        // ── Legacy library endpoints (/api/library/**) ────────────────
+                        // Chỉ các endpoint ĐỌC danh sách/đếm là công khai cho GUEST.
+                        // Endpoint ghi (POST /api/library/member-exercises) và endpoint
+                        // đọc chi tiết (/api/library/exercises/{id}) phải yêu cầu MEMBER —
+                        // nếu không, GUEST có thể tạo bài tập và đọc bài tập cá nhân
+                        // (kể cả bài đang chờ duyệt) của người khác.
+                        .requestMatchers(HttpMethod.GET, "/api/library/levels").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/library/summary").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/library/counts").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/library/exercises").permitAll()
+                        .requestMatchers("/api/library/member-exercises").hasRole("MEMBER")
+                        .requestMatchers("/api/library/exercises/**").hasRole("MEMBER")
                         .requestMatchers("/api/member/form-rules/**").hasAnyRole("MEMBER", "CONTENT_MANAGER", "ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));

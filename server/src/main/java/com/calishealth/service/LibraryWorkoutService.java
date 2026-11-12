@@ -177,11 +177,17 @@ public class LibraryWorkoutService {
         User member = requireMember(memberEmail);
         WorkoutEntry workout = requireOwnedWorkout(member.getId(), workoutId);
         // Đổi tên sang tên một bài tập đang dùng thì bị chặn (trùng tuyệt đối).
-        contentNameGuard.assertWorkoutNameNotUsedByExercise(request.title(), null);
+        // Giữ nguyên tên cũ thì vẫn sửa được (dữ liệu cũ có workout trùng tên bài tập).
+        String requestedTitle = request.title().trim();
+        boolean titleChanged = !requestedTitle.equalsIgnoreCase(
+                workout.getName() == null ? "" : workout.getName().trim());
+        if (titleChanged) {
+            contentNameGuard.assertWorkoutNameNotUsedByExercise(requestedTitle, null);
+        }
         validateItems(request.items());
         Map<Long, Exercise> selectedExercises = getAllowedExercises(
                 member.getId(), request.items().stream().map(WorkoutItemDTO::exerciseId).toList());
-        workout.setName(request.title().trim());
+        workout.setName(requestedTitle);
         workout.setDescription(request.description() == null ? null : request.description().trim());
         if (request.type() != null) {
             workout.setType(resolveWorkoutType(request.type()));
