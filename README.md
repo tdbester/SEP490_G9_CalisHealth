@@ -3,7 +3,7 @@
 Ứng dụng sức khỏe & kỹ năng calisthenics.
 
 - **Backend**: Spring Boot 3 + JWT + MySQL (xem `src/main/java/com/calishealth/`)
-- **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS
+- **Frontend**: React 18 + Vite + JavaScript + Tailwind CSS
 
 ---
 
@@ -32,19 +32,23 @@ CORS backend đã cho phép `http://localhost:5173` (xem `SecurityConfig.java`).
 
 ```
 src/
-├── components/       # UI shared (Button, Input, AuthLayout)
-├── contexts/         # AuthContext
+├── api/              # axios client + endpoint theo domain (auth, library, survey, tracking...)
+├── components/       # UI shared (layout, common, content, survey, session, tracking...)
+├── context/          # FavoritesContext
+├── data/             # seed/mock data cho dashboard, health tracking
 ├── features/
-│   ├── auth/         # Toàn bộ flow auth: api, hooks, schemas, forms, pages
-│   ├── content-manager/  # Quản trị bài tập & chương trình tập
-│   └── survey/       # Khảo sát 4 bước (context, schemas, components, pages)
-├── lib/              # axios, storage, error, utils
-├── pages/            # Trang global (HomePage...)
-├── routes/           # AppRoutes, ProtectedRoute, PublicRoute
-├── App.tsx
-├── main.tsx
+│   └── content-manager/  # Quản trị bài tập & chương trình tập
+├── hooks/            # usePoseDetection, useVideoPoseScan, useHoldTracker...
+├── i18n/             # locales vi/en + useTranslation
+├── pages/            # Trang global (Login, Library, Survey, Tracking, Admin...)
+├── styles/           # global.css, notification.css
+├── utils/            # helper thuần (bmi, levelLabel, exerciseMedia, planCalendar...)
+├── App.jsx
+├── main.jsx
 └── index.css
 ```
+
+> Toàn bộ source frontend là **JavaScript (JSX)** — không còn file `.ts`/`.tsx` nào trong `src/`.
 
 ### Routes
 
@@ -67,7 +71,7 @@ src/
 
 > Survey flow: `/survey` → `body-information` → `goals-and-motivation` → `current-training-routine` → `level-test` → `result`.
 > Bước 4 (level test) điều hướng sang `result`, nơi hiển thị level + plan khuyến nghị.
-> Plan hiện là **data mẫu chạy client-side** trong `features/survey/data/recommendation.ts` — khi backend có API plan thật, chỉ cần thay `buildRecommendation` mà không đổi phần UI.
+> Kế hoạch gợi ý do backend tính (module `survey.level`) và trả về qua API — frontend chỉ render kết quả.
 
 ### Stack
 
@@ -117,12 +121,14 @@ Collection `postman/CalisHealth-Survey.postman_collection.json` cùng environmen
 - [x] Monorepo `client/` + `server/`
 - [x] Admin layout (Sidebar + Topbar + canvas)
 - [x] Dashboard UI (search / filter / bảng / pagination)
-- [x] Login UI (chưa nối API)
-- [x] Placeholder cho `/library` và `/tracking`
-- [ ] Nối frontend ↔ backend (auth + CRUD)
-- [ ] Hoàn thiện `/library` (CRUD bài tập, video)
-- [ ] `/tracking` (theo dõi sức khỏe & tiến trình)
-- [ ] Thêm sidebar items (Khảo sát, Quy tắc thăng tiến, Tiêu chí lên cấp)
+- [x] Auth end-to-end (register · verify email · login · reset password · đổi mật khẩu)
+- [x] Onboarding survey 4 bước + chấm level + plan khuyến nghị
+- [x] Library bài tập / workout (CRUD, video, duyệt nội dung)
+- [x] Tracking tập luyện (MediaPipe pose tracking, kết quả bài/set, phân tích hiệu năng)
+- [x] AI Support chat (Gemini) + quota
+- [x] Lịch tập theo tháng, quy tắc thăng tiến, leaderboard tuần
+- [x] Storage / media management (Cloudinary + quota)
+- [ ] Gợi ý kế hoạch tập cá nhân hoá theo hồ sơ sinh lý
 
 ## Conventions
 
