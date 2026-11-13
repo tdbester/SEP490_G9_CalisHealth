@@ -6,6 +6,7 @@ import com.calishealth.dtos.LibraryDtos.ExerciseListItem;
 import com.calishealth.dtos.LibraryDtos.FitnessLevelOption;
 import com.calishealth.dtos.LibraryDtos.LibrarySummaryResponse;
 import com.calishealth.dtos.LibraryDtos.PagedExerciseListResponse;
+import com.calishealth.security.SessionIdentity;
 import com.calishealth.service.LibraryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,14 +32,12 @@ public class LibraryController {
 
     @GetMapping("/summary")
     public LibrarySummaryResponse getSummary(Authentication authentication) {
-        String email = authentication != null ? (String) authentication.getPrincipal() : null;
-        return libraryService.getSummary(email);
+        return libraryService.getSummary(SessionIdentity.emailOf(authentication));
     }
 
     @GetMapping("/counts")
     public ExerciseCounts getCounts(Authentication authentication) {
-        String email = authentication != null ? (String) authentication.getPrincipal() : null;
-        return libraryService.getExerciseCounts(email);
+        return libraryService.getExerciseCounts(SessionIdentity.emailOf(authentication));
     }
 
     @GetMapping("/exercises")
@@ -53,8 +52,9 @@ public class LibraryController {
             @RequestParam(required = false, defaultValue = "6") int size,
             Authentication authentication
     ) {
-        String email = authentication != null ? (String) authentication.getPrincipal() : null;
-        return libraryService.getExercises(type, source, level, muscleGroup, muscles, search, page, size, email);
+        return libraryService.getExercises(
+                type, source, level, muscleGroup, muscles, search, page, size,
+                SessionIdentity.emailOf(authentication));
     }
 
     @GetMapping("/exercises/{id}")
@@ -72,8 +72,9 @@ public class LibraryController {
             @RequestParam(required = false, defaultValue = "6") int size,
             Authentication authentication
     ) {
-        String email = authentication != null ? (String) authentication.getPrincipal() : null;
-        return libraryService.getMemberExercises(level, muscleGroup, muscles, search, page, size, email);
+        return libraryService.getMemberExercises(
+                level, muscleGroup, muscles, search, page, size,
+                SessionIdentity.emailOf(authentication));
     }
 
     @PostMapping("/member-exercises")
@@ -82,7 +83,6 @@ public class LibraryController {
             @RequestBody CreateMemberExerciseRequest request,
             Authentication authentication
     ) {
-        String email = authentication != null ? (String) authentication.getPrincipal() : null;
-        return libraryService.createMemberExercise(request, email);
+        return libraryService.createMemberExercise(request, SessionIdentity.emailOf(authentication));
     }
 }

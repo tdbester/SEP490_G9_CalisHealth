@@ -6,6 +6,7 @@ import com.calishealth.dtos.WorkoutDetailResponseDTO;
 import com.calishealth.dtos.WorkoutFilterRequestDTO;
 import com.calishealth.dtos.WorkoutListItemDTO;
 import com.calishealth.dtos.AvailableWorkoutExerciseDTO;
+import com.calishealth.security.SessionIdentity;
 import com.calishealth.service.LibraryWorkoutService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,14 +31,7 @@ public class LibraryWorkoutController {
      * requireMember() ném lỗi 404.
      */
     private static String emailOf(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return null;
-        }
-        Object principal = authentication.getPrincipal();
-        if (!(principal instanceof String email)) {
-            return null;
-        }
-        return email.isBlank() || "anonymousUser".equals(email) ? null : email;
+        return SessionIdentity.emailOf(authentication);
     }
 
     @GetMapping("/custom-workouts")
