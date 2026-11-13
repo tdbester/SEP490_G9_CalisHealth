@@ -142,25 +142,11 @@ public final class MemberTrackingDtos {
     public record PerformanceAnalyticsResponse(
             String range,
             int sessions,
-            FormErrorsSummaryDto formErrors,
             RepsSummaryDto reps,
             HoldSummaryDto hold,
             List<VolumeProgressionDto> volume,
             DurationBreakdownDto duration,
             AiInsightDto insight
-    ) {
-    }
-
-    public record FormErrorsSummaryDto(
-            int totalTags,
-            List<FormErrorItemDto> items
-    ) {
-    }
-
-    public record FormErrorItemDto(
-            String label,
-            int count,
-            int percent
     ) {
     }
 

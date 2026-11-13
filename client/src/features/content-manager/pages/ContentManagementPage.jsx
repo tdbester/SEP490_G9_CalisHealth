@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
  * Mapping từ `section` trong URL sang namespace i18n tương ứng.
  * Mỗi section dùng key `contentManager.sections.<key>.title` / `.description`.
  */
-const SECTION_KEY_MAP: Record<string, string> = {
+const SECTION_KEY_MAP = {
   survey: 'surveys',
   workouts: 'workouts',
   'progression-rules': 'progressionRules',

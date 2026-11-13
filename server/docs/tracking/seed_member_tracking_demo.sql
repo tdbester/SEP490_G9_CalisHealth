@@ -7,8 +7,8 @@
 -- Điều kiện: member đã đăng nhập / hoàn thành survey ít nhất 1 lần (đã có dòng member_profiles),
 -- DB đã có exercises id 5-19 và form_rules id 1-5 (seed của màn Exercise library), đã chạy migration V12.
 --
--- Nội dung: 43 buổi tập COMPLETED trong 12 tuần (5 loại buổi, reps tăng dần, lỗi form giảm dần),
---   chuỗi hiện tại 6 ngày (tới hôm nay), chuỗi dài nhất 9 ngày, lỗi form gắn với form_rules,
+-- Nội dung: 43 buổi tập COMPLETED trong 12 tuần (5 loại buổi, reps tăng dần, độ chính xác form tăng dần),
+--   chuỗi hiện tại 6 ngày (tới hôm nay), chuỗi dài nhất 9 ngày,
 --   6 lần đo cơ thể theo tháng (cân nặng giảm dần 69.8 -> 66.5 kg).
 --   Mỗi buổi có ít nhất 1 bài HOLD, thời gian giữ mỗi set tăng dần (Plank 45 -> 75s, Handstand 15 -> 35s,
 --   Front lever 8 -> 18s, Planche 6 -> 15s).
@@ -29,10 +29,6 @@ SET SQL_SAFE_UPDATES = 0;
 START TRANSACTION;
 
 -- Xóa dữ liệu tracking cũ của member này
-DELETE fel FROM form_error_logs fel
-  JOIN session_exercise_results ser ON ser.id = fel.session_exercise_result_id
-  JOIN workout_sessions ws ON ws.id = ser.workout_session_id
-  WHERE ws.member_profile_id = @pid;
 DELETE ser FROM session_exercise_results ser
   JOIN workout_sessions ws ON ws.id = ser.workout_session_id
   WHERE ws.member_profile_id = @pid;
@@ -59,17 +55,14 @@ VALUES (@pid, NULL, 'Upper Body Strength', 'strength', CURDATE() - INTERVAL 81 D
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 41, 8, 83.7, 723, 1, @s, 17);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 15.000, CURDATE() - INTERVAL 81 DAY + INTERVAL 420 MINUTE + INTERVAL 60 SECOND, @r, 1), (5, 16.300, CURDATE() - INTERVAL 81 DAY + INTERVAL 420 MINUTE + INTERVAL 105 SECOND, @r, 2), (8, 17.600, CURDATE() - INTERVAL 81 DAY + INTERVAL 420 MINUTE + INTERVAL 150 SECOND, @r, 1), (11, 18.900, CURDATE() - INTERVAL 81 DAY + INTERVAL 420 MINUTE + INTERVAL 195 SECOND, @r, 2);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 17, 3, 85, 674, 2, @s, 16);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 15.000, CURDATE() - INTERVAL 81 DAY + INTERVAL 420 MINUTE + INTERVAL 60 SECOND, @r, 4), (5, 16.300, CURDATE() - INTERVAL 81 DAY + INTERVAL 420 MINUTE + INTERVAL 105 SECOND, @r, 4), (8, 17.600, CURDATE() - INTERVAL 81 DAY + INTERVAL 420 MINUTE + INTERVAL 150 SECOND, @r, 4);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 22, 2, 91.7, 434, 3, @s, 18);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
 VALUES (@pid, NULL, 'Lower Body Power', 'strength', CURDATE() - INTERVAL 79 DAY, 'COMPLETED', CURDATE() - INTERVAL 79 DAY + INTERVAL 1095 MINUTE, CURDATE() - INTERVAL 79 DAY + INTERVAL 1095 MINUTE + INTERVAL 2189 SECOND, 1593, 89, CURDATE() - INTERVAL 79 DAY + INTERVAL 1095 MINUTE, CURDATE() - INTERVAL 79 DAY + INTERVAL 1095 MINUTE + INTERVAL 2189 SECOND);
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 10, 2, 83.3, 579, 1, @s, 9);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 16.300, CURDATE() - INTERVAL 79 DAY + INTERVAL 1095 MINUTE + INTERVAL 60 SECOND, @r, 3), (5, 17.600, CURDATE() - INTERVAL 79 DAY + INTERVAL 1095 MINUTE + INTERVAL 105 SECOND, @r, 3);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 28, 3, 90.3, 652, 2, @s, 10);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 42, 4, 91.3, 362, 3, @s, 12);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
@@ -89,29 +82,23 @@ VALUES (@pid, NULL, 'Full Body Calisthenics', 'strength', CURDATE() - INTERVAL 7
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 16, 3, 84.2, 511, 1, @s, 16);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 20.200, CURDATE() - INTERVAL 72 DAY + INTERVAL 1080 MINUTE + INTERVAL 60 SECOND, @r, 4), (5, 21.500, CURDATE() - INTERVAL 72 DAY + INTERVAL 1080 MINUTE + INTERVAL 105 SECOND, @r, 4), (8, 22.800, CURDATE() - INTERVAL 72 DAY + INTERVAL 1080 MINUTE + INTERVAL 150 SECOND, @r, 4);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 41, 7, 85.4, 511, 2, @s, 17);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 20.200, CURDATE() - INTERVAL 72 DAY + INTERVAL 1080 MINUTE + INTERVAL 60 SECOND, @r, 1), (5, 21.500, CURDATE() - INTERVAL 72 DAY + INTERVAL 1080 MINUTE + INTERVAL 105 SECOND, @r, 2), (8, 22.800, CURDATE() - INTERVAL 72 DAY + INTERVAL 1080 MINUTE + INTERVAL 150 SECOND, @r, 1), (11, 24.100, CURDATE() - INTERVAL 72 DAY + INTERVAL 1080 MINUTE + INTERVAL 195 SECOND, @r, 2);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 14, 2, 87.5, 584, 3, @s, 9);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 20.200, CURDATE() - INTERVAL 72 DAY + INTERVAL 1080 MINUTE + INTERVAL 60 SECOND, @r, 3), (5, 21.500, CURDATE() - INTERVAL 72 DAY + INTERVAL 1080 MINUTE + INTERVAL 105 SECOND, @r, 3);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
 VALUES (@pid, NULL, 'Upper Body Strength', 'strength', CURDATE() - INTERVAL 70 DAY, 'COMPLETED', CURDATE() - INTERVAL 70 DAY + INTERVAL 435 MINUTE, CURDATE() - INTERVAL 70 DAY + INTERVAL 435 MINUTE + INTERVAL 2528 SECOND, 1854, 100, CURDATE() - INTERVAL 70 DAY + INTERVAL 435 MINUTE, CURDATE() - INTERVAL 70 DAY + INTERVAL 435 MINUTE + INTERVAL 2528 SECOND);
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 45, 7, 86.5, 732, 1, @s, 17);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 21.500, CURDATE() - INTERVAL 70 DAY + INTERVAL 435 MINUTE + INTERVAL 60 SECOND, @r, 1), (5, 22.800, CURDATE() - INTERVAL 70 DAY + INTERVAL 435 MINUTE + INTERVAL 105 SECOND, @r, 2), (8, 24.100, CURDATE() - INTERVAL 70 DAY + INTERVAL 435 MINUTE + INTERVAL 150 SECOND, @r, 1), (11, 25.400, CURDATE() - INTERVAL 70 DAY + INTERVAL 435 MINUTE + INTERVAL 195 SECOND, @r, 2);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 19, 3, 86.4, 683, 2, @s, 16);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 21.500, CURDATE() - INTERVAL 70 DAY + INTERVAL 435 MINUTE + INTERVAL 60 SECOND, @r, 4), (5, 22.800, CURDATE() - INTERVAL 70 DAY + INTERVAL 435 MINUTE + INTERVAL 105 SECOND, @r, 4), (8, 24.100, CURDATE() - INTERVAL 70 DAY + INTERVAL 435 MINUTE + INTERVAL 150 SECOND, @r, 4);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 24, 2, 92.3, 439, 3, @s, 18);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
 VALUES (@pid, NULL, 'Lower Body Power', 'strength', CURDATE() - INTERVAL 67 DAY, 'COMPLETED', CURDATE() - INTERVAL 67 DAY + INTERVAL 450 MINUTE, CURDATE() - INTERVAL 67 DAY + INTERVAL 450 MINUTE + INTERVAL 2197 SECOND, 1616, 95, CURDATE() - INTERVAL 67 DAY + INTERVAL 450 MINUTE, CURDATE() - INTERVAL 67 DAY + INTERVAL 450 MINUTE + INTERVAL 2197 SECOND);
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 11, 2, 84.6, 588, 1, @s, 9);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 22.800, CURDATE() - INTERVAL 67 DAY + INTERVAL 450 MINUTE + INTERVAL 60 SECOND, @r, 3), (5, 24.100, CURDATE() - INTERVAL 67 DAY + INTERVAL 450 MINUTE + INTERVAL 105 SECOND, @r, 3);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 30, 3, 90.9, 661, 2, @s, 10);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 45, 4, 91.8, 367, 3, @s, 12);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
@@ -131,29 +118,23 @@ VALUES (@pid, NULL, 'Full Body Calisthenics', 'strength', CURDATE() - INTERVAL 6
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 17, 3, 85, 518, 1, @s, 16);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 15.000, CURDATE() - INTERVAL 60 DAY + INTERVAL 435 MINUTE + INTERVAL 60 SECOND, @r, 4), (5, 16.300, CURDATE() - INTERVAL 60 DAY + INTERVAL 435 MINUTE + INTERVAL 105 SECOND, @r, 4), (8, 17.600, CURDATE() - INTERVAL 60 DAY + INTERVAL 435 MINUTE + INTERVAL 150 SECOND, @r, 4);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 44, 7, 86.3, 518, 2, @s, 17);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 15.000, CURDATE() - INTERVAL 60 DAY + INTERVAL 435 MINUTE + INTERVAL 60 SECOND, @r, 1), (5, 16.300, CURDATE() - INTERVAL 60 DAY + INTERVAL 435 MINUTE + INTERVAL 105 SECOND, @r, 2), (8, 17.600, CURDATE() - INTERVAL 60 DAY + INTERVAL 435 MINUTE + INTERVAL 150 SECOND, @r, 1), (11, 18.900, CURDATE() - INTERVAL 60 DAY + INTERVAL 435 MINUTE + INTERVAL 195 SECOND, @r, 2);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 15, 2, 88.2, 592, 3, @s, 9);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 15.000, CURDATE() - INTERVAL 60 DAY + INTERVAL 435 MINUTE + INTERVAL 60 SECOND, @r, 3), (5, 16.300, CURDATE() - INTERVAL 60 DAY + INTERVAL 435 MINUTE + INTERVAL 105 SECOND, @r, 3);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
 VALUES (@pid, NULL, 'Upper Body Strength', 'strength', CURDATE() - INTERVAL 58 DAY, 'COMPLETED', CURDATE() - INTERVAL 58 DAY + INTERVAL 1110 MINUTE, CURDATE() - INTERVAL 58 DAY + INTERVAL 1110 MINUTE + INTERVAL 2536 SECOND, 1880, 105, CURDATE() - INTERVAL 58 DAY + INTERVAL 1110 MINUTE, CURDATE() - INTERVAL 58 DAY + INTERVAL 1110 MINUTE + INTERVAL 2536 SECOND);
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 48, 7, 87.3, 742, 1, @s, 17);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 16.300, CURDATE() - INTERVAL 58 DAY + INTERVAL 1110 MINUTE + INTERVAL 60 SECOND, @r, 1), (5, 17.600, CURDATE() - INTERVAL 58 DAY + INTERVAL 1110 MINUTE + INTERVAL 105 SECOND, @r, 2), (8, 18.900, CURDATE() - INTERVAL 58 DAY + INTERVAL 1110 MINUTE + INTERVAL 150 SECOND, @r, 1), (11, 20.200, CURDATE() - INTERVAL 58 DAY + INTERVAL 1110 MINUTE + INTERVAL 195 SECOND, @r, 2);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 20, 3, 87, 693, 2, @s, 16);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 16.300, CURDATE() - INTERVAL 58 DAY + INTERVAL 1110 MINUTE + INTERVAL 60 SECOND, @r, 4), (5, 17.600, CURDATE() - INTERVAL 58 DAY + INTERVAL 1110 MINUTE + INTERVAL 105 SECOND, @r, 4), (8, 18.900, CURDATE() - INTERVAL 58 DAY + INTERVAL 1110 MINUTE + INTERVAL 150 SECOND, @r, 4);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 25, 2, 92.6, 445, 3, @s, 18);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
 VALUES (@pid, NULL, 'Lower Body Power', 'strength', CURDATE() - INTERVAL 56 DAY, 'COMPLETED', CURDATE() - INTERVAL 56 DAY + INTERVAL 465 MINUTE, CURDATE() - INTERVAL 56 DAY + INTERVAL 465 MINUTE + INTERVAL 2204 SECOND, 1637, 101, CURDATE() - INTERVAL 56 DAY + INTERVAL 465 MINUTE, CURDATE() - INTERVAL 56 DAY + INTERVAL 465 MINUTE + INTERVAL 2204 SECOND);
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 12, 2, 85.7, 595, 1, @s, 9);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 17.600, CURDATE() - INTERVAL 56 DAY + INTERVAL 465 MINUTE + INTERVAL 60 SECOND, @r, 3), (5, 18.900, CURDATE() - INTERVAL 56 DAY + INTERVAL 465 MINUTE + INTERVAL 105 SECOND, @r, 3);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 32, 3, 91.4, 670, 2, @s, 10);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 48, 4, 92.3, 372, 3, @s, 12);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
@@ -173,29 +154,23 @@ VALUES (@pid, NULL, 'Full Body Calisthenics', 'strength', CURDATE() - INTERVAL 4
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 19, 2, 90.5, 526, 1, @s, 16);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 21.500, CURDATE() - INTERVAL 48 DAY + INTERVAL 450 MINUTE + INTERVAL 60 SECOND, @r, 4), (5, 22.800, CURDATE() - INTERVAL 48 DAY + INTERVAL 450 MINUTE + INTERVAL 105 SECOND, @r, 4);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 48, 6, 88.9, 526, 2, @s, 17);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 21.500, CURDATE() - INTERVAL 48 DAY + INTERVAL 450 MINUTE + INTERVAL 60 SECOND, @r, 1), (5, 22.800, CURDATE() - INTERVAL 48 DAY + INTERVAL 450 MINUTE + INTERVAL 105 SECOND, @r, 2), (8, 24.100, CURDATE() - INTERVAL 48 DAY + INTERVAL 450 MINUTE + INTERVAL 150 SECOND, @r, 1), (11, 25.400, CURDATE() - INTERVAL 48 DAY + INTERVAL 450 MINUTE + INTERVAL 195 SECOND, @r, 2);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 16, 2, 88.9, 601, 3, @s, 9);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 21.500, CURDATE() - INTERVAL 48 DAY + INTERVAL 450 MINUTE + INTERVAL 60 SECOND, @r, 3), (5, 22.800, CURDATE() - INTERVAL 48 DAY + INTERVAL 450 MINUTE + INTERVAL 105 SECOND, @r, 3);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
 VALUES (@pid, NULL, 'Upper Body Strength', 'strength', CURDATE() - INTERVAL 47 DAY, 'COMPLETED', CURDATE() - INTERVAL 47 DAY + INTERVAL 465 MINUTE, CURDATE() - INTERVAL 47 DAY + INTERVAL 465 MINUTE + INTERVAL 2545 SECOND, 1905, 111, CURDATE() - INTERVAL 47 DAY + INTERVAL 465 MINUTE, CURDATE() - INTERVAL 47 DAY + INTERVAL 465 MINUTE + INTERVAL 2545 SECOND);
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 51, 7, 87.9, 752, 1, @s, 17);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 22.800, CURDATE() - INTERVAL 47 DAY + INTERVAL 465 MINUTE + INTERVAL 60 SECOND, @r, 1), (5, 24.100, CURDATE() - INTERVAL 47 DAY + INTERVAL 465 MINUTE + INTERVAL 105 SECOND, @r, 2), (8, 25.400, CURDATE() - INTERVAL 47 DAY + INTERVAL 465 MINUTE + INTERVAL 150 SECOND, @r, 1), (11, 15.000, CURDATE() - INTERVAL 47 DAY + INTERVAL 465 MINUTE + INTERVAL 195 SECOND, @r, 2);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 21, 3, 87.5, 702, 2, @s, 16);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 22.800, CURDATE() - INTERVAL 47 DAY + INTERVAL 465 MINUTE + INTERVAL 60 SECOND, @r, 4), (5, 24.100, CURDATE() - INTERVAL 47 DAY + INTERVAL 465 MINUTE + INTERVAL 105 SECOND, @r, 4), (8, 25.400, CURDATE() - INTERVAL 47 DAY + INTERVAL 465 MINUTE + INTERVAL 150 SECOND, @r, 4);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 27, 2, 93.1, 451, 3, @s, 18);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
 VALUES (@pid, NULL, 'Lower Body Power', 'strength', CURDATE() - INTERVAL 46 DAY, 'COMPLETED', CURDATE() - INTERVAL 46 DAY + INTERVAL 1080 MINUTE, CURDATE() - INTERVAL 46 DAY + INTERVAL 1080 MINUTE + INTERVAL 2209 SECOND, 1655, 104, CURDATE() - INTERVAL 46 DAY + INTERVAL 1080 MINUTE, CURDATE() - INTERVAL 46 DAY + INTERVAL 1080 MINUTE + INTERVAL 2209 SECOND);
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 12, 2, 85.7, 602, 1, @s, 9);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 24.100, CURDATE() - INTERVAL 46 DAY + INTERVAL 1080 MINUTE + INTERVAL 60 SECOND, @r, 3), (5, 25.400, CURDATE() - INTERVAL 46 DAY + INTERVAL 1080 MINUTE + INTERVAL 105 SECOND, @r, 3);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 34, 2, 94.4, 677, 2, @s, 10);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 50, 4, 92.6, 376, 3, @s, 12);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
@@ -215,29 +190,23 @@ VALUES (@pid, NULL, 'Full Body Calisthenics', 'strength', CURDATE() - INTERVAL 4
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 20, 2, 90.9, 529, 1, @s, 16);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 16.300, CURDATE() - INTERVAL 43 DAY + INTERVAL 1125 MINUTE + INTERVAL 60 SECOND, @r, 4), (5, 17.600, CURDATE() - INTERVAL 43 DAY + INTERVAL 1125 MINUTE + INTERVAL 105 SECOND, @r, 4);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 49, 6, 89.1, 529, 2, @s, 17);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 16.300, CURDATE() - INTERVAL 43 DAY + INTERVAL 1125 MINUTE + INTERVAL 60 SECOND, @r, 1), (5, 17.600, CURDATE() - INTERVAL 43 DAY + INTERVAL 1125 MINUTE + INTERVAL 105 SECOND, @r, 2), (8, 18.900, CURDATE() - INTERVAL 43 DAY + INTERVAL 1125 MINUTE + INTERVAL 150 SECOND, @r, 1), (11, 20.200, CURDATE() - INTERVAL 43 DAY + INTERVAL 1125 MINUTE + INTERVAL 195 SECOND, @r, 2);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 16, 2, 88.9, 604, 3, @s, 9);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 16.300, CURDATE() - INTERVAL 43 DAY + INTERVAL 1125 MINUTE + INTERVAL 60 SECOND, @r, 3), (5, 17.600, CURDATE() - INTERVAL 43 DAY + INTERVAL 1125 MINUTE + INTERVAL 105 SECOND, @r, 3);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
 VALUES (@pid, NULL, 'Upper Body Strength', 'strength', CURDATE() - INTERVAL 42 DAY, 'COMPLETED', CURDATE() - INTERVAL 42 DAY + INTERVAL 420 MINUTE, CURDATE() - INTERVAL 42 DAY + INTERVAL 420 MINUTE + INTERVAL 2548 SECOND, 1916, 113, CURDATE() - INTERVAL 42 DAY + INTERVAL 420 MINUTE, CURDATE() - INTERVAL 42 DAY + INTERVAL 420 MINUTE + INTERVAL 2548 SECOND);
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 53, 6, 89.8, 756, 1, @s, 17);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 17.600, CURDATE() - INTERVAL 42 DAY + INTERVAL 420 MINUTE + INTERVAL 60 SECOND, @r, 1), (5, 18.900, CURDATE() - INTERVAL 42 DAY + INTERVAL 420 MINUTE + INTERVAL 105 SECOND, @r, 2), (8, 20.200, CURDATE() - INTERVAL 42 DAY + INTERVAL 420 MINUTE + INTERVAL 150 SECOND, @r, 1), (11, 21.500, CURDATE() - INTERVAL 42 DAY + INTERVAL 420 MINUTE + INTERVAL 195 SECOND, @r, 2);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 22, 3, 88, 706, 2, @s, 16);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 17.600, CURDATE() - INTERVAL 42 DAY + INTERVAL 420 MINUTE + INTERVAL 60 SECOND, @r, 4), (5, 18.900, CURDATE() - INTERVAL 42 DAY + INTERVAL 420 MINUTE + INTERVAL 105 SECOND, @r, 4), (8, 20.200, CURDATE() - INTERVAL 42 DAY + INTERVAL 420 MINUTE + INTERVAL 150 SECOND, @r, 4);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 27, 2, 93.1, 454, 3, @s, 18);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
 VALUES (@pid, NULL, 'Lower Body Power', 'strength', CURDATE() - INTERVAL 41 DAY, 'COMPLETED', CURDATE() - INTERVAL 41 DAY + INTERVAL 435 MINUTE, CURDATE() - INTERVAL 41 DAY + INTERVAL 435 MINUTE + INTERVAL 2211 SECOND, 1664, 107, CURDATE() - INTERVAL 41 DAY + INTERVAL 435 MINUTE, CURDATE() - INTERVAL 41 DAY + INTERVAL 435 MINUTE + INTERVAL 2211 SECOND);
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 13, 2, 86.7, 605, 1, @s, 9);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 18.900, CURDATE() - INTERVAL 41 DAY + INTERVAL 435 MINUTE + INTERVAL 60 SECOND, @r, 3), (5, 20.200, CURDATE() - INTERVAL 41 DAY + INTERVAL 435 MINUTE + INTERVAL 105 SECOND, @r, 3);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 35, 2, 94.6, 681, 2, @s, 10);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 51, 4, 92.7, 378, 3, @s, 12);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
@@ -257,29 +226,23 @@ VALUES (@pid, NULL, 'Full Body Calisthenics', 'strength', CURDATE() - INTERVAL 3
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 21, 2, 91.3, 533, 1, @s, 16);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 22.800, CURDATE() - INTERVAL 35 DAY + INTERVAL 420 MINUTE + INTERVAL 60 SECOND, @r, 4), (5, 24.100, CURDATE() - INTERVAL 35 DAY + INTERVAL 420 MINUTE + INTERVAL 105 SECOND, @r, 4);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 51, 6, 89.5, 533, 2, @s, 17);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 22.800, CURDATE() - INTERVAL 35 DAY + INTERVAL 420 MINUTE + INTERVAL 60 SECOND, @r, 1), (5, 24.100, CURDATE() - INTERVAL 35 DAY + INTERVAL 420 MINUTE + INTERVAL 105 SECOND, @r, 2), (8, 25.400, CURDATE() - INTERVAL 35 DAY + INTERVAL 420 MINUTE + INTERVAL 150 SECOND, @r, 1), (11, 15.000, CURDATE() - INTERVAL 35 DAY + INTERVAL 420 MINUTE + INTERVAL 195 SECOND, @r, 2);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 17, 2, 89.5, 610, 3, @s, 9);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 22.800, CURDATE() - INTERVAL 35 DAY + INTERVAL 420 MINUTE + INTERVAL 60 SECOND, @r, 3), (5, 24.100, CURDATE() - INTERVAL 35 DAY + INTERVAL 420 MINUTE + INTERVAL 105 SECOND, @r, 3);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
 VALUES (@pid, NULL, 'Upper Body Strength', 'strength', CURDATE() - INTERVAL 32 DAY, 'COMPLETED', CURDATE() - INTERVAL 32 DAY + INTERVAL 1095 MINUTE, CURDATE() - INTERVAL 32 DAY + INTERVAL 1095 MINUTE + INTERVAL 2554 SECOND, 1938, 118, CURDATE() - INTERVAL 32 DAY + INTERVAL 1095 MINUTE, CURDATE() - INTERVAL 32 DAY + INTERVAL 1095 MINUTE + INTERVAL 2554 SECOND);
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 55, 6, 90.2, 765, 1, @s, 17);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 24.100, CURDATE() - INTERVAL 32 DAY + INTERVAL 1095 MINUTE + INTERVAL 60 SECOND, @r, 1), (5, 25.400, CURDATE() - INTERVAL 32 DAY + INTERVAL 1095 MINUTE + INTERVAL 105 SECOND, @r, 2), (8, 15.000, CURDATE() - INTERVAL 32 DAY + INTERVAL 1095 MINUTE + INTERVAL 150 SECOND, @r, 1), (11, 16.300, CURDATE() - INTERVAL 32 DAY + INTERVAL 1095 MINUTE + INTERVAL 195 SECOND, @r, 2);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 23, 3, 88.5, 714, 2, @s, 16);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 24.100, CURDATE() - INTERVAL 32 DAY + INTERVAL 1095 MINUTE + INTERVAL 60 SECOND, @r, 4), (5, 25.400, CURDATE() - INTERVAL 32 DAY + INTERVAL 1095 MINUTE + INTERVAL 105 SECOND, @r, 4), (8, 15.000, CURDATE() - INTERVAL 32 DAY + INTERVAL 1095 MINUTE + INTERVAL 150 SECOND, @r, 4);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 29, 2, 93.5, 459, 3, @s, 18);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
 VALUES (@pid, NULL, 'Lower Body Power', 'strength', CURDATE() - INTERVAL 30 DAY, 'COMPLETED', CURDATE() - INTERVAL 30 DAY + INTERVAL 450 MINUTE, CURDATE() - INTERVAL 30 DAY + INTERVAL 450 MINUTE + INTERVAL 2218 SECOND, 1686, 112, CURDATE() - INTERVAL 30 DAY + INTERVAL 450 MINUTE, CURDATE() - INTERVAL 30 DAY + INTERVAL 450 MINUTE + INTERVAL 2218 SECOND);
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 14, 1, 93.3, 613, 1, @s, 9);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 25.400, CURDATE() - INTERVAL 30 DAY + INTERVAL 450 MINUTE + INTERVAL 60 SECOND, @r, 3);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 37, 2, 94.9, 690, 2, @s, 10);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 55, 3, 94.8, 383, 3, @s, 12);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
@@ -299,29 +262,23 @@ VALUES (@pid, NULL, 'Full Body Calisthenics', 'strength', CURDATE() - INTERVAL 2
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 22, 2, 91.7, 541, 1, @s, 16);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 17.600, CURDATE() - INTERVAL 23 DAY + INTERVAL 435 MINUTE + INTERVAL 60 SECOND, @r, 4), (5, 18.900, CURDATE() - INTERVAL 23 DAY + INTERVAL 435 MINUTE + INTERVAL 105 SECOND, @r, 4);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 55, 5, 91.7, 541, 2, @s, 17);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 17.600, CURDATE() - INTERVAL 23 DAY + INTERVAL 435 MINUTE + INTERVAL 60 SECOND, @r, 1), (5, 18.900, CURDATE() - INTERVAL 23 DAY + INTERVAL 435 MINUTE + INTERVAL 105 SECOND, @r, 2), (8, 20.200, CURDATE() - INTERVAL 23 DAY + INTERVAL 435 MINUTE + INTERVAL 150 SECOND, @r, 1), (11, 21.500, CURDATE() - INTERVAL 23 DAY + INTERVAL 435 MINUTE + INTERVAL 195 SECOND, @r, 2);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 18, 2, 90, 618, 3, @s, 9);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 17.600, CURDATE() - INTERVAL 23 DAY + INTERVAL 435 MINUTE + INTERVAL 60 SECOND, @r, 3), (5, 18.900, CURDATE() - INTERVAL 23 DAY + INTERVAL 435 MINUTE + INTERVAL 105 SECOND, @r, 3);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
 VALUES (@pid, NULL, 'Upper Body Strength', 'strength', CURDATE() - INTERVAL 21 DAY, 'COMPLETED', CURDATE() - INTERVAL 21 DAY + INTERVAL 450 MINUTE, CURDATE() - INTERVAL 21 DAY + INTERVAL 450 MINUTE + INTERVAL 2558 SECOND, 1960, 123, CURDATE() - INTERVAL 21 DAY + INTERVAL 450 MINUTE, CURDATE() - INTERVAL 21 DAY + INTERVAL 450 MINUTE + INTERVAL 2558 SECOND);
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 59, 5, 92.2, 774, 1, @s, 17);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 18.900, CURDATE() - INTERVAL 21 DAY + INTERVAL 450 MINUTE + INTERVAL 60 SECOND, @r, 1), (5, 20.200, CURDATE() - INTERVAL 21 DAY + INTERVAL 450 MINUTE + INTERVAL 105 SECOND, @r, 2), (8, 21.500, CURDATE() - INTERVAL 21 DAY + INTERVAL 450 MINUTE + INTERVAL 150 SECOND, @r, 1), (11, 22.800, CURDATE() - INTERVAL 21 DAY + INTERVAL 450 MINUTE + INTERVAL 195 SECOND, @r, 2);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 25, 2, 92.6, 722, 2, @s, 16);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 18.900, CURDATE() - INTERVAL 21 DAY + INTERVAL 450 MINUTE + INTERVAL 60 SECOND, @r, 4), (5, 20.200, CURDATE() - INTERVAL 21 DAY + INTERVAL 450 MINUTE + INTERVAL 105 SECOND, @r, 4);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 30, 2, 93.8, 464, 3, @s, 18);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
 VALUES (@pid, NULL, 'Lower Body Power', 'strength', CURDATE() - INTERVAL 18 DAY, 'COMPLETED', CURDATE() - INTERVAL 18 DAY + INTERVAL 1125 MINUTE, CURDATE() - INTERVAL 18 DAY + INTERVAL 1125 MINUTE + INTERVAL 2223 SECOND, 1708, 118, CURDATE() - INTERVAL 18 DAY + INTERVAL 1125 MINUTE, CURDATE() - INTERVAL 18 DAY + INTERVAL 1125 MINUTE + INTERVAL 2223 SECOND);
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 15, 1, 93.8, 621, 1, @s, 9);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 20.200, CURDATE() - INTERVAL 18 DAY + INTERVAL 1125 MINUTE + INTERVAL 60 SECOND, @r, 3);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 39, 2, 95.1, 699, 2, @s, 10);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 58, 3, 95.1, 388, 3, @s, 12);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
@@ -341,29 +298,23 @@ VALUES (@pid, NULL, 'Full Body Calisthenics', 'strength', CURDATE() - INTERVAL 1
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 23, 2, 92, 548, 1, @s, 16);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 24.100, CURDATE() - INTERVAL 11 DAY + INTERVAL 1110 MINUTE + INTERVAL 60 SECOND, @r, 4), (5, 25.400, CURDATE() - INTERVAL 11 DAY + INTERVAL 1110 MINUTE + INTERVAL 105 SECOND, @r, 4);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 58, 5, 92.1, 548, 2, @s, 17);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 24.100, CURDATE() - INTERVAL 11 DAY + INTERVAL 1110 MINUTE + INTERVAL 60 SECOND, @r, 1), (5, 25.400, CURDATE() - INTERVAL 11 DAY + INTERVAL 1110 MINUTE + INTERVAL 105 SECOND, @r, 2), (8, 15.000, CURDATE() - INTERVAL 11 DAY + INTERVAL 1110 MINUTE + INTERVAL 150 SECOND, @r, 1), (11, 16.300, CURDATE() - INTERVAL 11 DAY + INTERVAL 1110 MINUTE + INTERVAL 195 SECOND, @r, 2);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 19, 2, 90.5, 626, 3, @s, 9);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 24.100, CURDATE() - INTERVAL 11 DAY + INTERVAL 1110 MINUTE + INTERVAL 60 SECOND, @r, 3), (5, 25.400, CURDATE() - INTERVAL 11 DAY + INTERVAL 1110 MINUTE + INTERVAL 105 SECOND, @r, 3);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
 VALUES (@pid, NULL, 'Upper Body Strength', 'strength', CURDATE() - INTERVAL 9 DAY, 'COMPLETED', CURDATE() - INTERVAL 9 DAY + INTERVAL 465 MINUTE, CURDATE() - INTERVAL 9 DAY + INTERVAL 465 MINUTE + INTERVAL 2565 SECOND, 1987, 129, CURDATE() - INTERVAL 9 DAY + INTERVAL 465 MINUTE, CURDATE() - INTERVAL 9 DAY + INTERVAL 465 MINUTE + INTERVAL 2565 SECOND);
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 62, 5, 92.5, 784, 1, @s, 17);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 25.400, CURDATE() - INTERVAL 9 DAY + INTERVAL 465 MINUTE + INTERVAL 60 SECOND, @r, 1), (5, 15.000, CURDATE() - INTERVAL 9 DAY + INTERVAL 465 MINUTE + INTERVAL 105 SECOND, @r, 2), (8, 16.300, CURDATE() - INTERVAL 9 DAY + INTERVAL 465 MINUTE + INTERVAL 150 SECOND, @r, 1), (11, 17.600, CURDATE() - INTERVAL 9 DAY + INTERVAL 465 MINUTE + INTERVAL 195 SECOND, @r, 2);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 26, 2, 92.9, 732, 2, @s, 16);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 25.400, CURDATE() - INTERVAL 9 DAY + INTERVAL 465 MINUTE + INTERVAL 60 SECOND, @r, 4), (5, 15.000, CURDATE() - INTERVAL 9 DAY + INTERVAL 465 MINUTE + INTERVAL 105 SECOND, @r, 4);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 33, 1, 97.1, 471, 3, @s, 18);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
 VALUES (@pid, NULL, 'Lower Body Power', 'strength', CURDATE() - INTERVAL 7 DAY, 'COMPLETED', CURDATE() - INTERVAL 7 DAY + INTERVAL 420 MINUTE, CURDATE() - INTERVAL 7 DAY + INTERVAL 420 MINUTE + INTERVAL 2228 SECOND, 1729, 123, CURDATE() - INTERVAL 7 DAY + INTERVAL 420 MINUTE, CURDATE() - INTERVAL 7 DAY + INTERVAL 420 MINUTE + INTERVAL 2228 SECOND);
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 16, 1, 94.1, 629, 1, @s, 9);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 15.000, CURDATE() - INTERVAL 7 DAY + INTERVAL 420 MINUTE + INTERVAL 60 SECOND, @r, 3);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 40, 2, 95.2, 707, 2, @s, 10);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 61, 3, 95.3, 393, 3, @s, 12);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
@@ -383,29 +334,23 @@ VALUES (@pid, NULL, 'Full Body Calisthenics', 'strength', CURDATE() - INTERVAL 3
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 24, 2, 92.3, 553, 1, @s, 16);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 18.900, CURDATE() - INTERVAL 3 DAY + INTERVAL 465 MINUTE + INTERVAL 60 SECOND, @r, 4), (5, 20.200, CURDATE() - INTERVAL 3 DAY + INTERVAL 465 MINUTE + INTERVAL 105 SECOND, @r, 4);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 61, 4, 93.8, 553, 2, @s, 17);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 18.900, CURDATE() - INTERVAL 3 DAY + INTERVAL 465 MINUTE + INTERVAL 60 SECOND, @r, 1), (5, 20.200, CURDATE() - INTERVAL 3 DAY + INTERVAL 465 MINUTE + INTERVAL 105 SECOND, @r, 2), (8, 21.500, CURDATE() - INTERVAL 3 DAY + INTERVAL 465 MINUTE + INTERVAL 150 SECOND, @r, 1), (11, 22.800, CURDATE() - INTERVAL 3 DAY + INTERVAL 465 MINUTE + INTERVAL 195 SECOND, @r, 2);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 21, 1, 95.5, 632, 3, @s, 9);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 18.900, CURDATE() - INTERVAL 3 DAY + INTERVAL 465 MINUTE + INTERVAL 60 SECOND, @r, 3);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
 VALUES (@pid, NULL, 'Upper Body Strength', 'strength', CURDATE() - INTERVAL 2 DAY, 'COMPLETED', CURDATE() - INTERVAL 2 DAY + INTERVAL 1080 MINUTE, CURDATE() - INTERVAL 2 DAY + INTERVAL 1080 MINUTE + INTERVAL 2567 SECOND, 2002, 133, CURDATE() - INTERVAL 2 DAY + INTERVAL 1080 MINUTE, CURDATE() - INTERVAL 2 DAY + INTERVAL 1080 MINUTE + INTERVAL 2567 SECOND);
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 65, 4, 94.2, 790, 1, @s, 17);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 20.200, CURDATE() - INTERVAL 2 DAY + INTERVAL 1080 MINUTE + INTERVAL 60 SECOND, @r, 1), (5, 21.500, CURDATE() - INTERVAL 2 DAY + INTERVAL 1080 MINUTE + INTERVAL 105 SECOND, @r, 2), (8, 22.800, CURDATE() - INTERVAL 2 DAY + INTERVAL 1080 MINUTE + INTERVAL 150 SECOND, @r, 1), (11, 24.100, CURDATE() - INTERVAL 2 DAY + INTERVAL 1080 MINUTE + INTERVAL 195 SECOND, @r, 2);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (4, 27, 2, 93.1, 738, 2, @s, 16);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 20.200, CURDATE() - INTERVAL 2 DAY + INTERVAL 1080 MINUTE + INTERVAL 60 SECOND, @r, 4), (5, 21.500, CURDATE() - INTERVAL 2 DAY + INTERVAL 1080 MINUTE + INTERVAL 105 SECOND, @r, 4);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 34, 1, 97.1, 474, 3, @s, 18);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
 VALUES (@pid, NULL, 'Lower Body Power', 'strength', CURDATE() - INTERVAL 1 DAY, 'COMPLETED', CURDATE() - INTERVAL 1 DAY + INTERVAL 435 MINUTE, CURDATE() - INTERVAL 1 DAY + INTERVAL 435 MINUTE + INTERVAL 2231 SECOND, 1741, 125, CURDATE() - INTERVAL 1 DAY + INTERVAL 435 MINUTE, CURDATE() - INTERVAL 1 DAY + INTERVAL 435 MINUTE + INTERVAL 2231 SECOND);
 SET @s = LAST_INSERT_ID();
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 16, 1, 94.1, 633, 1, @s, 9);
 SET @r = LAST_INSERT_ID();
-INSERT INTO form_error_logs (rep_number, joint_angle, occurred_at, session_exercise_result_id, form_rule_id) VALUES (2, 21.500, CURDATE() - INTERVAL 1 DAY + INTERVAL 435 MINUTE + INTERVAL 60 SECOND, @r, 3);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 41, 2, 95.3, 712, 2, @s, 10);
 INSERT INTO session_exercise_results (sets_completed, valid_reps, invalid_reps, accuracy, active_seconds, sort_order, workout_session_id, exercise_id) VALUES (3, 63, 2, 96.9, 396, 3, @s, 12);
 INSERT INTO workout_sessions (member_profile_id, workout_id, workout_name, category, session_date, status, started_at, finished_at, active_seconds, total_reps, created_at, updated_at)
