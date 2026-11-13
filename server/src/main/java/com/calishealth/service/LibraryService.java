@@ -256,6 +256,13 @@ public class LibraryService {
         int toIndex = Math.min(fromIndex + safeSize, totalItems);
         List<ExerciseListItem> pagedItems = allExercises.subList(fromIndex, toIndex);
 
+        // GUEST (chưa đăng nhập) chỉ được xem DANH SÁCH. Link video demo bị gỡ
+        // khỏi payload để guest không thể tự gọi API và mở xem "Watch Exercise Demo"
+        // khi giao diện đang chặn màn chi tiết.
+        if (userEmail == null || userEmail.isBlank()) {
+            pagedItems = pagedItems.stream().map(LibraryService::toGuestSafe).toList();
+        }
+
         return new PagedExerciseListResponse(
                 pagedItems,
                 totalItems,
@@ -263,6 +270,29 @@ public class LibraryService {
                 safePage,
                 safeSize
         );
+    }
+
+    /** Bản rút gọn cho GUEST: bỏ link video demo (nội dung chỉ xem sau khi đăng nhập). */
+    private static ExerciseListItem toGuestSafe(ExerciseListItem item) {
+        if (item == null || item.demoVideoUrl() == null) {
+            return item;
+        }
+        return new ExerciseListItem(
+                item.id(),
+                item.code(),
+                item.name(),
+                item.type(),
+                item.source(),
+                item.category(),
+                item.muscleGroup(),
+                item.sets(),
+                item.repsOrDuration(),
+                item.goal(),
+                item.equipment(),
+                item.level(),
+                item.details(),
+                item.description(),
+                null);
     }
 
     @Transactional(readOnly = true)

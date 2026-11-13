@@ -17,7 +17,7 @@ spring:
     # KHÔNG hard-code mật khẩu trong repo. Đặt DB_USERNAME / DB_PASSWORD trong
     # file .env ở thư mục gốc dự án (xem .env.example).
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:}
+    password: ${DB_PASSWORD:12345678}
     driver-class-name: com.mysql.cj.jdbc.Driver
   flyway:
     enabled: true

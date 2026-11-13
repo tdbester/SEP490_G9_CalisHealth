@@ -246,6 +246,50 @@ public class ExerciseService {
                 .toList();
     }
 
+    /**
+     * Bản rút gọn dành cho GUEST (chưa đăng nhập).
+     *
+     * <p>GUEST chỉ được xem danh sách bài tập/workout, không được mở trang chi tiết.
+     * Vì vậy 3 nội dung "nâng cao" phải bị gỡ khỏi payload:
+     * <ul>
+     *   <li>{@code guide} — các bước thực hiện ("Execution Theory")</li>
+     *   <li>{@code demoVideoUrl} — video minh hoạ ("Watch Exercise Demo")</li>
+     *   <li>{@code anatomyImageUrl} — ảnh giải phẫu ("View Anatomy")</li>
+     * </ul>
+     *
+     * <p>Nếu không gỡ, GUEST có thể tự gọi API công khai và lấy được nội dung mà
+     * giao diện đang cố che bằng {@code GuestBlockedRoute}.
+     */
+    public ExerciseResponse toGuestSafe(ExerciseResponse response) {
+        if (response == null) {
+            return null;
+        }
+        return new ExerciseResponse(
+                response.code(),
+                response.movementGroup(),
+                response.name(),
+                response.type(),
+                response.description(),
+                response.category(),
+                response.muscleGroup(),
+                response.level(),
+                null,
+                null,
+                null,
+                response.source(),
+                response.createdByName(),
+                response.defaultReps(),
+                response.duration(),
+                response.active(),
+                response.updatedAt(),
+                response.submittedAt(),
+                response.autoCheckStatus(),
+                response.defaultSets(),
+                response.selfActive(),
+                response.levelActive(),
+                null);
+    }
+
     @Transactional(readOnly = true)
     public ExerciseResponse findByCode(String code) {
         return exercises.findByCode(code)
