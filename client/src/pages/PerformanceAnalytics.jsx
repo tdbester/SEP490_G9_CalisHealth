@@ -9,8 +9,6 @@ import "./PerformanceAnalytics.css";
 
 const RANGE_IDS = ["1M", "3M", "1Y"];
 
-const ERROR_COLORS = ["#EC4899", "#C084FC", "#6C8CFF", "#4A4466"];
-
 // Nhãn cột 1Y là "Q1 2026"... -> thêm các tháng của quý ở dòng chữ nhỏ bên dưới
 const QUARTER_MONTHS = { Q1: "Jan – Mar", Q2: "Apr – Jun", Q3: "Jul – Sep", Q4: "Oct – Dec" };
 
@@ -29,46 +27,6 @@ function formatHold(totalSeconds) {
   const seconds = totalSeconds % 60;
   if (!minutes) return `${seconds}s`;
   return seconds ? `${minutes}m ${String(seconds).padStart(2, "0")}s` : `${minutes}m`;
-}
-
-/** Vòng donut chia theo tỉ lệ các lỗi form. */
-function ErrorDonut({ items, total }) {
-  const { t } = useTranslation();
-  const radius = 54;
-  const circumference = 2 * Math.PI * radius;
-  const gap = 4;
-  let offset = 0;
-
-  return (
-    <div className="pa-donut">
-      <svg viewBox="0 0 140 140" aria-hidden="true">
-        <circle cx="70" cy="70" r={radius} className="pa-donut-track" />
-        {items.map((item, i) => {
-          const length = (item.percent / 100) * circumference;
-          const segment = (
-            <circle
-              key={item.label}
-              cx="70"
-              cy="70"
-              r={radius}
-              fill="none"
-              stroke={ERROR_COLORS[i % ERROR_COLORS.length]}
-              strokeWidth="14"
-              strokeDasharray={`${Math.max(length - gap, 0)} ${circumference}`}
-              strokeDashoffset={-offset}
-              transform="rotate(-90 70 70)"
-            />
-          );
-          offset += length;
-          return segment;
-        })}
-      </svg>
-      <div className="pa-donut-center">
-        <strong>{total}</strong>
-        <span>{t("member.analytics.tags")}</span>
-      </div>
-    </div>
-  );
 }
 
 /** Vòng tiến độ theo phần trăm; percent = null thì hiện "—" (chưa đo). */
@@ -208,29 +166,6 @@ export default function PerformanceAnalytics() {
           <section className="pa-section">
             <SectionLabel index="01">{t("member.analytics.sectionForm")}</SectionLabel>
             <div className="pa-grid">
-              <article className="pa-card pa-errors">
-                <h3 className="pa-card-title">{t("member.analytics.commonFormErrors")}</h3>
-                <p className="pa-card-subtitle">{t("member.analytics.issuesDetected")}</p>
-                <div className="pa-card-body">
-                  <ErrorDonut items={data.formErrors.items} total={data.formErrors.totalTags} />
-                  {data.formErrors.items.length === 0 && (
-                    <p className="pa-card-subtitle">{t("member.analytics.noFormErrors", { period })}</p>
-                  )}
-                  <ul className="pa-legend">
-                    {data.formErrors.items.map((item, i) => (
-                      <li key={item.label}>
-                        <span
-                          className="pa-legend-dot"
-                          style={{ background: ERROR_COLORS[i % ERROR_COLORS.length] }}
-                        />
-                        <span className="pa-legend-label">{item.label}</span>
-                        <strong>{item.percent}%</strong>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </article>
-
               <article className="pa-card">
                 <h3 className="pa-card-title">{t("member.analytics.cleanRepRatio")}</h3>
                 <p className="pa-card-subtitle">{t("member.analytics.validVsTotal")}</p>

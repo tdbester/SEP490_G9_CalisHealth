@@ -5,10 +5,10 @@ import com.calishealth.dtos.MemberExerciseDetailResponseDTO;
 import com.calishealth.dtos.MemberExerciseItemResponseDTO;
 import com.calishealth.dtos.PageResponseDTO;
 import com.calishealth.models.Exercise;
-import com.calishealth.models.MemberSavedExercise;
+import com.calishealth.models.MemberFavorite;
 import com.calishealth.models.User;
 import com.calishealth.repository.ExerciseRepository;
-import com.calishealth.repository.MemberSavedExerciseRepository;
+import com.calishealth.repository.MemberFavoriteRepository;
 import com.calishealth.repository.UserRepository;
 import com.calishealth.specification.MemberExerciseSpecification;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +32,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class MemberExerciseService {
     private final ExerciseRepository exercises;
-    private final MemberSavedExerciseRepository savedExercises;
+    private final MemberFavoriteRepository favorites;
     private final UserRepository users;
 
     @Transactional(readOnly = true)
@@ -47,10 +47,10 @@ public class MemberExerciseService {
                         || (item.getAuthor() != null && member.getId().equals(item.getAuthor().getId())))
                 .orElseThrow(() -> new ResourceNotFoundException("Community exercise not found"));
 
-        boolean isSaved = savedExercises.findAllByMemberIdAndExerciseIdIn(member.getId(), List.of(exerciseId))
-                .stream()
-                .findAny()
-                .isPresent();
+        boolean isSaved = favorites.existsByMemberIdAndItemTypeAndItemId(
+                member.getId(),
+                MemberFavorite.ItemType.MEMBER_EXERCISE,
+                exerciseId);
         String guide = exercise.getGuideSteps();
         if (guide == null || guide.isBlank()) {
             guide = exercise.getGuide();
@@ -129,9 +129,13 @@ public class MemberExerciseService {
         List<Long> ids = result.getContent().stream().map(Exercise::getId).toList();
         Set<Long> savedIds = new HashSet<>();
         if (!ids.isEmpty()) {
-            savedExercises.findAllByMemberIdAndExerciseIdIn(member.getId(), ids)
+            favorites.findAllByMemberIdAndItemTypeIn(
+                            member.getId(),
+                            List.of(MemberFavorite.ItemType.MEMBER_EXERCISE,
+                                    MemberFavorite.ItemType.SYSTEM_EXERCISE))
                     .stream()
-                    .map(MemberSavedExercise::getExerciseId)
+                    .map(MemberFavorite::getItemId)
+                    .filter(ids::contains)
                     .forEach(savedIds::add);
         }
 

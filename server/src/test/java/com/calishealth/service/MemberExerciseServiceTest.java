@@ -3,11 +3,11 @@ package com.calishealth.service;
 import com.calishealth.dtos.MemberExerciseFilterRequestDTO;
 import com.calishealth.models.Exercise;
 import com.calishealth.models.ExerciseMuscleGroup;
-import com.calishealth.models.MemberSavedExercise;
+import com.calishealth.models.MemberFavorite;
 import com.calishealth.models.MuscleGroup;
 import com.calishealth.models.User;
 import com.calishealth.repository.ExerciseRepository;
-import com.calishealth.repository.MemberSavedExerciseRepository;
+import com.calishealth.repository.MemberFavoriteRepository;
 import com.calishealth.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,21 +22,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class MemberExerciseServiceTest {
     private ExerciseRepository exercises;
-    private MemberSavedExerciseRepository savedExercises;
+    private MemberFavoriteRepository favorites;
     private UserRepository users;
     private MemberExerciseService service;
 
     @BeforeEach
     void setUp() {
         exercises = mock(ExerciseRepository.class);
-        savedExercises = mock(MemberSavedExerciseRepository.class);
+        favorites = mock(MemberFavoriteRepository.class);
         users = mock(UserRepository.class);
-        service = new MemberExerciseService(exercises, savedExercises, users);
+        service = new MemberExerciseService(exercises, favorites, users);
     }
 
     @Test
@@ -62,10 +63,8 @@ class MemberExerciseServiceTest {
         when(exercises.findAll(any(org.springframework.data.jpa.domain.Specification.class),
                 any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(exercise), PageRequest.of(0, 6), 1));
-        MemberSavedExercise saved = new MemberSavedExercise();
-        saved.setExerciseId(25L);
-        when(savedExercises.findAllByMemberIdAndExerciseIdIn(anyLong(), anyCollection()))
-                .thenReturn(List.of(saved));
+        when(favorites.findAllByMemberIdAndItemTypeIn(eq(10L), anyCollection()))
+                .thenReturn(List.of(favorite(25L)));
 
         MemberExerciseFilterRequestDTO filter = new MemberExerciseFilterRequestDTO();
         var result = service.getMemberExercises(filter, "member@example.com");
@@ -115,7 +114,8 @@ class MemberExerciseServiceTest {
         exercise.setStatus(Exercise.EntryStatus.ACCEPTED);
         exercise.setShareWithCommunity(true);
         when(exercises.findById(25L)).thenReturn(Optional.of(exercise));
-        when(savedExercises.findAllByMemberIdAndExerciseIdIn(10L, List.of(25L))).thenReturn(List.of());
+        when(favorites.existsByMemberIdAndItemTypeAndItemId(
+                10L, MemberFavorite.ItemType.MEMBER_EXERCISE, 25L)).thenReturn(false);
 
         var result = service.getMemberExerciseDetail(25L, "member@example.com");
 
@@ -158,10 +158,17 @@ class MemberExerciseServiceTest {
         exercise.setMuscleGroups(List.of(backLink, bicepsLink));
 
         when(exercises.findById(26L)).thenReturn(Optional.of(exercise));
-        when(savedExercises.findAllByMemberIdAndExerciseIdIn(10L, List.of(26L))).thenReturn(List.of());
 
         var result = service.getMemberExerciseDetail(26L, "member@example.com");
 
         assertThat(result.targetMuscle()).isEqualTo("Back, Biceps");
+    }
+
+    private MemberFavorite favorite(Long exerciseId) {
+        MemberFavorite favorite = new MemberFavorite();
+        favorite.setMemberId(10L);
+        favorite.setItemType(MemberFavorite.ItemType.MEMBER_EXERCISE);
+        favorite.setItemId(exerciseId);
+        return favorite;
     }
 }

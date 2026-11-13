@@ -731,40 +731,7 @@ public class MemberTrackingRepository {
             periodText = "this month";
         }
 
-        // 1. Phân bổ lỗi form (Form Errors)
-        List<Map<String, Object>> errorRows = jdbcTemplate.queryForList(
-                """
-                SELECT COALESCE(fr.feedback_message, fr.joint, 'Other') AS error_label,
-                       COUNT(fel.id) AS error_count
-                FROM form_error_logs fel
-                JOIN session_exercise_results ser ON ser.id = fel.session_exercise_result_id
-                JOIN workout_sessions ws ON ws.id = ser.workout_session_id
-                LEFT JOIN form_rules fr ON fr.id = fel.form_rule_id
-                WHERE ws.member_profile_id = ?
-                  AND ws.status = 'COMPLETED'
-                  AND ws.session_date >= ?
-                GROUP BY error_label
-                ORDER BY error_count DESC
-                """,
-                profileId,
-                Date.valueOf(startDate)
-        );
-
-        int totalErrors = errorRows.stream()
-                .mapToInt(r -> ((Number) r.get("error_count")).intValue())
-                .sum();
-
-        // Chưa có lỗi nào được ghi nhận -> danh sách rỗng (không dùng số mẫu)
-        List<FormErrorItemDto> errorItems = new ArrayList<>();
-        for (Map<String, Object> row : errorRows) {
-            String label = (String) row.get("error_label");
-            int count = ((Number) row.get("error_count")).intValue();
-            int percent = (int) Math.round((count * 100.0) / totalErrors);
-            errorItems.add(new FormErrorItemDto(label, count, percent));
-        }
-        FormErrorsSummaryDto formErrorsSummary = new FormErrorsSummaryDto(totalErrors, errorItems);
-
-        // 2. Thống kê số lượng Reps (Clean vs Total)
+        // 1. Reps sạch vs tổng (Clean Rep Ratio) — nguồn sự thật cho điểm form
         Map<String, Object> repsMap = jdbcTemplate.queryForMap(
                 """
                 SELECT COALESCE(SUM(ser.valid_reps), 0) AS total_valid,
@@ -871,24 +838,22 @@ public class MemberTrackingRepository {
                 restPercent
         );
 
-        // 6. Nhận xét sinh từ số liệu của chính member; chưa có buổi tập thì không có nhận xét
+        // 6. Nhận xét sinh từ số liệu của chính member; chưa có buổi tập thì không có nhận xét.
+        //    Nhận xét chỉ dựa trên số liệu đo được (rep sạch / rep tổng) — phần phân tích lỗi dáng
+        //    chi tiết theo khớp do AI Support (chat box) đảm nhiệm, không ghi log vào DB.
         AiInsightDto aiInsight = null;
         if (sessionCount > 0) {
             String title = "You completed " + totalReps + " reps"
                     + (totalHoldSec > 0 ? " and " + formatHold(totalHoldSec) + " of holds" : "")
                     + " in " + sessionCount + (sessionCount == 1 ? " session " : " sessions ") + periodText;
-            String text = errorItems.isEmpty()
-                    ? cleanRatio + "% of your reps were clean. No form errors were flagged in this period."
-                    : cleanRatio + "% of your reps were clean. Your most frequent form issue was \""
-                            + errorItems.get(0).label() + "\" (" + errorItems.get(0).percent() + "% of "
-                            + totalErrors + " flagged reps).";
+            String text = cleanRatio + "% of your reps were clean ("
+                    + validReps + " of " + totalReps + " reps).";
             aiInsight = new AiInsightDto(title, text);
         }
 
         return new PerformanceAnalyticsResponse(
                 range.toUpperCase(Locale.ROOT),
                 sessionCount,
-                formErrorsSummary,
                 repsSummary,
                 holdSummary,
                 volumeProgression,

@@ -4,9 +4,11 @@ import com.calishealth.dtos.ExerciseTreeEdgeDTO;
 import com.calishealth.dtos.ExerciseTreeNodeDTO;
 import com.calishealth.dtos.ExerciseTreeResponseDTO;
 import com.calishealth.models.Exercise;
-import com.calishealth.models.MemberExerciseProgress;
+import com.calishealth.models.MemberProfile;
+import com.calishealth.models.MemberSkillProgress;
 import com.calishealth.models.ProgressionRule;
-import com.calishealth.repository.MemberExerciseProgressRepository;
+import com.calishealth.repository.MemberProfileRepository;
+import com.calishealth.repository.MemberSkillProgressRepository;
 import com.calishealth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +32,8 @@ public class ExerciseTreeService {
     public enum TreeOrder { EASY_TO_HARD, HARD_TO_EASY }
 
     private final ProgressionRuleService progressionRules;
-    private final MemberExerciseProgressRepository progress;
+    private final MemberSkillProgressRepository skillProgress;
+    private final MemberProfileRepository memberProfiles;
     private final UserRepository users;
 
     @Transactional(readOnly = true)
@@ -61,13 +63,9 @@ public class ExerciseTreeService {
         }
 
         Set<Long> exerciseIds = exercises.keySet();
-        Map<Long, MemberExerciseProgress.ProgressStatus> storedStates = exerciseIds.isEmpty()
+        Map<Long, String> storedStates = exerciseIds.isEmpty()
                 ? Map.of()
-                : progress.findAllByMemberIdAndExerciseIdIn(memberId, exerciseIds).stream()
-                        .collect(Collectors.toMap(
-                                MemberExerciseProgress::getExerciseId,
-                                MemberExerciseProgress::getStatus,
-                                (first, ignored) -> first));
+                : loadSkillStates(memberId, exerciseIds);
         Map<Long, String> states = resolveStates(exercises, prerequisites, activePrerequisites, storedStates);
 
         Comparator<Exercise> comparator = Comparator
@@ -100,11 +98,39 @@ public class ExerciseTreeService {
         return response(order, nodes, edges);
     }
 
+    /**
+     * Đọc trạng thái tiến độ của member trên các bài trong cây.
+     *
+     * <p>Nguồn sự thật là {@code member_skill_progress} (bảng {@code ProgressionRuleService} ghi khi
+     * member tập xong bài và mở khoá bài kế tiếp): {@code UNLOCKED} = đã chinh phục, còn lại
+     * ({@code IN_PROGRESS} / chưa có dòng) = đang tập. Trạng thái trả về dùng đúng 3 giá trị mà
+     * frontend dựng cây: MASTERED / CURRENT / LOCKED.
+     */
+    private Map<Long, String> loadSkillStates(Long memberId, Set<Long> exerciseIds) {
+        MemberProfile profile = memberProfiles.findByUserId(memberId).orElse(null);
+        if (profile == null) {
+            return Map.of();
+        }
+        Map<Long, String> states = new HashMap<>();
+        for (MemberSkillProgress row : skillProgress.findAllByMemberProfile_IdAndExercise_IdIn(
+                profile.getId(), exerciseIds)) {
+            Long exerciseId = row.getExercise() == null ? null : row.getExercise().getId();
+            if (exerciseId == null) {
+                continue;
+            }
+            String status = row.getStatus();
+            states.put(exerciseId, ProgressionRuleService.PROGRESS_UNLOCKED.equals(status)
+                    ? "MASTERED"
+                    : "CURRENT");
+        }
+        return states;
+    }
+
     private Map<Long, String> resolveStates(
             Map<Long, Exercise> exercises,
             Map<Long, Set<Long>> prerequisites,
             Map<Long, Set<Long>> activePrerequisites,
-            Map<Long, MemberExerciseProgress.ProgressStatus> storedStates
+            Map<Long, String> storedStates
     ) {
         Comparator<Long> byDifficulty = Comparator
                 .comparing((Long id) -> exercises.get(id).getTreeLevel(), Comparator.nullsLast(Integer::compareTo))
@@ -126,10 +152,9 @@ public class ExerciseTreeService {
         Map<Long, String> states = new HashMap<>();
         while (!ready.isEmpty()) {
             Long id = ready.remove();
-            MemberExerciseProgress.ProgressStatus savedState = storedStates.get(id);
-            if (savedState == MemberExerciseProgress.ProgressStatus.MASTERED
-                    || savedState == MemberExerciseProgress.ProgressStatus.CURRENT) {
-                states.put(id, savedState.name());
+            String savedState = storedStates.get(id);
+            if ("MASTERED".equals(savedState) || "CURRENT".equals(savedState)) {
+                states.put(id, savedState);
             } else if (activePrerequisites.containsKey(id)) {
                 boolean unlocked = activePrerequisites.get(id).stream()
                         .allMatch(prerequisiteId -> "MASTERED".equals(states.get(prerequisiteId)));
