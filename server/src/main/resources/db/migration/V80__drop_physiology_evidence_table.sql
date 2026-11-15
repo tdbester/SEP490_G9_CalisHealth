@@ -1,0 +1,28 @@
+-- V80: Bỏ bảng physiology_evidence — chuyển thư viện bằng chứng sang file tĩnh.
+--
+-- LÝ DO
+--   Bảng này CHƯA BAO GIỜ được hiển thị cho người dùng cuối:
+--     - Member ở màn chi tiết bài tập chỉ thấy hồ sơ sinh lý (đòn cân bằng, tải
+--       tim mạch, huyết áp, tải gân...), KHÔNG thấy danh mục nguồn.
+--     - Endpoint GET /api/content/physiology/evidence (Content Manager tra cứu)
+--       không có màn hình nào gọi tới.
+--   Nó chỉ là danh mục tra cứu tĩnh, không phải dữ liệu nghiệp vụ phát sinh.
+--   Giữ bảng trong DB chỉ tăng chi phí bảo trì (mỗi lần đổi nguồn học thuật là
+--   phải viết migration) mà không tạo thêm giá trị cho hệ thống.
+--
+-- GIẢI PHÁP
+--   21 nguồn được chuyển thành file tĩnh trong mã nguồn:
+--     server/src/main/resources/physiology-evidence-library.json
+--   Service đọc file này thay vì truy vấn DB (xem PhysiologyEvidenceLibrary).
+--   Lợi ích: nguồn nằm trong git nên trích dẫn được trong báo cáo đồ án và
+--   khi bảo vệ trước hội đồng; không cần migration khi bổ sung nguồn mới.
+--
+-- VÌ SAO KHÔNG XÓA LUÔN CỘT evidence_refs
+--   exercise_physiology_profiles.evidence_refs và physiology_alert_rules.evidence_refs
+--   là JSON array chứa MÃ nguồn (vd. "EV_PLANK_2026"), không phải khóa ngoại.
+--   Giữ lại để hồ sơ vẫn truy được về nguồn, và để service kiểm chứng mã nguồn
+--   còn tồn tại trong thư viện file tĩnh.
+--
+-- LƯU Ý: file JSON đã chứa đủ 21 nguồn, nên dữ liệu không mất.
+
+DROP TABLE IF EXISTS physiology_evidence;
