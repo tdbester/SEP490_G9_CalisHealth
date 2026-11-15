@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { memberScheduleApi } from "../api/memberSchedule";
-import "./ReviewTrainingPlanPage.css";
+import "./PreviewTrainingPlanPage.css";
 
 const WEEK_DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -30,7 +30,7 @@ function exerciseSummary(exercise, t) {
       ? t("member.plan.secondsUnit", { count: exercise.durationSeconds ?? 0 })
       : t("member.plan.repsUnit", { count: exercise.reps ?? 0 });
   const muscles = exercise.muscleGroup ? ` · ${exercise.muscleGroup}` : "";
-  return `${t("member.plan.reviewSummarySets", { sets: exercise.sets, count })}${muscles}`;
+  return `${t("member.plan.previewSummarySets", { sets: exercise.sets, count })}${muscles}`;
 }
 
 function mondayOf(date) {
@@ -40,7 +40,7 @@ function mondayOf(date) {
   return monday;
 }
 
-export default function ReviewTrainingPlanPage() {
+export default function PreviewTrainingPlanPage() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === "vi" ? "vi-VN" : "en-GB";
@@ -66,7 +66,7 @@ export default function ReviewTrainingPlanPage() {
         if (!cancelled) {
           setError(
             loadError?.response?.data?.message ||
-              t("member.plan.reviewLoadError"),
+              t("member.plan.previewLoadError"),
           );
         }
       } finally {
@@ -114,15 +114,15 @@ export default function ReviewTrainingPlanPage() {
   const plannedDays = week.filter((day) => (byDate[day.iso]?.length || 0) > 0).length;
 
   if (loading) {
-    return <div className="review-loading">{t("member.plan.reviewLoading")}</div>;
+    return <div className="preview-loading">{t("member.plan.previewLoading")}</div>;
   }
 
   return (
-    <div className="review-page">
-      <header className="review-head">
-        <h1 className="review-title">{t("member.plan.reviewPlan")}</h1>
-        <p className="review-subtitle">
-          {t("member.plan.reviewPlanSubtitle", {
+    <div className="preview-page">
+      <header className="preview-head">
+        <h1 className="preview-title">{t("member.plan.previewPlan")}</h1>
+        <p className="preview-subtitle">
+          {t("member.plan.previewPlanSubtitle", {
             month: formatMonth(new Date(), locale),
             start: week[0].dateLabel,
             end: week[6].dateLabel,
@@ -130,58 +130,58 @@ export default function ReviewTrainingPlanPage() {
         </p>
       </header>
 
-      {error && <div className="review-alert">{error}</div>}
+      {error && <div className="preview-alert">{error}</div>}
 
       {/* Plan info: ẩn khi member chưa có template phù hợp */}
       {planInfo && (
-        <section className="review-card">
-          <h2 className="review-card__title">{t("member.plan.reviewPlanInfo")}</h2>
-          <div className="review-plan-grid">
+        <section className="preview-card">
+          <h2 className="preview-card__title">{t("member.plan.previewPlanInfo")}</h2>
+          <div className="preview-plan-grid">
             {[
               [t("member.plan.planName"), planInfo.templateName],
               [t("member.plan.planYear"), planInfo.year],
               [t("member.plan.planLevel"), planInfo.level],
             ].map(([label, value]) => (
               <div key={label}>
-                <div className="review-plan-grid__label">{label}</div>
-                <div className="review-plan-grid__value">{value}</div>
+                <div className="preview-plan-grid__label">{label}</div>
+                <div className="preview-plan-grid__value">{value}</div>
               </div>
             ))}
           </div>
         </section>
       )}
 
-      <section className="review-week">
-        <div className="review-week__head">
+      <section className="preview-week">
+        <div className="preview-week__head">
           {week.map((day) => (
             <div
               key={day.key}
-              className={`review-day-head${day.isToday ? " is-today" : ""}`}
+              className={`preview-day-head${day.isToday ? " is-today" : ""}`}
             >
-              <span className="review-day-head__date">{day.dateLabel}</span>
-              <span className="review-day-head__name">{day.label}</span>
+              <span className="preview-day-head__date">{day.dateLabel}</span>
+              <span className="preview-day-head__name">{day.label}</span>
             </div>
           ))}
         </div>
 
-        <div className="review-week__body">
+        <div className="preview-week__body">
           {week.map((day) => {
             const entries = byDate[day.iso] || [];
             return (
               <div
                 key={day.key}
-                className={`review-day-cell${day.isToday ? " is-today" : ""}`}
+                className={`preview-day-cell${day.isToday ? " is-today" : ""}`}
               >
                 {entries.length > 0 ? (
                   entries.map((entry) => (
                     <article
                       key={entry.id ?? `${day.iso}-${entry.workoutCode}`}
-                      className={`review-workout review-workout--${
+                      className={`preview-workout preview-workout--${
                         entry.category === "SKILL" ? "skill" : "health"
                       }`}
                     >
                       <span
-                        className={`review-workout__badge review-workout__badge--${
+                        className={`preview-workout__badge preview-workout__badge--${
                           entry.category === "SKILL" ? "skill" : "health"
                         }`}
                       >
@@ -189,26 +189,26 @@ export default function ReviewTrainingPlanPage() {
                           CATEGORY_LABEL_KEY[entry.category] ?? "member.schedule.categoryHealth",
                         )}
                       </span>
-                      <h3 className="review-workout__name">{entry.workoutName}</h3>
-                      <p className="review-workout__meta">
-                        {t("member.plan.reviewWorkoutMeta", {
+                      <h3 className="preview-workout__name">{entry.workoutName}</h3>
+                      <p className="preview-workout__meta">
+                        {t("member.plan.previewWorkoutMeta", {
                           level: entry.workoutLevel,
                           count: entry.exerciseCount,
                         })}
                       </p>
-                      <p className="review-workout__meta review-workout__meta--dim">
+                      <p className="preview-workout__meta preview-workout__meta--dim">
                         {entry.durationMinutes} min
                       </p>
 
                       {/* Danh sách bài tập của buổi tập trong ngày này. */}
                       {exerciseList(entry).length > 0 && (
-                        <ul className="review-exercises">
+                        <ul className="preview-exercises">
                           {exerciseList(entry).map((exercise) => (
-                            <li key={exercise.exerciseCode} className="review-exercise">
-                              <span className="review-exercise__name">
+                            <li key={exercise.exerciseCode} className="preview-exercise">
+                              <span className="preview-exercise__name">
                                 {exercise.exerciseName}
                               </span>
-                              <span className="review-exercise__detail">
+                              <span className="preview-exercise__detail">
                                 {exerciseSummary(exercise, t)}
                               </span>
                             </li>
@@ -218,8 +218,8 @@ export default function ReviewTrainingPlanPage() {
                     </article>
                   ))
                 ) : (
-                  <div className="review-workout review-workout--empty">
-                    {t("member.plan.reviewRestDay")}
+                  <div className="preview-workout preview-workout--empty">
+                    {t("member.plan.previewRestDay")}
                   </div>
                 )}
               </div>
@@ -228,27 +228,27 @@ export default function ReviewTrainingPlanPage() {
         </div>
       </section>
 
-      <p className="review-summary">
+      <p className="preview-summary">
         {plannedCount > 0
-          ? t("member.plan.reviewSummary", {
+          ? t("member.plan.previewSummary", {
               count: plannedCount,
               plural: plannedCount === 1 ? "" : "s",
               days: plannedDays,
             })
-          : t("member.plan.reviewSummaryEmpty")}
+          : t("member.plan.previewSummaryEmpty")}
       </p>
 
-      <div className="review-actions">
-        <button type="button" className="review-back" onClick={() => navigate("/schedule")}>
+      <div className="preview-actions">
+        <button type="button" className="preview-back" onClick={() => navigate("/schedule")}>
           ← {t("common.back")}
         </button>
         <button
           type="button"
-          className="review-go"
+          className="preview-go"
           onClick={() => navigate("/plan")}
           disabled={plannedCount === 0}
         >
-          {t("member.plan.reviewLetsGo")}
+          {t("member.plan.previewLetsGo")}
         </button>
       </div>
     </div>

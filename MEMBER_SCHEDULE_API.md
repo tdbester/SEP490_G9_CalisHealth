@@ -1,9 +1,9 @@
 # Member Workout Schedule — Backend
 
 Chức năng: member tự kéo workout (lấy từ **Daily Training Plan Template** do Content
-Manager tạo) vào các thứ trong tuần, rồi review lại kế hoạch tuần.
+Manager tạo) vào các thứ trong tuần, rồi xem trước kế hoạch tuần.
 
-Luồng: `/` (Start Workout) → `/schedule` → Save → `/schedule/review` → Let's go → `/plan`
+Luồng: `/` (Start Workout) → `/schedule` → Save → `/schedule/preview` → Let's go → `/plan`
 
 ---
 
@@ -173,7 +173,7 @@ Tất cả lịch của member, mới nhất trước.
    (`toIsoDate`) để tránh gửi lùi một ngày ở UTC+7.
 4. **Drag & drop trên Firefox/Safari** — phải `dataTransfer.setData("text/plain", code)`
    trong `onDragStart`, nếu không `onDrop` không bắn.
-5. **2 trang chưa có route** — phải thêm `/schedule` và `/schedule/review` vào `App.jsx`;
+5. **2 trang chưa có route** — phải thêm `/schedule` và `/schedule/preview` vào `App.jsx`;
    nút "Let's go" trỏ `/plan` (không phải `/daily-workout`).
 
 ---
@@ -196,7 +196,7 @@ UI (browser, desktop 1512×1000):
 
 - `/` Start Workout → `/schedule` ✔
 - Sidebar load 5 workout, lịch load lại đúng Thứ 3 + Thứ 7 đã lưu ✔
-- Save schedule → chuyển `/schedule/review`, hiện 2 workouts planned ✔
+- Save schedule → chuyển `/schedule/preview`, hiện 2 workouts planned ✔
 - Let's go → `/plan` ✔
 
 ---

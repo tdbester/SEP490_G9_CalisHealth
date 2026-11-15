@@ -1,7 +1,7 @@
-/* ReviewTrainingPlanPage.css — màn "Review workout plan" (bước sau khi lưu lịch).
+/* PreviewTrainingPlanPage.css — màn "Preview workout plan" (bước sau khi lưu lịch).
    Dùng cùng bảng màu với MemberSchedulePage.css để hai màn liền mạch. */
 
-.review-page {
+.preview-page {
   --panel: #150f33;
   --panel-border: #2a2150;
   --head-row: #1b1340;
@@ -22,7 +22,7 @@
   font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
 }
 
-.review-loading {
+.preview-loading {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -31,26 +31,26 @@
   font-size: 14px;
 }
 
-.review-head {
+.preview-head {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.review-title {
+.preview-title {
   margin: 0;
   font-size: 26px;
   line-height: 1.2;
   font-weight: 700;
 }
 
-.review-subtitle {
+.preview-subtitle {
   margin: 0;
   font-size: 13px;
   color: var(--text-dim);
 }
 
-.review-alert {
+.preview-alert {
   padding: 10px 14px;
   border-radius: 10px;
   background: rgba(224, 122, 181, 0.12);
@@ -60,52 +60,52 @@
 }
 
 /* plan info */
-.review-card {
+.preview-card {
   background: var(--panel);
   border: 1px solid var(--panel-border);
   border-radius: 14px;
   padding: 18px 20px;
 }
 
-.review-card__title {
+.preview-card__title {
   margin: 0 0 16px;
   font-size: 16px;
   font-weight: 600;
 }
 
-.review-plan-grid {
+.preview-plan-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 16px;
 }
 
-.review-plan-grid__label {
+.preview-plan-grid__label {
   font-size: 12px;
   color: var(--text-dim);
   margin-bottom: 6px;
 }
 
-.review-plan-grid__value {
+.preview-plan-grid__value {
   font-size: 16px;
   font-weight: 600;
 }
 
 /* week board */
-.review-week {
+.preview-week {
   background: var(--panel);
   border: 1px solid var(--panel-border);
   border-radius: 14px;
   overflow: hidden;
 }
 
-.review-week__head {
+.preview-week__head {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   background: var(--head-row);
   border-bottom: 1px solid var(--panel-border);
 }
 
-.review-day-head {
+.preview-day-head {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -114,38 +114,38 @@
   border-right: 1px solid var(--panel-border);
 }
 
-.review-day-head:last-child {
+.preview-day-head:last-child {
   border-right: none;
 }
 
-.review-day-head__date {
+.preview-day-head__date {
   font-size: 11px;
   color: var(--text-muted);
 }
 
-.review-day-head__name {
+.preview-day-head__name {
   font-size: 12px;
   font-weight: 600;
 }
 
-.review-day-head__date,
-.review-day-head__name {
+.preview-day-head__date,
+.preview-day-head__name {
   padding: 0 6px;
   border-radius: 4px;
 }
 
-.review-day-head.is-today .review-day-head__date {
+.preview-day-head.is-today .preview-day-head__date {
   background: var(--today);
   color: #fff;
 }
 
-.review-week__body {
+.preview-week__body {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   min-height: 220px;
 }
 
-.review-day-cell {
+.preview-day-cell {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -154,15 +154,15 @@
   background: #0f0a24;
 }
 
-.review-day-cell:last-child {
+.preview-day-cell:last-child {
   border-right: none;
 }
 
-.review-day-cell.is-today {
+.preview-day-cell.is-today {
   background: rgba(108, 79, 230, 0.16);
 }
 
-.review-workout {
+.preview-workout {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -172,17 +172,17 @@
   border-left: 3px solid transparent;
 }
 
-.review-workout--health {
+.preview-workout--health {
   background: var(--health-bg);
   border-left-color: var(--health);
 }
 
-.review-workout--skill {
+.preview-workout--skill {
   background: var(--skill-bg);
   border-left-color: var(--skill);
 }
 
-.review-workout--empty {
+.preview-workout--empty {
   flex: 1;
   align-items: center;
   justify-content: center;
@@ -193,7 +193,7 @@
   font-size: 11px;
 }
 
-.review-workout__badge {
+.preview-workout__badge {
   align-self: flex-start;
   padding: 1px 6px;
   border-radius: 4px;
@@ -201,35 +201,35 @@
   font-weight: 500;
 }
 
-.review-workout__badge--health {
+.preview-workout__badge--health {
   background: rgba(95, 191, 128, 0.16);
   color: #86e3a0;
 }
 
-.review-workout__badge--skill {
+.preview-workout__badge--skill {
   background: rgba(139, 108, 235, 0.2);
   color: #c9bff0;
 }
 
-.review-workout__name {
+.preview-workout__name {
   margin: 0;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.3;
 }
 
-.review-workout__meta {
+.preview-workout__meta {
   margin: 0;
   font-size: 10.5px;
   color: var(--text-muted);
 }
 
-.review-workout__meta--dim {
+.preview-workout__meta--dim {
   color: var(--text-dim);
 }
 
 /* Danh sách bài tập trong buổi tập của ngày. */
-.review-exercises {
+.preview-exercises {
   margin: 6px 0 0;
   padding: 6px 0 0;
   list-style: none;
@@ -239,32 +239,32 @@
   gap: 4px;
 }
 
-.review-exercise {
+.preview-exercise {
   display: flex;
   flex-direction: column;
   gap: 1px;
 }
 
-.review-exercise__name {
+.preview-exercise__name {
   font-size: 11px;
   line-height: 1.35;
   color: #e6e0ff;
   font-weight: 500;
 }
 
-.review-exercise__detail {
+.preview-exercise__detail {
   font-size: 10px;
   color: var(--text-dim);
 }
 
 /* footer */
-.review-summary {
+.preview-summary {
   margin: 0;
   font-size: 13px;
   color: var(--text-dim);
 }
 
-.review-actions {
+.preview-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -272,7 +272,7 @@
   flex-wrap: wrap;
 }
 
-.review-back {
+.preview-back {
   height: 38px;
   padding: 0 22px;
   background: #1e1646;
@@ -286,11 +286,11 @@
   transition: background 0.15s ease;
 }
 
-.review-back:hover {
+.preview-back:hover {
   background: #271d59;
 }
 
-.review-go {
+.preview-go {
   height: 38px;
   padding: 0 32px;
   border: none;
@@ -304,22 +304,22 @@
   transition: filter 0.15s ease;
 }
 
-.review-go:hover:not(:disabled) {
+.preview-go:hover:not(:disabled) {
   filter: brightness(1.08);
 }
 
-.review-go:disabled {
+.preview-go:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
 @media (max-width: 900px) {
-  .review-week {
+  .preview-week {
     overflow-x: auto;
   }
 
-  .review-week__head,
-  .review-week__body {
+  .preview-week__head,
+  .preview-week__body {
     min-width: 720px;
   }
 }
