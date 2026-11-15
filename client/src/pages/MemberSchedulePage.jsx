@@ -685,7 +685,7 @@ export default function MemberSchedulePage() {
         templateCode: planInfo?.templateCode ?? null,
         entries: weekEntries,
       });
-      navigate("/schedule/review");
+      navigate("/schedule/preview");
     } catch (saveError) {
       setError(readApiError(saveError, t("member.schedule.saveFailed")));
       return;

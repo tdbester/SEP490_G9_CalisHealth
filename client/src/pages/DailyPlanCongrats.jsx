@@ -78,7 +78,7 @@ function StreakIcon() {
  *  - Về dashboard để xem tổng quan tiến độ.
  *  - Bấm nút gợi ý để sang thư viện tập thêm nếu còn muốn tập.
  */
-export default function DailyPlanCongrats({ onReviewPlan }) {
+export default function DailyPlanCongrats({ onPreviewPlan }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
   /** Số bài tập / độ chính xác của buổi tập vừa hoàn thành. */
@@ -162,14 +162,14 @@ export default function DailyPlanCongrats({ onReviewPlan }) {
           {t('member.plan.congratsGoLibrary')}
         </button>
 
-        {onReviewPlan && (
+        {onPreviewPlan && (
           <button
             type="button"
             className="dp-congrats__btn dp-congrats__btn--ghost"
-            onClick={onReviewPlan}
+            onClick={onPreviewPlan}
           >
             <CalendarIcon />
-            {t('member.plan.congratsReviewPlan')}
+            {t('member.plan.congratsPreviewPlan')}
           </button>
         )}
       </div>
