@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -23,6 +22,10 @@ import java.util.Set;
  * <p>Quy tắc bất di bất dịch: CHỈ bài có {@code source = 'SYSTEM'} mới được có hồ sơ.
  * Bài do Member tải lên ({@code CUSTOM}) không bao giờ được gán hồ sơ vì không có
  * tuyên bố sinh lý nào được duyệt bằng chứng học thuật cho bài đó.
+ *
+ * <p>Thư viện nguồn học thuật không nằm trong DB mà nằm trong file tĩnh
+ * {@code physiology-evidence-library.json} (xem {@link PhysiologyEvidenceLibrary});
+ * bảng {@code physiology_evidence} đã bị bỏ ở V80.
  */
 @Service
 @RequiredArgsConstructor
@@ -37,6 +40,7 @@ public class ExercisePhysiologyService {
     /** Mỗi mục trong {@code contraindications} là 1 bệnh / tình trạng do CM tự nhập (tối đa 120 ký tự). */
 
     private final JdbcTemplate jdbcTemplate;
+    private final PhysiologyEvidenceLibrary evidenceLibrary;
 
     /**
      * Tạo hoặc cập nhật hồ sơ sinh lý cho một bài tập hệ thống.
@@ -181,96 +185,33 @@ public class ExercisePhysiologyService {
                 loadEvidences(evidenceRefs));
     }
 
-    /** Thư viện bằng chứng theo danh sách mã nguồn, giữ đúng thứ tự đã khai báo. */
+    /**
+     * Thư viện bằng chứng theo danh sách mã nguồn, giữ đúng thứ tự đã khai báo.
+     *
+     * <p>Nguồn đến từ file tĩnh {@code physiology-evidence-library.json}
+     * (bảng {@code physiology_evidence} đã bị bỏ ở V80).
+     */
     @Transactional(readOnly = true)
     public List<PhysiologyEvidenceDTO> loadEvidences(List<String> codes) {
-        if (codes == null || codes.isEmpty()) {
-            return List.of();
-        }
-        String placeholders = String.join(",", java.util.Collections.nCopies(codes.size(), "?"));
-        List<Map<String, Object>> rows;
-        try {
-            rows = jdbcTemplate.queryForList(
-                    "SELECT code, title, authors, journal, year, doi, url, evidence_grade, study_type, summary"
-                            + " FROM physiology_evidence WHERE code IN (" + placeholders + ")",
-                    codes.toArray());
-        } catch (Exception ex) {
-            return List.of();
-        }
-        Map<String, Map<String, Object>> byCode = new HashMap<>();
-        for (Map<String, Object> row : rows) {
-            byCode.put(str(row.get("code")), row);
-        }
-        return codes.stream()
-                .map(byCode::get)
-                .filter(java.util.Objects::nonNull)
-                .map(row -> new PhysiologyEvidenceDTO(
-                        str(row.get("code")),
-                        str(row.get("title")),
-                        str(row.get("authors")),
-                        str(row.get("journal")),
-                        num(row.get("year")),
-                        str(row.get("doi")),
-                        str(row.get("url")),
-                        str(row.get("evidence_grade")),
-                        str(row.get("study_type")),
-                        str(row.get("summary"))))
-                .toList();
+        return evidenceLibrary.loadByCodes(codes);
     }
 
     /** Thư viện nguồn trích dẫn cho Content Manager chọn. */
     @Transactional(readOnly = true)
     public List<PhysiologyEvidenceDTO> listEvidence(String keyword) {
-        String sql = "SELECT code, title, authors, journal, year, doi, url, evidence_grade, study_type, summary"
-                + " FROM physiology_evidence";
-        List<Object> params = new java.util.ArrayList<>();
-        if (keyword != null && !keyword.isBlank()) {
-            sql += " WHERE title LIKE ? OR authors LIKE ? OR study_type LIKE ?";
-            String like = "%" + keyword.trim() + "%";
-            params.add(like);
-            params.add(like);
-            params.add(like);
-        }
-        sql += " ORDER BY evidence_grade ASC, year DESC";
-        try {
-            return jdbcTemplate.query(sql, (rs, rowNum) -> new PhysiologyEvidenceDTO(
-                    rs.getString("code"),
-                    rs.getString("title"),
-                    rs.getString("authors"),
-                    rs.getString("journal"),
-                    (Integer) rs.getObject("year"),
-                    rs.getString("doi"),
-                    rs.getString("url"),
-                    rs.getString("evidence_grade"),
-                    rs.getString("study_type"),
-                    rs.getString("summary")), params.toArray());
-        } catch (Exception ex) {
-            return List.of();
-        }
+        return evidenceLibrary.list(keyword);
     }
 
-    /** Kiểm tra các mã nguồn có tồn tại trong thư viện không (tuỳ chọn — CM có thể bỏ trống). */
+    /**
+     * Kiểm tra các mã nguồn có tồn tại trong thư viện không.
+     * CM được phép bỏ trống nguồn tham khảo.
+     */
     private void assertEvidenceExists(List<String> codes) {
         if (codes == null || codes.isEmpty()) {
-            // Không bắt buộc nguồn tham khảo nữa.
+            // Không bắt buộc nguồn tham khảo.
             return;
         }
-        String placeholders = String.join(",", java.util.Collections.nCopies(codes.size(), "?"));
-        List<Map<String, Object>> rows;
-        try {
-            rows = jdbcTemplate.queryForList(
-                    "SELECT code FROM physiology_evidence WHERE code IN (" + placeholders + ")",
-                    codes.toArray());
-        } catch (Exception ex) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "Evidence library is not available");
-        }
-        Set<String> existing = new java.util.HashSet<>();
-        for (Map<String, Object> row : rows) {
-            Object value = row.get("code");
-            existing.add(value == null ? "" : String.valueOf(value));
-        }
-        List<String> missing = codes.stream().filter(code -> !existing.contains(code)).toList();
+        List<String> missing = evidenceLibrary.missingCodes(codes);
         if (!missing.isEmpty()) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, "Unknown evidence source(s): " + String.join(", ", missing));

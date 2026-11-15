@@ -7,6 +7,28 @@ Mục tiêu: mọi tuyên bố sinh lý trong CalisHealth đều truy được v
 
 ---
 
+## 0. Thư viện nguồn nằm ở đâu
+
+Từ migration **V80**, thư viện bằng chứng **không còn nằm trong database** mà nằm trong mã nguồn:
+
+```
+server/src/main/resources/physiology-evidence-library.json
+```
+
+Đọc bởi `PhysiologyEvidenceLibrary` (Spring service, nạp 1 lần lúc khởi động).
+
+**Lý do:** bảng `physiology_evidence` chưa bao giờ được hiển thị cho người dùng cuối
+(Member chỉ thấy hồ sơ sinh lý, không thấy danh mục nguồn; endpoint tra cứu của
+Content Manager không có màn hình nào gọi tới). Đây là dữ liệu tra cứu tĩnh, đặt
+trong git thì trích dẫn được cho báo cáo đồ án và khi bảo vệ trước hội đồng, và
+bổ sung nguồn mới không phải viết migration.
+
+Cột `evidence_refs` (JSON array các mã nguồn) trong `exercise_physiology_profiles`
+và `physiology_alert_rules` **vẫn được giữ** — đó là phần liên kết truy được về
+nguồn.
+
+---
+
 ## 1. Thứ tự ưu tiên khi tìm nguồn
 
 Đi từ trên xuống. Dừng ở mức đầu tiên cho ra đủ dữ liệu.
@@ -31,7 +53,7 @@ Mục tiêu: mọi tuyên bố sinh lý trong CalisHealth đều truy được v
 
 ## 2. Quy tắc chấp nhận nguồn
 
-Một nguồn được đưa vào `physiology_evidence` khi đáp ứng **đủ 4 điều kiện**:
+Một nguồn được đưa vào **thư viện tĩnh** (`physiology-evidence-library.json`) khi đáp ứng **đủ 4 điều kiện**:
 
 1. **Định danh được** — có DOI hoặc PMID. Nguồn không có định danh không nhận.
 2. **Có cơ sở thực nghiệm** — thử nghiệm có nhóm đối chứng, hoặc tổng quan hệ thống, hoặc đo đạc trên mẫu đủ lớn.
@@ -108,21 +130,23 @@ Mẫu hợp đồng trong hệ thống là R3 (ACR):
 - `EV_IMPELLIZZERI_2020` phản biện, kết luận **không có bằng chứng nhân quả**
 - Thông điệp cảnh báo nói rõ: *"chỉ số này dùng để theo dõi tốc độ thay đổi tải, chưa có bằng chứng nhân quả để dùng dự đoán chấn thương"*
 
-### Bước 5 — Ghi vào hệ thống
+### Bước 5 — Ghi vào thư viện
 
-```sql
-INSERT INTO physiology_evidence
-  (code, title, authors, journal, year, doi, url, evidence_grade, study_type, summary)
-VALUES (
-  'EV_TANAKA_2001',
-  'Age-predicted maximal heart rate revisited',
-  'Tanaka M, Seals DR, Monahan KD, Craining PW',
-  'Journal of Applied Physiology', 2001,
-  '10.1152/japplphysiol.2001.89.3.1193',
-  'https://pubmed.ncbi.nlm.nih.gov/11153730/',
-  'A', 'Meta-analysis + cross-validation (18,712 subjects, 351 studies)',
-  'Đề xuất công thức HRmax = 208 - 0.7 x tuổi ...'
-);
+Thêm một phần tử vào `server/src/main/resources/physiology-evidence-library.json`:
+
+```json
+{
+  "code": "EV_TANAKA_2001",
+  "title": "Age-predicted maximal heart rate revisited",
+  "authors": "Tanaka M, Seals DR, Monahan KD, Craining PW",
+  "journal": "Journal of Applied Physiology",
+  "year": 2001,
+  "doi": "10.1152/japplphysiol.2001.89.3.1193",
+  "url": "https://pubmed.ncbi.nlm.nih.gov/11153730/",
+  "evidence_grade": "A",
+  "study_type": "Meta-analysis + cross-validation (18,712 subjects, 351 studies)",
+  "summary": "Đề xuất công thức HRmax = 208 - 0.7 x tuổi ..."
+}
 ```
 
 `summary` phải nêu **nghiên cứu chứng minh điều gì**, không chỉ lặp lại tiêu đề.
@@ -142,15 +166,20 @@ FROM exercise_physiology_profiles p
 JOIN JSON_TABLE(p.evidence_refs, '$[*]' COLUMNS(code VARCHAR(64) PATH '$')) jt
 LEFT JOIN physiology_evidence e ON e.code = jt.code
 WHERE e.code IS NULL;
+```
 
--- (b) Không hồ sơ nào chỉ dựa vào nguồn mức C/D
-SELECT p.exercise_id
-FROM exercise_physiology_profiles p
-JOIN JSON_TABLE(p.evidence_refs, '$[*]' COLUMNS(code VARCHAR(64) PATH '$')) jt
-JOIN physiology_evidence e ON e.code = jt.code
-GROUP BY p.exercise_id
-HAVING MAX(e.evidence_grade) NOT IN ('A','B');
+> Từ V80 bảng `physiology_evidence` không còn tồn tại, nên truy vấn (a) và (b) ở trên
+> **không chạy được nữa**. Cách kiểm chứng tương đương hiện tại:
+>
+> ```bash
+> # so mã trong evidence_refs với thư viện file tĩnh
+> node _tools/verify_evidence_refs.js
+> ```
+>
+> Script này đọc `physiology-evidence-library.json`, quét toàn bộ `evidence_refs`
+> trong các migration V76 và báo mã nào không tồn tại trong thư viện.
 
+```sql
 -- (c) Không luật cảnh báo nào thiếu nguồn
 SELECT rule_code FROM physiology_alert_rules
 WHERE evidence_refs IS NULL OR JSON_LENGTH(evidence_refs) = 0;
@@ -188,12 +217,16 @@ Module sinh lý là **thông tin mang tính giáo dục và tự theo dõi**, kh
 
 ## 7. Danh mục nguồn hiện có (21 nguồn)
 
-Xem trực tiếp trong DB:
+Xem trực tiếp trong file thư viện:
 
-```sql
-SELECT code, evidence_grade, study_type, year, title, doi
-FROM physiology_evidence
-ORDER BY evidence_grade, year;
+```
+server/src/main/resources/physiology-evidence-library.json
+```
+
+```bash
+# liệt kê mã + mức bằng chứng + năm
+node -e "require('./server/src/main/resources/physiology-evidence-library.json')
+  .forEach(e=>console.log(e.code, e.evidence_grade, e.year, e.title))"
 ```
 
 | Mã | Nguồn | Mức | Dùng cho |
@@ -224,6 +257,9 @@ ORDER BY evidence_grade, year;
 
 ## 8. Bảo trì
 
-- Nguồn mới được thêm bằng `INSERT` vào `physiology_evidence` trong migration mới (không sửa migration đã apply).
-- Khi một tuyên bố bị gỡ khỏi UI, **giữ nguyên** dòng bằng chứng và chỉ bỏ reference khỏi hồ sơ — để lịch sử trích dẫn còn tra được.
-- Nếu một nguồn bị **rút lại (retracted)**: đặt `evidence_grade = 'D'`, ghi rõ trong `summary`, và tìm nguồn thay thế cho mọi hồ sơ đang trích dẫn nó.
+- Nguồn mới được thêm bằng cách thêm một phần tử vào
+  `server/src/main/resources/physiology-evidence-library.json` (không cần migration).
+- Khi một tuyên bố bị gỡ khỏi UI, **giữ nguyên** mã nguồn trong thư viện và chỉ bỏ
+  reference khỏi hồ sơ — để lịch sử trích dẫn còn tra được.
+- Nếu một nguồn bị **rút lại (retracted)**: đặt `evidence_grade = 'D'`, ghi rõ trong
+  `summary`, và tìm nguồn thay thế cho mọi hồ sơ đang trích dẫn nó.
