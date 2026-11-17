@@ -1,13 +1,12 @@
 package com.calishealth.service;
 
 import com.calishealth.dtos.PhysiologyEvidenceDTO;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -35,14 +34,14 @@ import java.util.Map;
  * sinh lý và luật cảnh báo vẫn phải tồn tại trong thư viện này.
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class PhysiologyEvidenceLibrary {
 
     /** Đường dẫn file JSON chứa danh mục nguồn. */
     private static final String RESOURCE = "physiology-evidence-library.json";
 
-    private final ObjectMapper objectMapper;
+    /** Jackson 3 là bản mặc định của Spring Boot 4; Jackson 2 không còn bean mặc định. */
+    private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
     /** Mã nguồn -> chi tiết nguồn. Giữ thứ tự như trong file. */
     private Map<String, PhysiologyEvidenceDTO> byCode = Map.of();
@@ -53,7 +52,7 @@ public class PhysiologyEvidenceLibrary {
     @PostConstruct
     void load() {
         try (InputStream in = new ClassPathResource(RESOURCE).getInputStream()) {
-            JsonNode root = objectMapper.readTree(in);
+            JsonNode root = jsonMapper.readTree(in);
             Map<String, PhysiologyEvidenceDTO> map = new LinkedHashMap<>();
             List<PhysiologyEvidenceDTO> list = new ArrayList<>();
             for (JsonNode node : root) {
@@ -156,7 +155,7 @@ public class PhysiologyEvidenceLibrary {
         if (v == null || v.isNull()) {
             return null;
         }
-        String s = v.asText();
+        String s = v.asString();
         return s.isEmpty() ? null : s;
     }
 }
