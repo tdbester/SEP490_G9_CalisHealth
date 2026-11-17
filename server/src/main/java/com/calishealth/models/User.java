@@ -2,7 +2,6 @@ package com.calishealth.models;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -21,20 +20,13 @@ public class User {
     @Column(nullable = false)
     private String fullName;
 
-    // ---- Profile Information screen (V26), shared by every role ----
+    // ---- Profile Information screen (V26) ----
+    // gender / date_of_birth / bio are owned by MemberProfile (see V81); only the
+    // account facts (name, phone, avatar, role, security) live here.
 
     /** Kept as typed so the leading 0 or "+84" of a Vietnamese number survives a round trip. */
     @Column(length = 30)
     private String phone;
-
-    @Column(length = 20)
-    private String gender;
-
-    @Column(name = "date_of_birth")
-    private LocalDate dateOfBirth;
-
-    @Column(columnDefinition = "TEXT")
-    private String bio;
 
     @Column(name = "avatar_url", length = 1000)
     private String avatarUrl;

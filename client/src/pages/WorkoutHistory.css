@@ -266,17 +266,13 @@
   color: #FFFFFF;
 }
 
-.wh-row-icon.tone-cardio {
-  background: #2C1530;
-  color: #F472B6;
-}
-
-.wh-row-icon.tone-strength {
+/* Thể loại buổi tập suy ra từ loại bài tập (HEALTH / SKILL) — V83 bỏ cột `category`. */
+.wh-row-icon.tone-health {
   background: #16223F;
   color: #7FA2FF;
 }
 
-.wh-row-icon.tone-mobility {
+.wh-row-icon.tone-skill {
   background: #2A1C4D;
   color: #C084FC;
 }

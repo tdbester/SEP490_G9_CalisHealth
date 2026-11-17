@@ -100,7 +100,13 @@ public final class ProgressionRuleDtos {
 
     public record SubmitExerciseResultRequest(
             @NotBlank String exerciseCode,
-            @NotEmpty @Size(max = 30) List<@Valid SetResultInput> sets
+            @NotEmpty @Size(max = 30) List<@Valid SetResultInput> sets,
+            /**
+             * Nguồn buổi tập: {@code DAILY_PLAN} khi member tập theo kế hoạch ngày,
+             * {@code LIBRARY} (hoặc bỏ trống) khi tập bài lẻ / workout trong thư viện.
+             * V83 thêm cột `workout_sessions.source` để phân biệt 2 luồng tập.
+             */
+            @Size(max = 20) String source
     ) {}
 
     public record RuleEvaluation(

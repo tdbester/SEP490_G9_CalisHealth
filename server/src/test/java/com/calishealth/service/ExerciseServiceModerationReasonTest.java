@@ -5,7 +5,7 @@ import com.calishealth.models.Exercise;
 import com.calishealth.models.User;
 import com.calishealth.repository.ExerciseModerationHistoryRepository;
 import com.calishealth.repository.ExerciseRepository;
-import com.calishealth.repository.ExerciseTreeEdgeRepository;
+import com.calishealth.repository.ProgressionRuleRepository;
 import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -32,7 +32,7 @@ class ExerciseServiceModerationReasonTest {
     private final SystemNotificationService systemNotifications = mock(SystemNotificationService.class);
     private final ExerciseService service = new ExerciseService(
             exercises, moderationHistory, users, jdbcTemplate, mediaRegistry,
-            mock(ExerciseTreeEdgeRepository.class),
+            mock(ProgressionRuleRepository.class),
             mock(FitnessLevelRepository.class),
             mock(ExerciseMuscleGroupCatalog.class),
             systemNotifications,

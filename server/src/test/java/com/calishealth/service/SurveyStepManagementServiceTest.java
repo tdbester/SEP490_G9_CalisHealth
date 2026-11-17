@@ -17,7 +17,6 @@ import com.calishealth.dtos.SurveyStepManagementDtos.StepQuestionInput;
 import com.calishealth.dtos.SurveyStepManagementDtos.StepQuestionItem;
 import com.calishealth.exception.SurveyException.ErrorItem;
 import com.calishealth.repository.AssessmentQuestionRepository;
-import com.calishealth.repository.LevelRuleCriterionRepository;
 import com.calishealth.service.survey.StepQuestionWriter;
 import com.calishealth.service.survey.SurveyFixtures;
 import com.calishealth.dtos.SurveyStepManagementDtos.ChangeStepStatusRequest;
@@ -82,7 +81,6 @@ class SurveyStepManagementServiceTest {
     private final UserRepository users = mock(UserRepository.class);
     private final SurveyDefinitionLoader loader = mock(SurveyDefinitionLoader.class);
     private final AssessmentQuestionRepository questions = mock(AssessmentQuestionRepository.class);
-    private final LevelRuleCriterionRepository levelCriteria = mock(LevelRuleCriterionRepository.class);
 
     /** "Bảng" survey_steps / survey_step_questions / assessment_questions trong bộ nhớ. */
     private final List<SurveyStep> stepStore = new ArrayList<>();
@@ -100,7 +98,7 @@ class SurveyStepManagementServiceTest {
     void setUp() {
         service = new SurveyStepManagementService(surveys, steps, stepQuestions, questions, options, answers,
                 fitnessLevels, users, loader, SurveyFixtures.registry(),
-                new StepQuestionWriter(questions, options, answers, levelCriteria, SurveyFixtures.registry()));
+                new StepQuestionWriter(questions, options, answers, SurveyFixtures.registry()));
 
         survey = new Survey();
         survey.setId(1L);
@@ -621,15 +619,6 @@ class SurveyStepManagementServiceTest {
         assertThat(response.questions().get(0).options()).extracting(OptionResponse::label)
                 .containsExactly("Male", "Other");
         assertThat(response.questions().get(0).typeLocked()).isTrue();
-    }
-
-    @Test
-    void questionsUsedByLevelRulesKeepTheirType() {
-        when(levelCriteria.findAllQuestionCodes()).thenReturn(List.of("AGE"));
-
-        assertError(() -> service.update(EMAIL, CODE, null, 11L, edit(SurveyStep.Status.ACTIVE,
-                        new StepQuestionInput("AGE", true, content("Age", "TEXT", null)))),
-                HttpStatus.BAD_REQUEST, "INVALID_STEP_QUESTIONS");
     }
 
     @Test

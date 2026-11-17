@@ -52,15 +52,19 @@ public class ProfileDtos {
             List<String> genderOptions,
             List<String> fitnessLevelOptions) {
 
-        public static ProfileResponse of(User u, SecurityInfo security, MemberSummary member) {
-            return of(u, security, member, age(u.getDateOfBirth()));
-        }
-
-        /** Same payload with an explicit age, used when the age comes from the onboarding survey. */
-        public static ProfileResponse of(User u, SecurityInfo security, MemberSummary member, Integer age) {
+        /**
+         * The payload of the profile screen. The personal details come from the profile row that owns
+         * them ({@code member_profiles}); the account facts come from {@code users}.
+         */
+        public static ProfileResponse of(User u, SecurityInfo security, MemberSummary member,
+                                          MemberProfile profile, Integer age) {
             return new ProfileResponse(
                     u.getId(), userCode(u.getId()), u.getFullName(), username(u), u.getEmail(),
-                    u.getPhone(), u.getGender(), u.getDateOfBirth(), age, u.getBio(),
+                    u.getPhone(),
+                    profile == null ? null : profile.getGender(),
+                    profile == null ? null : profile.getDateOfBirth(),
+                    age,
+                    profile == null ? null : profile.getBio(),
                     u.getAvatarUrl(), u.getRole().name(), roleLabel(u),
                     u.isEnabled(), u.isActive(), u.getCreatedAt(), security, member, GENDERS, List.of());
         }

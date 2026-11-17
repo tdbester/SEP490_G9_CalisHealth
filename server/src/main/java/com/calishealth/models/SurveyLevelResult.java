@@ -27,10 +27,6 @@ public class SurveyLevelResult {
     private SurveySession session;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "rule_set_id")
-    private LevelRuleSet ruleSet;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "fitness_level_id")
     private FitnessLevel fitnessLevel;
 

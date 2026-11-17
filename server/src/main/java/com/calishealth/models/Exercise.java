@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Formula;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -83,7 +84,18 @@ public class Exercise {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    @Column(name = "save_count")
+    /**
+     * Số lượt yêu thích (lưu) của bài này, tính TRỰC TIẾP từ bảng `member_favorites`.
+     *
+     * <p>Trước V83 đây là cột vật lý `exercises.save_count` bị ghi đè (denormalized) nên
+     * lệch với thực tế: dữ liệu seed ghi 18/9/5/13 trong khi `member_favorites` rỗng.
+     * V83 bỏ cột đó; giờ số đếm lấy thẳng từ nguồn sự thật nên không bao giờ lệch.
+     *
+     * <p>`@Formula` cho phép Hibernate dùng biểu thức này trong cả SELECT lẫn ORDER BY,
+     * nên tuỳ chọn sắp xếp "MOST_SAVED" vẫn chạy được dù không còn cột vật lý.
+     */
+    @Formula("(select count(*) from member_favorites mf where mf.item_id = {alias}.id "
+            + "and mf.item_type in ('SYSTEM_EXERCISE', 'MEMBER_EXERCISE'))")
     private Integer saveCount = 0;
 
     @Column(name = "share_with_community", nullable = false)
@@ -99,9 +111,6 @@ public class Exercise {
     @Enumerated(EnumType.STRING)
     @Column(name = "target_skill", length = 30)
     private EntryTargetSkill targetSkill;
-
-    @Column(name = "exercise_tree_id")
-    private Long exerciseTreeId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "movement_group", length = 20)
@@ -130,9 +139,6 @@ public class Exercise {
             moderationStatus = "ACTIVE";
         }
         source = normalizeSource(source);
-        if (saveCount == null) {
-            saveCount = 0;
-        }
     }
 
     public boolean isSystem() {

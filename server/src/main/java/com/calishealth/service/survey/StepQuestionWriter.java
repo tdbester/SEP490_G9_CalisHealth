@@ -10,7 +10,6 @@ import com.calishealth.models.ConfigStatus;
 import com.calishealth.repository.AssessmentAnswerRepository;
 import com.calishealth.repository.AssessmentOptionRepository;
 import com.calishealth.repository.AssessmentQuestionRepository;
-import com.calishealth.repository.LevelRuleCriterionRepository;
 import com.calishealth.service.survey.definition.OptionDefinition;
 import com.calishealth.service.survey.definition.QuestionDefinition;
 import com.calishealth.service.survey.questiontype.QuestionTypeHandler;
@@ -53,7 +52,6 @@ public class StepQuestionWriter {
     private final AssessmentQuestionRepository questions;
     private final AssessmentOptionRepository options;
     private final AssessmentAnswerRepository answers;
-    private final LevelRuleCriterionRepository levelCriteria;
     private final QuestionTypeRegistry registry;
 
     /** Câu nào đã có câu trả lời / đang được rule chấm level dùng. */
@@ -70,7 +68,9 @@ public class StepQuestionWriter {
     public Locks locks(Collection<AssessmentQuestion> existing) {
         List<Long> ids = existing.stream().map(AssessmentQuestion::getId).distinct().toList();
         Set<Long> answered = ids.isEmpty() ? Set.of() : new HashSet<>(answers.findQuestionIdsWithAnswers(ids));
-        return new Locks(answered, new HashSet<>(levelCriteria.findAllQuestionCodes()));
+        // V83 đã bỏ 4 bảng `level_rule_*` (đều rỗng) nên không còn danh sách câu hỏi
+        // bị "khóa" bởi bộ luật riêng của survey: chỉ còn câu đã có câu trả lời là bị khóa.
+        return new Locks(answered, Set.of());
     }
 
     /** Lựa chọn ACTIVE của các câu hỏi, theo thứ tự hiển thị. */

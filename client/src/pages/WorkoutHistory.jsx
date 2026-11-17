@@ -201,7 +201,7 @@ export default function WorkoutHistory() {
                       onClick={() => openLog(workout)}
                     >
                       <span
-                        className={`wh-row-icon ${isLatest ? "featured" : `tone-${workout.category}`}`}
+                        className={`wh-row-icon ${isLatest ? "featured" : `tone-${(workout.category || "").toLowerCase()}`}`}
                       >
                         {isLatest ? <FitnessCenterRoundedIcon /> : <MonitorHeartOutlinedIcon />}
                       </span>
