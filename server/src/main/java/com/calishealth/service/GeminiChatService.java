@@ -4,7 +4,7 @@ import com.calishealth.dtos.AiSupportDtos.AnswerResponse;
 import com.calishealth.dtos.AiSupportDtos.LikelyCause;
 import com.calishealth.exception.OpenAiException;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
@@ -50,7 +50,7 @@ public class GeminiChatService implements AiChatProvider {
      */
     private final int maxOutputTokens;
     private final boolean demoFallbackEnabled;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final JsonMapper mapper = JsonMapper.builder().build();
 
     public GeminiChatService(
             @Value("${app.gemini.api-key:}") String apiKey,
