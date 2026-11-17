@@ -177,6 +177,19 @@ JWT_SECRET=clh-demo-secret-key-please-change-this-32-chars-min
 
 Thường do `JWT_SECRET` rỗng (xem trên) hoặc MySQL không truy cập được.
 
+### `/actuator/health` trả 503 dù app vẫn chạy
+
+Đã được xử lý trong code (xem `server/src/main/java/com/calishealth/config/MailHealthIndicator.java`).
+Trường hợp này xảy ra khi SMTP chưa cấu hình — `MailHealthIndicator` mặc định của
+Spring Boot đánh dấu DOWN. App đã có indicator riêng: chưa cấu hình SMTP thì báo
+UP (vì chức năng gửi mail có fallback sang console log).
+
+Nếu vẫn thấy 503, kiểm tra MySQL:
+
+```bash
+curl http://localhost:8080/actuator/health
+```
+
 ### `Port 8080 was already in use`
 
 Có instance khác đang chạy. Đóng cửa sổ terminal cũ, hoặc đổi port:
