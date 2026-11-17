@@ -32,4 +32,12 @@ public interface MemberFavoriteRepository extends JpaRepository<MemberFavorite, 
             Long memberId,
             MemberFavorite.ItemType itemType,
             Long itemId);
+
+    /**
+     * Số lượt yêu thích của một nội dung.
+     *
+     * <p>V83 bỏ cột vật lý `save_count` ở `exercises` / `workout_entries` (vì bị ghi sai và
+     * lệch với thực tế) nên số đếm giờ lấy thẳng từ bảng này - nguồn sự thật duy nhất.
+     */
+    long countByItemTypeAndItemId(MemberFavorite.ItemType itemType, Long itemId);
 }

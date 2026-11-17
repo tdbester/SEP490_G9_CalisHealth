@@ -44,8 +44,8 @@ public class SurveyProfileSync {
 
     /** Question code -> the profile column it feeds. Question codes are the contract. */
     private static final Map<String, String> PROFILE_SOURCES = Map.of(
-            "GENDER", "member_profiles.gender + users.gender",
-            "AGE", "member_profiles.date_of_birth + users.date_of_birth",
+            "GENDER", "member_profiles.gender",
+            "AGE", "member_profiles.date_of_birth",
             "HEIGHT", "member_profiles.height",
             "WEIGHT", "member_profiles.weight",
             "GOAL_TYPE", "member_profiles.goals",
@@ -62,6 +62,7 @@ public class SurveyProfileSync {
     private final MemberProfileRepository profiles;
     private final MemberTrackingRepository tracking;
     private final AssessmentOptionRepository options;
+    private final com.calishealth.repository.AssessmentQuestionRepository questions;
     private final com.calishealth.service.MemberFitnessLevelService fitnessLevelsService;
 
     /**
@@ -95,10 +96,10 @@ public class SurveyProfileSync {
         }
 
         Map<String, JsonNode> values = answers == null ? Map.of() : answers;
-        Map<String, String> labels = choiceLabels(values);
+        Map<String, Map<String, String>> labels = choiceLabels(values);
 
-        applyGender(profile, user, values.get("GENDER"), labels);
-        applyAge(profile, user, values.get("AGE"));
+        applyGender(profile, values.get("GENDER"), labels);
+        applyAge(profile, values.get("AGE"));
         applyHeight(profile, values.get("HEIGHT"));
         applyWeight(profile, values.get("WEIGHT"));
         applyGoal(profile, values.get("GOAL_TYPE"), labels);
@@ -113,17 +114,13 @@ public class SurveyProfileSync {
     // Individual fields
     // ---------------------------------------------------------------------------------
 
-    private void applyGender(MemberProfile profile, User user, JsonNode node, Map<String, String> labels) {
-        if (node == null || !node.isTextual()) {
-            return;
-        }
-        String value = ProfileService.normaliseGender(labels.getOrDefault(node.asText(), node.asText()));
+    private void applyGender(MemberProfile profile, JsonNode node, Map<String, Map<String, String>> labels) {
+        String value = ProfileService.normaliseGender(labelOf(labels, "GENDER", node));
         if (value == null) {
             return;
         }
+        // The profile row is the only owner of the gender since V81.
         profile.setGender(value);
-        // V26 moved the editable personal details to `users`; keep both rows in step.
-        user.setGender(value);
     }
 
     /**
@@ -132,7 +129,7 @@ public class SurveyProfileSync {
      * An existing date of birth is never replaced: the member may have typed the real one on the
      * profile screen, and that is strictly more precise than this estimate.
      */
-    private void applyAge(MemberProfile profile, User user, JsonNode node) {
+    private void applyAge(MemberProfile profile, JsonNode node) {
         if (node == null || !node.canConvertToInt()) {
             return;
         }
@@ -143,9 +140,6 @@ public class SurveyProfileSync {
         LocalDate estimate = LocalDate.of(LocalDate.now().getYear() - age, 1, 1);
         if (profile.getDateOfBirth() == null) {
             profile.setDateOfBirth(estimate);
-        }
-        if (user.getDateOfBirth() == null) {
-            user.setDateOfBirth(estimate);
         }
     }
 
@@ -163,11 +157,13 @@ public class SurveyProfileSync {
         }
     }
 
-    private void applyGoal(MemberProfile profile, JsonNode node, Map<String, String> labels) {
+    private void applyGoal(MemberProfile profile, JsonNode node, Map<String, Map<String, String>> labels) {
         if (node == null) {
             return;
         }
-        String value = node.isTextual() ? labels.getOrDefault(node.asText(), node.asText()) : node.toString();
+        // Mục tiêu được lưu theo MÃ (HEALTH / SKILLS) vì màn Profile dùng mã đó cho
+        // select; nhãn đầy đủ chỉ dùng để hiển thị.
+        String value = node.isTextual() ? node.asText() : node.toString();
         if (!value.isBlank()) {
             profile.setGoals(value);
         }
@@ -209,24 +205,55 @@ public class SurveyProfileSync {
     // ---------------------------------------------------------------------------------
 
     /**
-     * Option code -> option label for every choice question present in the answers. One query for
-     * the whole survey; answers for numbers and free text simply never look anything up here.
+     * Mã option -> nhãn hiển thị, theo từng câu hỏi: {@code {câu hỏi: {mã: nhãn}}}.
+     * Tra theo từng câu hỏi vì các câu khác nhau có thể dùng trùng mã option
+     * (ví dụ GENDER có "OTHER" còn một câu khác cũng có "OTHER").
      */
-    private Map<String, String> choiceLabels(Map<String, JsonNode> values) {
+    private Map<String, Map<String, String>> choiceLabels(Map<String, JsonNode> values) {
         if (values.isEmpty()) {
             return Map.of();
         }
-        Map<String, String> byCode = new HashMap<>();
-        for (List<AssessmentOption> group : optionsByQuestionCode(values.keySet()).values()) {
-            for (AssessmentOption option : group) {
+        Map<String, Map<String, String>> byQuestion = new HashMap<>();
+        for (Map.Entry<String, List<AssessmentOption>> entry : optionsByQuestionCode(values.keySet()).entrySet()) {
+            Map<String, String> byCode = new HashMap<>();
+            for (AssessmentOption option : entry.getValue()) {
                 byCode.put(option.getOptionCode(), option.getOptionLabel());
             }
+            byQuestion.put(entry.getKey(), byCode);
         }
-        return byCode;
+        return byQuestion;
+    }
+
+    /** Nhãn của option trong câu hỏi; khi không tra được thì trả về chính mã đã chọn. */
+    private static String labelOf(Map<String, Map<String, String>> labels, String questionCode, JsonNode node) {
+        if (node == null || !node.isTextual()) {
+            return null;
+        }
+        Map<String, String> byCode = labels.get(questionCode);
+        if (byCode == null) {
+            return node.asText();
+        }
+        return byCode.getOrDefault(node.asText(), node.asText());
     }
 
     private Map<String, List<AssessmentOption>> optionsByQuestionCode(java.util.Set<String> questionCodes) {
-        return Map.of();
+        if (questionCodes.isEmpty()) {
+            return Map.of();
+        }
+        List<com.calishealth.models.AssessmentQuestion> found = questions.findByQuestionCodeIn(questionCodes);
+        if (found.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, String> codeById = new HashMap<>();
+        found.forEach(question -> codeById.put(question.getId(), question.getQuestionCode()));
+        Map<String, List<AssessmentOption>> byCode = new HashMap<>();
+        for (AssessmentOption option : options.findByQuestionIdInOrderBySortOrderAsc(codeById.keySet())) {
+            String code = codeById.get(option.getQuestion().getId());
+            if (code != null && option.getStatus() == com.calishealth.models.ConfigStatus.ACTIVE) {
+                byCode.computeIfAbsent(code, ignored -> new java.util.ArrayList<>()).add(option);
+            }
+        }
+        return byCode;
     }
 
     private static BigDecimal decimal(JsonNode node) {

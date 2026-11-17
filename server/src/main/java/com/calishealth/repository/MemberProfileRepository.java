@@ -14,10 +14,9 @@ public interface MemberProfileRepository extends JpaRepository<MemberProfile, Lo
     long countByFitnessLevel_Id(Long fitnessLevelId);
 
     /**
-     * Profiles whose owning account has the given role. The weekly leaderboard
-     * only ranks accounts with role = MEMBER; content managers and admins may
-     * still own a member_profiles row from legacy data but must never be
-     * ranked against real members.
+     * Profiles whose owning account has the given role. Every account owns one profile row (V81),
+     * but the weekly leaderboard only ranks accounts with role = MEMBER: content managers and admins
+     * keep a row for their personal details and must never be ranked against real members.
      */
     List<MemberProfile> findAllByUser_Role(UserRole role);
 }

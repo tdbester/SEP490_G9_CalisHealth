@@ -7,7 +7,7 @@ import useSquatTracker from "../hooks/useSquatTracker";
 import useHoldTracker from "../hooks/useHoldTracker";
 import useVideoPoseScan from "../hooks/useVideoPoseScan";
 import trackingApi from "../api/tracking";
-import { addWorkoutResult } from "../utils/workoutResults";
+import { addWorkoutResult, readWorkoutOrigin } from "../utils/workoutResults";
 import "./VideoScanPage.css";
 
 const MAX_BYTES = 500 * 1024 * 1024;
@@ -175,6 +175,8 @@ export default function VideoScanPage() {
         const response = await trackingApi.submitExerciseResult({
           exerciseCode,
           sets: validSets,
+          // V83: phân biệt buổi tập theo kế hoạch ngày với buổi tập trong thư viện.
+          source: readWorkoutOrigin() === "/plan" ? "DAILY_PLAN" : "LIBRARY",
         });
         serverAccuracy = response?.cleanRate != null ? Number(response.cleanRate) : null;
       } catch (err) {

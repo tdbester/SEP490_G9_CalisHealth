@@ -33,9 +33,14 @@ import java.util.Locale;
 /**
  * Backs the Profile Information screen of every role.
  * <p>
- * The editable fields live on {@code users}. A MEMBER also has a {@code member_profiles} row that the
- * onboarding survey and the dashboard read, so when a member saves this screen the shared fields are
- * written to both places. Content Managers and Admins only have the user row.
+ * The account facts (name, phone, avatar, role, security) live on {@code users}. The personal
+ * details (gender, date of birth, bio) live on {@code member_profiles}, which is the single owner
+ * of those columns since V81: the onboarding survey, the dashboard and the admin screens all read
+ * them from there, so there is no second copy to keep in step.
+ * <p>
+ * Every account owns exactly one {@code member_profiles} row (the staff accounts too, so the shared
+ * screen can store their gender, birthday and bio); the fitness columns of that row stay empty for
+ * staff accounts.
  */
 @Service
 @RequiredArgsConstructor
@@ -79,14 +84,10 @@ public class ProfileService {
             u.setFullName(fullName);
         }
         if (r.phone() != null) u.setPhone(blankToNull(r.phone()));
-        if (r.gender() != null) u.setGender(normaliseGender(r.gender()));
-        if (r.clearDateOfBirth()) u.setDateOfBirth(null);
-        else if (r.dateOfBirth() != null) u.setDateOfBirth(validateDateOfBirth(r.dateOfBirth()));
-        if (r.bio() != null) u.setBio(blankToNull(r.bio()));
         users.save(u);
 
-        // A member's profile row feeds the survey, the dashboard and the streak, so keep it in step.
-        if (u.getRole() == UserRole.MEMBER) syncMemberProfile(u, r);
+        // The personal details live on the profile row, which every account owns.
+        syncProfile(u, r);
         return build(u);
     }
 
@@ -139,14 +140,12 @@ public class ProfileService {
     // ---------------------------------------------------------------------------------
 
     private ProfileResponse build(User u) {
-        MemberProfile memberProfile = u.getRole() == UserRole.MEMBER
-                ? memberProfiles.findByUser_Id(u.getId()).orElse(null)
-                : null;
-        ProfileResponse base = ProfileResponse.of(u, securityOf(u), memberSummary(u), surveyAge(u));
-        // Hồ sơ member lưu giới tính đã chuẩn hoá; member chưa có hồ sơ (hoặc hồ sơ chưa có giới tính)
-        // thì lấy từ users.
-        String memberGender = memberProfile == null ? null : normaliseGender(memberProfile.getGender());
-        String gender = memberGender != null ? memberGender : base.gender();
+        MemberProfile memberProfile = memberProfiles.findByUser_Id(u.getId()).orElse(null);
+        Integer age = surveyAge(u, memberProfile);
+        ProfileResponse base = ProfileResponse.of(u, securityOf(u), memberSummary(u), memberProfile, age);
+        // The profile row stores the gender already normalised; "Prefer not to say" is the fallback
+        // for legacy free text.
+        String gender = memberProfile == null ? null : normaliseGender(memberProfile.getGender());
         List<String> levels = fitnessLevels.findAll(
                         Sort.by(Sort.Order.asc("scoreMin"), Sort.Order.asc("id")))
                 .stream()
@@ -166,12 +165,12 @@ public class ProfileService {
      * profile screen must show the same number the member entered. Falls back to the date of birth only
      * when the survey was never completed (a staff account, or a member who skipped it).
      */
-    private Integer surveyAge(User u) {
+    private Integer surveyAge(User u, MemberProfile profile) {
         for (String json : answers.findLatestAnswerValues(u.getId(), AGE_QUESTION)) {
             Integer age = asAge(json);
             if (age != null) return age;
         }
-        return ProfileResponse.ageFrom(u.getDateOfBirth());
+        return ProfileResponse.ageFrom(profile == null ? null : profile.getDateOfBirth());
     }
 
     /** Answer JSON is a bare number for a NUMBER question; 1..120 keeps obviously broken data out. */
@@ -226,26 +225,35 @@ public class ProfileService {
         return index < 0 ? null : index + 1;
     }
 
-    private void syncMemberProfile(User u, UpdateProfileRequest r) {
+    /**
+     * Writes the editable personal details onto the profile row of the account.
+     * <p>
+     * The row is created when it does not exist yet: every account owns one, so the shared screen can
+     * store a gender, a birthday and a bio for staff accounts too. The fitness columns are only
+     * meaningful for a MEMBER, so they are written for that role only.
+     */
+    private void syncProfile(User u, UpdateProfileRequest r) {
         MemberProfile profile = memberProfiles.findByUser_Id(u.getId()).orElseGet(() -> {
             MemberProfile created = new MemberProfile();
             created.setUser(u);
             return created;
         });
-        if (r.gender() != null) profile.setGender(u.getGender());
+        if (r.gender() != null) profile.setGender(normaliseGender(r.gender()));
         if (r.clearDateOfBirth()) profile.setDateOfBirth(null);
-        else if (r.dateOfBirth() != null) profile.setDateOfBirth(u.getDateOfBirth());
-        if (r.bio() != null) profile.setBio(u.getBio());
-        if (r.fitnessLevel() != null) {
-            FitnessLevel level = fitnessLevels.findByNameIgnoreCase(r.fitnessLevel().trim())
-                    .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
-                    .orElseThrow(() -> err(HttpStatus.BAD_REQUEST, "Choose a valid active fitness level"));
-            fitnessLevelsService.changeLevel(profile, level);
-        }
-        // The onboarding answer is only the starting value; once saved here it wins.
-        if (r.daysPerWeek() != null) profile.setDaysPerWeek(r.daysPerWeek());
-        if (r.goal() != null && !r.goal().isBlank()) {
-            profile.setGoals(r.goal().trim().toUpperCase(Locale.ROOT));
+        else if (r.dateOfBirth() != null) profile.setDateOfBirth(validateDateOfBirth(r.dateOfBirth()));
+        if (r.bio() != null) profile.setBio(blankToNull(r.bio()));
+        if (u.getRole() == UserRole.MEMBER) {
+            if (r.fitnessLevel() != null) {
+                FitnessLevel level = fitnessLevels.findByNameIgnoreCase(r.fitnessLevel().trim())
+                        .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
+                        .orElseThrow(() -> err(HttpStatus.BAD_REQUEST, "Choose a valid active fitness level"));
+                fitnessLevelsService.changeLevel(profile, level);
+            }
+            // The onboarding answer is only the starting value; once saved here it wins.
+            if (r.daysPerWeek() != null) profile.setDaysPerWeek(r.daysPerWeek());
+            if (r.goal() != null && !r.goal().isBlank()) {
+                profile.setGoals(r.goal().trim().toUpperCase(Locale.ROOT));
+            }
         }
         memberProfiles.save(profile);
     }
@@ -261,6 +269,12 @@ public class ProfileService {
 
     /**
      * Accepts only the offered options; legacy free text from the survey becomes "Prefer not to say".
+     * <p>
+     * Both the option CODE and the option LABEL are accepted, because the two readings of the survey
+     * answer disagree on which one to use: the code is {@code MALE}/{@code FEMALE}/{@code OTHER},
+     * the label is {@code Male}/{@code Female}/{@code Other / prefer not to say}. The code is mapped
+     * first so "Other" is not swallowed by the fallback.
+     * <p>
      * Public because the onboarding survey writes the same column (see {@code SurveyProfileSync}).
      */
     public static String normaliseGender(String raw) {
@@ -269,7 +283,24 @@ public class ProfileService {
         for (String option : ProfileDtos.GENDERS) {
             if (option.equalsIgnoreCase(value)) return option;
         }
-        return "Prefer not to say";
+        // The option code of the survey, e.g. MALE / FEMALE / OTHER.
+        switch (value.toUpperCase(Locale.ROOT)) {
+            case "MALE" -> {
+                return "Male";
+            }
+            case "FEMALE" -> {
+                return "Female";
+            }
+            case "OTHER" -> {
+                return "Other";
+            }
+            default -> {
+                // The option label, e.g. "Other / prefer not to say".
+                if (value.toLowerCase(Locale.ROOT).startsWith("other")) return "Other";
+                if (value.toLowerCase(Locale.ROOT).startsWith("prefer")) return "Prefer not to say";
+                return "Prefer not to say";
+            }
+        }
     }
 
     private static LocalDate validateDateOfBirth(LocalDate dateOfBirth) {

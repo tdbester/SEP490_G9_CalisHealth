@@ -118,7 +118,6 @@ public class PersonalExerciseService {
             exercise.setDemoVideoUrl(videoUrl);
             exercise.setAnatomyImageUrl(anatomyImageUrl);
             exercise.setShareWithCommunity(Boolean.TRUE.equals(request.shareWithCommunity()));
-            exercise.setSaveCount(0);
             Exercise saved = exercises.save(exercise);
             saved.setCode(customExerciseCode(saved.getId()));
             muscleGroupCatalog.assign(saved, request.targetMuscle());

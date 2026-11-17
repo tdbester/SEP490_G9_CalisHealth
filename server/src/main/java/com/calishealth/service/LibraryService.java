@@ -360,7 +360,6 @@ public class LibraryService {
         memberEntry.setDefaultDuration(duration);
         memberEntry.setEquipment(equip);
         memberEntry.setGuide(desc);
-        memberEntry.setSaveCount(0);
         Exercise saved = exerciseRepository.save(memberEntry);
         saved.setCode("CU_" + saved.getId());
         muscleGroupCatalog.assign(saved, mg);

@@ -23,6 +23,7 @@ public class DayStreakRepository {
                 FROM member_profiles mp
                 JOIN users u ON u.id = mp.user_id
                 WHERE u.email = ?
+                  AND u.role = 'MEMBER'
                 """,
                 resultSet -> resultSet.next() ? Optional.of(resultSet.getLong("id")) : Optional.empty(),
                 email

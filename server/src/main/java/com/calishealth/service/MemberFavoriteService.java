@@ -65,8 +65,19 @@ public class MemberFavoriteService {
             nowFavorite = true;
         }
 
-        int count = adjustSaveCount(type, itemId, nowFavorite);
+        int count = countFavorites(type, itemId);
         return new FavoriteToggleResponseDTO(type.name(), itemId, nowFavorite, count);
+    }
+
+    /**
+     * Số lượt yêu thích thực tế của một nội dung, đếm trực tiếp từ `member_favorites`.
+     *
+     * <p>Trước V83 đây là cột vật lý `save_count` bị cộng dồn theo kiểu delta, nên dễ lệch
+     * với thực tế (đặc biệt với dữ liệu seed ghi số giả). V83 bỏ cột, giờ đếm lại từ
+     * nguồn sự thật nên luôn khớp.
+     */
+    private int countFavorites(MemberFavorite.ItemType type, Long itemId) {
+        return (int) favorites.countByItemTypeAndItemId(type, itemId);
     }
 
     @Transactional(readOnly = true)
@@ -209,33 +220,6 @@ public class MemberFavoriteService {
         if (workout.isSystem()) {
             throw new ResourceNotFoundException("Member workout not found");
         }
-    }
-
-    /**
-     * Đồng bộ cột `save_count` của nội dung gốc với số lượt yêu thích.
-     * Bộ đếm này đã tồn tại từ trước (dùng cho bài community) nên ta tiếp tục dùng
-     * chung để không phải thêm cột mới.
-     */
-    private int adjustSaveCount(MemberFavorite.ItemType type, Long itemId, boolean increment) {
-        int delta = increment ? 1 : -1;
-        if (isExercise(type)) {
-            Exercise exercise = exercises.findById(itemId).orElse(null);
-            if (exercise == null) {
-                return 0;
-            }
-            int next = Math.max(0, (exercise.getSaveCount() == null ? 0 : exercise.getSaveCount()) + delta);
-            exercise.setSaveCount(next);
-            exercises.saveAndFlush(exercise);
-            return next;
-        }
-        WorkoutEntry workout = workouts.findById(itemId).orElse(null);
-        if (workout == null) {
-            return 0;
-        }
-        int next = Math.max(0, (workout.getSaveCount() == null ? 0 : workout.getSaveCount()) + delta);
-        workout.setSaveCount(next);
-        workouts.saveAndFlush(workout);
-        return next;
     }
 
     private MemberFavorite.ItemType parseItemType(String itemType) {
