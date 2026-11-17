@@ -9,12 +9,12 @@ import com.calishealth.dtos.ExercisePhysiologyDTO;
 import com.calishealth.dtos.PageResponseDTO;
 import com.calishealth.dtos.SystemExerciseDetailResponseDTO;
 import com.calishealth.models.Exercise;
-import com.calishealth.models.ExerciseTreeEdge;
 import com.calishealth.models.FitnessLevel;
+import com.calishealth.models.ProgressionRule;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.ExerciseModerationHistoryRepository;
-import com.calishealth.repository.ExerciseTreeEdgeRepository;
+import com.calishealth.repository.ProgressionRuleRepository;
 import com.calishealth.repository.UserRepository;
 import com.calishealth.specification.ExerciseSpecification;
 import lombok.RequiredArgsConstructor;
@@ -56,7 +56,7 @@ public class ExerciseService {
     private final UserRepository users;
     private final JdbcTemplate jdbcTemplate;
     private final MediaRegistryService mediaRegistry;
-    private final ExerciseTreeEdgeRepository treeEdges;
+    private final ProgressionRuleRepository progressionRules;
     private final FitnessLevelRepository fitnessLevels;
     private final ExerciseMuscleGroupCatalog muscleGroupCatalog;
     private final SystemNotificationService systemNotifications;
@@ -123,29 +123,36 @@ public class ExerciseService {
                     "Return to the starting position with control and repeat.");
         }
 
-        List<ExerciseTreeEdge> connected = exercise.getId() == null
+        List<ProgressionRule> connected = exercise.getId() == null
                 ? List.of()
-                : treeEdges.findAllConnectedTo(Set.of(exercise.getId()));
-        List<Long> relatedIds = connected.stream()
-                .flatMap(edge -> java.util.stream.Stream.of(edge.getParentExerciseId(), edge.getChildExerciseId()))
+                : progressionRules.findAllByExercise_IdOrPrerequisiteExercise_Id(exercise.getId(), exercise.getId());
+        // "Bài trước" = bài tập là tiền kiện của bài này.
+        // "Bài sau"   = bài tập mà bài này là tiền kiện.
+        // Nguồn duy nhất là `progression_rules` (V83 đã bỏ bảng `exercise_tree_edges`).
+        var relatedIds = connected.stream()
+                .flatMap(rule -> java.util.stream.Stream.of(
+                        rule.getPrerequisiteExercise().getId(),
+                        rule.getExercise().getId()))
                 .filter(id -> !id.equals(exercise.getId()))
                 .distinct()
                 .toList();
         var relatedNames = exercises.findAllById(relatedIds).stream()
                 .collect(Collectors.toMap(Exercise::getId, Exercise::getName));
         List<String> previous = connected.stream()
-                .filter(edge -> exercise.getId().equals(edge.getChildExerciseId()))
-                .map(ExerciseTreeEdge::getParentExerciseId)
+                .filter(rule -> exercise.getId().equals(rule.getExercise().getId()))
+                .map(rule -> rule.getPrerequisiteExercise().getId())
                 .map(relatedNames::get)
                 .filter(java.util.Objects::nonNull)
+                .distinct()
                 .toList();
         List<String> next = connected.stream()
-                .filter(edge -> exercise.getId().equals(edge.getParentExerciseId()))
-                .map(ExerciseTreeEdge::getChildExerciseId)
+                .filter(rule -> exercise.getId().equals(rule.getPrerequisiteExercise().getId()))
+                .map(rule -> rule.getExercise().getId())
                 .map(relatedNames::get)
                 .filter(java.util.Objects::nonNull)
+                .distinct()
                 .toList();
-        boolean hasTree = exercise.getExerciseTreeId() != null || !connected.isEmpty();
+        boolean hasTree = !connected.isEmpty();
 
         ExercisePhysiologyDTO physiology = loadPhysiology(exercise.getId());
 
@@ -167,7 +174,6 @@ public class ExerciseService {
                 exercise.getType(),
                 exercise.getGoal() == null ? null : exercise.getGoal().name(),
                 exercise.getTargetSkill() == null ? null : exercise.getTargetSkill().name(),
-                exercise.getExerciseTreeId(),
                 hasTree,
                 exercise.getMovementGroup() == null ? null : exercise.getMovementGroup().name(),
                 previous,

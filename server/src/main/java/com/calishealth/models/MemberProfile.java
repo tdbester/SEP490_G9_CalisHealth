@@ -8,6 +8,15 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/**
+ * The profile row of an account: one row per user ({@code users.id}), whatever the role is.
+ * <p>
+ * Since V81 this table is the single owner of the personal details — {@code gender},
+ * {@code date_of_birth} and {@code bio} used to be duplicated on {@code users}. The fitness
+ * columns (weight, height, goals, level, streak, days per week) only carry data for a MEMBER;
+ * a staff account keeps them empty but still owns a row, because the Profile Information screen
+ * is shared by every role.
+ */
 @Entity
 @Table(name = "member_profiles")
 @Getter
@@ -18,6 +27,7 @@ public class MemberProfile {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** Male | Female | Other | Prefer not to say; free text from the survey becomes the last one. */
     @Column(length = 20)
     private String gender;
 
@@ -39,6 +49,7 @@ public class MemberProfile {
     @Column(name = "longest_streak", nullable = false, columnDefinition = "int not null default 0")
     private int longestStreak;
 
+    /** Short self introduction shown on the profile screen. */
     @Column(columnDefinition = "TEXT")
     private String bio;
 

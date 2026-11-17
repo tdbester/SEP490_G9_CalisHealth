@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Formula;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -44,7 +45,14 @@ public class WorkoutEntry {
     @Column(name = "moderation_status", nullable = false, length = 20)
     private String moderationStatus = "ACTIVE";
 
-    @Column(name = "save_count", nullable = false)
+    /**
+     * Số lượt yêu thích (lưu) của workout này, tính TRỰC TIẾP từ `member_favorites`.
+     *
+     * <p>Trước V83 đây là cột vật lý `workout_entries.save_count` bị ghi đè nên lệch với
+     * thực tế. V83 bỏ cột; giờ số đếm lấy thẳng từ nguồn sự thật.
+     */
+    @Formula("(select count(*) from member_favorites mf where mf.item_id = {alias}.id "
+            + "and mf.item_type in ('SYSTEM_WORKOUT', 'MEMBER_WORKOUT'))")
     private Integer saveCount = 0;
 
     @Column(name = "total_sets", nullable = false)
@@ -97,9 +105,6 @@ public class WorkoutEntry {
         updatedAt = LocalDateTime.now();
         if (createdAt == null) {
             createdAt = updatedAt;
-        }
-        if (saveCount == null) {
-            saveCount = 0;
         }
         if (totalSets == null) {
             totalSets = 0;

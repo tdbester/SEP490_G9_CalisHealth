@@ -4,7 +4,7 @@ import com.calishealth.dtos.ExerciseDtos.ExerciseResponse;
 import com.calishealth.models.Exercise;
 import com.calishealth.repository.ExerciseModerationHistoryRepository;
 import com.calishealth.repository.ExerciseRepository;
-import com.calishealth.repository.ExerciseTreeEdgeRepository;
+import com.calishealth.repository.ProgressionRuleRepository;
 import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,7 +41,7 @@ class GuestExerciseVisibilityTest {
                 mock(UserRepository.class),
                 mock(JdbcTemplate.class),
                 mock(MediaRegistryService.class),
-                mock(ExerciseTreeEdgeRepository.class),
+                mock(ProgressionRuleRepository.class),
                 mock(FitnessLevelRepository.class),
                 mock(ExerciseMuscleGroupCatalog.class),
                 mock(SystemNotificationService.class),

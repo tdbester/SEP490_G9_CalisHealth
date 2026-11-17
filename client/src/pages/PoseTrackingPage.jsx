@@ -8,7 +8,7 @@ import trackingApi from "../api/tracking";
 import api from "../api/client";
 import SessionTopbar from "../components/session/SessionTopbar";
 import VoiceToggleButton from "../components/session/VoiceToggleButton";
-import { addWorkoutResult } from "../utils/workoutResults";
+import { addWorkoutResult, readWorkoutOrigin } from "../utils/workoutResults";
 import { useVoiceMuted } from "../utils/voiceCoach";
 import { getAnatomyImage } from "../utils/anatomyImages";
 import { mediaUrl } from "../api/contentManager";
@@ -540,6 +540,8 @@ export default function PoseTrackingPage() {
         const response = await trackingApi.submitExerciseResult({
           exerciseCode: config.exerciseCode,
           sets,
+          // V83: phân biệt buổi tập theo kế hoạch ngày với buổi tập trong thư viện.
+          source: readWorkoutOrigin() === "/plan" ? "DAILY_PLAN" : "LIBRARY",
         });
         accuracy = response?.cleanRate != null ? Number(response.cleanRate) : null;
         toast.success(t("member.tracking.sessionSaved"));

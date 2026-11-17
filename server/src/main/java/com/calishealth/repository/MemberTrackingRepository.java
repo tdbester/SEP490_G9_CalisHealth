@@ -50,95 +50,130 @@ public class MemberTrackingRepository {
                 FROM member_profiles mp
                 JOIN users u ON u.id = mp.user_id
                 WHERE u.email = ?
+                  AND u.role = 'MEMBER'
                 """,
                 resultSet -> resultSet.next() ? Optional.of(resultSet.getLong("id")) : Optional.empty(),
                 email
         );
     }
 
+    /**
+     * Dự phòng cho hồ sơ chưa có lịch sử đo: tạo dòng đầu tiên trong
+     * {@code member_body_metrics} từ số đo đang có trên hồ sơ, hoặc từ câu trả lời
+     * khảo sát onboarding gần nhất khi hồ sơ còn trống.
+     * <p>
+     * Health Tracking đọc số đo mới nhất và biến thiên cân nặng từ bảng lịch sử, nên
+     * một hồ sơ có weight/height mà không có dòng lịch sử sẽ không hiện gì trên biểu đồ
+     * BMI theo tháng.
+     * <p>
+     * Chỉ số đo được ghi ở đây. Giới tính và mục tiêu do {@code SurveyProfileSync}
+     * phụ trách, vì chỉ nó dịch được mã option sang nhãn hiển thị.
+     */
     public void syncFromSurveyIfMissing(Long profileId) {
-        // Kiểm tra xem profile đã có weight và height chưa
-        Boolean hasMetrics = jdbcTemplate.query(
-                "SELECT weight, height FROM member_profiles WHERE id = ?",
-                rs -> rs.next() && rs.getBigDecimal("weight") != null && rs.getBigDecimal("height") != null,
+        Long historyRows = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM member_body_metrics WHERE member_profile_id = ?",
+                Long.class,
                 profileId
         );
-
-        if (Boolean.TRUE.equals(hasMetrics)) {
+        if (historyRows != null && historyRows > 0) {
             return;
         }
 
-        // Tìm phiên survey completed gần nhất của member này
-        List<Map<String, Object>> answers = jdbcTemplate.queryForList(
-                """
-                SELECT aq.question_code, aa.answer_value
-                FROM assessment_answers aa
-                JOIN assessment_questions aq ON aq.id = aa.question_id
-                JOIN survey_sessions ss ON ss.id = aa.session_id
-                JOIN member_profiles mp ON mp.user_id = ss.user_id
-                WHERE mp.id = ? AND ss.status = 'COMPLETED'
-                ORDER BY ss.completed_at DESC
-                """,
-                profileId
-        );
-
-        if (answers.isEmpty()) {
-            return;
-        }
-
+        // Ưu tiên số đo đang có trên hồ sơ (member đã nhập tay ở màn Profile).
         BigDecimal weight = null;
         BigDecimal height = null;
-        String gender = null;
-        String goal = null;
+        BigDecimal[] fromProfile = jdbcTemplate.query(
+                "SELECT weight, height FROM member_profiles WHERE id = ?",
+                rs -> rs.next()
+                        ? new BigDecimal[]{rs.getBigDecimal("weight"), rs.getBigDecimal("height")}
+                        : null,
+                profileId
+        );
+        if (fromProfile != null) {
+            weight = fromProfile[0];
+            height = fromProfile[1];
+        }
 
-        for (Map<String, Object> row : answers) {
-            String code = (String) row.get("question_code");
-            String rawVal = (String) row.get("answer_value");
-            if (rawVal == null || rawVal.isBlank()) continue;
-
-            String val = rawVal.trim().replaceAll("^\"|\"$", "");
-            try {
-                if ("WEIGHT".equalsIgnoreCase(code)) {
-                    weight = new BigDecimal(val);
-                } else if ("HEIGHT".equalsIgnoreCase(code)) {
-                    height = new BigDecimal(val);
-                } else if ("GENDER".equalsIgnoreCase(code)) {
-                    gender = val;
-                } else if ("GOAL_TYPE".equalsIgnoreCase(code) || "HEALTH_GOAL".equalsIgnoreCase(code)) {
-                    goal = val;
+        // Hồ sơ còn trống thì tra câu trả lời khảo sát gần nhất.
+        if (weight == null || height == null) {
+            List<Map<String, Object>> answers = jdbcTemplate.queryForList(
+                    """
+                    SELECT aq.question_code, aa.answer_value
+                    FROM assessment_answers aa
+                    JOIN assessment_questions aq ON aq.id = aa.question_id
+                    JOIN survey_sessions ss ON ss.id = aa.session_id
+                    JOIN member_profiles mp ON mp.user_id = ss.user_id
+                    WHERE mp.id = ? AND ss.status = 'COMPLETED'
+                      AND aq.question_code IN ('WEIGHT', 'HEIGHT')
+                    ORDER BY ss.completed_at DESC
+                    """,
+                    profileId
+            );
+            for (Map<String, Object> row : answers) {
+                String code = (String) row.get("question_code");
+                BigDecimal value = decimal(row.get("answer_value"));
+                if (value == null) {
+                    continue;
                 }
-            } catch (Exception ignored) {
+                if ("WEIGHT".equalsIgnoreCase(code) && weight == null) {
+                    weight = value;
+                } else if ("HEIGHT".equalsIgnoreCase(code) && height == null) {
+                    height = value;
+                }
             }
         }
 
-        if (weight != null || height != null || gender != null || goal != null) {
-            jdbcTemplate.update(
-                    """
-                    UPDATE member_profiles
-                    SET weight = COALESCE(?, weight),
-                        height = COALESCE(?, height),
-                        gender = COALESCE(?, gender),
-                        goals = COALESCE(?, goals)
-                    WHERE id = ?
-                    """,
-                    weight,
-                    height,
-                    gender,
-                    goal,
-                    profileId
-            );
+        if (!isUsableMeasurement(weight, height)) {
+            return;
+        }
 
-            if (weight != null && height != null && height.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal heightM = height.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
-                BigDecimal bmi = weight.divide(heightM.multiply(heightM), 1, RoundingMode.HALF_UP);
-                saveBodyMetric(
-                        profileId,
-                        weight,
-                        height,
-                        bmi,
-                        "Initial measurement from onboarding survey"
-                );
-            }
+        jdbcTemplate.update(
+                """
+                UPDATE member_profiles
+                SET weight = COALESCE(weight, ?),
+                    height = COALESCE(height, ?)
+                WHERE id = ?
+                """,
+                weight,
+                height,
+                profileId
+        );
+
+        BigDecimal heightM = height.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+        BigDecimal bmi = weight.divide(heightM.multiply(heightM), 1, RoundingMode.HALF_UP);
+        saveBodyMetric(
+                profileId,
+                weight,
+                height,
+                bmi,
+                "Initial measurement from onboarding survey"
+        );
+    }
+
+    /** Số đo dùng được: có đủ 2 chiều và nằm trong khoảng CHECK của member_body_metrics. */
+    private static boolean isUsableMeasurement(BigDecimal weight, BigDecimal height) {
+        if (weight == null || height == null) {
+            return false;
+        }
+        return weight.compareTo(BigDecimal.valueOf(20.0)) >= 0
+                && weight.compareTo(BigDecimal.valueOf(300.0)) <= 0
+                && height.compareTo(BigDecimal.valueOf(100.0)) >= 0
+                && height.compareTo(BigDecimal.valueOf(250.0)) <= 0;
+    }
+
+    /** Câu trả lời NUMBER được lưu dạng JSON: "72" hoặc 72 (một số câu cũ lưu kèm dấu nháy). */
+    private static BigDecimal decimal(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        String value = raw.toString().trim().replaceAll("^\"|\"$", "");
+        if (value.isEmpty()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(value);
+        } catch (NumberFormatException exception) {
+            return null;
         }
     }
 
@@ -440,8 +475,30 @@ public class MemberTrackingRepository {
         return new HealthScoreDto(score, changePercent, peerPercentile, headline, description);
     }
 
-    /** Mục tiêu số ngày tập mỗi tuần: câu GOAL_DAYS_PER_WEEK ở lần survey hoàn thành gần nhất, chưa có thì 3. */
+    /**
+     * Mục tiêu số ngày tập mỗi tuần.
+     *
+     * <p>Nguồn chính là {@code member_profiles.days_per_week}: đây là nơi duy nhất
+     * {@code LevelAssessmentService.persistAndReadDaysPerWeek} ghi số buổi/tuần member chọn
+     * trong khảo sát, nên mọi màn hình đều thấy cùng một con số.
+     *
+     * <p>Phương án dự phòng là đọc thẳng câu trả lời khảo sát. Lưu ý mã câu hỏi: trong
+     * {@code assessment_questions} không có {@code GOAL_DAYS_PER_WEEK}; hai mã thật là
+     * {@code TRAINING_DAYS_PER_WEEK} (số buổi đang tập) và
+     * {@code HOW_MANY_DAYS_PER_WEEK_DO_YOU_WANT_TO_TRAIN_WITH_CALISHE} (số buổi muốn tập).
+     * Ưu tiên câu "muốn tập" rồi mới tới câu "đang tập", đúng thứ tự
+     * {@code LevelAssessmentService.desiredDaysPerWeek} dùng.
+     */
     private int findWeeklyGoalDays(Long profileId) {
+        List<Integer> stored = jdbcTemplate.queryForList(
+                "SELECT days_per_week FROM member_profiles WHERE id = ?",
+                Integer.class,
+                profileId
+        );
+        if (!stored.isEmpty() && stored.get(0) != null && stored.get(0) >= 1 && stored.get(0) <= 7) {
+            return stored.get(0);
+        }
+
         List<String> answers = jdbcTemplate.queryForList(
                 """
                 SELECT aa.answer_value
@@ -450,9 +507,14 @@ public class MemberTrackingRepository {
                 JOIN survey_sessions ss ON ss.id = aa.session_id
                 JOIN member_profiles mp ON mp.user_id = ss.user_id
                 WHERE mp.id = ?
-                  AND aq.question_code = 'GOAL_DAYS_PER_WEEK'
+                  AND aq.question_code IN (
+                        'HOW_MANY_DAYS_PER_WEEK_DO_YOU_WANT_TO_TRAIN_WITH_CALISHE',
+                        'TRAINING_DAYS_PER_WEEK')
                   AND ss.status = 'COMPLETED'
-                ORDER BY ss.completed_at DESC
+                ORDER BY FIELD(aq.question_code,
+                        'HOW_MANY_DAYS_PER_WEEK_DO_YOU_WANT_TO_TRAIN_WITH_CALISHE',
+                        'TRAINING_DAYS_PER_WEEK'),
+                    ss.completed_at DESC
                 LIMIT 1
                 """,
                 String.class,
@@ -488,10 +550,16 @@ public class MemberTrackingRepository {
     }
 
     public WorkoutHistoryResponse findWorkoutHistory(Long profileId, String category, LocalDate date) {
+        // Thể loại buổi tập không lưu cột nữa (V83 bỏ `workout_sessions.category` vì ghi sai)
+        // -> suy ra lúc đọc từ loại bài tập: mọi bài đều HEALTH thì "Health", có bài SKILL thì "Skill".
         StringBuilder sql = new StringBuilder("""
                 SELECT ws.id,
                        COALESCE(ws.workout_name, 'Custom Workout') AS workout_name,
-                       ws.category,
+                       CASE
+                           WHEN MAX(CASE WHEN e.type = 'SKILL' THEN 1 ELSE 0 END) = 1 THEN 'SKILL'
+                           WHEN MAX(CASE WHEN e.type = 'HEALTH' THEN 1 ELSE 0 END) = 1 THEN 'HEALTH'
+                           ELSE NULL
+                       END AS category,
                        ws.started_at,
                        ws.finished_at,
                        ws.active_seconds,
@@ -508,8 +576,9 @@ public class MemberTrackingRepository {
         params.add(profileId);
 
         if (category != null && !category.equalsIgnoreCase("all")) {
-            sql.append(" AND ws.category = ? ");
-            params.add(category.toLowerCase());
+            sql.append(" AND EXISTS (SELECT 1 FROM session_exercise_results s2 "
+                    + "JOIN exercises e2 ON e2.id = s2.exercise_id WHERE s2.workout_session_id = ws.id AND e2.type = ?) ");
+            params.add(category.toUpperCase());
         }
 
         if (date != null) {
@@ -518,7 +587,7 @@ public class MemberTrackingRepository {
         }
 
         sql.append("""
-                GROUP BY ws.id, ws.workout_name, ws.category, ws.started_at, ws.finished_at, ws.active_seconds
+                GROUP BY ws.id, ws.workout_name, ws.started_at, ws.finished_at, ws.active_seconds
                 ORDER BY ws.session_date DESC, ws.started_at DESC
                 """);
 
@@ -628,12 +697,19 @@ public class MemberTrackingRepository {
                 """
                 SELECT ws.id,
                        COALESCE(ws.workout_name, 'Custom Workout') AS workout_name,
-                       ws.category,
+                       CASE
+                           WHEN MAX(CASE WHEN e.type = 'SKILL' THEN 1 ELSE 0 END) = 1 THEN 'SKILL'
+                           WHEN MAX(CASE WHEN e.type = 'HEALTH' THEN 1 ELSE 0 END) = 1 THEN 'HEALTH'
+                           ELSE NULL
+                       END AS category,
                        ws.started_at,
                        ws.finished_at,
                        ws.active_seconds
                 FROM workout_sessions ws
+                LEFT JOIN session_exercise_results ser ON ser.workout_session_id = ws.id
+                LEFT JOIN exercises e ON e.id = ser.exercise_id
                 WHERE ws.id = ?
+                GROUP BY ws.id, ws.workout_name, ws.started_at, ws.finished_at, ws.active_seconds
                 """,
                 (rs, rowNum) -> {
                     Timestamp startedAt = rs.getTimestamp("started_at");

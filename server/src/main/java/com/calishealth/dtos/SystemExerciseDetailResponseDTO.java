@@ -21,7 +21,7 @@ public record SystemExerciseDetailResponseDTO(
         String type,
         String goal,
         String targetSkill,
-        Long exerciseTreeId,
+        /** Bài này có nằm trong cây tiến trình (progression rules) hay không. */
         Boolean hasExerciseTree,
         String movementGroup,
         List<String> previousExercises,

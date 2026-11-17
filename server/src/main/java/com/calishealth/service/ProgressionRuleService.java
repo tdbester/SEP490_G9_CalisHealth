@@ -16,6 +16,8 @@ import com.calishealth.dtos.ProgressionRuleDtos.UpdateRuleRequest;
 import com.calishealth.events.WorkoutCompletedEvent;
 import com.calishealth.models.Exercise;
 import com.calishealth.models.ProgressionRule;
+import com.calishealth.models.User;
+import com.calishealth.models.UserRole;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.MemberProfileRepository;
 import com.calishealth.repository.MemberSkillProgressRepository;
@@ -63,6 +65,10 @@ public class ProgressionRuleService {
     public static final String STATUS_INACTIVE = "INACTIVE";
     public static final String MEASURE_REPS = "REPS";
     public static final String MEASURE_HOLD = "HOLD";
+    /** Nguồn buổi tập: member tập bài lẻ / workout trong thư viện. */
+    public static final String SOURCE_LIBRARY = "LIBRARY";
+    /** Nguồn buổi tập: member tập theo kế hoạch ngày. */
+    public static final String SOURCE_DAILY_PLAN = "DAILY_PLAN";
     static final int MAX_SETS = 20;
     static final String PROGRESS_UNLOCKED = "UNLOCKED";
     static final String PROGRESS_IN_PROGRESS = "IN_PROGRESS";
@@ -198,9 +204,13 @@ public class ProgressionRuleService {
         String measure = measureOf(exercise);
         validateSets(measure, request.sets());
 
-        Long userId = users.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "The signed-in user no longer exists")).getId();
-        var profile = memberProfiles.findByUserId(userId)
+        User user = users.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "The signed-in user no longer exists"));
+        // Mọi tài khoản đều có dòng member_profiles (V81), nhưng chỉ MEMBER mới gửi kết quả tập được.
+        if (user.getRole() != UserRole.MEMBER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only members can submit workout results");
+        }
+        var profile = memberProfiles.findByUserId(user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member profile not found"));
 
         int totalReps = request.sets().stream().mapToInt(SetResultInput::totalReps).sum();
@@ -211,7 +221,7 @@ public class ProgressionRuleService {
 
         LocalDateTime finishedAt = LocalDateTime.now();
         Long sessionId = insertSession(profile.getId(), exercise.getName(), finishedAt.minusSeconds(totalSeconds),
-                finishedAt, totalSeconds, totalReps);
+                finishedAt, totalSeconds, totalReps, normalizeSource(request.source()));
 
         var result = new com.calishealth.models.SessionExerciseResult();
         result.setWorkoutSessionId(sessionId);
@@ -260,13 +270,23 @@ public class ProgressionRuleService {
         return new ExerciseResultResponse(sessionId, ref(exercise), cleanRate, evaluations, newlyUnlocked);
     }
 
+    /**
+     * Ghi 1 buổi tập mới.
+     *
+     * <p>`source` cho biết buổi tập đến từ đâu:
+     * <ul>
+     *   <li>{@code LIBRARY} - member tập bài lẻ / workout trong thư viện (mặc định)</li>
+     *   <li>{@code DAILY_PLAN} - member tập theo kế hoạch ngày</li>
+     * </ul>
+     * V83 thêm cột này để phân biệt 2 luồng tập (cả 2 đều ghi vào cùng bảng).
+     */
     private Long insertSession(Long profileId, String name, LocalDateTime startedAt, LocalDateTime finishedAt,
-                               int activeSeconds, int totalReps) {
+                               int activeSeconds, int totalReps, String source) {
         KeyHolder keys = new GeneratedKeyHolder();
         jdbc.update(connection -> {
             var statement = connection.prepareStatement(
                     "INSERT INTO workout_sessions (member_profile_id, workout_name, session_date, status, started_at, "
-                            + "finished_at, active_seconds, total_reps) VALUES (?, ?, ?, 'COMPLETED', ?, ?, ?, ?)",
+                            + "finished_at, active_seconds, total_reps, source) VALUES (?, ?, ?, 'COMPLETED', ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS);
             statement.setLong(1, profileId);
             statement.setString(2, name);
@@ -275,6 +295,7 @@ public class ProgressionRuleService {
             statement.setTimestamp(5, Timestamp.valueOf(finishedAt));
             statement.setInt(6, activeSeconds);
             statement.setInt(7, totalReps);
+            statement.setString(8, source);
             return statement;
         }, keys);
         return keys.getKey().longValue();
@@ -391,8 +412,16 @@ public class ProgressionRuleService {
         rule.setStatus(normalizeStatus(status));
     }
 
-    private static String normalizeStatus(String status) {
-        if (status == null || status.isBlank()) throw bad("Status is required and must be ACTIVE or INACTIVE");
+    /** Chuẩn hoá nguồn buổi tập: chỉ nhận {@code LIBRARY} / {@code DAILY_PLAN}, còn lại -> {@code LIBRARY}. */
+    private static String normalizeSource(String source) {
+        if (source == null || source.isBlank()) {
+            return SOURCE_LIBRARY;
+        }
+        String value = source.trim().toUpperCase();
+        return SOURCE_DAILY_PLAN.equals(value) ? SOURCE_DAILY_PLAN : SOURCE_LIBRARY;
+    }
+
+    private static String normalizeStatus(String status) {        if (status == null || status.isBlank()) throw bad("Status is required and must be ACTIVE or INACTIVE");
         String value = status.trim().toUpperCase();
         if (!STATUS_ACTIVE.equals(value) && !STATUS_INACTIVE.equals(value)) throw bad("Status must be ACTIVE or INACTIVE");
         return value;
