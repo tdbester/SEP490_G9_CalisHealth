@@ -20,7 +20,7 @@ import PerformanceAnalytics from "./pages/PerformanceAnalytics";
 import DayStreak from "./pages/DayStreak";
 import DailyWorkoutPlan from "./pages/DailyWorkoutPlan";
 import MemberSchedulePage from "./pages/MemberSchedulePage";
-import ReviewTrainingPlanPage from "./pages/ReviewTrainingPlanPage";
+import PreviewTrainingPlanPage from "./pages/PreviewTrainingPlanPage";
 import ExerciseDetailPreview from "./pages/ExerciseDetailPreview";
 import PoseTrackingPage from "./pages/PoseTrackingPage";
 import RestCountdownPage from "./pages/RestCountdownPage";
@@ -271,10 +271,10 @@ export default function App() {
           <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
-        {/* Member daily training flow: schedule → review → daily plan → exercise detail */}
+        {/* Member daily training flow: schedule → preview → daily plan → exercise detail */}
         <Route path="/plan" element={memberPage(<DailyWorkoutPlan />)} />
         <Route path="/schedule" element={memberPage(<MemberSchedulePage />)} />
-        <Route path="/schedule/review" element={memberPage(<ReviewTrainingPlanPage />)} />
+        <Route path="/schedule/preview" element={memberPage(<PreviewTrainingPlanPage />)} />
         <Route path="/exercises/:code" element={memberPage(<ExerciseDetailPreview />)} />
         {/* Real-time AI Pose Tracking — mở sau khi member bấm "Ready · Start counting".
             Màn này fullscreen nên không dùng layout sidebar của member. */}

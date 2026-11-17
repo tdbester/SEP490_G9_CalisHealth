@@ -335,7 +335,7 @@ export default function DailyWorkoutPlan() {
         {/* Đã tập xong kế hoạch hôm nay -> màn chúc mừng, kèm nút về dashboard
             và nút gợi ý sang thư viện nếu member muốn tập thêm. */}
         {celebrating ? (
-          <DailyPlanCongrats onReviewPlan={() => setCelebrating(false)} />
+          <DailyPlanCongrats onPreviewPlan={() => setCelebrating(false)} />
         ) : (
           workouts.map((workout) => (
           <section key={workout.workoutCode} className="plan-workout">

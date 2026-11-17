@@ -310,8 +310,8 @@ public class ExercisePhysiologyService {
             return List.of(raw);
         }
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper =
-                    new com.fasterxml.jackson.databind.ObjectMapper();
+            tools.jackson.databind.ObjectMapper mapper =
+                    new tools.jackson.databind.ObjectMapper();
             List<?> list = mapper.readValue(raw, List.class);
             return list.stream()
                     .filter(java.util.Objects::nonNull)
