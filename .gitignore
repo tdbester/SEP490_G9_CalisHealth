@@ -100,3 +100,8 @@ client/.env.*.local
 docs/architecture/designsets/**/*.puml
 docs/architecture/designsets/**/*.svg
 docs/architecture/designsets/**/*.png
+
+# ===== ERD / Database design (sinh tu DB that, chay local, khong commit) =====
+# File sinh boi script doc schema MySQL sau khi Flyway chay xong.
+# Chi dung de xem trinh duyet local (mo file .html bang Chrome).
+server/docs/erd/
