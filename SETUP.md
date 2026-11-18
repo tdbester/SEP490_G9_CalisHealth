@@ -104,7 +104,7 @@ cd server
 ./mvnw spring-boot:run        # Windows: .\mvnw.cmd spring-boot:run
 ```
 
-Lần đầu sẽ mất khoảng 30–60 giây (tải dependency + chạy 76 migration).
+Lần đầu sẽ mất khoảng 30–60 giây (tải dependency + chạy 82 migration).
 Thấy dòng này là thành công:
 
 ```
@@ -217,7 +217,7 @@ Test suite cần MySQL thật (không dùng H2 vì SQL migration viết cho MySQ
 mysql -u root -p -e "DROP DATABASE calishealth; CREATE DATABASE calishealth;"
 ```
 
-Lần start sau Flyway tự chạy lại toàn bộ 76 migration.
+Lần start sau Flyway tự chạy lại toàn bộ 82 migration.
 
 ---
 
@@ -228,7 +228,7 @@ cd server
 ./mvnw test          # Windows: .\mvnw.cmd test
 ```
 
-Cần MySQL đang chạy. Test hiện có **373 test**.
+Cần MySQL đang chạy. Test hiện có **367 test**.
 
 Frontend:
 
@@ -241,10 +241,15 @@ npm run test:tracker
 
 ## Vì sao lỗi này không lặp lại nữa
 
-Mỗi lần push lên `main` hoặc mở Pull Request, **GitHub Actions** tự động:
+Repo này **không dùng GitHub Actions (CI)**. Chất lượng được bảo đảm thủ công:
+điều kiện tối thiểu trước khi push là
 
-1. Build + chạy toàn bộ test backend (kèm MySQL service)
-2. Build frontend
+```bash
+cd server && ./mvnw test        # 367 test backend, cần MySQL đang chạy
+cd client && npm ci && npm run build
+```
 
-Nếu code làm app không start được (ví dụ lỗi dependency injection như lần trước),
-CI sẽ **fail** và PR bị chặn. Xem trạng thái ở tab **Actions** trên GitHub.
+Lưu ý cho môi trường Linux/CI khác: `server/mvnw` phải có quyền thực thi
+(`git update-index --chmod=+x server/mvnw`), nếu không sẽ báo `./mvnw: Permission denied`.
+Với `npm`, luôn dùng `npm ci` để bắt lỗi lockfile lệch với `package.json`
+(`npm install` sẽ tự vá và che mất lỗi này).
