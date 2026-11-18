@@ -57,7 +57,6 @@ class WorkoutServiceTest {
                 "Workout description",
                 "HEALTH",
                 "Beginner",
-                1,
                 3,
                 1,
                 "PUBLISHED",

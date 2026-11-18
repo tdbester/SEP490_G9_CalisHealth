@@ -181,6 +181,15 @@ function ExerciseCard({ item, onClick }) {
           label={item.name}
           className="shrink-0"
         />
+        {/* Bài chưa mở khoá trong Exercise Tree -> báo trước cho member. */}
+        {item.locked && (
+          <span
+            title={t("member.catalog.exerciseLockedBadge")}
+            className="rounded-full border border-amber-700/70 bg-amber-950/40 px-2.5 py-1 text-[10px] font-semibold text-amber-300"
+          >
+            {t("member.catalog.exerciseLockedBadge")}
+          </span>
+        )}
         <span
           className={`min-w-[96px] text-center px-4 py-1.5 rounded-full text-xs font-bold tracking-wide capitalize ${getLevelBadgeStyle(level)}`}
         >

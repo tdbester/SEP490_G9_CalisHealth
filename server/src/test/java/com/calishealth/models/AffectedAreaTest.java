@@ -1,13 +1,18 @@
 package com.calishealth.models;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class AffectedAreaTest {
-    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /**
+     * Spring Boot 4 dùng Jackson 3 (tools.jackson) làm mặc định cho HTTP converter,
+     * nên enum phải bind được bằng đúng mapper mà runtime thực sự dùng.
+     */
+    private final JsonMapper objectMapper = JsonMapper.builder().build();
 
     @Test
     void acceptsAllCurrentAreaKeys() throws Exception {

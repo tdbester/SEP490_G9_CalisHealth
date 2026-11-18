@@ -1,7 +1,6 @@
 package com.calishealth.security;
 
 import com.calishealth.service.MaintenanceScheduleService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -49,7 +49,7 @@ public class MaintenanceEnforcementFilter extends OncePerRequestFilter {
     public MaintenanceEnforcementFilter(MaintenanceScheduleService schedules) {
         this.schedules = schedules;
     }
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final JsonMapper objectMapper = JsonMapper.builder().build();
 
     @Override
     protected void doFilterInternal(

@@ -38,6 +38,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // lỗi chưa có handler được Spring chuyển sang /error: không mở thì mọi lỗi thành 401 (FE tự logout)
                         .requestMatchers("/error").permitAll()
+                        // Chỉ mở health để team kiểm tra backend đã sống chưa (GET /actuator/health).
+                        // Các endpoint actuator khác (env, beans, loggers...) vẫn yêu cầu đăng nhập.
+                        .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/api/auth/change-password", "/api/auth/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/dashboard").permitAll()
                         .requestMatchers(

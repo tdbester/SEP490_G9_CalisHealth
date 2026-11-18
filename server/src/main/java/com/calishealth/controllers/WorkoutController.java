@@ -40,7 +40,7 @@ public class WorkoutController {
         return workouts.update(code, request);
     }
 
-    /** Clone Template: copies a template into a new DRAFT for the target month. */
+    /** Clone Template: copies a template into a new DRAFT copy. */
     @PostMapping("/{code}/clone")
     @ResponseStatus(HttpStatus.CREATED)
     public WorkoutResponse cloneTemplate(

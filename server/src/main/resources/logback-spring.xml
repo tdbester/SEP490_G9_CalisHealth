@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cấu hình log cho backend.
+
+  Mục tiêu: console IntelliJ phải đọc được, không bị ngập bởi SQL của Hibernate.
+  Khi `spring.jpa.show-sql=true`, SQL được in bởi logger `org.hibernate.SQL` (mặc định
+  level DEBUG). Ở đây ta hạ nó xuống OFF để SQL không chen vào log ứng dụng —
+  muốn xem SQL thì bật `JPA_SHOW_SQL=true` và sửa level của `org.hibernate.SQL`
+  thành DEBUG.
+
+  Còn muốn xem SQL mà vẫn giữ console sạch thì bật `logging.level.org.hibernate.SQL=DEBUG`
+  (biến môi trường / application.yml) — logger này đã được tách riêng.
+-->
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <springProfile name="!prod">
+        <!-- Logger riêng cho SQL: bật bằng logging.level.org.hibernate.SQL=DEBUG -->
+        <logger name="org.hibernate.SQL" level="OFF"/>
+    </springProfile>
+
+    <springProfile name="prod">
+        <logger name="org.hibernate.SQL" level="OFF"/>
+    </springProfile>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

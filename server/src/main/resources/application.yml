@@ -27,7 +27,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none # Flyway là nguồn sự thật duy nhất cho schema
-    show-sql: true
+    # In SQL ra console. Mặc định TẮT vì console IntelliJ bị ngập bởi SQL mỗi
+    # lần poll job + mỗi request -> rất khó đọc log ứng dụng.
+    # Bật lại khi cần debug query: JPA_SHOW_SQL=true trong file .env
+    show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
         format_sql: true
@@ -47,6 +50,20 @@ spring:
 
 server:
   port: 8080
+
+logging:
+  level:
+    # Log "token hợp lệ" của JwtAuthFilter để ở DEBUG (mặc định tắt) vì frontend
+    # poll /api/notifications mỗi 10 giây -> ở INFO console bị ngập vài nghìn
+    # dòng/ngày mà không có thông tin chẩn đoán nào.
+    # Bật lại khi cần debug token: JWT_LOG_LEVEL=DEBUG trong file .env
+    com.calishealth.security: ${JWT_LOG_LEVEL:INFO}
+
+maintenance:
+  # Job quét bảng `maintenance_schedules` để gửi nhắc nhở cho member trước
+  # khi lịch bảo trì bắt đầu. Đơn vị: mili-giây.
+  # Mặc định 300000 = 5 phút (đủ sớm cho các mốc nhắc 1/12/24/48 giờ).
+  reminder-poll-ms: ${MAINTENANCE_REMINDER_POLL_MS:300000}
 
 app:
   frontend-url: http://localhost:5173

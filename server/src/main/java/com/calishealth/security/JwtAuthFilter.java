@@ -59,7 +59,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     null,
                                     List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
                             ));
-                    logger.info("JWT authenticated request: method={}, path={}, role={}",
+                    // Ở DEBUG vì đây là log "token hợp lệ" - mọi request có JWT đều in
+                    // 1 dòng. Frontend poll /api/notifications mỗi 10 giây nên ở
+                    // INFO sẽ lấp đầy console (vài nghìn dòng/ngày) mà không mang
+                    // thông tin chẩn đoán nào. Mọi log LỖI token vẫn giữ ở WARN
+                    // (token hết hạn, sai chữ ký, tài khoản bị block).
+                    // Bật lại khi debug token: logging.level.com.calishealth.security=DEBUG
+                    logger.debug("JWT authenticated request: method={}, path={}, role={}",
                             req.getMethod(), req.getRequestURI(), user.getRole());
                 }
             } catch (io.jsonwebtoken.ExpiredJwtException exception) {

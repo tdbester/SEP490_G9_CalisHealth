@@ -39,6 +39,7 @@ public class LibraryWorkoutService {
     private final UserRepository users;
     private final FitnessLevelRepository fitnessLevels;
     private final ContentNameGuardService contentNameGuard;
+    private final ExerciseUnlockService unlockService;
 
     @Transactional(readOnly = true)
     public PageResponseDTO<WorkoutListItemDTO> getCommunityWorkouts(String memberEmail, WorkoutFilterRequestDTO filter) {
@@ -78,14 +79,46 @@ public class LibraryWorkoutService {
                 WorkoutSpecification.withSystemFilters(filter, types),
                 PageRequest.of(filter.getPage(), filter.getSize(),
                         Sort.by(Sort.Order.asc("name"), Sort.Order.asc("id"))));
+
+        // Tập bài đang khoá của member — tính MỘT LẦN cho cả trang để tránh N+1 query.
+        Set<Long> lockedExerciseIds = lockedExerciseIdsOf(memberEmail, result.getContent());
+
         return new PageResponseDTO<>(
-                result.getContent().stream().map(this::toListItem).toList(),
+                result.getContent().stream().map(workout -> toListItem(workout, lockedExerciseIds)).toList(),
                 result.getNumber(),
                 result.getSize(),
                 result.getTotalElements(),
                 result.getTotalPages(),
                 result.hasNext(),
                 result.hasPrevious());
+    }
+
+    /**
+     * Gom tất cả bài đang khoá của member trong danh sách workout.
+     *
+     * <p>Gọi {@code statesByExercise} đúng một lần rồi lọc ra các bài LOCKED, thay vì
+     * gọi {@code isLocked} cho từng bài (mỗi lần đó lại quét cả cây).</p>
+     */
+    private Set<Long> lockedExerciseIdsOf(String memberEmail, List<WorkoutEntry> workouts) {
+        if (memberEmail == null || memberEmail.isBlank() || workouts.isEmpty()) {
+            return Set.of();
+        }
+        User member = users.findByEmail(memberEmail).orElse(null);
+        if (member == null) {
+            return Set.of();
+        }
+        Set<Long> exerciseIds = workouts.stream()
+                .flatMap(workout -> workout.getExercises().stream())
+                .map(item -> item.getExercise() == null ? null : item.getExercise().getId())
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (exerciseIds.isEmpty()) {
+            return Set.of();
+        }
+        Map<Long, String> states = unlockService.statesByExercise(member.getId());
+        return exerciseIds.stream()
+                .filter(id -> ExerciseUnlockService.STATE_LOCKED.equals(states.get(id)))
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     @Transactional(readOnly = true)
@@ -98,7 +131,7 @@ public class LibraryWorkoutService {
                         && Set.of("HEALTH", "SKILL", "FLEX").contains(
                                 entry.getType() == null ? "" : entry.getType().toUpperCase(Locale.ROOT)))
                 .orElseThrow(() -> new ResourceNotFoundException("System workout not found"));
-        return toDetail(workout);
+        return toDetail(workout, lockState(memberEmail, workout));
     }
 
     private PageResponseDTO<WorkoutListItemDTO> getWorkoutPage(
@@ -377,6 +410,10 @@ public class LibraryWorkoutService {
     }
 
     private WorkoutDetailResponseDTO toDetail(WorkoutEntry workout) {
+        return toDetail(workout, new WorkoutLockState(false, List.of()));
+    }
+
+    private WorkoutDetailResponseDTO toDetail(WorkoutEntry workout, WorkoutLockState lockState) {
         List<WorkoutExerciseItemDTO> items = java.util.stream.IntStream.range(0, workout.getExercises().size())
                 .mapToObj(index -> {
                     WorkoutExerciseItem item = workout.getExercises().get(index);
@@ -413,10 +450,64 @@ public class LibraryWorkoutService {
                 items.size(),
                 workout.getTotalSets(),
                 workout.getEstimatedDuration(),
-                items);
+                items,
+                lockState.locked(),
+                lockState.lockedExerciseNames());
     }
 
+    /**
+     * Tính cờ khoá cho workout hệ thống: workout chỉ tập được khi TẤT CẢ bài trong
+     * nó đã mở khoá trong Exercise Tree.
+     *
+     * <p>Chỉ áp dụng cho workout hệ thống: workout của member (custom / cộng đồng)
+     * luôn tập được vì chính member đã chủ động chọn các bài đó.</p>
+     *
+     * @param memberEmail email member (null khi guest)
+     * @param workout     workout cần kiểm tra
+     * @return cặp (locked, tên các bài đang khoá)
+     */
+    private WorkoutLockState lockState(String memberEmail, WorkoutEntry workout) {
+        if (!workout.isSystem() || memberEmail == null || memberEmail.isBlank()) {
+            return new WorkoutLockState(false, List.of());
+        }
+        User member = users.findByEmail(memberEmail).orElse(null);
+        if (member == null) {
+            return new WorkoutLockState(false, List.of());
+        }
+        List<Long> exerciseIds = workout.getExercises().stream()
+                .map(item -> item.getExercise() == null ? null : item.getExercise().getId())
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        Set<Long> lockedIds = unlockService.lockedExerciseIds(exerciseIds, member.getId());
+        if (lockedIds.isEmpty()) {
+            return new WorkoutLockState(false, List.of());
+        }
+        List<String> lockedNames = workout.getExercises().stream()
+                .map(item -> item.getExercise())
+                .filter(java.util.Objects::nonNull)
+                .filter(exercise -> lockedIds.contains(exercise.getId()))
+                .map(Exercise::getName)
+                .distinct()
+                .toList();
+        return new WorkoutLockState(true, lockedNames);
+    }
+
+    /** Kết quả kiểm tra khoá của workout. */
+    private record WorkoutLockState(boolean locked, List<String> lockedExerciseNames) {}
+
     private WorkoutListItemDTO toListItem(WorkoutEntry workout) {
+        return toListItem(workout, Set.of());
+    }
+
+    /**
+     * @param lockedExerciseIds các bài đang khoá của member — workout chứa bất kỳ bài nào
+     *                           trong tập này thì workout đó bị khoá.
+     */
+    private WorkoutListItemDTO toListItem(WorkoutEntry workout, Set<Long> lockedExerciseIds) {
+        boolean locked = !lockedExerciseIds.isEmpty() && workout.getExercises().stream()
+                .map(item -> item.getExercise() == null ? null : item.getExercise().getId())
+                .anyMatch(lockedExerciseIds::contains);
         return new WorkoutListItemDTO(
                 workout.getId(),
                 workout.getName(),
@@ -434,7 +525,8 @@ public class LibraryWorkoutService {
                         .filter(group -> group != null && !group.isBlank())
                         .distinct()
                         .collect(Collectors.joining(", ")),
-                workout.isSharedWithCommunity());
+                workout.isSharedWithCommunity(),
+                locked);
     }
 
     private WorkoutEntry requireOwnedWorkout(Long memberId, Long workoutId) {

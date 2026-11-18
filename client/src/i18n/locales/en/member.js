@@ -948,6 +948,12 @@ export default {
     setSummary: "{{sets}} sets · {{dosage}} · {{rest}} rest",
     startWorkout: "Start workout",
     couldNotStart: "This workout has no exercise you can start yet.",
+    workoutLockedBadge: "Locked",
+    workoutLocked:
+      "This workout is locked. Unlock {{exercises}} in the Exercise Tree before starting it.",
+    exerciseLockedBadge: "Locked",
+    exerciseLocked:
+      "This exercise is still locked. Complete its prerequisites in the Exercise Tree first.",
     invalidExerciseId: "This workout exercise does not have a valid exercise ID.",
     loadingExercises: "Loading exercises...",
     loadFailed: "Unable to load your exercises. Please try again.",

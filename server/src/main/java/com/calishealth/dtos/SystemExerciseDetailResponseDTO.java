@@ -26,5 +26,12 @@ public record SystemExerciseDetailResponseDTO(
         String movementGroup,
         List<String> previousExercises,
         List<String> nextExercises,
-        ExercisePhysiologyDTO physiology
+        ExercisePhysiologyDTO physiology,
+        /**
+         * Bài này đang khoá trong Exercise Tree với member đang xem hay không.
+         *
+         * <p>Null khi khách (guest) xem — guest không tập được nên không cần biết.
+         * Member chỉ tập được bài không LOCKED.</p>
+         */
+        Boolean locked
 ) {}

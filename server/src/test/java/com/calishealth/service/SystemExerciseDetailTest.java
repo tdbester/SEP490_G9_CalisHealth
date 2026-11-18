@@ -41,7 +41,8 @@ class SystemExerciseDetailTest {
                 mock(ExerciseMuscleGroupCatalog.class),
                 mock(SystemNotificationService.class),
                 mock(ExercisePhysiologyService.class),
-                mock(ContentNameGuardService.class));
+                mock(ContentNameGuardService.class),
+                mock(ExerciseUnlockService.class));
     }
 
     /**
@@ -132,7 +133,6 @@ class SystemExerciseDetailTest {
         exercise.setName("Bench Dips");
         exercise.setMuscleGroup("Arm/Shoulders");
         exercise.setMovementGroup(Exercise.MovementGroup.PUSH);
-        exercise.setTreeLevel(1);
         when(exerciseRepository.findAcceptedByIdAndSource(118L, "SYSTEM")).thenReturn(Optional.of(exercise));
         when(progressionRules.findAllByExercise_IdOrPrerequisiteExercise_Id(118L, 118L))
                 .thenReturn(List.of(rule(118L, 119L, "Push-up")));
