@@ -95,3 +95,8 @@ client/.env.*.local
 # File kiem tra tam sinh khi debug
 *.tmp
 *.bak
+
+# ===== Diagram kien truc (sinh tu .puml, khong commit) =====
+docs/architecture/designsets/**/*.puml
+docs/architecture/designsets/**/*.svg
+docs/architecture/designsets/**/*.png
