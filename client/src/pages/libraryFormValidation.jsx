@@ -1,4 +1,5 @@
 import i18n from "../i18n";
+import { isDuplicateNameMessage } from "../utils/apiError";
 
 const t = (key, options) => i18n.t(key, options);
 
@@ -108,4 +109,53 @@ export function getApiErrorMessage(error, fallback) {
     if (messages.length) return messages.join("; ");
   }
   return responseData?.message || fallback;
+}
+
+/**
+ * Lỗi 409 "trùng tên" từ server.
+ *
+ * Server trả 409 khi:
+ * - tên workout trùng tuyệt đối với tên một bài tập (`ContentNameGuardService`),
+ * - tên workout trùng với một workout khác của chính member đó,
+ * - tên bài tập trùng với tên một bài tập đã có.
+ *
+ * Server trả thông báo tiếng Anh nên client tự dịch lại để nhất quán với ngôn ngữ đang dùng.
+ */
+export function isDuplicateNameError(error) {
+  const status = error?.response?.status;
+  if (status !== 409) return false;
+  return isDuplicateNameMessage(error?.response?.data?.message);
+}
+
+/**
+ * Loại xung đột tên mà server báo.
+ *
+ * - `workout`  : tên đã được dùng cho một WORKOUT (khi tạo/sửa bài tập).
+ * - `exercise` : tên đã được dùng cho một BÀI TẬP (khi tạo/sửa workout).
+ * - `own`      : member đã có nội dung cùng tên trong kho của chính họ.
+ */
+export function getDuplicateNameConflict(error) {
+  const message = String(error?.response?.data?.message || "").toLowerCase();
+  // "You already have a workout with this title" -> trùng trong kho của chính member.
+  if (message.includes("already have")) return "own";
+  // "already used by a workout" / "already used by another workout" -> trùng với workout.
+  if (message.includes("already used by a workout") || message.includes("already used by another workout")) {
+    return "workout";
+  }
+  // "already used by an exercise" -> trùng với bài tập.
+  if (message.includes("already used by an exercise")) return "exercise";
+  return "exercise";
+}
+
+/**
+ * Thông báo đã dịch cho lỗi trùng tên.
+ *
+ * @param error lỗi axios từ server
+ * @param keys  mapping theo loại xung đột, ví dụ
+ *              `{ workout: "...", exercise: "...", own: "..." }`
+ */
+export function getDuplicateNameMessage(error, keys) {
+  const conflict = getDuplicateNameConflict(error);
+  const key = keys[conflict] || keys.exercise;
+  return key ? t(key) : "";
 }

@@ -34,6 +34,7 @@ export default {
     previewWorkout: "Workout",
     previewDay: "Ngày {{number}}",
     previewUpperBodyA: "Thân trên A",
+    previewLevel: "Trình độ {{level}}",
     previewFullBodyA: "Toàn thân A",
     previewFullBodyB: "Toàn thân B",
     previewFullBodyC: "Toàn thân C",

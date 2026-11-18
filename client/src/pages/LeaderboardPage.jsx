@@ -5,21 +5,8 @@ import { useTranslation } from "react-i18next";
 import client from "../api/client";
 import { avatarUrl, profileApi } from "../api/profile";
 import { getLevelLabel } from "../utils/levelLabel";
+import { useSystemLevels } from "../useSystemLevels";
 import "./LeaderboardPage.css";
-
-/**
- * Các trình độ thể lực của hệ thống.
- *
- * `name` là tên gốc trong DB (bảng `fitness_levels`) — dùng để khớp với
- * `profile.member.levelName` và với `fitnessLevel` mà API trả về.
- * `labelKey` là key i18n để hiển thị nhãn đã dịch.
- */
-const LEVELS = [
-  { value: 1, name: "Beginner", labelKey: "member.catalog.beginner" },
-  { value: 2, name: "Intermediate", labelKey: "member.catalog.intermediate" },
-  { value: 3, name: "Advanced", labelKey: "member.catalog.advanced" },
-  { value: 4, name: "Expert", labelKey: "member.catalog.expert" },
-];
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
@@ -59,6 +46,17 @@ export default function LeaderboardPage() {
   const [levelFilter, setLevelFilter] = useState(null);
 
   /**
+   * Level của hệ thống lấy động từ `fitness_levels`.
+   *
+   * API leaderboard lọc theo `fitness_levels.id` nên dropdown phải dùng **id**,
+   * không dùng tên — trước đây page hard-code id 1/2/3/4 trong khi level `Expert`
+   * (id = 4) đã bị xoá khỏi DB, khiến dropdown gửi `levelId=4` và luôn rỗng.
+   */
+  const { levelOptions, isLoadingLevels } = useSystemLevels();
+  const [memberLevelName, setMemberLevelName] = useState(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+
+  /**
    * Nhãn trình độ đã dịch.
    *
    * API trả về tên level gốc trong DB ("Beginner", "Intermediate", ...) nên
@@ -77,22 +75,48 @@ export default function LeaderboardPage() {
   useEffect(() => {
     let cancelled = false;
 
-    profileApi.get()
+    profileApi
+      .get()
       .then((profile) => {
         if (cancelled) return;
-        const levelName = profile?.member?.levelName;
-        const match = LEVELS.find((level) => level.name === levelName);
-        if (match) setLevelFilter(match.value);
-        else setLevelFilter(LEVELS[0].value);
+        setMemberLevelName(profile?.member?.levelName || null);
       })
       .catch(() => {
-        if (!cancelled) setLevelFilter(LEVELS[0].value);
+        // Member chưa có hồ sơ hoặc API lỗi: dùng level đầu tiên của hệ thống.
+      })
+      .finally(() => {
+        if (!cancelled) setProfileLoaded(true);
       });
 
     return () => {
       cancelled = true;
     };
   }, []);
+
+  // Chọn level mặc định khi đã có cả profile lẫn danh sách level.
+  useEffect(() => {
+    if (!profileLoaded || isLoadingLevels) return;
+
+    if (levelOptions.length === 0) {
+      // Không có level nào trong hệ thống -> không có leaderboard để hiển thị.
+      setError({ message: null, status: null, network: false });
+      setLoading(false);
+      return;
+    }
+
+    setLevelFilter((current) => {
+      // Giữ lựa chọn hiện tại nếu level đó vẫn tồn tại trong hệ thống.
+      if (current != null && levelOptions.some((level) => level.id === current)) {
+        return current;
+      }
+      const target = String(memberLevelName || "").trim().toLowerCase();
+      const match = target
+        ? levelOptions.find((level) => level.name.trim().toLowerCase() === target)
+        : null;
+      const fallback = levelOptions.find((level) => level.status === "ACTIVE") || levelOptions[0];
+      return match?.id ?? fallback.id;
+    });
+  }, [profileLoaded, isLoadingLevels, levelOptions, memberLevelName]);
 
   // Đồng bộ tiêu đề tab khi người dùng đổi ngôn ngữ.
   useEffect(() => {
@@ -241,8 +265,8 @@ export default function LeaderboardPage() {
               value={levelFilter ?? ""}
               onChange={(event) => setLevelFilter(Number(event.target.value))}
             >
-              {LEVELS.map((level) => (
-                <option key={level.value} value={level.value}>{t(level.labelKey)}</option>
+              {levelOptions.map((level) => (
+                <option key={level.id} value={level.id}>{getLevelLabel(level.name)}</option>
               ))}
             </select>
           </label>

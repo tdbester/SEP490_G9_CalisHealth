@@ -197,7 +197,9 @@ public class LibraryWorkoutService {
         workout.setModerationStatus("ACTIVE");
         // Level phải có trước lần insert đầu tiên (cột `level` NOT NULL), nên tính
         // level ngay ở đây thay vì đợi populateWorkout gán sau.
-        workout.setLevel(resolveWorkoutLevel(request.items(), selectedExercises, request.level()));
+        String resolvedLevel = resolveWorkoutLevel(request.items(), selectedExercises, request.level());
+        assertLevelActive(resolvedLevel);
+        workout.setLevel(resolvedLevel);
         workouts.saveAndFlush(workout);
         populateWorkout(workout, request.items(), selectedExercises);
         return toDetail(workouts.saveAndFlush(workout));
@@ -230,7 +232,12 @@ public class LibraryWorkoutService {
             workout.setType(resolveWorkoutType(request.type()));
         }
         workout.setSharedWithCommunity(Boolean.TRUE.equals(request.isSharedWithCommunity()));
-        workout.setLevel(resolveWorkoutLevel(request.items(), selectedExercises, request.level()));
+        String resolvedLevel = resolveWorkoutLevel(request.items(), selectedExercises, request.level());
+        // Giữ nguyên level cũ vẫn sửa được; chỉ chặn khi đổi sang level đang không active.
+        if (resolvedLevel == null || !resolvedLevel.equalsIgnoreCase(workout.getLevel() == null ? "" : workout.getLevel())) {
+            assertLevelActive(resolvedLevel);
+        }
+        workout.setLevel(resolvedLevel);
         populateWorkout(workout, request.items(), selectedExercises);
         WorkoutEntry saved = workouts.saveAndFlush(workout);
         return toDetail(saved);
@@ -381,6 +388,23 @@ public class LibraryWorkoutService {
                 .map(FitnessLevel::getName)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "No exercise level is configured"));
+    }
+
+    /**
+     * Workout MỚI không được tạo ở level đang bị ẩn (INACTIVE) — giống quy tắc
+     * Content Manager áp cho workout hệ thống.
+     */
+    private void assertLevelActive(String levelName) {
+        if (levelName == null || levelName.isBlank()) {
+            return;
+        }
+        boolean active = fitnessLevels.findByNameIgnoreCase(levelName.trim())
+                .map(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
+                .orElse(true);
+        if (!active) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Level " + levelName + " is inactive. Choose an active level or activate it in Level & Benchmark Criteria");
+        }
     }
 
     /** Level này cao hơn level kia không, theo thứ tự score_min của fitness_levels. */

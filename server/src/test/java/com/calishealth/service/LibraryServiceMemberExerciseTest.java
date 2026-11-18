@@ -98,12 +98,54 @@ class LibraryServiceMemberExerciseTest {
         member.setId(7L);
         member.setRole(UserRole.MEMBER);
         when(users.findByEmail("member@example.com")).thenReturn(Optional.of(member));
-        when(exercises.existsNotDeletedByNameIgnoreCase("Push-up")).thenReturn(true);
+        // Tên trùng bài tập khác được chặn bởi ContentNameGuardService (dùng chung
+        // cho cả Content Manager và Member).
+        org.mockito.Mockito.doThrow(new ResponseStatusException(HttpStatus.CONFLICT,
+                        "This title is already used by an exercise. Choose a different title."))
+                .when(nameGuard).assertExerciseNameNotUsedByExercise(eq("Push-up"), eq(null));
 
         assertThatThrownBy(() -> service.createMemberExercise(request("Push-up"), "member@example.com"))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
                         .isEqualTo(HttpStatus.CONFLICT));
+
+        verify(exercises, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Tên trùng tên workout của hệ thống bị từ chối (409)")
+    void rejectsTitleUsedByWorkout() {
+        User member = new User();
+        member.setId(7L);
+        member.setRole(UserRole.MEMBER);
+        when(users.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        org.mockito.Mockito.doThrow(new ResponseStatusException(HttpStatus.CONFLICT,
+                        "This title is already used by a workout. Choose a different title."))
+                .when(nameGuard).assertExerciseNameNotUsedByWorkout(eq("Push-up"), eq(null));
+
+        assertThatThrownBy(() -> service.createMemberExercise(request("Push-up"), "member@example.com"))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.CONFLICT));
+
+        verify(exercises, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Level đang bị ẩn (INACTIVE) không được dùng để tạo bài mới")
+    void rejectsInactiveLevel() {
+        User member = new User();
+        member.setId(7L);
+        member.setRole(UserRole.MEMBER);
+        when(users.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        var inactive = level("Beginner");
+        inactive.setStatus("INACTIVE");
+        when(levels.findByNameIgnoreCase("Beginner")).thenReturn(Optional.of(inactive));
+
+        assertThatThrownBy(() -> service.createMemberExercise(request("Bài mới của tôi"), "member@example.com"))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.BAD_REQUEST));
 
         verify(exercises, never()).save(any());
     }
@@ -115,7 +157,6 @@ class LibraryServiceMemberExerciseTest {
         member.setId(7L);
         member.setRole(UserRole.MEMBER);
         when(users.findByEmail("member@example.com")).thenReturn(Optional.of(member));
-        when(exercises.existsNotDeletedByNameIgnoreCase(anyString())).thenReturn(false);
         when(levels.findByNameIgnoreCase("Beginner")).thenReturn(Optional.of(level("Beginner")));
         when(exercises.save(any())).thenAnswer(invocation -> {
             Exercise saved = invocation.getArgument(0);

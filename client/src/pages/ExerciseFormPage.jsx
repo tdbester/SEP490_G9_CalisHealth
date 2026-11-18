@@ -37,10 +37,11 @@ import MonitorHeartRoundedIcon from "@mui/icons-material/MonitorHeartRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import { useTranslation } from "react-i18next";
 import { contentManagerApi } from "../api/contentManager";
-import { useLevelNames } from "../useLevelNames";
+import { levelColumnLabels, useLevelNames } from "../useLevelNames";
 import { useApiMutation, useApiQuery } from "../hooks";
 import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { getLevelLabel } from "../utils/levelLabel";
+import { isDuplicateNameMessage } from "../utils/apiError";
 import { CONTENT_PATHS, ContentPageHeader, DarkPill, TONE_STYLES } from "../components/ContentShared";
 import { CM } from "../theme-content";
 import ConfirmDialog from "../components/common/ConfirmDialog";
@@ -965,7 +966,7 @@ function LevelDot({ tone }) {
 
 function ExercisePickerRow({ entry, onAdd, toneOf, knownLevels }) {
   const { t } = useTranslation();
-  const level = entry.level || entry.difficultyLevel || "Intermediate";
+  const level = entry.level || entry.difficultyLevel || "";
   // Level do Content Manager cấu hình động nên chỉ những level có trong hệ thống mới dùng
   // badge màu cố định; level ngoài danh sách dùng pill theo tone để không bị gán nhầm màu.
   const isStandardLevel = knownLevels.some(
@@ -1008,8 +1009,10 @@ function ExercisePickerRow({ entry, onAdd, toneOf, knownLevels }) {
             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${getLevelBadgeStyle(level)}`}>
               {getLevelLabel(level)}
             </span>
-          ) : (
+          ) : level ? (
             <DarkPill tone={toneOf(level)} sx={{ height: 18, fontSize: 10 }}>{getLevelLabel(level)}</DarkPill>
+          ) : (
+            <DarkPill tone="neutral" sx={{ height: 18, fontSize: 10 }}>—</DarkPill>
           )}
         </Stack>
         <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ minHeight: 18 }}>
@@ -1047,6 +1050,8 @@ export function WorkoutFields({
 }) {
   const { t } = useTranslation();
   const { levels: LEVELS, activeLevels, levelTone } = useLevelNames();
+  // Nhãn 3 cột sets/reps của daily plan lấy theo level đang cấu hình (thứ tự score).
+  const planLevelColumns = levelColumnLabels(LEVELS);
   const WEEK_DAYS = weekdayNames(t);
   const isDailyPlan = value.type === "DAILY_TRAINING_PLAN";
   const dayItems = value.planItems.filter((item) => item.dayOfWeek === selectedDay);
@@ -1333,27 +1338,16 @@ export function WorkoutFields({
                           gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" },
                         }}
                       >
-                        <PlanLevelInputs
-                          label={t("contentManager.form.fieldBeginner")}
-                          sets={item.beginnerSets}
-                          reps={item.beginnerReps}
-                          onSetsChange={(n) => updatePlanItem(item.exerciseCode, "beginnerSets", n)}
-                          onRepsChange={(n) => updatePlanItem(item.exerciseCode, "beginnerReps", n)}
-                        />
-                        <PlanLevelInputs
-                          label={t("contentManager.form.fieldIntermediate")}
-                          sets={item.intermediateSets}
-                          reps={item.intermediateReps}
-                          onSetsChange={(n) => updatePlanItem(item.exerciseCode, "intermediateSets", n)}
-                          onRepsChange={(n) => updatePlanItem(item.exerciseCode, "intermediateReps", n)}
-                        />
-                        <PlanLevelInputs
-                          label={t("contentManager.form.fieldAdvanced")}
-                          sets={item.advancedSets}
-                          reps={item.advancedReps}
-                          onSetsChange={(n) => updatePlanItem(item.exerciseCode, "advancedSets", n)}
-                          onRepsChange={(n) => updatePlanItem(item.exerciseCode, "advancedReps", n)}
-                        />
+                        {planLevelColumns.map((column) => (
+                          <PlanLevelInputs
+                            key={column.key}
+                            label={column.label}
+                            sets={item[`${column.key}Sets`]}
+                            reps={item[`${column.key}Reps`]}
+                            onSetsChange={(n) => updatePlanItem(item.exerciseCode, `${column.key}Sets`, n)}
+                            onRepsChange={(n) => updatePlanItem(item.exerciseCode, `${column.key}Reps`, n)}
+                          />
+                        ))}
                       </Box>
                     </Box>
                   ))}
@@ -1521,7 +1515,7 @@ export function WorkoutFields({
 function fieldErrorsFromMessage(message) {
   const normalized = String(message || "").toLowerCase();
   const fields = [];
-  if (normalized.includes("already exists") || normalized.includes("duplicate")) {
+  if (isDuplicateNameMessage(normalized)) {
     // Lỗi trùng tên: đánh dấu riêng để hiện đúng thông báo, không báo lỗi độ dài tiêu đề.
     fields.push("duplicateName");
     return fields;
@@ -1642,7 +1636,7 @@ export default function ExerciseFormPage() {
         navigate(`${CONTENT_PATHS.exercises}/${encodeURIComponent(entry.code)}`),
       onError: (requestError) => {
         const message = requestError.message || "";
-        const duplicate = /already exists|duplicate/i.test(message);
+        const duplicate = isDuplicateNameMessage(message);
         setError(duplicate ? t("contentManager.form.errDuplicateName") : message);
         setInvalidFields(fieldErrorsFromMessage(message));
       },

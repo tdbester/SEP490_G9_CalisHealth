@@ -405,10 +405,9 @@ public class ExerciseService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exercise title is required and must be at most 120 characters");
         }
         // Tên bài tập phải là duy nhất trong DB (không phân biệt hoa thường, bỏ khoảng trắng thừa).
-        if (exercises.existsNotDeletedByNameIgnoreCase(request.name())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Exercise title already exists. Choose a different title.");
-        }
+        // Dùng chung `ContentNameGuardService` để Content Manager / Member / Admin có
+        // cùng một quy tắc trùng tên và cùng một thông báo lỗi (HTTP 409).
+        contentNameGuard.assertExerciseNameNotUsedByExercise(request.name(), null);
         // Tên bài tập cũng không được trùng tuyệt đối với tên của một workout nào.
         contentNameGuard.assertExerciseNameNotUsedByWorkout(request.name(), null);
         if (request.muscleGroup() == null || request.muscleGroup().isBlank() || request.muscleGroup().length() > 120) {
@@ -476,12 +475,10 @@ public class ExerciseService {
         // (đồng bộ dữ liệu cũ đã có bài trùng tên từ trước).
         String requestedName = request.name().trim();
         boolean nameChanged = !requestedName.equalsIgnoreCase(exercise.getName() == null ? "" : exercise.getName().trim());
-        if (nameChanged && exercises.existsOtherNotDeletedByNameIgnoreCase(exercise.getId(), requestedName)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Exercise title already exists. Choose a different title.");
-        }
-        // Đổi tên sang tên một workout đang dùng thì bị chặn (trùng tuyệt đối).
         if (nameChanged) {
+            // Cùng quy tắc trùng tên như lúc tạo (dùng chung ContentNameGuardService).
+            contentNameGuard.assertExerciseNameNotUsedByExercise(requestedName, exercise.getId());
+            // Đổi tên sang tên một workout đang dùng thì bị chặn (trùng tuyệt đối).
             contentNameGuard.assertExerciseNameNotUsedByWorkout(requestedName, null);
         }
         if (request.muscleGroup() == null || request.muscleGroup().isBlank() || request.muscleGroup().length() > 120) {

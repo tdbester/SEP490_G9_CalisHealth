@@ -82,6 +82,30 @@ public class LibraryService {
     }
 
     /**
+     * Tên level cho dữ liệu mẫu (seed) theo vị trí độ khó.
+     *
+     * <p>Seed data không được hard-code "Beginner" / "Intermediate" / "Advanced" vì
+     * Content Manager có thể đổi tên hoặc thêm level: bài mẫu phải bám theo level
+     * đang cấu hình trong `fitness_levels`. Vị trí 0 = level dễ nhất, vị trí 1 = level
+     * kế tiếp, vị trí 2 = level cao hơn nữa.</p>
+     *
+     * @param index vị trí level (0 = dễ nhất)
+     * @return tên level đang cấu hình; không bao giờ null (fallback khi chưa cấu hình level)
+     */
+    private String seedLevelName(int index) {
+        List<String> ordered = fitnessLevels.findAll().stream()
+                .sorted(Comparator.comparingInt(FitnessLevel::getScoreMin)
+                        .thenComparing(FitnessLevel::getName, String.CASE_INSENSITIVE_ORDER))
+                .map(FitnessLevel::getName)
+                .toList();
+        if (ordered.isEmpty()) {
+            // Chưa cấu hình level nào: dùng tên mặc định để seed data vẫn hiển thị được.
+            return "Beginner";
+        }
+        return index < ordered.size() ? ordered.get(index) : ordered.get(ordered.size() - 1);
+    }
+
+    /**
      * Level mặc định khi bài tập chưa gán level: level thấp nhất đang cấu hình trong
      * `fitness_levels` (theo score_min). Không hard-code "Beginner" vì Content Manager có thể
      * tạo level mới hoặc đổi tên level cũ.
@@ -326,13 +350,11 @@ public class LibraryService {
         contentNameGuard.assertExerciseNameNotUsedByWorkout(name, null);
         // Tên bài tập cũng phải duy nhất trong DB (không phân biệt hoa thường,
         // bỏ khoảng trắng thừa) — kể cả với bài do chính member đó tạo trước đó.
-        if (exerciseRepository.existsNotDeletedByNameIgnoreCase(name)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Exercise title already exists. Choose a different title.");
-        }
+        contentNameGuard.assertExerciseNameNotUsedByExercise(name, null);
         String mg = req.muscleGroup() != null && !req.muscleGroup().isBlank() ? req.muscleGroup().trim() : "Full body";
         muscleGroupCatalog.validate(mg);
         String lvl = resolveLevelName(req.level());
+        assertLevelActive(lvl);
         String equip = req.equipment() != null && !req.equipment().isBlank() ? req.equipment().trim() : "Bodyweight";
         int sets = req.sets() != null && req.sets() > 0 ? req.sets() : 3;
         String reps = req.repsOrDuration() != null && !req.repsOrDuration().isBlank() ? req.repsOrDuration().trim() : "10 reps";
@@ -402,6 +424,23 @@ public class LibraryService {
                 .map(FitnessLevel::getName)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Choose a valid exercise level"));
+    }
+
+    /**
+     * Bài MỚI không được tạo ở level đang bị ẩn (INACTIVE) — giống quy tắc Content
+     * Manager áp cho bài hệ thống và cho bài cá nhân.
+     */
+    private void assertLevelActive(String levelName) {
+        if (levelName == null || levelName.isBlank()) {
+            return;
+        }
+        boolean active = fitnessLevels.findByNameIgnoreCase(levelName.trim())
+                .map(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
+                .orElse(true);
+        if (!active) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Level " + levelName + " is inactive. Choose an active level or activate it in Level & Benchmark Criteria");
+        }
     }
 
     private Integer parseRepCount(String repsOrDuration) {
@@ -517,7 +556,7 @@ public class LibraryService {
             "8 reps",
             "Strength",
             "Bodyweight",
-            "Intermediate",
+            seedLevelName(1),
             "Chest, triceps • 3 sets • 8 reps",
             "A push-up variation where your hands form a diamond under the chest. It shifts more of the load onto the triceps and inner chest, and is a solid stepping stone toward archer and one-arm push-ups.",
             null
@@ -593,41 +632,47 @@ public class LibraryService {
     }
 
     private List<ExerciseListItem> getSeedExercises() {
+        // Level lấy động từ `fitness_levels`: 0 = dễ nhất, 1 = giữa, 2 = cao.
+        String easy = seedLevelName(0);
+        String mid = seedLevelName(1);
+        String top = seedLevelName(2);
         return List.of(
             // Health - Top 6 matching Figma mockup screenshot
-            new ExerciseListItem(101L, "EX-001", "Jumping jacks", "HEALTH", "SYSTEM", "HOLD", "Full body", 3, "30 sec", "Cardio", "Bodyweight", "Beginner", "Full body • 3 sets • 30 sec", "Classic aerobic calisthenic drill that elevates heart rate and engages the entire body.", null),
-            new ExerciseListItem(102L, "EX-002", "Mountain climbers", "HEALTH", "SYSTEM", "HOLD", "Core", 3, "30 sec", "Endurance", "Bodyweight", "Intermediate", "Core, cardio • 3 sets • 30 sec", "Dynamic core and cardio exercise that improves agility and core stabilization.", null),
-            new ExerciseListItem(103L, "EX-003", "Burpees", "HEALTH", "SYSTEM", "REPS", "Full body", 3, "10 reps", "Cardio", "Bodyweight", "Advanced", "Full body • 3 sets • 10 reps", "High intensity full-body movement that develops endurance, explosive power, and stamina.", null),
-            new ExerciseListItem(104L, "EX-004", "Push-up", "HEALTH", "SYSTEM", "REPS", "Chest", 3, "8–12 reps", "Strength", "Bodyweight", "Beginner", "Chest, triceps • 3 sets • 8–12 reps", "The foundational horizontal pushing exercise building upper chest, shoulders, and triceps.", null),
-            new ExerciseListItem(105L, "EX-005", "Pull-up", "HEALTH", "SYSTEM", "REPS", "Back", 3, "5–8 reps", "Strength", "Pull-up bar", "Intermediate", "Back, biceps • 3 sets • 5–8 reps", "The king of bodyweight vertical pulling movements targeting the latissimus dorsi and biceps.", null),
-            new ExerciseListItem(106L, "EX-006", "Pistol squat", "HEALTH", "SYSTEM", "REPS", "Legs", 3, "5 reps", "Strength", "Bodyweight", "Advanced", "Legs, glutes • 3 sets • 5 reps", "Single-leg deep squat requiring maximum ankle dorsiflexion, balance, and quad power.", null),
+            new ExerciseListItem(101L, "EX-001", "Jumping jacks", "HEALTH", "SYSTEM", "HOLD", "Full body", 3, "30 sec", "Cardio", "Bodyweight", easy, "Full body • 3 sets • 30 sec", "Classic aerobic calisthenic drill that elevates heart rate and engages the entire body.", null),
+            new ExerciseListItem(102L, "EX-002", "Mountain climbers", "HEALTH", "SYSTEM", "HOLD", "Core", 3, "30 sec", "Endurance", "Bodyweight", mid, "Core, cardio • 3 sets • 30 sec", "Dynamic core and cardio exercise that improves agility and core stabilization.", null),
+            new ExerciseListItem(103L, "EX-003", "Burpees", "HEALTH", "SYSTEM", "REPS", "Full body", 3, "10 reps", "Cardio", "Bodyweight", top, "Full body • 3 sets • 10 reps", "High intensity full-body movement that develops endurance, explosive power, and stamina.", null),
+            new ExerciseListItem(104L, "EX-004", "Push-up", "HEALTH", "SYSTEM", "REPS", "Chest", 3, "8–12 reps", "Strength", "Bodyweight", easy, "Chest, triceps • 3 sets • 8–12 reps", "The foundational horizontal pushing exercise building upper chest, shoulders, and triceps.", null),
+            new ExerciseListItem(105L, "EX-005", "Pull-up", "HEALTH", "SYSTEM", "REPS", "Back", 3, "5–8 reps", "Strength", "Pull-up bar", mid, "Back, biceps • 3 sets • 5–8 reps", "The king of bodyweight vertical pulling movements targeting the latissimus dorsi and biceps.", null),
+            new ExerciseListItem(106L, "EX-006", "Pistol squat", "HEALTH", "SYSTEM", "REPS", "Legs", 3, "5 reps", "Strength", "Bodyweight", top, "Legs, glutes • 3 sets • 5 reps", "Single-leg deep squat requiring maximum ankle dorsiflexion, balance, and quad power.", null),
 
             // Health - Core
-            new ExerciseListItem(113L, "EX-013", "Plank", "HEALTH", "SYSTEM", "HOLD", "Core", 3, "45 sec", "Stability", "Bodyweight", "Beginner", "Core • 3 sets • 45 sec • Bodyweight", "Isometric core exercise holding rigid hollow body alignment to protect the lower spine.", null),
-            new ExerciseListItem(114L, "EX-014", "Hanging Knee Raise", "HEALTH", "SYSTEM", "REPS", "Core", 3, "12 reps", "Strength", "Pull-up bar", "Intermediate", "Core • 3 sets • 12 reps • Pull-up bar", "Bar-hanging abdominal drill targeting the lower abs and hip flexors.", null),
-            new ExerciseListItem(115L, "EX-015", "Hollow Body Hold", "HEALTH", "SYSTEM", "HOLD", "Core", 3, "30 sec", "Stability", "Bodyweight", "Intermediate", "Core • 3 sets • 30 sec • Bodyweight", "Gymnastic staple holding posterior pelvic tilt to solidify bodyweight stability.", null),
+            new ExerciseListItem(113L, "EX-013", "Plank", "HEALTH", "SYSTEM", "HOLD", "Core", 3, "45 sec", "Stability", "Bodyweight", easy, "Core • 3 sets • 45 sec • Bodyweight", "Isometric core exercise holding rigid hollow body alignment to protect the lower spine.", null),
+            new ExerciseListItem(114L, "EX-014", "Hanging Knee Raise", "HEALTH", "SYSTEM", "REPS", "Core", 3, "12 reps", "Strength", "Pull-up bar", mid, "Core • 3 sets • 12 reps • Pull-up bar", "Bar-hanging abdominal drill targeting the lower abs and hip flexors.", null),
+            new ExerciseListItem(115L, "EX-015", "Hollow Body Hold", "HEALTH", "SYSTEM", "HOLD", "Core", 3, "30 sec", "Stability", "Bodyweight", mid, "Core • 3 sets • 30 sec • Bodyweight", "Gymnastic staple holding posterior pelvic tilt to solidify bodyweight stability.", null),
 
             // Health - Arms and Shoulders
-            new ExerciseListItem(116L, "EX-016", "Pike Push-up", "HEALTH", "SYSTEM", "REPS", "Arms, Shoulders", 3, "10 reps", "Strength", "Bodyweight", "Intermediate", "Arms, Shoulders • 3 sets • 10 reps • Bodyweight", "Vertical pushing angle transitioning chest drive directly into the anterior deltoids.", null),
-            new ExerciseListItem(117L, "EX-017", "Parallel Bar Dips", "HEALTH", "SYSTEM", "REPS", "Arms, Shoulders", 3, "10 reps", "Strength", "Parallel bars", "Intermediate", "Arms, Shoulders • 3 sets • 10 reps • Parallel bars", "High-load bodyweight dip targeting lateral triceps and lower chest fibers.", null),
-            new ExerciseListItem(118L, "EX-018", "Bench Dips", "HEALTH", "SYSTEM", "REPS", "Arms, Shoulders", 3, "12 reps", "Strength", "Bench", "Beginner", "Arms, Shoulders • 3 sets • 12 reps • Bench", "Accessible tricep flexion drill for building pushing lock-out strength.", null),
+            new ExerciseListItem(116L, "EX-016", "Pike Push-up", "HEALTH", "SYSTEM", "REPS", "Arms, Shoulders", 3, "10 reps", "Strength", "Bodyweight", mid, "Arms, Shoulders • 3 sets • 10 reps • Bodyweight", "Vertical pushing angle transitioning chest drive directly into the anterior deltoids.", null),
+            new ExerciseListItem(117L, "EX-017", "Parallel Bar Dips", "HEALTH", "SYSTEM", "REPS", "Arms, Shoulders", 3, "10 reps", "Strength", "Parallel bars", mid, "Arms, Shoulders • 3 sets • 10 reps • Parallel bars", "High-load bodyweight dip targeting lateral triceps and lower chest fibers.", null),
+            new ExerciseListItem(118L, "EX-018", "Bench Dips", "HEALTH", "SYSTEM", "REPS", "Arms, Shoulders", 3, "12 reps", "Strength", "Bench", easy, "Arms, Shoulders • 3 sets • 12 reps • Bench", "Accessible tricep flexion drill for building pushing lock-out strength.", null),
 
             // Skills (Chuẩn 100% theo Mockup Figma)
-            new ExerciseListItem(201L, "SK-001", "Wall handstand hold", "SKILL", "SYSTEM", "HOLD", "Shoulders", 4, "30 sec", "Handstand", "Wall / Floor", "Beginner", "Shoulders, core • 4 sets • 30 sec • Handstand", "Balance drill on hands demanding wrist mobility, shoulder flexion, and overhead stability.", null),
-            new ExerciseListItem(202L, "SK-002", "Handstand push-up", "SKILL", "SYSTEM", "REPS", "Shoulders", 3, "5 reps", "Handstand", "Wall / Floor", "Advanced", "Shoulders, triceps • 3 sets • 5 reps • Handstand", "Elite vertical pressing calisthenic skill lifting 100% of body mass overhead.", null),
-            new ExerciseListItem(203L, "SK-003", "Explosive pull-up", "SKILL", "SYSTEM", "REPS", "Back", 4, "5 reps", "Muscle-up", "Pull-up bar", "Intermediate", "Back, arms • 4 sets • 5 reps • Muscle-up", "Explosive transition building power for muscle-up.", null),
-            new ExerciseListItem(204L, "SK-004", "Straight bar dip", "SKILL", "SYSTEM", "REPS", "Chest", 3, "8 reps", "Muscle-up", "Straight bar", "Intermediate", "Chest, triceps • 3 sets • 8 reps • Muscle-up", "Bar dip drill developing pressing strength above the bar.", null),
-            new ExerciseListItem(205L, "SK-005", "Tuck front lever", "SKILL", "SYSTEM", "HOLD", "Back", 4, "10 sec", "Front lever", "Pull-up bar", "Intermediate", "Back, core • 4 sets • 10 sec • Front lever", "Horizontal straight-arm isometric pull engaging extreme latissimus activation.", null),
-            new ExerciseListItem(206L, "SK-006", "Advanced tuck front lever", "SKILL", "SYSTEM", "HOLD", "Back", 4, "8 sec", "Front lever", "Pull-up bar", "Advanced", "Back, core • 4 sets • 8 sec • Front lever", "Legendary calisthenics static hold progression.", null)
+            new ExerciseListItem(201L, "SK-001", "Wall handstand hold", "SKILL", "SYSTEM", "HOLD", "Shoulders", 4, "30 sec", "Handstand", "Wall / Floor", easy, "Shoulders, core • 4 sets • 30 sec • Handstand", "Balance drill on hands demanding wrist mobility, shoulder flexion, and overhead stability.", null),
+            new ExerciseListItem(202L, "SK-002", "Handstand push-up", "SKILL", "SYSTEM", "REPS", "Shoulders", 3, "5 reps", "Handstand", "Wall / Floor", top, "Shoulders, triceps • 3 sets • 5 reps • Handstand", "Elite vertical pressing calisthenic skill lifting 100% of body mass overhead.", null),
+            new ExerciseListItem(203L, "SK-003", "Explosive pull-up", "SKILL", "SYSTEM", "REPS", "Back", 4, "5 reps", "Muscle-up", "Pull-up bar", mid, "Back, arms • 4 sets • 5 reps • Muscle-up", "Explosive pulling transition building power for muscle-up.", null),
+            new ExerciseListItem(204L, "SK-004", "Straight bar dip", "SKILL", "SYSTEM", "REPS", "Chest", 3, "8 reps", "Muscle-up", "Straight bar", mid, "Chest, triceps • 3 sets • 8 reps • Muscle-up", "Bar dip drill developing pressing strength above the bar.", null),
+            new ExerciseListItem(205L, "SK-005", "Tuck front lever", "SKILL", "SYSTEM", "HOLD", "Back", 4, "10 sec", "Front lever", "Pull-up bar", mid, "Back, core • 4 sets • 10 sec • Front lever", "Horizontal straight-arm isometric pull engaging extreme latissimus activation.", null),
+            new ExerciseListItem(206L, "SK-006", "Advanced tuck front lever", "SKILL", "SYSTEM", "HOLD", "Back", 4, "8 sec", "Front lever", "Pull-up bar", top, "Back, core • 4 sets • 8 sec • Front lever", "Legendary calisthenics static hold progression.", null)
         );
     }
 
     private List<ExerciseListItem> getSeedMemberExercises() {
+        String easy = seedLevelName(0);
+        String mid = seedLevelName(1);
         return List.of(
-            new ExerciseListItem(301L, "PER-001", "Custom Archer Push-up", "HEALTH", "CUSTOM", "REPS", "Chest", 3, "10 reps", "Strength", "Bodyweight", "Intermediate", "Chest • 3 sets • 10 reps • Bodyweight", "Member custom progression emphasizing asymmetric horizontal pushing power.", null),
-            new ExerciseListItem(302L, "PER-002", "Doorframe Bodyweight Rows", "HEALTH", "CUSTOM", "REPS", "Back", 3, "12 reps", "Strength", "Doorframe", "Beginner", "Back • 3 sets • 12 reps • Doorframe", "Home-calisthenics pulling variation using household doorframe for scapular traction.", null),
-            new ExerciseListItem(303L, "PER-003", "Chair Elevated Dips", "HEALTH", "CUSTOM", "REPS", "Arms, Shoulders", 3, "12 reps", "Strength", "Chair", "Beginner", "Arms, Shoulders • 3 sets • 12 reps • Chair", "Accessible triceps dipping variation using stable living room chairs.", null),
-            new ExerciseListItem(304L, "PER-004", "Bulgarian Split Squat Variation", "HEALTH", "CUSTOM", "REPS", "Legs", 3, "10 reps", "Strength", "Chair / Bench", "Intermediate", "Legs • 3 sets • 10 reps • Chair / Bench", "Single leg rear-foot elevated drill customized for quad hypertrophy.", null)
+            new ExerciseListItem(301L, "PER-001", "Custom Archer Push-up", "HEALTH", "CUSTOM", "REPS", "Chest", 3, "10 reps", "Strength", "Bodyweight", mid, "Chest • 3 sets • 10 reps • Bodyweight", "Member custom progression emphasizing asymmetric horizontal pushing power.", null),
+            new ExerciseListItem(302L, "PER-002", "Doorframe Bodyweight Rows", "HEALTH", "CUSTOM", "REPS", "Back", 3, "12 reps", "Strength", "Doorframe", easy, "Back • 3 sets • 12 reps • Doorframe", "Home-calisthenics pulling variation using household doorframe for scapular traction.", null),
+            new ExerciseListItem(303L, "PER-003", "Chair Elevated Dips", "HEALTH", "CUSTOM", "REPS", "Arms, Shoulders", 3, "12 reps", "Strength", "Chair", easy, "Arms, Shoulders • 3 sets • 12 reps • Chair", "Accessible triceps dipping variation using stable living room chairs.", null),
+            new ExerciseListItem(304L, "PER-004", "Bulgarian Split Squat Variation", "HEALTH", "CUSTOM", "REPS", "Legs", 3, "10 reps", "Strength", "Chair / Bench", mid, "Legs • 3 sets • 10 reps • Chair / Bench", "Single leg rear-foot elevated drill customized for quad hypertrophy.", null)
         );
     }
 

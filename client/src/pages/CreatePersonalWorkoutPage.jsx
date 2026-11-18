@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import {
   getApiErrorMessage,
+  getDuplicateNameMessage,
+  isDuplicateNameError,
   validateWorkoutDescription,
   validateWorkoutExercises,
   validateWorkoutName,
@@ -61,10 +63,12 @@ function XIcon() {
 }
 
 function LevelBadge({ level }) {
-  const displayLevel = level || "Intermediate";
+  // Level do Content Manager cấu hình động: chưa gán level thì hiện "—" thay vì
+  // hard-code một tên level mặc định.
+  const displayLevel = level || "";
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold capitalize ${getLevelBadgeStyle(displayLevel)}`}>
-      {getLevelLabel(displayLevel)}
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold capitalize ${displayLevel ? getLevelBadgeStyle(displayLevel) : "bg-slate-500/10 text-slate-400"}`}>
+      {displayLevel ? getLevelLabel(displayLevel) : "—"}
     </span>
   );
 }
@@ -295,9 +299,20 @@ export default function CreatePersonalWorkoutPage() {
         })),
       });
     } catch (error) {
-      const message = getApiErrorMessage(error, t("member.personal.couldNotSaveWorkout"));
+      // Trùng tên -> báo rõ để member đổi tên (server trả 409 khi tên trùng bài tập
+      // hoặc trùng workout khác của chính member này).
+      const message = isDuplicateNameError(error)
+        ? getDuplicateNameMessage(error, {
+          exercise: "member.personal.nameMatchesExercise",
+          own: "member.personal.nameTaken",
+        })
+        : getApiErrorMessage(error, t("member.personal.couldNotSaveWorkout"));
       setErrorMessage(message);
       toast.error(message);
+      if (isDuplicateNameError(error)) {
+        setHasSubmitted(true);
+        markFieldTouched("name");
+      }
       return;
     } finally {
       submissionLock.current = false;

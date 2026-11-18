@@ -649,8 +649,9 @@ export default function ExerciseDetailPage() {
     ? `/library/workouts/system/${workoutId}?type=${workoutType}${isMockSystemExercise ? "&mock=true" : ""}`
     : null);
 
-  // Badge level color tokens
-  const level = exercise.level || exercise.difficultyLevel || "Intermediate";
+  // Badge level color tokens — level do Content Manager cấu hình động nên không
+  // hard-code một tên level mặc định khi bài chưa gán level.
+  const level = exercise.level || exercise.difficultyLevel || "";
 
   return (
     <div
@@ -737,9 +738,11 @@ export default function ExerciseDetailPage() {
                 {localizedExercise.name}
               </h1>
               <span
-                className={`px-4 py-1.5 text-xs font-semibold rounded-full border capitalize ${getLevelBadgeStyle(level)}`}
+                className={`px-4 py-1.5 text-xs font-semibold rounded-full border capitalize ${
+                  level ? getLevelBadgeStyle(level) : "bg-slate-500/10 border-slate-500/30 text-slate-400"
+                }`}
               >
-                {getLevelLabel(level)}
+                {level ? getLevelLabel(level) : "—"}
               </span>
             </div>
             {isMemberExercise && (
