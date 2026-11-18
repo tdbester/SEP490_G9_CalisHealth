@@ -11,6 +11,11 @@ import { getLevelLabel } from "../utils/levelLabel";
 import { localizeSeed } from "../utils/seedText";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import { useSystemLevels } from "../useSystemLevels";
+import {
+  getApiErrorMessage,
+  getDuplicateNameMessage,
+  isDuplicateNameError,
+} from "./libraryFormValidation";
 
 // Mock data matching mockup 100%
 const INITIAL_COMMUNITY_EXERCISES = [
@@ -127,7 +132,7 @@ function normalizePersonalExercise(exercise, index) {
     id: exercise?.id || `personal-${index}`,
     slug: exercise?.slug || title.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
     title,
-    level: exercise?.level || "Intermediate",
+    level: exercise?.level || "",
     muscles: exercise?.muscles || exercise?.muscleGroup || "Full body",
     setsReps: exercise?.setsReps || "3 sets · 10 reps",
     author: {
@@ -365,7 +370,7 @@ export default function CommunityExerciseListPage() {
         setShowCreateModal(false);
         setCreateForm({
           title: "",
-          level: "Intermediate",
+          level: activeLevels[0] || "",
           muscles: "Chest, triceps",
           sets: 3,
           repsOrDuration: "8 reps",
@@ -375,11 +380,15 @@ export default function CommunityExerciseListPage() {
       }, 1200);
     } catch (error) {
       console.error("Failed to submit member exercise:", error);
-      // Server trả 409 khi tên bài tập đã tồn tại -> báo rõ thay vì lỗi chung chung.
-      if (error?.response?.status === 409) {
-        toast.error(t("member.customExercise.duplicateName"));
+      // Server trả 409 khi tên bài tập trùng tên một bài tập khác HOẶC trùng tên một
+      // workout nào đó -> báo đúng loại xung đột để member biết phải đổi tên gì.
+      if (isDuplicateNameError(error)) {
+        toast.error(getDuplicateNameMessage(error, {
+          workout: "member.personal.nameMatchesWorkout",
+          exercise: "member.customExercise.duplicateName",
+        }));
       } else {
-        toast.error(t("member.customExercise.createFailed"));
+        toast.error(getApiErrorMessage(error, t("member.customExercise.createFailed")));
       }
     } finally {
       setSubmitting(false);
@@ -567,9 +576,13 @@ export default function CommunityExerciseListPage() {
                         {localizeSeed(item.title)}
                       </h3>
                       <span
-                        className={`px-3 py-0.5 text-[11px] font-medium rounded-full border capitalize ${getLevelBadgeStyle(item.level || item.difficultyLevel)}`}
+                        className={`px-3 py-0.5 text-[11px] font-medium rounded-full border capitalize ${
+                          item.level || item.difficultyLevel
+                            ? getLevelBadgeStyle(item.level || item.difficultyLevel)
+                            : "bg-slate-500/10 border-slate-500/30 text-slate-400"
+                        }`}
                       >
-                        {getLevelLabel(item.level || item.difficultyLevel || "Intermediate")}
+                        {getLevelLabel(item.level || item.difficultyLevel || "")}
                       </span>
                     </div>
 
@@ -694,7 +707,7 @@ export default function CommunityExerciseListPage() {
                     }
                     className="w-full rounded-xl bg-[#1a123d] border border-[#2b2257] px-3.5 py-2 text-xs text-white outline-none focus:border-[#643bf6] cursor-pointer"
                   >
-                    {levelNames.map((name) => (
+                    {activeLevels.map((name) => (
                       <option key={name} value={name}>{getLevelLabel(name)}</option>
                     ))}
                   </select>

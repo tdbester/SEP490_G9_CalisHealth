@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLevelNames } from "../useLevelNames";
+import { levelColumnLabels, useLevelNames } from "../useLevelNames";
 import { Link as RouterLink, useLocation, useParams } from "react-router-dom";
 import {
   Alert,
@@ -91,6 +91,8 @@ export default function WorkoutDetailPage() {
   const returnTo = location.state?.returnTo || CONTENT_PATHS.workouts;
   const returnLabel = location.state?.returnLabel || t("contentManager.detail.backToList");
   const { levels: levelNames } = useLevelNames();
+  // Nhãn 3 cột sets/reps của daily plan lấy theo level đang cấu hình (thứ tự score).
+  const planLevelColumns = levelColumnLabels(levelNames);
   const { data: workout, isLoading, error, refetch } = useApiQuery(
     () => contentManagerApi.workout(code),
     { enabled: Boolean(code), deps: [code] },
@@ -366,17 +368,13 @@ export default function WorkoutDetailPage() {
                                   useFlexGap
                                   sx={{ mt: 0.75 }}
                                 >
-                                  {[
-                                    ["Beginner", item.beginnerSets, item.beginnerReps],
-                                    ["Intermediate", item.intermediateSets, item.intermediateReps],
-                                    ["Advanced", item.advancedSets, item.advancedReps],
-                                  ].map(([label, sets, reps]) => (
+                                  {planLevelColumns.map((column) => (
                                     <Typography
-                                      key={label}
+                                      key={column.key}
                                       variant="caption"
                                       sx={{ fontSize: 10.5, color: CM.textMuted }}
                                     >
-                                      {label}: {sets} × {reps}
+                                      {column.label}: {item[`${column.key}Sets`]} × {item[`${column.key}Reps`]}
                                     </Typography>
                                   ))}
                                 </Stack>

@@ -94,10 +94,12 @@ function DumbbellIcon() {
 }
 
 function LevelBadge({ level }) {
-  const displayLevel = level || "Intermediate";
+  // Level do Content Manager cấu hình động: chưa gán level thì hiện "—" thay vì
+  // hard-code một tên level mặc định.
+  const displayLevel = level || "";
   return (
-    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold capitalize ${getLevelBadgeStyle(displayLevel)}`}>
-      {getLevelLabel(displayLevel)}
+    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold capitalize ${displayLevel ? getLevelBadgeStyle(displayLevel) : "bg-slate-500/10 text-slate-400"}`}>
+      {displayLevel ? getLevelLabel(displayLevel) : "—"}
     </span>
   );
 }
@@ -113,7 +115,9 @@ function FilterDropdown({ value, onChange, options, label }) {
     if (option.label === "Newest") return t("member.catalog.sortNewest");
     if (option.label === "Oldest") return t("member.catalog.sortOldest");
     if (option.label === "Most saved") return t("member.catalog.sortMostSaved");
-    return option.label;
+    // Level do Content Manager đặt tên động -> `getLevelLabel` tra bản dịch, level lạ
+    // hiển thị đúng tên gốc.
+    return getLevelLabel(option.label);
   };
   return (
     <select

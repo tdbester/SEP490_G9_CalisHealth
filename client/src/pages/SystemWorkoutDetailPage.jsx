@@ -179,7 +179,7 @@ export default function SystemWorkoutDetailPage() {
             <h2 className="text-lg font-semibold">{t("member.catalog.exercisesSection")}</h2>
             {workout.exercises?.length ? workout.exercises.map((exercise, index) => {
               const name = exercise.name || exercise.exerciseTitle || "Exercise";
-              const level = exercise.level || "Beginner";
+              const level = exercise.level || "";
               const dosage = exercise.duration != null
                 ? (typeof exercise.duration === "string" ? exercise.duration : `${exercise.duration} ${t("member.catalog.seconds")}`)
                 : exercise.reps == null
@@ -198,7 +198,7 @@ export default function SystemWorkoutDetailPage() {
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="font-semibold">{index + 1}. {name}</h3>
-                  <span className={`rounded-full px-3 py-1 text-xs capitalize ${getLevelBadgeStyle(level)}`}>{getLevelLabel(level)}</span>
+                  <span className={`rounded-full px-3 py-1 text-xs capitalize ${level ? getLevelBadgeStyle(level) : "bg-slate-500/10 text-slate-400"}`}>{level ? getLevelLabel(level) : "—"}</span>
                 </div>
                 <p className="mt-2 text-sm text-slate-400">{muscleGroup}</p>
                 <p className="mt-3 text-sm text-slate-200">

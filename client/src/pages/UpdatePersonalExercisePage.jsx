@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import {
   getApiErrorMessage,
+  getDuplicateNameMessage,
+  isDuplicateNameError,
   validatePersonalExercise,
   validateVideoFile,
 } from './libraryFormValidation';
@@ -112,11 +114,19 @@ export default function UpdatePersonalExercisePage() {
   const [touchedFields, setTouchedFields] = useState({});
 
   // Level do Content Manager cấu hình động nên danh sách level lấy từ hệ thống.
+  // Level đang lưu vẫn hiện được dù đã bị ẩn (server cho phép giữ nguyên level cũ).
   const { activeLevels } = useSystemLevels();
-  const levelChoices = activeLevels.map((name) => ({
-    name,
-    description: '',
-  }));
+  const levelChoices = useMemo(() => {
+    const names = [...activeLevels];
+    const current = level?.trim();
+    if (current && !names.some((name) => name.toLowerCase() === current.toLowerCase())) {
+      names.unshift(current);
+    }
+    return names.map((name) => ({
+      name,
+      description: '',
+    }));
+  }, [activeLevels, level]);
 
   useEffect(() => {
     if (!anatomyImageFile) {
@@ -139,7 +149,7 @@ export default function UpdatePersonalExercisePage() {
       const initialState = {
         title: mockExercise.title || '',
         description: mockExercise.description || '',
-        level: mockExercise.level || 'Beginner',
+        level: mockExercise.level || activeLevels[0] || '',
         guide: initialGuide,
         video: mockExercise.video || null,
         targetMuscles: parseMuscleGroups(mockExercise.targetMuscle),
@@ -170,7 +180,7 @@ export default function UpdatePersonalExercisePage() {
         const initialState = {
           title: currentExercise.title || '',
           description: currentExercise.description || '',
-          level: currentExercise.level || 'Beginner',
+          level: currentExercise.level || activeLevels[0] || '',
           guide: initialGuide,
           video: currentExercise.videoUrl
             ? { name: currentExercise.videoUrl.split('/').pop(), size: 'Uploaded' }
@@ -200,7 +210,7 @@ export default function UpdatePersonalExercisePage() {
     return () => {
       active = false;
     };
-  }, [id, location.state]);
+  }, [id, location.state, activeLevels]);
 
   const currentState = JSON.stringify({ title, description, level, guide, video, targetMuscles });
   const isDirty = baseline !== '' && (
@@ -316,7 +326,8 @@ export default function UpdatePersonalExercisePage() {
         status: "PENDING",
         title: title.trim(),
         description: description.trim(),
-        level: level.toUpperCase(),
+        // Gửi đúng tên level trong hệ thống (server tự đối chiếu `fitness_levels`).
+      level: level.trim(),
         guideSteps: guide.filter((step) => step.trim()),
         targetMuscle: targetMuscles.join(', '),
         defaultSets: exercise.defaultSets || 3,
@@ -377,9 +388,16 @@ export default function UpdatePersonalExercisePage() {
       const responseData = error?.response?.data;
       const errorMsg = error?.response?.status === 401
         ? t("member.personal.sessionExpired")
-        : typeof responseData === "string"
-          ? responseData
-          : responseData?.message || getApiErrorMessage(error, t("member.personal.couldNotSaveExercise"));
+        // Trùng tên -> thông báo đã dịch (server trả 409 khi tên bài tập trùng tên một
+        // bài tập khác, hoặc trùng tên một workout nào đó).
+        : isDuplicateNameError(error)
+          ? getDuplicateNameMessage(error, {
+            workout: "member.personal.nameMatchesWorkout",
+            exercise: "member.customExercise.duplicateName",
+          })
+          : typeof responseData === "string"
+            ? responseData
+            : responseData?.message || getApiErrorMessage(error, t("member.personal.couldNotSaveExercise"));
       console.error("Edit exercise failed:", error?.response || error);
       toast.error(errorMsg);
       setErrorMessage(errorMsg);

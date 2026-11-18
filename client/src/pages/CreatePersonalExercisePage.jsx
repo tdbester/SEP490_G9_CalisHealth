@@ -13,6 +13,8 @@ import { getLevelLabel } from "../utils/levelLabel";
 import { useSystemLevels } from "../useSystemLevels";
 import {
   getApiErrorMessage,
+  getDuplicateNameMessage,
+  isDuplicateNameError,
   validatePersonalExercise,
   validateVideoFile,
 } from "./libraryFormValidation";
@@ -329,7 +331,8 @@ export default function CreatePersonalExercisePage() {
       const created = await createPersonalExercise({
         title: title.trim(),
         description: description.trim(),
-        level: level.toUpperCase(),
+        // Gửi đúng tên level trong hệ thống (server tự đối chiếu `fitness_levels`).
+        level: level.trim(),
         guideSteps: guideSteps.map((step) => step.trim()).filter(Boolean),
         targetMuscle: targetMuscles.join(", "),
         countType,
@@ -362,9 +365,16 @@ export default function CreatePersonalExercisePage() {
         return;
       }
       const responseData = err?.response?.data;
-      const errorMsg = typeof responseData === "string"
-        ? responseData
-        : responseData?.message || getApiErrorMessage(err, t("member.personal.couldNotSaveExercise"));
+      // Trùng tên -> thông báo đã dịch (server trả 409 khi tên bài tập trùng tên một
+      // bài tập khác, hoặc trùng tên một workout nào đó).
+      const errorMsg = isDuplicateNameError(err)
+        ? getDuplicateNameMessage(err, {
+          workout: "member.personal.nameMatchesWorkout",
+          exercise: "member.customExercise.duplicateName",
+        })
+        : typeof responseData === "string"
+          ? responseData
+          : responseData?.message || getApiErrorMessage(err, t("member.personal.couldNotSaveExercise"));
       if (err?.response?.status === 503) {
         setVideoCheckStatus("failed");
         setErrorMessage(errorMsg);

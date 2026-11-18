@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import {
   getApiErrorMessage,
+  getDuplicateNameMessage,
+  isDuplicateNameError,
   validateWorkoutDescription,
   validateWorkoutExercises,
   validateWorkoutName,
@@ -16,31 +18,53 @@ import { getLevelLabel } from "../utils/levelLabel";
 import { localizeSeed } from "../utils/seedText";
 import { useSystemLevels } from "../useSystemLevels";
 
-const LEVEL_PRIORITY = { Beginner: 1, Intermediate: 2, Advanced: 3 };
 // Số bài mỗi trang, giống màn chỉnh sửa workout của Content Manager.
 const SYSTEM_PAGE_SIZE = 6;
 const ITEM_PAGE_SIZE = 4;
+// Bài tập mẫu dùng khi workout chưa có bài nào. Level của bài mẫu sẽ được thay bằng
+// level thấp nhất của hệ thống lúc runtime (xem `buildDefaultExercises`).
 const DEFAULT_EXERCISES = [
-  { id: "pike-push-up", name: "Pike push-up", level: "Intermediate", sets: 3, reps: 8, restSec: 45, countBy: "reps" },
-  { id: "diamond-push-up", name: "Diamond push-up", level: "Intermediate", sets: 3, reps: 10, restSec: 45, countBy: "reps" },
-  { id: "plank", name: "Plank", level: "Beginner", sets: 3, reps: 30, restSec: 30, countBy: "sec" },
+  { id: "pike-push-up", name: "Pike push-up", sets: 3, reps: 8, restSec: 45, countBy: "reps" },
+  { id: "diamond-push-up", name: "Diamond push-up", sets: 3, reps: 10, restSec: 45, countBy: "reps" },
+  { id: "plank", name: "Plank", sets: 3, reps: 30, restSec: 30, countBy: "sec" },
 ];
 
-function createExerciseList(workout) {
+/**
+ * Bài tập mẫu kèm level theo độ khó tương đối.
+ *
+ * Level trong hệ thống động (Content Manager tạo/đổi tên) nên bài mẫu được gán theo
+ * **thứ tự** level trong hệ thống: plank = level dễ nhất, push-up = level thứ hai.
+ * Không hard-code tên level để không vỡ khi level được đổi tên.
+ */
+function buildDefaultExercises(levelNames) {
+  const list = Array.isArray(levelNames) ? levelNames : [];
+  // Không hard-code tên level: nếu hệ thống chưa cấu hình level nào thì để trống,
+  // form sẽ báo lỗi "chọn level" thay vì gửi một tên level không tồn tại.
+  const easiest = list[0] || "";
+  const second = list[1] || easiest;
+  return [
+    { ...DEFAULT_EXERCISES[0], level: second },
+    { ...DEFAULT_EXERCISES[1], level: second },
+    { ...DEFAULT_EXERCISES[2], level: easiest },
+  ];
+}
+
+function createExerciseList(workout, levelNames) {
+  const fallbackLevel = (Array.isArray(levelNames) && levelNames[0]) || "";
   if (Array.isArray(workout?.exercises) && workout.exercises.length > 0) {
     return workout.exercises.map((exercise, index) => ({
       uniqueKey: `${exercise.id || exercise.code || `exercise-${index}`}_${Date.now()}_${index}`,
       id: exercise.id || exercise.code || `exercise-${index}`,
       exerciseId: exercise.id || exercise.code || `exercise-${index}`,
       name: exercise.name || exercise.title || "Exercise",
-      level: exercise.level || "Beginner",
+      level: exercise.level || fallbackLevel,
       sets: exercise.sets ?? 3,
       reps: exercise.reps ?? 8,
       restSec: exercise.restSec ?? 45,
       countBy: exercise.countBy === "Duration" ? "sec" : exercise.countBy || "reps",
     }));
   }
-  return DEFAULT_EXERCISES.map((exercise, index) => ({
+  return buildDefaultExercises(levelNames).map((exercise, index) => ({
     ...exercise,
     uniqueKey: `${exercise.id}_${Date.now()}_${index}`,
     exerciseId: exercise.id,
@@ -93,10 +117,12 @@ function XIcon() {
 }
 
 function LevelBadge({ level }) {
-  const displayLevel = level || "Beginner";
+  // Level do Content Manager cấu hình động: chưa gán level thì hiện "—" thay vì
+  // hard-code một tên level mặc định.
+  const displayLevel = level || "";
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold capitalize ${getLevelBadgeStyle(displayLevel)}`}>
-      {getLevelLabel(displayLevel)}
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold capitalize ${displayLevel ? getLevelBadgeStyle(displayLevel) : "bg-slate-500/10 text-slate-400"}`}>
+      {displayLevel ? getLevelLabel(displayLevel) : "—"}
     </span>
   );
 }
@@ -199,7 +225,16 @@ export default function UpdateMyCustomWorkoutPage() {
   const [touchedFields, setTouchedFields] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   // Level do Content Manager cấu hình động nên danh sách level lấy từ hệ thống.
-  const { levels: levelNames } = useSystemLevels();
+  // Chỉ level ACTIVE mới được chọn cho nội dung mới; level đang lưu vẫn hiện để không mất dữ liệu.
+  const {
+    levels: levelNames,
+    activeLevels,
+    levelPriority,
+    isLoadingLevels,
+  } = useSystemLevels();
+  // Chỉ khởi tạo form khi đã biết danh sách level, vì level mặc định của workout
+  // được suy ra từ bài tập khó nhất theo thứ tự level của hệ thống.
+  const levelsReady = !isLoadingLevels;
   // Cấp độ của workout: mặc định lấy theo bài tập khó nhất, nhưng người dùng có thể đổi.
   const [workoutLevel, setWorkoutLevel] = useState("");
   const [exerciseSearch, setExerciseSearch] = useState("");
@@ -209,14 +244,25 @@ export default function UpdateMyCustomWorkoutPage() {
   const [itemPage, setItemPage] = useState(1);
 
   useEffect(() => {
+    if (!levelsReady) return undefined;
     let active = true;
     Promise.all([getMyWorkout(id), getAvailableWorkoutExercises()])
       .then(([currentWorkout, available]) => {
         if (!active) return;
+        // Tên level do Content Manager đặt nên giữ nguyên tên trong hệ thống (không tự
+        // viết hoa/viết thường lại, vì tên level có thể chứa ký tự đặc biệt).
+        const systemLevelName = (raw) => {
+          const value = String(raw ?? "").trim();
+          if (!value) return "";
+          const matched = levelNames.find(
+            (name) => name.trim().toLowerCase() === value.toLowerCase()
+          );
+          return matched || value;
+        };
         const normalizedAvailable = available.map((exercise) => ({
           id: exercise.id,
           name: exercise.title,
-          level: String(exercise.level).toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase()),
+          level: systemLevelName(exercise.level),
           muscles: exercise.targetMuscle,
           defaultSets: exercise.defaultSets,
           defaultReps: exercise.defaultReps,
@@ -225,21 +271,22 @@ export default function UpdateMyCustomWorkoutPage() {
           reps: exercise.defaultDuration || exercise.defaultReps || 8,
         }));
         const availableById = new Map(normalizedAvailable.map((exercise) => [String(exercise.id), exercise]));
-        const initialExercises = createExerciseList(currentWorkout).map((exercise) => {
+        const initialExercises = createExerciseList(currentWorkout, levelNames).map((exercise) => {
           const match = availableById.get(String(exercise.id));
-          return match
-            ? { ...exercise, muscles: match.muscles, level: match.level || exercise.level }
-            : exercise;
+          return {
+            ...exercise,
+            muscles: match?.muscles ?? exercise.muscles,
+            level: systemLevelName(match?.level || exercise.level),
+          };
         });
         // Level đã lưu; nếu workout cũ chưa có level thì suy ra từ bài tập khó nhất.
+        const easiestLevel = levelNames[0] || "";
         const highestExerciseLevel = initialExercises.reduce(
           (current, exercise) =>
-            (LEVEL_PRIORITY[exercise.level] || 0) > (LEVEL_PRIORITY[current] || 0)
-              ? exercise.level
-              : current,
-          "Beginner"
+            levelPriority(exercise.level) > levelPriority(current) ? exercise.level : current,
+          easiestLevel
         );
-        const initialLevel = currentWorkout.level || highestExerciseLevel;
+        const initialLevel = systemLevelName(currentWorkout.level) || highestExerciseLevel;
         const initialForm = {
           title: currentWorkout.title || "",
           description: currentWorkout.description || "",
@@ -262,7 +309,7 @@ export default function UpdateMyCustomWorkoutPage() {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, levelsReady, levelNames, levelPriority]);
 
   const totalSets = exercises.reduce((total, exercise) => {
     const sets = Number(exercise.sets);
@@ -284,8 +331,8 @@ export default function UpdateMyCustomWorkoutPage() {
     : `${totalDurationSeconds} sec`;
   const suggestedLevel = exercises.reduce(
     (currentLevel, exercise) =>
-      LEVEL_PRIORITY[exercise.level] > LEVEL_PRIORITY[currentLevel] ? exercise.level : currentLevel,
-    "Beginner"
+      levelPriority(exercise.level) > levelPriority(currentLevel) ? exercise.level : currentLevel,
+    levelNames[0] || ""
   );
   // Level đã chọn; nếu chưa chọn thì lấy level cao nhất của các bài tập trong workout.
   const level = workoutLevel || suggestedLevel;
@@ -481,9 +528,20 @@ export default function UpdateMyCustomWorkoutPage() {
       toast.success(t("member.personal.workoutUpdated"));
       navigate("/library/workouts");
     } catch (error) {
-      const message = getApiErrorMessage(error, t("member.personal.couldNotSaveWorkoutUpdate"));
+      // Trùng tên -> báo rõ để member đổi tên (server trả 409 khi tên trùng bài tập
+      // hoặc trùng workout khác của chính member này).
+      const message = isDuplicateNameError(error)
+        ? getDuplicateNameMessage(error, {
+          exercise: "member.personal.nameMatchesExercise",
+          own: "member.personal.nameTaken",
+        })
+        : getApiErrorMessage(error, t("member.personal.couldNotSaveWorkoutUpdate"));
       toast.error(message);
       setErrorMessage(message);
+      if (isDuplicateNameError(error)) {
+        setHasSubmitted(true);
+        markFieldTouched("name");
+      }
     } finally {
       submissionLock.current = false;
       setIsSaving(false);
@@ -595,11 +653,12 @@ export default function UpdateMyCustomWorkoutPage() {
                   onChange={(event) => setWorkoutLevel(event.target.value)}
                   className="w-full cursor-pointer rounded-lg border border-[#493b79] bg-[#1b1538] px-3 py-2.5 text-sm text-white focus:border-[#8b6cff] focus:outline-none"
                 >
-                  {/* Level đang lưu có thể không còn trong danh sách hệ thống — vẫn giữ để không mất dữ liệu. */}
-                  {level && !levelNames.includes(level) && (
+                  {/* Level đang lưu có thể không còn active (hoặc đã bị xoá khỏi hệ thống) —
+                      vẫn giữ lựa chọn này để không mất dữ liệu. */}
+                  {level && !activeLevels.includes(level) && (
                     <option value={level}>{getLevelLabel(level)}</option>
                   )}
-                  {levelNames.map((name) => (
+                  {activeLevels.map((name) => (
                     <option key={name} value={name}>{getLevelLabel(name)}</option>
                   ))}
                 </select>

@@ -1080,6 +1080,14 @@ export default {
     couldNotLoadAccepted: "Could not load accepted exercises.",
     couldNotSaveWorkout: "Could not save this workout.",
     fillRequiredFields: "Please fill in all required fields correctly.",
+    // Trùng tên: tên workout đã có một bài tập cùng tên, hoặc trùng workout khác của bạn.
+    nameMatchesExercise:
+      "This title is already used by an exercise. Please choose a different title.",
+    nameTaken: "You already have a workout with this title. Please choose a different title.",
+    // Trùng tên khi tạo/sửa bài tập cá nhân: tên đã có một bài tập khác, hoặc trùng
+    // tên một workout nào đó.
+    nameMatchesWorkout:
+      "This title is already used by a workout. Please choose a different title.",
 
     // Update custom workout
     updateWorkoutTitle: "Update my custom workout",

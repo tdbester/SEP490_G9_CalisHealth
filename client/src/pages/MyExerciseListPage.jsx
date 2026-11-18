@@ -63,9 +63,17 @@ function XCircleIcon({ className = "w-3.5 h-3.5" }) {
 
 /* -------------------- LEVEL BADGE -------------------- */
 function LevelBadge({ level }) {
-  const displayLevel = level || "Intermediate";
+  // Level do Content Manager cấu hình động: bài chưa gán level thì hiện "—"
+  // thay vì hard-code một tên level mặc định.
+  const displayLevel = level || "";
   return (
-    <span className={`px-3 py-1 text-xs font-bold rounded-full border capitalize ${getLevelBadgeStyle(displayLevel)}`}>{getLevelLabel(displayLevel)}</span>
+    <span
+      className={`px-3 py-1 text-xs font-bold rounded-full border capitalize ${
+        displayLevel ? getLevelBadgeStyle(displayLevel) : "bg-slate-500/10 border-slate-500/30 text-slate-400"
+      }`}
+    >
+      {displayLevel ? getLevelLabel(displayLevel) : "—"}
+    </span>
   );
 }
 
@@ -247,7 +255,7 @@ export default function MyExerciseListPage() {
           return {
             ...item,
             slug: item.id,
-            level: item.level || "Intermediate",
+            level: item.level || "",
             meta: t("member.catalog.submittedMeta", {
               muscle: item.targetMuscle || "Full body",
               sets: item.defaultSets ?? 3,

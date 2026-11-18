@@ -59,3 +59,26 @@ export function fieldErrors(error) {
   const errors = error?.response?.data?.errors;
   return errors && typeof errors === "object" && !Array.isArray(errors) ? errors : {};
 }
+
+/**
+ * Message của backend có chứa dấu hiệu "trùng tên" không.
+ *
+ * `ContentNameGuardService` trả 409 với các message dạng:
+ * - "This title is already used by an exercise. Choose a different title."
+ * - "This title is already used by a workout. Choose a different title."
+ * - "This title is already used by another workout. Choose a different title."
+ * - "You already have a workout with this title. Choose a different title."
+ *
+ * Ngoài ra còn có message của `LevelBenchmarkService` ("already exists") và các
+ * service khác ("duplicate"). Chuẩn hoá tất cả về một điều kiện để Content Manager,
+ * Member và Admin hiển thị thông báo trùng tên giống nhau.
+ */
+export function isDuplicateNameMessage(message) {
+  const text = String(message || "").toLowerCase();
+  return (
+    text.includes("already used")
+    || text.includes("already exists")
+    || text.includes("already have")
+    || text.includes("duplicate")
+  );
+}

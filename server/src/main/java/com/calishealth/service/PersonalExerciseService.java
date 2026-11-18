@@ -50,6 +50,8 @@ public class PersonalExerciseService {
     /**
      * Level do Content Manager quản lý trong Level & Benchmark Criteria nên tên level lấy động
      * từ bảng fitness_levels; bài của member không được dùng level ngoài danh sách đó.
+     *
+     * <p>Giống Content Manager: bài MỚI không được tạo ở level đang bị ẩn (INACTIVE).</p>
      */
     private String resolveLevelName(String level) {
         if (level == null || level.isBlank()) {
@@ -59,6 +61,24 @@ public class PersonalExerciseService {
                 .map(FitnessLevel::getName)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Choose a valid exercise level"));
+    }
+
+    /**
+     * Level mới phải đang ACTIVE. Bài đã tồn tại vẫn sửa được ở level cũ (kể cả khi level đó
+     * sau này bị ẩn) — chỉ chặn khi MEMBER đổi sang level đang không active.
+     */
+    private void assertLevelUsable(String requestedLevel, String currentLevel) {
+        String name = resolveLevelName(requestedLevel);
+        if (currentLevel != null && name.equalsIgnoreCase(currentLevel.trim())) {
+            return;
+        }
+        boolean active = fitnessLevels.findByNameIgnoreCase(name)
+                .map(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
+                .orElse(true);
+        if (!active) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Level " + name + " is inactive. Choose an active level or activate it in Level & Benchmark Criteria");
+        }
     }
 
     @Transactional(readOnly = true)
@@ -90,6 +110,10 @@ public class PersonalExerciseService {
         }
         // Tên bài tập cá nhân không được trùng tuyệt đối với tên của một workout nào.
         contentNameGuard.assertExerciseNameNotUsedByWorkout(request.title(), null);
+        // ... và cũng không được trùng với tên một bài tập khác trong thư viện.
+        contentNameGuard.assertExerciseNameNotUsedByExercise(request.title(), null);
+        // Level phải đang ACTIVE (giống quy tắc Content Manager áp cho bài hệ thống).
+        assertLevelUsable(request.level(), null);
         videoStorage.validateVideoFile(videoFile, true);
         String videoReason = moderation.checkVideo(videoFile);
         ContentModerationService.ModerationResult result = moderation.combine(textReason, videoReason);
@@ -219,6 +243,9 @@ public class PersonalExerciseService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, textReason);
         }
         contentNameGuard.assertExerciseNameNotUsedByWorkout(request.title(), null);
+        contentNameGuard.assertExerciseNameNotUsedByExercise(request.title(), exercise.getId());
+        // Giữ nguyên level cũ vẫn sửa được; chỉ chặn khi đổi sang level đang không active.
+        assertLevelUsable(request.level(), exercise.getLevel());
         boolean hasNewVideo = videoFile != null && !videoFile.isEmpty();
         if (hasNewVideo) {
             videoStorage.validateVideoFile(videoFile, true);
@@ -313,6 +340,9 @@ public class PersonalExerciseService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, textReason);
         }
         contentNameGuard.assertExerciseNameNotUsedByWorkout(request.title(), null);
+        contentNameGuard.assertExerciseNameNotUsedByExercise(request.title(), exercise.getId());
+        // Giữ nguyên level cũ vẫn sửa được; chỉ chặn khi đổi sang level đang không active.
+        assertLevelUsable(request.level(), exercise.getLevel());
         boolean hasNewVideo = videoFile != null && !videoFile.isEmpty();
         if (hasNewVideo) {
             videoStorage.validateVideoFile(videoFile, true);

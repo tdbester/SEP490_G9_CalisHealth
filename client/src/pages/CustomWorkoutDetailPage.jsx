@@ -129,8 +129,8 @@ export default function CustomWorkoutDetailPage() {
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="font-semibold">{index + 1}. {exercise.title}</h3>
-                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium capitalize ${getLevelBadgeStyle(exercise.level || exercise.difficultyLevel)}`}>
-                      {getLevelLabel(exercise.level || exercise.difficultyLevel || "Intermediate")}
+                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium capitalize ${exercise.level || exercise.difficultyLevel ? getLevelBadgeStyle(exercise.level || exercise.difficultyLevel) : "bg-slate-500/10 text-slate-400"}`}>
+                      {getLevelLabel(exercise.level || exercise.difficultyLevel || "")}
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-slate-400">{exercise.targetMuscle}</p>

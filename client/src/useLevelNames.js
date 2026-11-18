@@ -8,6 +8,24 @@ const GRADIENT_TONES = ["success", "sky", "warning", "orange", "danger"];
 const EXTRA_TONES = ["primary", "pink", "teal"];
 
 /**
+ * Nhãn level tương ứng với 3 cột sets/reps của một mục daily plan.
+ *
+ * <p>Bảng `workout_plan_items` lưu cố định 3 bộ sets/reps (theo thứ tự level từ thấp
+ * đến cao). Để nhãn hiển thị khớp với level Content Manager đang cấu hình, ta ánh xạ
+ * 3 cột đó vào 3 level đầu tiên theo thứ tự score — không hard-code tên level.</p>
+ *
+ * @param {string[]} orderedNames tên level đã sắp theo score tăng dần
+ * @returns {{key: string, label: string}[]} luôn 3 mục (key = tên cột trong DB)
+ */
+export function levelColumnLabels(orderedNames) {
+  const fallback = ["Beginner", "Intermediate", "Advanced"];
+  return ["beginner", "intermediate", "advanced"].map((key, index) => ({
+    key,
+    label: orderedNames[index] || fallback[index],
+  }));
+}
+
+/**
  * Gives every level its own colour from its position (ordered by score range). Up to 8 levels never share a
  * colour; after that the palette repeats. Inactive levels keep their slot, so toggling a status does not
  * recolour the others.
