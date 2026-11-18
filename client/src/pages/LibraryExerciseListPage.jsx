@@ -10,6 +10,7 @@ import { getLevelBadgeStyle } from "../utils/levelBadge";
 import { getLevelLabel } from "../utils/levelLabel";
 import { localizeSeed } from "../utils/seedText";
 import { isGuestSession, loginPath } from "../utils/authState";
+import { useSystemLevels } from "../useSystemLevels";
 import "./ExerciseListPage.css";
 
 // SVG Icons matching Figma design
@@ -117,7 +118,9 @@ const FALLBACK_MUSCLE_GROUPS = [
   "Legs",
 ];
 
-const LEVEL_OPTIONS = ["All levels", "Beginner", "Intermediate", "Advanced"];
+// Level của hệ thống lấy động từ `fitness_levels` (xem `useSystemLevels`) nên danh sách
+// filter dưới đây không hard-code Beginner / Intermediate / Advanced.
+const ALL_LEVELS = "All levels";
 
 // Dữ liệu mẫu chuẩn 100% Mockup Figma cho Tab Health (6 bài)
 export const HEALTH_FALLBACK_EXERCISES = [
@@ -142,7 +145,9 @@ export const SKILL_FALLBACK_EXERCISES = [
 // SUB-COMPONENT 1: ExerciseCard (Dùng chung 1:1 cho cả Health và Skills)
 function ExerciseCard({ item, onClick }) {
   const { t } = useTranslation();
-  const level = item.level || item.difficultyLevel || "Beginner";
+  // Level do Content Manager cấu hình động: bài chưa gán level thì hiện "—"
+  // thay vì hard-code một tên level mặc định.
+  const level = item.level || item.difficultyLevel || "";
   // Bài trong danh sách này đều thuộc hệ thống (Content Manager quản lý).
   const favoriteType = FAVORITE_ITEM_TYPES.SYSTEM_EXERCISE;
 
@@ -191,9 +196,9 @@ function ExerciseCard({ item, onClick }) {
           </span>
         )}
         <span
-          className={`min-w-[96px] text-center px-4 py-1.5 rounded-full text-xs font-bold tracking-wide capitalize ${getLevelBadgeStyle(level)}`}
+          className={`min-w-[96px] text-center px-4 py-1.5 rounded-full text-xs font-bold tracking-wide capitalize ${level ? getLevelBadgeStyle(level) : "bg-slate-500/10 text-slate-400"}`}
         >
-          {getLevelLabel(level)}
+          {level ? getLevelLabel(level) : "—"}
         </span>
       </div>
     </div>
@@ -255,6 +260,7 @@ function SearchFilterBar({
   onSearchChange,
   selectedLevel,
   onLevelChange,
+  levelOptions,
 }) {
   const { t } = useTranslation();
   return (
@@ -280,9 +286,12 @@ function SearchFilterBar({
           value={selectedLevel}
           onChange={onLevelChange}
         >
-          {LEVEL_OPTIONS.map((lvl) => (
-            <option key={lvl} value={lvl} className="bg-[#130d2e] text-white">
-              {lvl === "All levels" ? t("member.catalog.allLevels") : getLevelLabel(lvl)}
+          <option value={ALL_LEVELS} className="bg-[#130d2e] text-white">
+            {t("member.catalog.allLevels")}
+          </option>
+          {levelOptions.map((level) => (
+            <option key={level} value={level} className="bg-[#130d2e] text-white">
+              {getLevelLabel(level)}
             </option>
           ))}
         </select>
@@ -366,7 +375,11 @@ export default function ExerciseListPage() {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const [selectedLevel, setSelectedLevel] = useState("All levels");
+  const [selectedLevel, setSelectedLevel] = useState(ALL_LEVELS);
+
+  // Level của hệ thống lấy động: Content Manager có thể thêm/đổi tên level nên
+  // dropdown filter không được hard-code danh sách level.
+  const { levels: levelNames } = useSystemLevels();
 
   // Multi-select Muscle Groups
   const [selectedMuscles, setSelectedMuscles] = useState(["All"]);
@@ -399,6 +412,16 @@ export default function ExerciseListPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
+
+  // Level đã chọn không còn tồn tại (đã bị xoá/đổi tên) -> reset về "All levels"
+  // để không lọc nhầm và luôn trả kết quả rỗng.
+  useEffect(() => {
+    if (selectedLevel === ALL_LEVELS) return;
+    if (!levelNames.includes(selectedLevel)) {
+      setSelectedLevel(ALL_LEVELS);
+      setCurrentPage(1);
+    }
+  }, [levelNames, selectedLevel]);
 
   const [loading, setLoading] = useState(true);
   const [exercises, setExercises] = useState([]);
@@ -454,7 +477,7 @@ export default function ExerciseListPage() {
 
       const data = await getExercises({
         type: activeTab === "skill" ? "SKILL" : "HEALTH",
-        level: selectedLevel === "All levels" ? undefined : selectedLevel.toUpperCase(),
+        level: selectedLevel === ALL_LEVELS ? undefined : selectedLevel.toUpperCase(),
         targetMuscle: musclesQuery,
         search: debouncedSearch.trim() || undefined,
         page: currentPage - 1,
@@ -537,7 +560,7 @@ export default function ExerciseListPage() {
   const handleClearFilters = () => {
     setSearchInput("");
     setDebouncedSearch("");
-    setSelectedLevel("All levels");
+    setSelectedLevel(ALL_LEVELS);
     setSelectedMuscles(["All"]);
     setCurrentPage(1);
   };
@@ -627,6 +650,7 @@ export default function ExerciseListPage() {
         onSearchChange={handleSearchChange}
         selectedLevel={selectedLevel}
         onLevelChange={handleLevelChange}
+        levelOptions={levelNames}
       />
       {/* 4. BỐ CỤC CHÍNH 2 CỘT ĐỒNG BỘ 1:1 CHO CẢ HEALTH VÀ SKILLS */}
       <div className="flex flex-col md:flex-row items-start gap-4 w-full">

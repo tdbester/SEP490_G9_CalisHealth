@@ -1,0 +1,180 @@
+﻿@startuml
+'==============================================================
+' DESIGN SET DS7 - Health Tracking & Performance Analytics
+' Sequence 1 of 3: Health & Tracking progress
+'
+' Front end : client/src/pages/HealthTracking.jsx
+'            client/src/components/tracking/UpdateStatsModal.jsx
+'            client/src/utils/bmi.js (calculateBmi, classifyBmi)
+'            client/src/api/tracking.js
+' Back end  : MemberTrackingController -> MemberTrackingService
+'            -> MemberTrackingRepository -> MySQL
+'
+' The participants are ordered so that a message only reaches the
+' next layer of the chain: no arrow jumps over more than one life
+' line of the layer it belongs to.
+'==============================================================
+skinparam shadowing false
+skinparam linetype ortho
+skinparam ArrowFontSize 9
+skinparam ArrowColor #333333
+skinparam defaultFontName Segoe UI
+skinparam defaultFontSize 10
+skinparam sequence {
+  ArrowColor #333333
+  LifeLineBorderColor #777777
+  ParticipantBorderColor #333333
+  ParticipantBackgroundColor #FFFFFF
+  ActivationBorderColor #555555
+  ActivationBackgroundColor #F2F2F2
+  ActivationFontSize 9
+  ArrowFontSize 9
+}
+skinparam ParticipantPadding 12
+
+'===============================================================
+' Every layer is a rectangle with a single head at the top.
+' The life lines get shorter from the left to the right.
+'===============================================================
+hide footbox
+skinparam ParticipantBorderThickness 1.2
+title DS7 - Health & Tracking progress\n(Sequence Diagram)
+
+participant "Member" as User
+participant "Update Stats Modal\n(React)" as Modal
+participant "Health Tracking Page\n(React)" as Page
+participant "trackingApi\n(tracking.js)" as Api
+participant "MemberTrackingController" as Ctl
+participant "MemberTrackingService" as Svc
+participant "MemberTrackingRepository" as Repo
+participant "MySQL\n(Database)" as DB
+
+== READ THE HEALTH TRACKING OVERVIEW ==
+
+User -> Page : Open the health tracking screen
+activate Page
+Page -> Api : Ask for the health tracking overview of the signed-in member
+activate Api
+Api -> Ctl : Read the health tracking overview
+activate Ctl
+Ctl -> Svc : Read the health tracking overview of the member
+activate Svc
+Svc -> Repo : Find the member profile id of the signed-in member
+activate Repo
+Repo -> DB : Select the profile id from the member profiles joined with the user accounts
+activate DB
+DB --> Repo : The id of the member profile
+deactivate DB
+Repo --> Svc : The id of the member profile
+deactivate Repo
+Svc -> Repo : Copy the weight and the height from the last completed survey when the profile has no measurement
+activate Repo
+Repo -> DB : Select the weight, the height and the goal answers of the last completed survey
+activate DB
+DB --> Repo : The answers of the completed survey
+deactivate DB
+Repo -> DB : Write the copied measurements into the member profile and the measurement history
+activate DB
+DB --> Repo : The survey measurements are stored
+deactivate DB
+Repo --> Svc : The survey measurements are synchronised
+deactivate Repo
+Svc -> Repo : Load the latest body measurement of the member
+activate Repo
+Repo -> DB : Select the last record of the measurement history of the member
+activate DB
+DB --> Repo : The latest weight, the latest height and the measured date
+deactivate DB
+Repo --> Svc : BodyMetricsDto(weightKg, heightCm, updatedAt)
+deactivate Repo
+Svc -> Repo : Load the BMI of every month of the last 6 months
+activate Repo
+Repo -> DB : Select the monthly BMI records of the last 6 months
+activate DB
+DB --> Repo : The BMI of every month
+deactivate DB
+Repo --> Svc : The BMI history of 6 months
+deactivate Repo
+Svc -> Svc : Calculate the current BMI and pick the band\n(Underweight / Healthy / Overweight / Obese)
+Svc -> Repo : Calculate the health score of the member
+activate Repo
+Repo -> DB : Select the training days, the average accuracy and the weekly goal of the member
+activate DB
+DB --> Repo : The training days, the average accuracy and the weekly goal
+deactivate DB
+Repo --> Svc : HealthScoreDto(score, changePercent, peerPercentile, headline)
+deactivate Repo
+Svc --> Ctl : HealthTrackingOverviewResponse(healthScore, bodyMetrics, bmiOverview)
+deactivate Svc
+Ctl --> Api : The health tracking overview
+deactivate Ctl
+Api --> Page : The health tracking overview
+deactivate Api
+Page -> Page : Calculate the BMI of the current measurement\nwith calculateBmi and classifyBmi of utils/bmi.js
+Page -> Page : Draw the score gauge, the BMI chart\nand the body measurement card
+Page --> User : Show the health score, the weight, the height\nand the BMI of the last 6 months
+deactivate Page
+
+== RECORD THE NEW BODY MEASUREMENTS ==
+
+User -> Page : Press "Update my stats"
+activate Page
+Page -> Modal : Open the update stats modal\nwith the current weight and height
+activate Modal
+User -> Modal : Type the new weight and the new height
+Modal -> Modal : Show the BMI preview of the entered values\nwith calculateBmi and classifyBmi of utils/bmi.js
+Modal -> Page : Save the new weight and the new height
+Page -> Api : Update the body measurements of the signed-in member
+activate Api
+Api -> Ctl : Update the body measurements
+activate Ctl
+Ctl -> Svc : Record the body measurements
+activate Svc
+Svc -> Svc : Calculate the BMI of the entered values
+alt the weight or the height is outside the allowed range
+  Svc --> Ctl : Reject the measurement\n("Cannot calculate BMI from the entered values")
+  deactivate Svc
+  Ctl --> Api : The error message
+  deactivate Ctl
+  Api --> Page : The error message
+  deactivate Api
+  Page -> Modal : Show the inline error and keep the modal open
+  deactivate Modal
+else the entered values are valid
+  Svc -> Repo : Save the new measurement in the history of the member
+  activate Repo
+  Repo -> DB : Insert the new record into the measurement history
+  activate DB
+  DB --> Repo : The new measurement record
+  deactivate DB
+  Repo --> Svc : The measurement is saved
+  deactivate Repo
+  Svc -> Repo : Update the weight and the height on the member profile
+  activate Repo
+  Repo -> DB : Update the weight and the height of the member profile
+  activate DB
+  DB --> Repo : The member profile is updated
+  deactivate DB
+  Repo --> Svc : The member profile is updated
+  deactivate Repo
+  Svc -> Repo : Work out the weight change of this month
+  activate Repo
+  Repo -> DB : Select the last weight recorded before this month
+  activate DB
+  DB --> Repo : The weight of the previous record
+  deactivate DB
+  Repo --> Svc : The weight change of this month
+  deactivate Repo
+  Svc --> Ctl : BodyMetricsDto(weightKg, heightCm, weightChangeKg, weightNote, updatedAt)
+  deactivate Svc
+  Ctl --> Api : The new body measurements
+  deactivate Ctl
+  Api --> Page : The new body measurements
+  deactivate Api
+  Page -> Page : Refresh the overview and close the modal
+  deactivate Modal
+  Page --> User : Show the new weight, the new height\nand the BMI of the member
+end
+deactivate Page
+
+@enduml

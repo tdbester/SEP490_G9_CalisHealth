@@ -25,7 +25,6 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -166,10 +165,16 @@ public class MemberExerciseService {
                 result.hasPrevious());
     }
 
+    /**
+     * Tên level hiển thị cho bài tập cộng đồng.
+     *
+     * Level do Content Manager đặt tên trong `fitness_levels` nên phải giữ NGUYÊN tên đã
+     * lưu (không tự viết hoa/viết thường lại) — nếu không, tên level đặc biệt sẽ bị đổi
+     * và không khớp với bộ lọc theo level trên giao diện.
+     */
     private String levelLabel(String level) {
         if (level == null || level.isBlank()) return null;
-        String normalized = level.toLowerCase(Locale.ROOT);
-        return Character.toUpperCase(normalized.charAt(0)) + normalized.substring(1);
+        return level.trim();
     }
 
     private String timeAgo(LocalDateTime createdAt) {

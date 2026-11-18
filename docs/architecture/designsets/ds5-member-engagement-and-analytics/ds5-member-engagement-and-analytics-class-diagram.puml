@@ -1,0 +1,666 @@
+@startuml
+left to right direction
+'==============================================================
+' DESIGN SET DS5 - Member Engagement and Analytics
+' Class Diagram: Controller -> Service -> DTO -> DAO -> Entity
+'
+' UML notation - exactly the six symbols of the project reference:
+'   --      Association            solid line, no head
+'   --|>    Generalization          solid line, hollow triangle
+'   ..|>    Realization             dashed line, hollow triangle
+'   ..>     Dependency              dashed line, OPEN arrow head
+'   o--     Aggregation             solid line, hollow diamond
+'   *--     Composition             solid line, filled diamond
+'==============================================================
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam arrowThickness 1.2
+skinparam defaultLineThickness 1.2
+skinparam ArrowFontSize 9
+skinparam ArrowColor #333333
+skinparam nodesep 30
+skinparam ranksep 45
+skinparam defaultFontName Segoe UI
+skinparam defaultFontSize 10
+skinparam class {
+  BorderThickness 1.2
+  BackgroundColor #FFFFFF
+  FontColor #000000
+  AttributeFontColor #1F3864
+  MethodFontColor #7B3F00
+}
+skinparam package {
+  BorderThickness 1.2
+  FontStyle bold
+  FontSize 11
+  BackColor #E4E4E4
+}
+skinparam stereotype {
+  FontSize 8
+  FontStyle italic
+}
+
+title DESIGN SET DS5 - Member Engagement and Analytics\n(Class Diagram)
+
+'==============================================================
+' CONTROLLER
+'==============================================================
+package "Controller" as CTL {
+  class MemberScheduleController <<Controller>> {
+    - scheduleService : MemberScheduleService
+    --
+    + availableWorkouts(Authentication authentication) : List<AvailableWorkoutResponse>
+    + planInfo(Authentication authentication) : PlanInfoResponse
+    + weekRule(Authentication authentication) : WeekRuleResponse
+    + saveWeek(SaveWeekRequest request, Authentication authentication) : MemberScheduleResponse
+    + save(SaveScheduleRequest request, Authentication authentication) : MemberScheduleResponse
+    + current(Authentication authentication) : MemberScheduleResponse
+    + byMonth(LocalDate month, Authentication authentication) : MemberScheduleResponse
+    + today(LocalDate date, Authentication authentication) : List<TodayWorkoutResponse>
+    + all(Authentication authentication) : List<MemberScheduleResponse>
+    + updateStatus(LocalDate date, String status, Authentication authentication) : MemberScheduleResponse
+  }
+
+  class MemberTrackingController <<Controller>> {
+    - trackingService : MemberTrackingService
+    --
+    + getOverview(Authentication authentication) : HealthTrackingOverviewResponse
+    + updateMeasurements(Authentication authentication, UpdateMeasurementsRequest request) : BodyMetricsDto
+    + getWorkoutHistory(Authentication authentication, String category, LocalDate date) : WorkoutHistoryResponse
+    + getWorkoutSessionDetail(Authentication authentication, Long sessionId) : WorkoutSessionDetailResponse
+    + getAnalytics(Authentication authentication, String range) : PerformanceAnalyticsResponse
+  }
+
+  class DayStreakController <<Controller>> {
+    - dayStreaks : DayStreakService
+    --
+    + getDayStreak(Authentication authentication, int year, int month) : DayStreakResponse
+    + getDayReport(Authentication authentication, LocalDate date) : DayReportResponse
+  }
+
+  class DashboardController <<Controller>> {
+    - dashboardService : DashboardService
+    --
+    + getDashboard(Authentication authentication) : ObjectNode
+  }
+
+  class LeaderboardController <<Controller>> {
+    - scoreRepository : MemberWeeklyScoreRepository
+    - memberProfileRepository : MemberProfileRepository
+    - leaderboardService : WeeklyLeaderboardService
+    --
+    + getCurrentWeekLeaderboard(Long levelId, Authentication authentication) : ResponseEntity<LeaderboardResponse>
+    + getMemberWeekHistory(Long memberId) : ResponseEntity<MemberWeekHistoryResponse>
+    + getScoreBreakdown(Long memberId, LocalDate weekStart) : ResponseEntity<ScoreBreakdownResponse>
+    + computeWeeklyScores(LocalDate weekStart) : ResponseEntity<Map<String, String>>
+  }
+
+  class MemberNotificationController <<Controller>> {
+    - notifications : MemberNotificationService
+    --
+    + getNotifications(Authentication authentication) : ResponseEntity<MemberNotificationListDto>
+    + markAsRead(Long id, Authentication authentication) : ResponseEntity<Void>
+  }
+
+  class MemberFeedbackController <<Controller>> {
+    - feedbackService : MemberFeedbackService
+    --
+    + listMine(Authentication authentication) : ResponseEntity<List<FeedbackResponse>>
+    + create(CreateFeedbackRequest request, Authentication authentication) : ResponseEntity<FeedbackResponse>
+  }
+}
+
+'==============================================================
+' SERVICE
+'==============================================================
+package "Service" as SVC {
+  class MemberScheduleService <<Service>> {
+    - schedules : MemberScheduleRepository
+    - workouts : WorkoutRepository
+    - templates : DailyPlanTemplateRepository
+    - profiles : MemberProfileRepository
+    - users : UserRepository
+    --
+    + availableWorkouts(String email) : List<AvailableWorkoutResponse>
+    + planInfo(String email) : Optional<PlanInfoResponse>
+    + weekRule(String email) : WeekRuleResponse
+    + saveWeek(String email, SaveWeekRequest request) : MemberScheduleResponse
+    + save(String email, SaveScheduleRequest request) : MemberScheduleResponse
+    + monthSchedule(String email, LocalDate monthDate) : Optional<MemberScheduleResponse>
+    + currentSchedule(String email) : Optional<MemberScheduleResponse>
+    + allSchedules(String email) : List<MemberScheduleResponse>
+    + updateStatus(String email, LocalDate date, String status) : MemberScheduleResponse
+    + todayWorkouts(String email, LocalDate date) : List<TodayWorkoutResponse>
+  }
+
+  class MemberTrackingService <<Service>> {
+    - trackingRepository : MemberTrackingRepository
+    --
+    + getOverview(String email) : HealthTrackingOverviewResponse
+    + recordMeasurements(String email, UpdateMeasurementsRequest request) : BodyMetricsDto
+    + getWorkoutHistory(String email, String category, LocalDate date) : WorkoutHistoryResponse
+    + getWorkoutSessionDetail(String email, Long sessionId) : WorkoutSessionDetailResponse
+    + getPerformanceAnalytics(String email, String range) : PerformanceAnalyticsResponse
+    + calculateBmi(BigDecimal weightKg, BigDecimal heightCm) : BigDecimal
+  }
+
+  class DayStreakService <<Service>> {
+    - dayStreaks : DayStreakRepository
+    --
+    + getDayStreak(String email, int year, int month) : DayStreakResponse
+    + getDayReport(String email, LocalDate date) : DayReportResponse
+  }
+
+  class DashboardService <<Service>> {
+    - jdbcTemplate : JdbcTemplate
+    - muscleGroupStatsService : MuscleGroupStatsService
+    - jsonMapper : JsonMapper
+    --
+    + getDashboard(String email) : ObjectNode
+  }
+
+  class MuscleGroupStatsService <<Service>> {
+    - jdbcTemplate : JdbcTemplate
+    --
+    + findAll() : List<MuscleGroupStat>
+  }
+
+  class WeeklyLeaderboardService <<Service>> {
+    - scoreRepository : MemberWeeklyScoreRepository
+    - memberProfileRepository : MemberProfileRepository
+    - scoring : LeaderboardScoringRepository
+    --
+    + computeScoresForWeek(LocalDate weekStart) : void
+    + refreshMemberScore(Long memberProfileId) : void
+    + resetAndRecomputeMemberScore(Long memberProfileId) : void
+    + explainScore(Long memberProfileId, LocalDate weekStart) : Map<String, BigDecimal>
+  }
+
+  class MemberNotificationService <<Service>> {
+    - notifications : NotificationRepository
+    - reads : NotificationReadRepository
+    - users : UserRepository
+    --
+    + getNotifications(String memberEmail) : MemberNotificationListDto
+    + markAsRead(Long notificationId, String memberEmail) : void
+  }
+
+  class MemberFeedbackService <<Service>> {
+    - feedbacks : MemberFeedbackRepository
+    - users : UserRepository
+    - notifications : NotificationRepository
+    --
+    + create(String memberEmail, CreateFeedbackRequest request) : FeedbackResponse
+    + listMine(String memberEmail) : List<FeedbackResponse>
+    + listForContentManager(MemberFeedback.Status status, MemberFeedback.Category category, String search, LocalDate fromDate, LocalDate toDate) : FeedbackListResponse
+    + detailForContentManager(Long feedbackId) : FeedbackResponse
+    + takeInReview(String handlerEmail, Long feedbackId) : FeedbackResponse
+    + handleByContentManager(String handlerEmail, Long feedbackId, HandleFeedbackRequest request) : FeedbackResponse
+    + listForAdmin(MemberFeedback.Status status, MemberFeedback.Category category, String search, LocalDate fromDate, LocalDate toDate) : FeedbackListResponse
+    + detailForAdmin(Long feedbackId) : FeedbackResponse
+    + handleByAdmin(String adminEmail, Long feedbackId, HandleFeedbackRequest request) : FeedbackResponse
+  }
+}
+
+'==============================================================
+' DTO
+'==============================================================
+package "DTO" as DTO {
+  class MemberScheduleDtos <<DTO>> {
+    + ScheduleEntryRequest
+    + SaveScheduleRequest
+    + ScheduleEntryResponse
+    + MemberScheduleResponse
+    + AvailableWorkoutResponse
+    + PlanInfoResponse
+    + PlanDayResponse
+    + WeekRuleResponse
+    + SaveWeekRequest
+    + TodayExerciseResponse
+    + TodayWorkoutResponse
+  }
+
+  class MemberTrackingDtos <<DTO>> {
+    + UpdateMeasurementsRequest
+    + HealthTrackingOverviewResponse
+    + HealthScoreDto
+    + BodyMetricsDto
+    + BmiOverviewDto
+    + BmiMonthRecordDto
+    + WorkoutHistoryResponse
+    + WorkoutHistorySummaryDto
+    + WorkoutSessionSummaryDto
+    + WorkoutSessionDetailResponse
+    + ExerciseDetailDto
+    + PerformanceAnalyticsResponse
+    + RepsSummaryDto
+    + HoldSummaryDto
+    + VolumeProgressionDto
+    + DurationBreakdownDto
+    + AiInsightDto
+  }
+
+  class DayStreakDtos <<DTO>> {
+    + DayStreakResponse
+    + WeeklyGoalResponse
+    + DayReportResponse
+    + ExerciseReportResponse
+  }
+
+  class MemberNotificationDto <<DTO>> {
+    + id : Long
+    + title : String
+    + message : String
+    + type : String
+    + createdAt : LocalDateTime
+    + read : boolean
+  }
+
+  class MemberNotificationListDto <<DTO>> {
+    + items : List<MemberNotificationDto>
+    + unreadCount : int
+  }
+
+  class MemberFeedbackDtos <<DTO>> {
+    + CreateFeedbackRequest
+    + FeedbackResponse
+    + HandleFeedbackRequest
+    + FeedbackListResponse
+  }
+}
+
+'==============================================================
+' DAO
+'==============================================================
+package "DAO" as DAO {
+  interface JpaRepository <<Interface>> {
+    + findById(ID id) : Optional<T>
+    + save(S entity) : T
+    + findAll() : List<T>
+    + deleteById(ID id) : void
+    + count() : long
+  }
+
+
+  interface MemberScheduleRepository <<DAO>> {
+    + findByUserIdAndPlanMonth(Long userId, LocalDate planMonth) : Optional<MemberSchedule>
+    + findByUserIdOrderByPlanMonthDesc(Long userId) : List<MemberSchedule>
+  }
+
+  class MemberTrackingRepository <<DAO>> {
+    - jdbcTemplate : JdbcTemplate
+    --
+    + findProfileIdByEmail(String email) : Optional<Long>
+    + syncFromSurveyIfMissing(Long profileId) : void
+    + findLatestBodyMetrics(Long memberProfileId) : BodyMetricsDto
+    + findBmiRecordsLast6Months(Long memberProfileId) : List<BmiMonthRecordDto>
+    + calculateWeightChangeThisMonth(Long memberProfileId, BigDecimal currentWeight) : BigDecimal
+    + hasMetric(Long profileId, BigDecimal weightKg, BigDecimal heightCm) : boolean
+    + saveBodyMetric(Long profileId, BigDecimal weightKg, BigDecimal heightCm, BigDecimal bmi, String note) : void
+    + updateMemberProfileMeasurements(Long profileId, BigDecimal weightKg, BigDecimal heightCm) : void
+    + calculateHealthScore(Long profileId, BigDecimal currentBmi) : HealthScoreDto
+    + findWorkoutHistory(Long profileId, String category, LocalDate date) : WorkoutHistoryResponse
+    + isSessionOwnedByMember(Long sessionId, Long profileId) : boolean
+    + findWorkoutSessionDetail(Long sessionId) : WorkoutSessionDetailResponse
+    + findPerformanceAnalytics(Long profileId, String range) : PerformanceAnalyticsResponse
+  }
+
+  class DayStreakRepository <<DAO>> {
+    - jdbcTemplate : JdbcTemplate
+    --
+    + findMemberProfileId(String email) : Optional<Long>
+    + findCompletedWorkoutDays(Long memberProfileId, LocalDate throughDate) : List<LocalDate>
+    + countCompletedSessions(Long memberProfileId, LocalDate startDate, LocalDate endDate) : int
+    + findDayReport(Long memberProfileId, LocalDate date) : DayReportData
+  }
+
+  interface MemberWeeklyScoreRepository <<DAO>> {
+    + findLeaderboardForWeekAndLevel(LocalDate weekStart, Long levelId, Pageable pageable) : List<MemberWeeklyScore>
+    + countForWeekAndLevel(LocalDate weekStart, Long levelId) : long
+    + findRecentWeeksForMember(Long memberId, Pageable pageable) : List<MemberWeeklyScore>
+    + findAllByMember_IdAndWeekStart(Long memberId, LocalDate weekStart) : List<MemberWeeklyScore>
+    + findForMemberAndWeekAndLevel(Long memberId, LocalDate weekStart, Long levelId) : Optional<MemberWeeklyScore>
+    + countScoresAbove(LocalDate weekStart, Long levelId, java.math.BigDecimal totalScore, Long scoreId) : long
+    + findByWeekStart(LocalDate weekStart) : List<MemberWeeklyScore>
+  }
+
+  class LeaderboardScoringRepository <<DAO>> {
+    - jdbcTemplate : JdbcTemplate
+    --
+    + findDailyActivity(Long memberProfileId, LocalDate weekStart) : List<DayActivity>
+    + findAverageAccuracy(Long memberProfileId, LocalDate weekStart) : BigDecimal
+    + countCompletedSessions(Long memberProfileId, LocalDate weekStart, LocalDate weekEnd) : int
+    + countTrainingDays(Long memberProfileId, LocalDate weekStart, LocalDate weekEnd) : int
+    + totalActiveMinutes(Long memberProfileId, LocalDate weekStart, LocalDate weekEnd) : long
+    + findTrainingDays(Long memberProfileId, LocalDate weekStart) : Map<LocalDate, Integer>
+    + countGoalWeekStreak(Long memberProfileId, int daysPerWeek, LocalDate throughWeek) : int
+  }
+
+  interface NotificationRepository <<DAO>> {
+    + findAllByOrderByCreatedAtDesc() : List<Notification>
+    + findAllByTypeInOrderByCreatedAtDesc(Collection<String> types) : List<Notification>
+    + findAllByTypeOrderByCreatedAtDesc(String type) : List<Notification>
+    + findAllByStatusOrderByCreatedAtDesc(String status) : List<Notification>
+    + findAllByIdIn(Collection<Long> ids) : List<Notification>
+    + findVisibleToUserByStatusAudienceOrderByCreatedAtDesc(Long userId, String role, String status) : List<Notification>
+    + countByType(String type) : long
+    + deleteAllByIdIn(Collection<Long> ids) : int
+  }
+
+  interface NotificationReadRepository <<DAO>> {
+    + findAllByUserIdAndNotificationIdIn(Long userId, Collection<Long> notificationIds) : List<NotificationRead>
+    + existsByUserIdAndNotificationId(Long userId, Long notificationId) : boolean
+  }
+
+  interface MemberFeedbackRepository <<DAO>> {
+    + findAllByMemberIdOrderByCreatedAtDesc(Long memberId) : List<MemberFeedback>
+    + findAllByStatusInOrderByCreatedAtDesc(Collection<MemberFeedback.Status> statuses) : List<MemberFeedback>
+    + findAllByStatusOrderByCreatedAtDesc(MemberFeedback.Status status) : List<MemberFeedback>
+    + findAllByEscalatedAtIsNotNullOrderByCreatedAtDesc() : List<MemberFeedback>
+    + findAllByEscalatedAtIsNotNullAndStatusOrderByCreatedAtDesc(MemberFeedback.Status status) : List<MemberFeedback>
+    + countByStatus(MemberFeedback.Status status) : long
+  }
+
+  interface WorkoutRepository <<DAO>> {
+    + findByCode(String code) : Optional<WorkoutEntry>
+    + existsByLevelIgnoreCase(String level) : boolean
+  }
+
+  interface DailyPlanTemplateRepository <<DAO>> {
+    + findByCode(String code) : Optional<DailyPlanTemplate>
+  }
+
+  interface MemberProfileRepository <<DAO>> {
+    + findByUserId(Long userId) : Optional<MemberProfile>
+    + findByUser_Email(String email) : Optional<MemberProfile>
+    + countByFitnessLevel_Id(Long fitnessLevelId) : long
+    + findAllByUser_Role(UserRole role) : List<MemberProfile>
+  }
+
+  interface UserRepository <<DAO>> {
+    + findByEmail(String email) : Optional<User>
+    + existsByEmail(String email) : boolean
+    + countByEnabledAndBlocked(boolean enabled, boolean blocked) : long
+    + countByRole(UserRole role) : long
+  }
+}
+
+'==============================================================
+' ENTITY
+'==============================================================
+package "Entity - Schedule" as ENTSC {
+  class MemberSchedule <<Entity>> {
+    - id : Long <<PK>>
+    - user : User <<FK>>
+    - planMonth : LocalDate
+    - template : DailyPlanTemplate <<FK>>
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+    - entries : List<MemberScheduleEntry>
+  }
+
+  class MemberScheduleEntry <<Entity>> {
+    - id : Long <<PK>>
+    - schedule : MemberSchedule <<FK>>
+    - scheduleDate : LocalDate
+    - workout : WorkoutEntry <<FK>>
+    - orderInDay : int
+    - status : String
+  }
+}
+
+package "Entity - Tracking (raw SQL view)" as ENTST {
+  class WorkoutSession <<Raw Table>> {
+    - id : Long <<PK>>
+    - member_profile_id : Long
+    - workout_id : Long
+    - session_date : LocalDate
+    - active_seconds : int
+    - total_reps : int
+    - status : String
+  }
+
+  class MemberHealthMetric <<Raw Table>> {
+    - id : Long <<PK>>
+    - member_profile_id : Long
+    - weight_kg : BigDecimal
+    - height_cm : BigDecimal
+    - bmi : BigDecimal
+    - recorded_at : LocalDateTime
+  }
+
+  class DayStreakProjection <<Raw Query>> {
+    - memberProfileId : Long
+    - completedDates : List<LocalDate>
+    - currentStreak : int
+    - longestStreak : int
+    - activeDays : int
+  }
+}
+
+package "Entity - Leaderboard" as ENTLD {
+  class MemberWeeklyScore <<Entity>> {
+    - id : Long <<PK>>
+    - member : MemberProfile <<FK>>
+    - weekStart : LocalDate
+    - fitnessLevel : FitnessLevel <<FK>>
+    - sessionsScore : BigDecimal
+    - timeScore : BigDecimal
+    - accuracyScore : BigDecimal
+    - restDayBonus : BigDecimal
+    - streakBonus : BigDecimal
+    - totalScore : BigDecimal
+    - rank : Integer
+    - previousRank : Integer
+    - rankChange : Integer
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+}
+
+package "Entity - Notification & Feedback" as ENTNF {
+  class Notification <<Entity>> {
+    - id : Long <<PK>>
+    - title : String
+    - message : String
+    - type : String
+    - status : String
+    - createdBy : Long
+    - userId : Long
+    - targetAudience : String
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+
+  class NotificationRead <<Entity>> {
+    - id : Long <<PK>>
+    - userId : Long
+    - notificationId : Long
+    - readAt : LocalDateTime
+  }
+
+  class MemberFeedback <<Entity>> {
+    - id : Long <<PK>>
+    - memberId : Long
+    - title : String
+    - content : String
+    - category : Category
+    - status : Status
+    - resolutionNote : String
+    - handledBy : Long
+    - escalatedAt : LocalDateTime
+    - resolvedAt : LocalDateTime
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+}
+
+package "Entity - Shared" as ENTSH {
+  class User <<Entity>> {
+    - id : Long <<PK>>
+    - email : String <<UK>>
+    - fullName : String
+    - role : UserRole
+  }
+
+  class MemberProfile <<Entity>> {
+    - id : Long <<PK>>
+    - user : User <<FK, unique>>
+    - fitnessLevel : FitnessLevel <<FK>>
+    - streakCount : int
+    - longestStreak : int
+    - daysPerWeek : int
+  }
+
+  class FitnessLevel <<Entity>> {
+    - id : Long <<PK>>
+    - name : String <<UK>>
+    - scoreMin : int
+    - scoreMax : int
+  }
+
+  class WorkoutEntry <<Entity>> {
+    - id : Long <<PK>>
+    - code : String <<UK>>
+    - name : String
+    - type : String
+    - level : String
+    - daysPerWeek : int
+    - exercises : List<WorkoutExerciseItem>
+  }
+
+  class WorkoutExerciseItem <<Embeddable>> {
+    - exercise : Exercise <<FK, PK>>
+    - sets : int
+    - reps : Integer
+    - durationSeconds : Integer
+    - restSeconds : int
+  }
+
+  class Exercise <<Entity>> {
+    - id : Long <<PK>>
+    - code : String <<UK>>
+    - name : String
+    - type : String
+    - difficultyLevel : String
+  }
+
+  class DailyPlanTemplate <<Entity>> {
+    - id : Long <<PK>>
+    - code : String <<UK>>
+    - name : String
+    - level : String
+    - daysPerWeek : int
+    - active : boolean
+    - createdBy : User <<FK>>
+    - days : List<DailyPlanDay>
+  }
+
+  class DailyPlanDay <<Embeddable>> {
+    - dayNumber : int <<PK>>
+    - workout : WorkoutEntry <<FK>>
+  }
+}
+
+'==============================================================
+' DIRECTED ASSOCIATION - Controller -> Service -> DTO
+'==============================================================
+MemberScheduleController ..> MemberScheduleService : delegates
+MemberScheduleController ..> MemberScheduleDtos: consumes
+MemberTrackingController ..> MemberTrackingService : delegates
+MemberTrackingController ..> MemberTrackingDtos: consumes
+DayStreakController ..> DayStreakService : delegates
+DayStreakController ..> DayStreakDtos: consumes
+DashboardController ..> DashboardService : delegates
+LeaderboardController ..> WeeklyLeaderboardService : delegates
+MemberNotificationController ..> MemberNotificationService : delegates
+MemberNotificationController ..> MemberNotificationDto: consumes
+MemberFeedbackController ..> MemberFeedbackService : delegates
+MemberFeedbackController ..> MemberFeedbackDtos: consumes
+MemberScheduleService ..> MemberScheduleDtos: produces
+MemberTrackingService ..> MemberTrackingDtos: produces
+DayStreakService ..> DayStreakDtos: produces
+WeeklyLeaderboardService ..> MemberWeeklyScore : produces
+MemberNotificationService ..> MemberNotificationListDto: produces
+MemberFeedbackService ..> MemberFeedbackDtos: produces
+
+'==============================================================
+' DIRECTED ASSOCIATION - Service -> DAO
+'==============================================================
+MemberScheduleService ..> MemberScheduleRepository : manages
+MemberScheduleService ..> WorkoutRepository : reads
+MemberScheduleService ..> DailyPlanTemplateRepository : reads
+MemberScheduleService ..> MemberProfileRepository : reads
+MemberScheduleService ..> UserRepository : reads
+MemberTrackingService ..> MemberTrackingRepository : manages
+DayStreakService ..> DayStreakRepository : manages
+DashboardService ..> MemberTrackingRepository : queries workout sessions
+DashboardService ..> MuscleGroupStatsService : reads
+WeeklyLeaderboardService ..> MemberWeeklyScoreRepository : manages
+WeeklyLeaderboardService ..> MemberProfileRepository : reads
+WeeklyLeaderboardService ..> LeaderboardScoringRepository : computes
+MemberNotificationService ..> NotificationRepository : reads
+MemberNotificationService ..> NotificationReadRepository : manages
+MemberNotificationService ..> UserRepository : reads
+MemberFeedbackService ..> MemberFeedbackRepository : manages
+MemberFeedbackService ..> UserRepository : reads
+MemberFeedbackService ..> NotificationRepository : notifies
+
+'==============================================================
+
+MemberScheduleRepository ..|> JpaRepository : extends
+MemberWeeklyScoreRepository ..|> JpaRepository : extends
+NotificationRepository ..|> JpaRepository : extends
+NotificationReadRepository ..|> JpaRepository : extends
+MemberFeedbackRepository ..|> JpaRepository : extends
+WorkoutRepository ..|> JpaRepository : extends
+DailyPlanTemplateRepository ..|> JpaRepository : extends
+MemberProfileRepository ..|> JpaRepository : extends
+UserRepository ..|> JpaRepository : extends
+' ASSOCIATION - DAO manages Entity
+'==============================================================
+MemberScheduleRepository -- MemberSchedule
+MemberTrackingRepository ..> WorkoutSession : queries workout_sessions
+MemberTrackingRepository ..> MemberHealthMetric : queries member_body_metrics
+DayStreakRepository ..> WorkoutSession : queries workout_sessions
+DayStreakRepository ..> DayStreakProjection : computes streak projection
+MemberWeeklyScoreRepository -- MemberWeeklyScore
+LeaderboardScoringRepository ..> WorkoutSession : scores workout_sessions
+NotificationRepository -- Notification
+NotificationReadRepository -- NotificationRead
+MemberFeedbackRepository -- MemberFeedback
+WorkoutRepository -- WorkoutEntry
+DailyPlanTemplateRepository -- DailyPlanTemplate
+MemberProfileRepository -- MemberProfile
+UserRepository -- User
+
+'==============================================================
+' COMPOSITION - child cannot exist without the parent
+'==============================================================
+MemberSchedule "1" *-- "0..*" MemberScheduleEntry : contains
+WorkoutEntry "1" *-- "0..*" WorkoutExerciseItem : contains
+DailyPlanTemplate "1" *-- "0..*" DailyPlanDay : schedules
+
+'==============================================================
+' AGGREGATION - entity foreign key
+'==============================================================
+MemberScheduleEntry "0..*" o-- "1" MemberSchedule : belongs to
+MemberScheduleEntry "0..*" o-- "1" WorkoutEntry : trains
+MemberSchedule "0..*" o-- "1" User : owned by
+MemberSchedule "0..*" o-- "1" DailyPlanTemplate : follows
+MemberHealthMetric "0..*" ..> "1" MemberProfile : measured for member_profile_id
+DayStreakProjection "0..*" ..> "1" MemberProfile : computed for member_profile_id
+MemberWeeklyScore "0..*" o-- "1" MemberProfile : earned by
+MemberWeeklyScore "0..*" o-- "1" FitnessLevel : ranked in
+Notification "0..*" ..> "1" User : addressed to user_id
+NotificationRead "0..*" ..> "1" User : read by user_id
+NotificationRead "0..*" ..> "1" Notification : marks notification_id
+MemberFeedback "0..*" ..> "1" User : submitted by user_id
+MemberProfile "0..*" o-- "1" User : belongs to
+MemberProfile "0..*" o-- "1" FitnessLevel : current tier
+DailyPlanDay "0..*" o-- "1" WorkoutEntry : trains
+WorkoutExerciseItem "0..*" o-- "1" Exercise : references
+DailyPlanTemplate "0..*" o-- "1" User : created by
+
+@enduml

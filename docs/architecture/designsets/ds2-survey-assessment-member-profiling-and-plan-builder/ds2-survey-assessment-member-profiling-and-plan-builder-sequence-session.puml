@@ -1,0 +1,106 @@
+@startuml
+'==============================================================
+' DESIGN SET DS2 - Survey Assessment, Member Profiling and Plan Builder
+' Sequence: The member takes the onboarding survey
+'==============================================================
+skinparam shadowing false
+skinparam linetype ortho
+skinparam ArrowFontSize 9
+skinparam ArrowColor #333333
+skinparam defaultFontName Segoe UI
+skinparam defaultFontSize 10
+skinparam sequence {
+  ArrowColor #333333
+  LifeLineBorderColor #777777
+  ParticipantBorderColor #333333
+  ParticipantBackgroundColor #FFFFFF
+  ArrowFontSize 9
+}
+skinparam ParticipantPadding 12
+
+'===============================================================
+' Every layer is a rectangle with a single head at the top.
+' The life lines get shorter from the left to the right.
+'===============================================================
+hide footbox
+skinparam ParticipantBorderThickness 1.2
+title DS2 - Take the onboarding survey\n(Sequence Diagram)
+
+participant "Member" as Member
+participant "Survey Page\n(React)" as Page
+participant "SurveySessionController" as Ctl
+participant "SurveySessionService" as Svc
+participant "SurveyService" as SurveySvc
+participant "SurveyDefinitionLoader" as Loader
+participant "LevelAssessmentService" as LevelSvc
+participant "SurveySessionRepository" as SessRepo
+participant "AssessmentAnswerRepository" as AnsRepo
+participant "SurveyLevelResultRepository" as ResultRepo
+participant "MySQL\n(Database)" as DB
+
+== START THE SESSION ==
+
+Member -> Page : Open the onboarding survey
+Page -> Ctl : Get the definition of the survey
+Ctl -> Svc : Get the definition of the survey
+Svc -> SurveySvc : Find the active survey of the code
+SurveySvc -> Loader : Load the steps and the questions
+Loader --> SurveySvc : the survey definition
+Svc --> Ctl : the definition with its steps and questions
+Ctl --> Page : Show the first step of the survey
+
+Page -> Ctl : Start a survey session (survey code)
+Ctl -> Svc : Start a survey session
+Svc -> SessRepo : Create the session of the member
+SessRepo -> DB : run the query
+DB --> SessRepo : the matching rows
+SessRepo --> Svc : the new session (status IN_PROGRESS)
+Svc --> Ctl : SessionResponse(session)
+Ctl --> Page : Show the survey form
+
+== SAVE THE ANSWERS OF A STEP ==
+
+Member -> Page : Answer the questions of the step and continue
+Page -> Ctl : Save the answers of the step
+Ctl -> Svc : Save the answers of the step
+Svc -> AnsRepo : Save the answers of the member
+AnsRepo -> DB : run the query
+DB --> AnsRepo : the matching rows
+Svc --> Ctl : SessionResponse(session with the next step)
+Ctl --> Page : Show the next step of the survey
+
+== COMPLETE THE SESSION ==
+
+Member -> Page : Finish the last step and submit the survey
+Page -> Ctl : Complete the survey session
+Ctl -> Svc : Complete the survey session
+Svc -> LevelSvc : Assess the fitness level from the answers
+LevelSvc --> Svc : the assessed level
+Svc -> SessRepo : Mark the session as COMPLETED
+SessRepo -> DB : run the query
+DB --> SessRepo : the matching rows
+Svc -> ResultRepo : Save the survey result of the member
+ResultRepo -> DB : run the query
+DB --> ResultRepo : the matching rows
+Svc --> Ctl : SessionResponse(session)
+Ctl --> Page : Show the result and the fitness level
+
+== READ THE RESULT AND START THE PLAN ==
+
+Member -> Page : Open the result of the survey
+Page -> Ctl : Get the result of the session
+Ctl -> Svc : Get the result of the session
+Svc -> ResultRepo : Load the survey result of the member
+ResultRepo -> DB : run the query
+DB --> ResultRepo : the matching rows
+ResultRepo --> Svc : the survey result
+Svc --> Ctl : SurveyResultResponse(result, level, recommended plan)
+Ctl --> Page : Show the result and the recommended plan
+
+Member -> Page : Start the recommended daily plan
+Page -> Ctl : Start the plan of the survey session
+Ctl -> Svc : Start the plan of the survey session
+Svc --> Ctl : PlanStartResponse(plan)
+Ctl --> Page : Show the plan of the member
+
+@enduml

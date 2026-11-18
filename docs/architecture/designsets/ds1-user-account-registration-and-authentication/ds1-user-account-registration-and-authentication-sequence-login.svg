@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="1132px" preserveAspectRatio="none" style="width:1511px;height:1132px;background:#FFFFFF;" version="1.1" viewBox="0 0 1511 1132" width="1511px" zoomAndPan="magnify"><defs/>
+<text fill="#000000" font-family="Segoe UI" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="84.8818" x="709.2554" y="30.1074">DS1 - Sign in</text>
+<text fill="#000000" font-family="Segoe UI" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="133.5264" x="684.9331" y="48.7285">(Sequence Diagram)</text>
+<rect fill="none" height="316.5801" style="stroke:#000000;stroke-width:1.5;" width="996.4009" x="296.6499" y="407.8516"/>
+<rect fill="none" height="328.8711" style="stroke:#000000;stroke-width:1.5;" width="1404.3418" x="10" y="779.7324"/>
+<rect fill="none" height="123.8145" style="stroke:#000000;stroke-width:1.5;" width="383.7319" x="20" y="895.2461"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="130" x2="130" y1="104.8438" y2="1109"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="349.6499" x2="349.6499" y1="104.8438" y2="1044"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="560.9282" x2="560.9282" y1="104.8438" y2="980"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="922.8062" x2="922.8062" y1="104.8438" y2="915"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1136.79" x2="1136.79" y1="104.8438" y2="850"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1240.7871" x2="1240.7871" y1="104.8438" y2="786"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1348.0508" x2="1348.0508" y1="104.8438" y2="721"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1456.3418" x2="1456.3418" y1="104.8438" y2="657"/>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="176.7148" x="42" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="162.7148" x="49" y="94.334">Member / Content Manager / Admin</text>
+<rect fill="#FFFFFF" height="40.6016" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="63.082" x="318.6499" y="63.2422"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="49.082" x="325.6499" y="81.0332">Login Page</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="30.3418" x="335.02" y="94.334">(React)</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="79.1416" x="521.9282" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="65.1416" x="528.9282" y="94.334">AuthController</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="66.2363" x="889.8062" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="52.2363" x="896.8062" y="94.334">AuthService</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="80.9971" x="1096.79" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="66.9971" x="1103.79" y="94.334">UserRepository</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="59.2637" x="1211.7871" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="45.2637" x="1218.7871" y="94.334">JwtService</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="87.291" x="1305.0508" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="73.291" x="1312.0508" y="94.334">SurveyController</text>
+<rect fill="#FFFFFF" height="40.6016" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="61.0508" x="1426.3418" y="63.2422"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="31.377" x="1441.1787" y="81.0332">MySQL</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="47.0508" x="1433.3418" y="94.334">(Database)</text>
+<rect fill="#EEEEEE" height="3" style="stroke:#EEEEEE;stroke-width:1.0;" width="1504.3926" x="0" y="134.4941"/>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1504.3926" y1="134.4941" y2="134.4941"/>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1504.3926" y1="137.4941" y2="137.4941"/>
+<rect fill="#EEEEEE" height="21.3008" style="stroke:#000000;stroke-width:2.0;" width="54.3711" x="725.0107" y="124.8438"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="37.6123" x="731.0107" y="139.6348">SIGN IN</text>
+<polyline points="338.1909,182.0859 348.1909,186.0859 338.1909,190.0859" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="130.3574" x2="344.1909" y1="186.0859" y2="186.0859"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="87.1523" x="137.3574" y="169.8564">Fill in the sign-in form</text>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="68.959" x="137.3574" y="181.8271">(email, password)</text>
+<line style="stroke:#333333;stroke-width:1.0;" x1="350.1909" x2="392.1909" y1="224.0273" y2="224.0273"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="392.1909" x2="392.1909" y1="224.0273" y2="237.0273"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="351.1909" x2="392.1909" y1="237.0273" y2="237.0273"/>
+<polyline points="361.1909,233.0273 351.1909,237.0273 361.1909,241.0273" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="83.874" x="357.1909" y="207.7979">Read the form values</text>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="117.936" x="357.1909" y="219.7686">(email trimmed to lower case)</text>
+<polyline points="549.499,258.998 559.499,262.998 549.499,266.998" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="350.1909" x2="555.499" y1="262.998" y2="262.998"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="61.6201" x="357.1909" y="258.7393">Sign in the user</text>
+<polyline points="910.9243,284.9688 920.9243,288.9688 910.9243,292.9688" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="561.499" x2="916.9243" y1="288.9688" y2="288.9688"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="61.6201" x="568.499" y="284.71">Sign in the user</text>
+<polyline points="1125.2886,310.9395 1135.2886,314.9395 1125.2886,318.9395" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="922.9243" x2="1131.2886" y1="314.9395" y2="314.9395"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="150.3809" x="929.9243" y="310.6807">Look up the account by email address</text>
+<polyline points="1444.8672,336.9102 1454.8672,340.9102 1444.8672,344.9102" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1137.2886" x2="1450.8672" y1="340.9102" y2="340.9102"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="53.6792" x="1144.2886" y="336.6514">run the query</text>
+<polyline points="1148.2886,362.8809 1138.2886,366.8809 1148.2886,370.8809" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1142.2886" x2="1455.8672" y1="366.8809" y2="366.8809"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="73.7095" x="1154.2886" y="362.6221">the matching rows</text>
+<polyline points="933.9243,388.8516 923.9243,392.8516 933.9243,396.8516" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="927.9243" x2="1136.2886" y1="392.8516" y2="392.8516"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="64.582" x="939.9243" y="388.5928">Optional&lt;User&gt;</text>
+<path d="M296.6499,407.8516 L353.7642,407.8516 L353.7642,413.1523 L343.7642,423.1523 L296.6499,423.1523 L296.6499,407.8516 " fill="#EEEEEE" style="stroke:#000000;stroke-width:1.5;"/>
+<rect fill="none" height="316.5801" style="stroke:#000000;stroke-width:1.5;" width="996.4009" x="296.6499" y="407.8516"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="12.1143" x="311.6499" y="419.6426">alt</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="183.9453" x="368.7642" y="420.6426">[the account or the password is wrong]</text>
+<polyline points="572.499,449.0938 562.499,453.0938 572.499,457.0938" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="566.499" x2="921.9243" y1="453.0938" y2="453.0938"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="69.2271" x="578.499" y="436.8643">Reject the sign-in</text>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="208.5425" x="578.499" y="448.835">(401 UNAUTHORIZED "Incorrect email or password")</text>
+<polyline points="361.1909,475.0645 351.1909,479.0645 361.1909,483.0645" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="355.1909" x2="560.499" y1="479.0645" y2="479.0645"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="145.5293" x="367.1909" y="474.8057">Show the error message on the form</text>
+<line style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="296.6499" x2="1293.0508" y1="488.0645" y2="488.0645"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="239.2822" x="301.6499" y="498.8555">[the account is blocked or the email is not verified]</text>
+<polyline points="572.499,528.3066 562.499,532.3066 572.499,536.3066" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="566.499" x2="921.9243" y1="532.3066" y2="532.3066"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="69.2271" x="578.499" y="516.0771">Reject the sign-in</text>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="337.4253" x="578.499" y="528.0479">(403 FORBIDDEN "Your account has been blocked" or "Account email is not verified")</text>
+<polyline points="361.1909,554.2773 351.1909,558.2773 361.1909,562.2773" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="355.1909" x2="560.499" y1="558.2773" y2="558.2773"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="145.5293" x="367.1909" y="554.0186">Show the error message on the form</text>
+<line style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="296.6499" x2="1293.0508" y1="567.2773" y2="567.2773"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="124.4092" x="301.6499" y="578.0684">[the account may be used]</text>
+<line style="stroke:#333333;stroke-width:1.0;" x1="922.9243" x2="964.9243" y1="599.5488" y2="599.5488"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="964.9243" x2="964.9243" y1="599.5488" y2="612.5488"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="923.9243" x2="964.9243" y1="612.5488" y2="612.5488"/>
+<polyline points="933.9243,608.5488 923.9243,612.5488 933.9243,616.5488" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="200.3643" x="929.9243" y="595.29">Compare the typed password with the stored hash</text>
+<polyline points="1229.4189,634.5195 1239.4189,638.5195 1229.4189,642.5195" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="922.9243" x2="1235.4189" y1="638.5195" y2="638.5195"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="163.9204" x="929.9243" y="634.2607">Create a signed access token for this user</text>
+<polyline points="933.9243,660.4902 923.9243,664.4902 933.9243,668.4902" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="927.9243" x2="1240.4189" y1="664.4902" y2="664.4902"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="50.2998" x="939.9243" y="660.2314">access token</text>
+<polyline points="572.499,686.4609 562.499,690.4609 572.499,694.4609" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="566.499" x2="921.9243" y1="690.4609" y2="690.4609"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="263.0742" x="578.499" y="686.2021">AuthResponse(token, email, fullName, role, mustChangePassword)</text>
+<polyline points="361.1909,712.4316 351.1909,716.4316 361.1909,720.4316" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="355.1909" x2="560.499" y1="716.4316" y2="716.4316"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="187.3081" x="367.1909" y="712.1729">Store the token and the account in the browser</text>
+<rect fill="#EEEEEE" height="3" style="stroke:#EEEEEE;stroke-width:1.0;" width="1504.3926" x="0" y="751.082"/>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1504.3926" y1="751.082" y2="751.082"/>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1504.3926" y1="754.082" y2="754.082"/>
+<rect fill="#EEEEEE" height="21.3008" style="stroke:#000000;stroke-width:2.0;" width="244.4443" x="629.9741" y="741.4316"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="227.6855" x="635.9741" y="756.2227">THE ACCOUNT IS OPENED FOR THE RIGHT ROLE</text>
+<path d="M10,779.7324 L67.1143,779.7324 L67.1143,785.0332 L57.1143,795.0332 L10,795.0332 L10,779.7324 " fill="#EEEEEE" style="stroke:#000000;stroke-width:1.5;"/>
+<rect fill="none" height="328.8711" style="stroke:#000000;stroke-width:1.5;" width="1404.3418" x="10" y="779.7324"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="12.1143" x="25" y="791.5234">alt</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="206.9775" x="82.1143" y="792.5234">[the account still uses the default password]</text>
+<polyline points="141.3574,809.0039 131.3574,813.0039 141.3574,817.0039" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="135.3574" x2="349.1909" y1="813.0039" y2="813.0039"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="175.5615" x="147.3574" y="808.7451">Send the user to the change-password page</text>
+<line style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="10" x2="1414.3418" y1="822.0039" y2="822.0039"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="123.1787" x="15" y="832.7949">[the account is a Member]</text>
+<polyline points="1336.6963,850.2754 1346.6963,854.2754 1336.6963,858.2754" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="350.1909" x2="1342.6963" y1="854.2754" y2="854.2754"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="212.7217" x="357.1909" y="850.0166">Ask for the onboarding survey definition and sessions</text>
+<polyline points="361.1909,876.2461 351.1909,880.2461 361.1909,884.2461" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="355.1909" x2="1347.6963" y1="880.2461" y2="880.2461"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="158.6865" x="367.1909" y="875.9873">the survey definition and the session list</text>
+<path d="M20,895.2461 L77.1143,895.2461 L77.1143,900.5469 L67.1143,910.5469 L20,910.5469 L20,895.2461 " fill="#EEEEEE" style="stroke:#000000;stroke-width:1.5;"/>
+<rect fill="none" height="123.8145" style="stroke:#000000;stroke-width:1.5;" width="383.7319" x="20" y="895.2461"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="12.1143" x="35" y="907.0371">alt</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="187.1094" x="92.1143" y="908.0371">[the onboarding survey cannot be read]</text>
+<polyline points="141.3574,924.5176 131.3574,928.5176 141.3574,932.5176" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="135.3574" x2="349.1909" y1="928.5176" y2="928.5176"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="163.9468" x="147.3574" y="924.2588">Send the user to the member home page</text>
+<line style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="20" x2="403.7319" y1="937.5176" y2="937.5176"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="317.3633" x="25" y="948.3086">[the member has no session yet or the session is still IN_PROGRESS]</text>
+<polyline points="141.3574,965.7891 131.3574,969.7891 141.3574,973.7891" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="135.3574" x2="349.1909" y1="969.7891" y2="969.7891"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="173.9575" x="147.3574" y="965.5303">Send the member to the onboarding survey</text>
+<line style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="20" x2="403.7319" y1="978.7891" y2="978.7891"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="237.1094" x="25" y="989.5801">[the member has finished the survey or skipped it]</text>
+<polyline points="141.3574,1007.0605 131.3574,1011.0605 141.3574,1015.0605" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="135.3574" x2="349.1909" y1="1011.0605" y2="1011.0605"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="180.5361" x="147.3574" y="1006.8018">Send the member to the member home page</text>
+<line style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="10" x2="1414.3418" y1="1027.0605" y2="1027.0605"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="165.8154" x="15" y="1037.8516">[the account is a Content Manager]</text>
+<polyline points="141.3574,1055.332 131.3574,1059.332 141.3574,1063.332" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="135.3574" x2="349.1909" y1="1059.332" y2="1059.332"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="195.8335" x="147.3574" y="1055.0732">Send the user to the content manager dashboard</text>
+<line style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="10" x2="1414.3418" y1="1068.332" y2="1068.332"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="120.7715" x="15" y="1079.123">[the account is an Admin]</text>
+<polyline points="141.3574,1096.6035 131.3574,1100.6035 141.3574,1104.6035" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="135.3574" x2="349.1909" y1="1100.6035" y2="1100.6035"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="152.71" x="147.3574" y="1096.3447">Send the user to the admin dashboard</text></svg>

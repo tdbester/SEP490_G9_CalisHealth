@@ -1,0 +1,1239 @@
+@startuml
+left to right direction
+'==============================================================
+' DESIGN SET DS2 - Survey Assessment, Member Profiling & Plan Builder
+' Class Diagram: Controller -> Service -> DTO -> DAO -> Entity
+'
+' Scope: onboarding survey definition and sessions, level assessment,
+'        member profile and fitness profiling, training plan templates.
+'
+' UML notation - exactly the six symbols of the project reference:
+'   --      Association            solid line, no head
+'   --|>    Generalization          solid line, hollow triangle
+'   ..|>    Realization             dashed line, hollow triangle
+'   ..>     Dependency              dashed line, OPEN arrow head
+'   o--     Aggregation             solid line, hollow diamond
+'   *--     Composition             solid line, filled diamond
+'==============================================================
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam arrowThickness 1.2
+skinparam defaultLineThickness 1.2
+skinparam ArrowFontSize 9
+skinparam ArrowColor #333333
+skinparam nodesep 30
+skinparam ranksep 45
+skinparam defaultFontName Segoe UI
+skinparam defaultFontSize 10
+skinparam class {
+  BorderThickness 1.2
+  BackgroundColor #FFFFFF
+  FontColor #000000
+  AttributeFontColor #1F3864
+  MethodFontColor #7B3F00
+}
+skinparam package {
+  BorderThickness 1.2
+  FontStyle bold
+  FontSize 11
+  BackColor #E4E4E4
+}
+skinparam stereotype {
+  FontSize 8
+  FontStyle italic
+}
+
+title DESIGN SET DS2 - Survey Assessment, Member Profiling & Plan Builder\n(Class Diagram)
+
+'==============================================================
+' CONTROLLER
+'==============================================================
+package "Controller" as CTL {
+  class SurveyController <<Controller>> {
+    - surveys : SurveyService
+    --
+    + definition(String surveyCode, Integer version) : SurveyDefinitionResponse
+  }
+
+  class SurveySessionController <<Controller>> {
+    - sessions : SurveySessionService
+    --
+    + start(Authentication a, StartSessionRequest r) : ResponseEntity<SessionResponse>
+    + list(Authentication a, String surveyCode) : List<SessionSummaryResponse>
+    + get(Authentication a, Long sessionId) : SessionResponse
+    + saveAnswers(Authentication a, Long sessionId, String stepCode, SaveAnswersRequest r) : SessionResponse
+    + complete(Authentication a, Long sessionId) : SessionResponse
+    + result(Authentication a, Long sessionId) : SurveyResultResponse
+    + startPlan(Authentication a, Long sessionId) : PlanStartResponse
+    + reopen(Authentication a, Long sessionId) : SessionResponse
+    + skip(Authentication a, Long sessionId) : SessionResponse
+    + resume(Authentication a, Long sessionId) : SessionResponse
+  }
+
+  class ContentSurveyStepController <<Controller>> {
+    - steps : SurveyStepManagementService
+    --
+    + list(String surveyCode, Integer version, String search, SurveyStep.Status status) : StepListResponse
+    + create(Authentication a, String surveyCode, Integer version, CreateStepRequest r) : ResponseEntity<StepDetailResponse>
+    + reorder(String surveyCode, Integer version, ReorderStepsRequest r) : StepListResponse
+    + get(String surveyCode, Long stepId, Integer version) : StepDetailResponse
+    + update(Authentication a, String surveyCode, Long stepId, Integer version, UpdateStepRequest r) : StepDetailResponse
+    + changeStatus(Authentication a, String surveyCode, Long stepId, Integer version, ChangeStepStatusRequest r) : StepDetailResponse
+    + delete(String surveyCode, Long stepId, Integer version) : ResponseEntity<Void>
+    + preview(String surveyCode, Long stepId, Integer version) : StepPreviewResponse
+    + previewCheck(String surveyCode, Long stepId, Integer version, PreviewCheckRequest r) : PreviewCheckResponse
+    + availableQuestionsForNewStep(String surveyCode, Integer version, String search) : List<AvailableQuestionResponse>
+    + availableQuestions(String surveyCode, Long stepId, Integer version, String search) : List<AvailableQuestionResponse>
+    + getResultConfig(String surveyCode, Long stepId, Integer version) : ResultConfigResponse
+    + updateResultConfig(Authentication a, String surveyCode, Long stepId, Integer version, UpdateResultConfigRequest r) : ResultConfigResponse
+  }
+
+  class DailyPlanTemplateController <<Controller>> {
+    - templates : DailyPlanTemplateService
+    --
+    + list() : List<DailyPlanTemplateResponse>
+    + get(String code) : DailyPlanTemplateResponse
+    + create(DailyPlanTemplateRequest request, Authentication authentication) : DailyPlanTemplateResponse
+    + update(String code, DailyPlanTemplateRequest request) : DailyPlanTemplateResponse
+    + updateStatus(String code, DailyPlanStatusRequest request) : DailyPlanTemplateResponse
+    + delete(String code) : void
+  }
+
+  class ProfileController <<Controller>> {
+    - service : ProfileService
+    --
+    + get(Authentication a) : ProfileResponse
+    + update(Authentication a, UpdateProfileRequest r) : ProfileResponse
+    + uploadAvatar(Authentication a, MultipartFile file) : ProfileResponse
+    + removeAvatar(Authentication a) : ProfileResponse
+    + changePassword(Authentication a, ChangeOwnPasswordRequest r) : ProfileResponse
+  }
+}
+
+'==============================================================
+' SERVICE
+'==============================================================
+package "Service" as SVC {
+  class SurveyService <<Service>> {
+    - surveys : SurveyRepository
+    - steps : SurveyStepRepository
+    - loader : SurveyDefinitionLoader
+    --
+    + getDefinition(String surveyCode, Integer version) : SurveyDefinitionResponse
+    + activeResultStep(Survey survey) : ResultStepResponse
+    + findActiveSurvey(String surveyCode) : Survey
+  }
+
+  class SurveySessionService <<Service>> {
+    - sessions : SurveySessionRepository
+    - answers : AssessmentAnswerRepository
+    - questions : AssessmentQuestionRepository
+    - users : UserRepository
+    - surveys : SurveyService
+    - loader : SurveyDefinitionLoader
+    - registry : QuestionTypeRegistry
+    - levelBenchmarks : LevelBenchmarkService
+    - levels : LevelAssessmentService
+    --
+    + start(String email, String surveyCode) : StartResult
+    + get(String email, Long sessionId) : SessionResponse
+    + list(String email, String surveyCode) : List<SessionSummaryResponse>
+    + saveStepAnswers(String email, Long sessionId, String stepCode, SaveAnswersRequest request) : SessionResponse
+    + complete(String email, Long sessionId) : SessionResponse
+    + result(String email, Long sessionId) : SurveyResultResponse
+    + startPlan(String email, Long sessionId) : PlanStartResponse
+    + reopen(String email, Long sessionId) : SessionResponse
+    + skip(String email, Long sessionId) : SessionResponse
+    + resume(String email, Long sessionId) : SessionResponse
+  }
+
+  class SurveyStepManagementService <<Service>> {
+    - surveys : SurveyRepository
+    - steps : SurveyStepRepository
+    - stepQuestions : SurveyStepQuestionRepository
+    - questions : AssessmentQuestionRepository
+    - options : AssessmentOptionRepository
+    - answers : AssessmentAnswerRepository
+    - fitnessLevels : FitnessLevelRepository
+    - users : UserRepository
+    - loader : SurveyDefinitionLoader
+    - registry : QuestionTypeRegistry
+    - questionWriter : StepQuestionWriter
+    --
+    + list(String surveyCode, Integer version, String search, SurveyStep.Status status) : StepListResponse
+    + get(String surveyCode, Integer version, Long stepId) : StepDetailResponse
+    + preview(String surveyCode, Integer version, Long stepId) : StepPreviewResponse
+    + previewCheck(String surveyCode, Integer version, Long stepId, PreviewCheckRequest request) : PreviewCheckResponse
+    + availableQuestions(String surveyCode, Integer version, Long stepId, String search) : List<AvailableQuestionResponse>
+    + getResultConfig(String surveyCode, Integer version, Long stepId) : ResultConfigResponse
+    + create(String email, String surveyCode, Integer version, CreateStepRequest request) : StepDetailResponse
+    + update(String email, String surveyCode, Integer version, Long stepId, UpdateStepRequest request) : StepDetailResponse
+    + changeStatus(String email, String surveyCode, Integer version, Long stepId, ChangeStepStatusRequest request) : StepDetailResponse
+    + reorder(String surveyCode, Integer version, ReorderStepsRequest request) : StepListResponse
+    + delete(String surveyCode, Integer version, Long stepId) : void
+    + updateResultConfig(String email, String surveyCode, Integer version, Long stepId, UpdateResultConfigRequest request) : ResultConfigResponse
+  }
+
+  class LevelAssessmentService <<Service>> {
+    - ruleSets : LevelRuleSetRepository
+    - loader : LevelRuleSetLoader
+    - results : SurveyLevelResultRepository
+    - fitnessLevels : FitnessLevelRepository
+    - profiles : MemberProfileRepository
+    - surveys : SurveyService
+    - trackingRepository : MemberTrackingRepository
+    - benchmarks : LevelBenchmarkService
+    - plans : RecommendedPlanService
+    - fitnessLevelsService : MemberFitnessLevelService
+    --
+    + find(SurveySession session) : Optional<LevelAssessment>
+    + activatePlan(Long userId, LevelAssessment assessment) : void
+    + clearResult(SurveySession session) : void
+    + assess(SurveySession session, SurveyDefinition survey, Map<String, JsonNode> answers) : LevelAssessment
+  }
+
+  class LevelBenchmarkService <<Service>> {
+    - criteria : BenchmarkCriterionRepository
+    - assessmentQuestions : AssessmentQuestionRepository
+    - fitnessLevels : FitnessLevelRepository
+    - exercises : ExerciseRepository
+    - users : UserRepository
+    - memberProfiles : MemberProfileRepository
+    - workouts : WorkoutRepository
+    - surveySync : BenchmarkSurveySync
+    - fitnessLevelsService : MemberFitnessLevelService
+    --
+    + getConfiguration() : BenchmarkConfiguration
+    + updateConfiguration(UpdateBenchmarkConfiguration request, String email) : BenchmarkConfiguration
+    + deleteLevel(Long id, String email) : BenchmarkConfiguration
+    + updateLevelStatus(String levelName, String status, String email) : BenchmarkConfiguration
+    + createLevel(CreateLevelRequest request, String email) : BenchmarkConfiguration
+    + benchmarkSlots() : List<String>
+    + assessFromOnboarding(Map<String, Integer> valuesBySlot) : Optional<BenchmarkAssessment>
+    + assignLevelFromOnboarding(Long userId, Map<String, Integer> valuesBySlot) : Optional<String>
+  }
+
+  class BenchmarkSurveySync <<Service>> {
+    - surveys : SurveyRepository
+    - steps : SurveyStepRepository
+    - stepQuestions : SurveyStepQuestionRepository
+    - questions : AssessmentQuestionRepository
+    - answers : AssessmentAnswerRepository
+    --
+    + sync(List<BenchmarkExercise> configured, Collection<String> removedSlots, User actor) : void
+  }
+
+  class RecommendedPlanService <<Service>> {
+    - templates : DailyPlanTemplateRepository
+    --
+    + build(FitnessLevel level, Integer desiredDaysPerWeek, ResultConfig config) : PlanResponse
+  }
+
+  class DailyPlanTemplateService <<Service>> {
+    - templates : DailyPlanTemplateRepository
+    - workouts : WorkoutRepository
+    - fitnessLevels : FitnessLevelRepository
+    - users : UserRepository
+    --
+    + findAll() : List<DailyPlanTemplateResponse>
+    + findByCode(String code) : DailyPlanTemplateResponse
+    + create(DailyPlanTemplateRequest request, String creatorEmail) : DailyPlanTemplateResponse
+    + update(String code, DailyPlanTemplateRequest request) : DailyPlanTemplateResponse
+    + updateStatus(String code, boolean active) : DailyPlanTemplateResponse
+    + delete(String code) : void
+  }
+
+  class SurveyDefinitionLoader <<Service>> {
+    - steps : SurveyStepRepository
+    - stepQuestions : SurveyStepQuestionRepository
+    - options : AssessmentOptionRepository
+    - validator : SurveyConfigValidator
+    --
+    + load(Survey survey) : SurveyDefinition
+    + findProblems(Survey survey) : List<String>
+    + loadUnvalidated(Survey survey) : SurveyDefinition
+  }
+
+  class SurveyConfigValidator <<Service>> {
+    - registry : QuestionTypeRegistry
+    --
+    + validate(SurveyDefinition survey) : List<String>
+  }
+
+  class StepQuestionWriter <<Service>> {
+    - questions : AssessmentQuestionRepository
+    - options : AssessmentOptionRepository
+    - answers : AssessmentAnswerRepository
+    - levelCriteria : LevelRuleCriterionRepository
+    - registry : QuestionTypeRegistry
+    --
+    + locks(Collection<AssessmentQuestion> existing) : Locks
+    + activeOptions(Collection<AssessmentQuestion> existing) : Map<Long, List<OptionResponse>>
+    + check(String stepCode, int position, AssessmentQuestion existing, QuestionContentInput content, Locks locks) : List<ErrorItem>
+    + write(AssessmentQuestion existing, QuestionContentInput content, boolean required, Locks locks, Set<String> reservedCodes) : AssessmentQuestion
+  }
+
+  class LevelRuleSetLoader <<Service>> {
+    - criteria : LevelRuleCriterionRepository
+    - outcomes : LevelRuleOutcomeRepository
+    --
+    + load(LevelRuleSet ruleSet, SurveyDefinition survey, List<String> problems) : LevelRuleSetDefinition
+  }
+
+  class QuestionTypeRegistry <<Service>> {
+    - handlers : Map<String, QuestionTypeHandler>
+    --
+    + find(String type) : Optional<QuestionTypeHandler>
+    + supports(String type) : boolean
+    + supportedTypes() : Set<String>
+  }
+
+  interface QuestionTypeHandler <<Interface>> {
+    + type() : String
+    + validateConfig(QuestionDefinition question) : List<String>
+    + check(QuestionDefinition question, JsonNode value) : AnswerCheck
+  }
+
+  abstract class AbstractQuestionTypeHandler {
+    # ruleKeys() : Set<String>
+    # validateRules(QuestionDefinition question, List<String> problems) : void
+    # validateConfig(QuestionDefinition question) : List<String>
+  }
+
+  abstract class AbstractTextQuestionType {
+    # defaultMaxLength() : int
+    # ruleKeys() : Set<String>
+    # validateRules(QuestionDefinition question, List<String> problems) : void
+    # check(QuestionDefinition question, JsonNode value) : AnswerCheck
+  }
+
+  class NumberQuestionType {
+    + type() : String
+    # ruleKeys() : Set<String>
+    # validateRules(QuestionDefinition question, List<String> problems) : void
+    # check(QuestionDefinition question, JsonNode value) : AnswerCheck
+  }
+
+  class BooleanQuestionType {
+    + type() : String
+    # ruleKeys() : Set<String>
+    # check(QuestionDefinition question, JsonNode value) : AnswerCheck
+  }
+
+  class SingleSelectQuestionType {
+    + type() : String
+    # ruleKeys() : Set<String>
+    # validateRules(QuestionDefinition question, List<String> problems) : void
+    # check(QuestionDefinition question, JsonNode value) : AnswerCheck
+  }
+
+  class MultipleSelectQuestionType {
+    + type() : String
+    # ruleKeys() : Set<String>
+    # validateRules(QuestionDefinition question, List<String> problems) : void
+    # check(QuestionDefinition question, JsonNode value) : AnswerCheck
+  }
+
+  class TextQuestionType {
+    + type() : String
+    # defaultMaxLength() : int
+  }
+
+  class TextareaQuestionType {
+    + type() : String
+    # defaultMaxLength() : int
+  }
+
+  class ProfileService <<Service>> {
+    - users : UserRepository
+    - memberProfiles : MemberProfileRepository
+    - fitnessLevels : FitnessLevelRepository
+    - answers : AssessmentAnswerRepository
+    - avatars : ProfileAvatarStorageService
+    - registry : MediaRegistryService
+    - encoder : PasswordEncoder
+    - activity : UserActivityRepository
+    - fitnessLevelsService : MemberFitnessLevelService
+    --
+    + get(String email) : ProfileResponse
+    + update(String email, UpdateProfileRequest r) : ProfileResponse
+    + updateAvatar(String email, MultipartFile file) : ProfileResponse
+    + removeAvatar(String email) : ProfileResponse
+    + changePassword(String email, ChangeOwnPasswordRequest r) : ProfileResponse
+    + normaliseGender(String raw) : String
+  }
+
+  class MemberFitnessLevelService <<Service>> {
+    - memberProfiles : MemberProfileRepository
+    - events : ApplicationEventPublisher
+    --
+    + changeLevel(MemberProfile profile, FitnessLevel level) : void
+  }
+
+  class ProfileAvatarStorageService <<Service>> {
+    - storageDirectory : Path
+    - cloudinary : Cloudinary
+    - cloudName : String
+    - folders : CloudinaryFolderService
+    - optimization : CloudinaryOptimizationService
+    --
+    + getStorageDirectory() : Path
+    + sizeOf(String avatarUrl) : long
+    + resolve(String avatarUrl) : Optional<Path>
+    + store(MultipartFile file) : String
+    + delete(String avatarUrl) : void
+  }
+
+  class MediaRegistryService <<Service>> {
+    - media : MediaFileRepository
+    - settingsRepository : StorageSettingsRepository
+    - exercises : ExerciseRepository
+    - users : UserRepository
+    - cloudinary : CloudinaryUsageService
+    --
+    + settings() : StorageSettings
+    + checkUpload(String category, String extension, long sizeBytes, String uploaderEmail) : User
+    + findSameContent(String contentHash, String category) : Optional<MediaFile>
+    + reuse(Long mediaId) : String
+    + registerAvatar(String url, String originalName, long sizeBytes, User owner) : void
+    + purgeAvatar(String url) : void
+    + release(String url, String reason) : void
+    + markRejected(Collection<String> urls, String reason) : void
+    + markActive(Collection<String> urls) : void
+    + referenceState(String url) : String
+    + applyReferenceState(MediaFile file, String state, String orphanReason, LocalDateTime now) : void
+    + activate(MediaFile file) : void
+  }
+
+  class CloudinaryUsageService <<Service>> {
+    - cloudinary : Cloudinary
+    - enabled : boolean
+    - cloudName : String
+    --
+    + percentOf(long used, long limit) : double
+    + storagePercent() : double
+    + bandwidthPercent() : double
+    + planPercent() : double
+    + creditsLeft() : Optional<BigDecimal>
+    + isEnabled() : boolean
+    + cloudName() : String
+    + consoleLinks() : ConsoleLinks
+    + lastError() : String
+    + usage() : Optional<Usage>
+    + isReachable() : boolean
+  }
+
+  class CloudinaryFolderService <<Service>> {
+    - root : String
+    --
+    + root() : String
+    + of(String subFolder) : String
+    + exerciseDemos() : String
+    + exerciseAnatomy() : String
+    + profileAvatars() : String
+    + memberExercises() : String
+    + trash() : String
+    + forCategory(String category) : String
+    + foldersByCategory() : Map<String, String>
+    + mediaFolders() : Map<String, String>
+  }
+
+  class CloudinaryOptimizationService <<Service>> {
+    - enabled : boolean
+    - imageMaxWidth : int
+    - videoMaxWidth : int
+    - imageQuality : String
+    - videoQuality : String
+    - imageFormat : String
+    - videoFormat : String
+    --
+    + imageMaxWidth() : int
+    + videoMaxWidth() : int
+    + enabled() : boolean
+    + imageTransformation() : String
+    + videoTransformation() : String
+    + transformationFor(boolean video) : String
+    + formatFor(boolean video) : String
+    + deliveryTransformation() : String
+  }
+}
+
+'==============================================================
+' DTO
+'==============================================================
+package "DTO" as DTO {
+  class SurveyDtos <<DTO>> {
+    + SurveyDefinitionResponse
+    + ResultStepResponse
+    + ResultConfig
+    + StepResponse
+    + QuestionResponse
+    + OptionResponse
+    + StartSessionRequest
+    + SaveAnswersRequest
+    + SessionResponse
+    + SessionStepResponse
+    + SessionQuestionResponse
+    + SessionSummaryResponse
+    + PlanStartResponse
+    + SurveyResultResponse
+    + LevelAssessment
+    + LevelItem
+    + CriterionResultItem
+    + PlanResponse
+    + PlanDayItem
+    + PlanExerciseItem
+    + Recommendation
+    + SessionTemplate
+  }
+
+  class SurveyStepManagementDtos <<DTO>> {
+    + CreateStepRequest
+    + UpdateStepRequest
+    + StepQuestionInput
+    + QuestionContentInput
+    + OptionInput
+    + PreviewCheckRequest
+    + ChangeStepStatusRequest
+    + ReorderStepsRequest
+    + UpdateResultConfigRequest
+    + SurveyInfo
+    + StatusCounts
+    + StepListResponse
+    + StepSummaryResponse
+    + StepDetailResponse
+    + StepQuestionItem
+    + StepPreviewResponse
+    + PreviewCheckResponse
+    + AvailableQuestionResponse
+    + ResultConfigResponse
+    + FitnessLevelOption
+  }
+
+  class DailyPlanDtos <<DTO>> {
+    + DailyPlanDayResponse
+    + DailyPlanTemplateResponse
+    + DailyPlanDayRequest
+    + DailyPlanTemplateRequest
+    + DailyPlanStatusRequest
+  }
+
+  class ProfileDtos <<DTO>> {
+    + ProfileResponse
+    + SecurityInfo
+    + MemberSummary
+    + UpdateProfileRequest
+    + ChangeOwnPasswordRequest
+  }
+
+  class AnswerCheck <<DTO>> {
+    + normalized : JsonNode
+    + errorCode : String
+    + message : String
+  }
+}
+
+'==============================================================
+' DAO
+'==============================================================
+package "DAO" as DAO {
+  interface JpaRepository <<Interface>> {
+    + findById(ID id) : Optional<T>
+    + save(S entity) : T
+    + findAll() : List<T>
+    + deleteById(ID id) : void
+    + count() : long
+  }
+
+
+  interface SurveyRepository <<DAO>> {
+    + findBySurveyCodeAndStatus(String surveyCode, Survey.Status status) : Optional<Survey>
+    + findBySurveyCodeAndVersion(String surveyCode, int version) : Optional<Survey>
+    + findFirstBySurveyCodeAndStatusOrderByVersionDesc(String surveyCode, Survey.Status status) : Optional<Survey>
+    + findByStatus(Survey.Status status) : List<Survey>
+    + existsBySurveyCode(String surveyCode) : boolean
+    + findByIdForUpdate(Long id) : Optional<Survey>
+  }
+
+  interface SurveyStepRepository <<DAO>> {
+    + findBySurveyIdOrderBySortOrderAsc(Long surveyId) : List<SurveyStep>
+    + findBySurveyIdAndStepTypeAndStatus(Long surveyId, SurveyStep.Type stepType, SurveyStep.Status status) : Optional<SurveyStep>
+  }
+
+  interface SurveyStepQuestionRepository <<DAO>> {
+    + findAllBySurveyId(Long surveyId) : List<SurveyStepQuestion>
+    + findAllByStepId(Long stepId) : List<SurveyStepQuestion>
+  }
+
+  interface AssessmentQuestionRepository <<DAO>> {
+    + existsByQuestionCode(String questionCode) : boolean
+    + findByQuestionCode(String questionCode) : Optional<AssessmentQuestion>
+    + findAllByQuestionTypeIgnoreCaseAndStatus(String questionType, ConfigStatus status) : List<AssessmentQuestion>
+    + findByQuestionCodeIn(Collection<String> questionCodes) : List<AssessmentQuestion>
+    + findByStatusOrderByQuestionCodeAsc(ConfigStatus status) : List<AssessmentQuestion>
+  }
+
+  interface AssessmentOptionRepository <<DAO>> {
+    + findByQuestionIdInOrderBySortOrderAsc(Collection<Long> questionIds) : List<AssessmentOption>
+  }
+
+  interface AssessmentAnswerRepository <<DAO>> {
+    + findBySessionId(Long sessionId) : List<AssessmentAnswer>
+    + countBySurveyAndQuestions(Long surveyId, Collection<Long> questionIds) : long
+    + findAnsweredQuestionIds(Long surveyId, Collection<Long> questionIds) : List<Long>
+    + findQuestionIdsWithAnswers(Collection<Long> questionIds) : List<Long>
+    + findLatestAnswerValues(Long userId, String questionCode) : List<String>
+  }
+
+  interface SurveySessionRepository <<DAO>> {
+    + findByIdForUpdate(Long id) : Optional<SurveySession>
+    + findWithSurveyById(Long id) : Optional<SurveySession>
+    + findByUserAndSurveyCode(Long userId, String surveyCode) : List<SurveySession>
+  }
+
+  interface SurveyLevelResultRepository <<DAO>> {
+    + findBySessionId(Long sessionId) : Optional<SurveyLevelResult>
+  }
+
+  interface LevelRuleSetRepository <<DAO>> {
+    + findBySurveyCodeAndStatus(String surveyCode, LevelRuleSet.Status status) : Optional<LevelRuleSet>
+    + findByStatus(LevelRuleSet.Status status) : List<LevelRuleSet>
+  }
+
+  interface LevelRuleCriterionRepository <<DAO>> {
+    + findByRuleSetIdOrderBySortOrderAsc(Long ruleSetId) : List<LevelRuleCriterion>
+    + findBandsByRuleSetId(Long ruleSetId) : List<LevelRuleBand>
+    + findAllQuestionCodes() : List<String>
+  }
+
+  interface LevelRuleOutcomeRepository <<DAO>> {
+    + findByRuleSetId(Long ruleSetId) : List<LevelRuleOutcome>
+  }
+
+  interface BenchmarkCriterionRepository <<DAO>> {
+    + findAllByBenchmarkSlotIn(List<String> slots) : List<BenchmarkCriterion>
+    + findAllByFitnessLevel_NameIgnoreCase(String level) : List<BenchmarkCriterion>
+    + findAllByBenchmarkSlotInAndFitnessLevel_NameIgnoreCase(List<String> slots, String level) : List<BenchmarkCriterion>
+    + findByFitnessLevel_NameIgnoreCaseAndBenchmarkSlot(String level, String slot) : Optional<BenchmarkCriterion>
+    + deleteAllByBenchmarkSlotIn(List<String> slots) : void
+  }
+
+  interface DailyPlanTemplateRepository <<DAO>> {
+    + findByCode(String code) : Optional<DailyPlanTemplate>
+  }
+
+  interface WorkoutRepository <<DAO>> {
+    + findByCode(String code) : Optional<WorkoutEntry>
+  }
+
+  interface ExerciseRepository <<DAO>> {
+    + findByCode(String code) : Optional<Exercise>
+    + existsByCode(String code) : boolean
+    + findAllByCodeIn(List<String> codes) : List<Exercise>
+    + findByNameIgnoreCase(String name) : Optional<Exercise>
+    + existsByNameIgnoreCaseAndSource(String name, String source) : boolean
+    + findAcceptedSystemById(Long id) : Optional<Exercise>
+    + countAcceptedSystemExercisesByType(String type) : long
+    + countAcceptedMemberExercisesByAuthorId(Long authorId) : long
+    + countPublishedCommunityMemberExercises() : long
+  }
+
+  interface MemberProfileRepository <<DAO>> {
+    + findByUserId(Long userId) : Optional<MemberProfile>
+    + findByUser_Email(String email) : Optional<MemberProfile>
+    + countByFitnessLevel_Id(Long fitnessLevelId) : long
+    + findAllByUser_Role(UserRole role) : List<MemberProfile>
+  }
+
+  interface FitnessLevelRepository <<DAO>> {
+    + findByNameIgnoreCase(String name) : Optional<FitnessLevel>
+    + existsByNameIgnoreCase(String name) : boolean
+  }
+
+  interface MediaFileRepository <<DAO>> {
+    + findFirstByFileUrlAndStatusNotOrderByIdDesc(String fileUrl, String status) : Optional<MediaFile>
+    + findFirstByContentHashAndCategoryAndStatusNotOrderByIdDesc(String contentHash, String category, String status) : Optional<MediaFile>
+    + findAllByStatus(String status) : List<MediaFile>
+    + sumBytesOnDisk() : long
+    + sumMemberBytes(Long userId) : long
+  }
+
+  interface StorageSettingsRepository <<DAO>> {
+    + findById(ID id) : Optional<StorageSettings>
+  }
+
+  class UserActivityRepository <<DAO>> {
+    - jdbc : JdbcTemplate
+    --
+    + logEvent(Long userId, String eventType, String description, String status) : void
+  }
+
+  class MemberTrackingRepository <<DAO>> {
+    - jdbcTemplate : JdbcTemplate
+    --
+    + findProfileIdByEmail(String email) : Optional<Long>
+    + syncFromSurveyIfMissing(Long profileId) : void
+    + findLatestBodyMetrics(Long memberProfileId) : BodyMetricsDto
+    + findBmiRecordsLast6Months(Long memberProfileId) : List<BmiMonthRecordDto>
+    + calculateWeightChangeThisMonth(Long memberProfileId, BigDecimal currentWeight) : BigDecimal
+    + saveBodyMetric(Long profileId, BigDecimal weightKg, BigDecimal heightCm, BigDecimal bmi, String note) : void
+    + calculateHealthScore(Long profileId, BigDecimal currentBmi) : HealthScoreDto
+    + findWorkoutHistory(Long profileId, String category, LocalDate date) : WorkoutHistoryResponse
+    + findWorkoutSessionDetail(Long sessionId) : WorkoutSessionDetailResponse
+    + findPerformanceAnalytics(Long profileId, String range) : PerformanceAnalyticsResponse
+  }
+
+  interface UserRepository <<DAO>> {
+    + findByEmail(String email) : Optional<User>
+    + existsByEmail(String email) : boolean
+    + countByEnabledAndBlocked(boolean enabled, boolean blocked) : long
+    + countByRole(UserRole role) : long
+  }
+}
+
+'==============================================================
+' ENTITY
+'==============================================================
+package "Entity" as ENTS {
+  class Survey <<Entity>> {
+    - id : Long <<PK>>
+    - surveyCode : String <<UK>>
+    - surveyName : String
+    - description : String
+    - version : int
+    - status : Status
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+
+  class SurveyStep <<Entity>> {
+    - id : Long <<PK>>
+    - survey : Survey <<FK>>
+    - stepCode : String
+    - stepName : String
+    - description : String
+    - stepType : Type
+    - resultConfig : String
+    - sortOrder : int
+    - status : Status
+    - revision : int
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+    - updatedBy : User <<FK>>
+  }
+
+  class SurveyStepQuestion <<Entity>> {
+    - id : Long <<PK>>
+    - step : SurveyStep <<FK>>
+    - question : AssessmentQuestion <<FK>>
+    - sortOrder : int
+    - required : Boolean
+    - conditionalRules : String
+    - active : boolean
+  }
+
+  class AssessmentQuestion <<Entity>> {
+    - id : Long <<PK>>
+    - questionCode : String <<UK>>
+    - questionText : String
+    - description : String
+    - questionType : String
+    - required : boolean
+    - validationRules : String
+    - displayConfig : String
+    - unit : String
+    - defaultValue : String
+    - status : ConfigStatus
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+
+  class AssessmentOption <<Entity>> {
+    - id : Long <<PK>>
+    - question : AssessmentQuestion <<FK>>
+    - optionCode : String
+    - optionLabel : String
+    - optionValue : String
+    - sortOrder : int
+    - status : ConfigStatus
+  }
+
+  class SurveySession <<Entity>> {
+    - id : Long <<PK>>
+    - user : User <<FK>>
+    - survey : Survey <<FK>>
+    - surveyVersion : int
+    - status : Status
+    - startedAt : LocalDateTime
+    - completedAt : LocalDateTime
+    - skippedAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+
+  class AssessmentAnswer <<Entity>> {
+    - id : Long <<PK>>
+    - session : SurveySession <<FK>>
+    - question : AssessmentQuestion <<FK>>
+    - answerValue : String
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+}
+
+package "Entity - Level Rule" as ENTL {
+  class LevelRuleSet <<Entity>> {
+    - id : Long <<PK>>
+    - ruleSetCode : String
+    - name : String
+    - description : String
+    - surveyCode : String
+    - version : int
+    - status : Status
+    - scoringMethod : ScoringMethod
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+
+  class LevelRuleCriterion <<Entity>> {
+    - id : Long <<PK>>
+    - ruleSet : LevelRuleSet <<FK>>
+    - criterionCode : String
+    - label : String
+    - questionCode : String
+    - weight : BigDecimal
+    - required : boolean
+    - sortOrder : int
+  }
+
+  class LevelRuleBand <<Entity>> {
+    - id : Long <<PK>>
+    - criterion : LevelRuleCriterion <<FK>>
+    - minValue : BigDecimal
+    - maxValue : BigDecimal
+    - score : BigDecimal
+    - fitnessLevel : FitnessLevel <<FK>>
+    - bandLabel : String
+    - appliesWhen : String
+    - sortOrder : int
+  }
+
+  class LevelRuleOutcome <<Entity>> {
+    - id : Long <<PK>>
+    - ruleSet : LevelRuleSet <<FK>>
+    - fitnessLevel : FitnessLevel <<FK>>
+    - minScore : BigDecimal
+    - sortOrder : int
+    - summary : String
+    - recommendation : String
+  }
+
+  class SurveyLevelResult <<Entity>> {
+    - id : Long <<PK>>
+    - session : SurveySession <<FK, unique>>
+    - ruleSet : LevelRuleSet <<FK>>
+    - fitnessLevel : FitnessLevel <<FK>>
+    - totalScore : BigDecimal
+    - method : Method
+    - breakdown : String
+    - evaluatedAt : LocalDateTime
+  }
+
+  class FitnessLevel <<Entity>> {
+    - id : Long <<PK>>
+    - name : String <<UK>>
+    - scoreMin : int
+    - scoreMax : int
+    - status : String
+    - updatedAt : LocalDateTime
+    - updatedBy : User <<FK>>
+  }
+
+  class BenchmarkCriterion <<Entity>> {
+    - id : Long <<PK>>
+    - minValue : BigDecimal
+    - maxValue : BigDecimal
+    - criterionWeight : BigDecimal
+    - benchmarkSlot : String
+    - exercise : Exercise <<FK>>
+    - fitnessLevel : FitnessLevel <<FK>>
+  }
+}
+
+package "Entity - User & Plan" as ENTU {
+  class MemberProfile <<Entity>> {
+    - id : Long <<PK>>
+    - user : User <<FK, unique>>
+    - fitnessLevel : FitnessLevel <<FK>>
+    - gender : String
+    - dateOfBirth : LocalDate
+    - weight : BigDecimal
+    - height : BigDecimal
+    - goals : String
+    - bio : String
+    - daysPerWeek : int
+    - streakCount : int
+    - longestStreak : int
+  }
+
+  class User <<Entity>> {
+    - id : Long <<PK>>
+    - email : String <<UK>>
+    - fullName : String
+    - phone : String
+    - gender : String
+    - dateOfBirth : LocalDate
+    - bio : String
+    - avatarUrl : String
+    - role : UserRole
+    - enabled : boolean
+    - blocked : boolean
+    - mustChangePassword : boolean
+    - passwordChangedAt : LocalDateTime
+    - createdAt : LocalDateTime
+  }
+
+  class MediaFile <<Entity>> {
+    - id : Long <<PK>>
+    - fileUrl : String
+    - originalName : String
+    - fileType : String
+    - format : String
+    - sizeMb : BigDecimal
+    - sizeBytes : long
+    - durationSeconds : Integer
+    - category : String
+    - source : String
+    - contentHash : String
+    - status : String
+    - previousStatus : String
+    - reason : String
+    - uploadedAt : LocalDateTime
+    - uploadedBy : User <<FK>>
+    - inactiveSince : LocalDateTime
+    - deletableAt : LocalDateTime
+    - trashedAt : LocalDateTime
+    - trashedBy : User <<FK>>
+    - purgeAt : LocalDateTime
+    - purgedAt : LocalDateTime
+  }
+
+  class StorageSettings <<Entity>> {
+    - id : Integer <<PK>>
+    - maxVideoMb : int
+    - maxImageMb : int
+    - videoFormats : String
+    - imageFormats : String
+    - demoMaxSeconds : int
+    - memberQuotaMb : int
+    - uploadsPerDay : int
+    - rejectedRetentionDays : int
+    - orphanGraceHours : int
+    - trashRetentionDays : int
+    - restoreGraceDays : int
+    - autoCleanupEnabled : boolean
+    - creditGuardEnabled : boolean
+    - creditGuardThreshold : int
+    - quotaGb : int
+    - warningPercent : int
+    - criticalPercent : int
+    - lastCleanupAt : LocalDateTime
+    - lastCleanupFreedBytes : long
+    - updatedBy : User <<FK>>
+    - updatedAt : LocalDateTime
+  }
+
+  class DailyPlanTemplate <<Entity>> {
+    - id : Long <<PK>>
+    - code : String <<UK>>
+    - name : String
+    - description : String
+    - level : String
+    - daysPerWeek : int
+    - active : boolean
+    - createdBy : User <<FK>>
+    - days : List<DailyPlanDay>
+    - updatedAt : LocalDateTime
+  }
+
+  class DailyPlanDay <<Embeddable>> {
+    - dayNumber : int <<PK>>
+    - workout : WorkoutEntry <<FK>>
+  }
+
+  class WorkoutEntry <<Entity>> {
+    - id : Long <<PK>>
+    - code : String <<UK>>
+    - name : String
+    - description : String
+    - type : String
+    - level : String
+    - source : String
+    - sharedWithCommunity : boolean
+    - moderationStatus : String
+    - saveCount : Integer
+    - totalSets : Integer
+    - estimatedDuration : Integer
+    - monthNumber : int
+    - daysPerWeek : int
+    - daySequence : int
+    - templateStatus : String
+    - createdBy : User <<FK>>
+    - exercises : List<WorkoutExerciseItem>
+    - planItems : List<WorkoutPlanItem>
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+
+  class WorkoutExerciseItem <<Embeddable>> {
+    - exercise : Exercise <<FK, PK>>
+    - sets : int
+    - reps : Integer
+    - durationSeconds : Integer
+    - restSeconds : int
+  }
+
+  class WorkoutPlanItem <<Embeddable>> {
+    - workout : WorkoutEntry <<FK, PK>>
+    - exercise : Exercise <<FK>>
+    - dayOfWeek : int
+    - beginnerSets : int
+    - beginnerReps : int
+    - intermediateSets : int
+    - intermediateReps : int
+    - advancedSets : int
+    - advancedReps : int
+  }
+
+  class Exercise <<Entity>> {
+    - id : Long <<PK>>
+    - code : String <<UK>>
+    - name : String
+    - type : String
+    - category : String
+    - difficultyLevel : String
+    - instructions : String
+    - executionSteps : String
+    - videoUrl : String
+    - anatomyImageUrl : String
+    - defaultSets : Integer
+    - defaultReps : Integer
+    - duration : Integer
+    - source : String
+    - moderationStatus : String
+    - active : boolean
+    - saveCount : Integer
+    - shareWithCommunity : boolean
+    - equipment : String
+    - goal : EntryGoal
+    - targetSkill : EntryTargetSkill
+    - exerciseTreeId : Long
+    - movementGroup : MovementGroup
+    - treeLevel : Integer
+    - icon : String
+    - muscleGroups : List<ExerciseMuscleGroup>
+    - createdBy : User <<FK>>
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+}
+
+'==============================================================
+' DIRECTED ASSOCIATION - Controller -> Service -> DTO
+'==============================================================
+SurveyController ..> SurveyService : delegates
+SurveyController ..> SurveyDtos: consumes
+SurveySessionController ..> SurveySessionService : delegates
+SurveySessionController ..> SurveyDtos: consumes
+ContentSurveyStepController ..> SurveyStepManagementService : delegates
+ContentSurveyStepController ..> SurveyStepManagementDtos: consumes
+DailyPlanTemplateController ..> DailyPlanTemplateService : delegates
+DailyPlanTemplateController ..> DailyPlanDtos: consumes
+ProfileController ..> ProfileService : delegates
+ProfileController ..> ProfileDtos: consumes
+ProfileService ..> ProfileDtos: produces
+SurveyService ..> SurveyDtos: produces
+SurveySessionService ..> SurveyDtos: produces
+SurveyStepManagementService ..> SurveyStepManagementDtos: produces
+DailyPlanTemplateService ..> DailyPlanDtos: produces
+SurveySessionService ..> SurveyService : reads definition
+SurveySessionService ..> SurveyDefinitionLoader : loads definition
+SurveySessionService ..> QuestionTypeRegistry : resolves handler
+SurveySessionService ..> LevelBenchmarkService : consults benchmark
+SurveySessionService ..> LevelAssessmentService : assesses level
+LevelAssessmentService ..> RecommendedPlanService : builds plan
+LevelAssessmentService ..> SurveyService : reads definition
+LevelAssessmentService ..> LevelRuleSetLoader : loads rules
+LevelAssessmentService ..> LevelBenchmarkService : consults benchmark
+LevelAssessmentService ..> MemberFitnessLevelService : updates tier
+LevelAssessmentService ..> MemberTrackingRepository : reads tracking
+LevelBenchmarkService ..> BenchmarkSurveySync : syncs survey
+SurveyStepManagementService ..> SurveyDefinitionLoader : loads definition
+SurveyStepManagementService ..> QuestionTypeRegistry : resolves handler
+SurveyStepManagementService ..> StepQuestionWriter : writes questions
+SurveyDefinitionLoader ..> SurveyConfigValidator : validates
+AbstractQuestionTypeHandler ..> AnswerCheck: returns
+ProfileService ..> ProfileAvatarStorageService : stores avatar
+ProfileService ..> MediaRegistryService : registers avatar
+ProfileService ..> MemberFitnessLevelService : updates level
+MediaRegistryService ..> CloudinaryUsageService : queries quota
+MediaRegistryService ..> ExerciseRepository : checks references
+ProfileAvatarStorageService ..> CloudinaryFolderService : resolves folder
+ProfileAvatarStorageService ..> CloudinaryOptimizationService : optimizes
+
+'==============================================================
+' DIRECTED ASSOCIATION - Service -> DAO
+'==============================================================
+SurveyService ..> SurveyRepository : queries
+SurveyService ..> SurveyStepRepository : reads
+SurveySessionService ..> SurveySessionRepository : manages
+SurveySessionService ..> AssessmentAnswerRepository : manages
+SurveySessionService ..> AssessmentQuestionRepository : reads
+SurveySessionService ..> UserRepository : reads
+SurveyStepManagementService ..> SurveyRepository : reads
+SurveyStepManagementService ..> SurveyStepRepository : manages
+SurveyStepManagementService ..> SurveyStepQuestionRepository : manages
+SurveyStepManagementService ..> AssessmentQuestionRepository : reads
+SurveyStepManagementService ..> AssessmentOptionRepository : manages
+SurveyStepManagementService ..> AssessmentAnswerRepository : reads
+SurveyStepManagementService ..> FitnessLevelRepository : reads
+SurveyStepManagementService ..> UserRepository : reads
+LevelAssessmentService ..> LevelRuleSetRepository : reads
+LevelAssessmentService ..> SurveyLevelResultRepository : writes
+LevelAssessmentService ..> FitnessLevelRepository : reads
+LevelAssessmentService ..> MemberProfileRepository : reads
+LevelBenchmarkService ..> BenchmarkCriterionRepository : reads
+LevelBenchmarkService ..> AssessmentQuestionRepository : reads
+LevelBenchmarkService ..> FitnessLevelRepository : reads
+LevelBenchmarkService ..> ExerciseRepository : reads
+LevelBenchmarkService ..> UserRepository : reads
+LevelBenchmarkService ..> MemberProfileRepository : reads
+LevelBenchmarkService ..> WorkoutRepository : reads
+LevelBenchmarkService ..> MemberFitnessLevelService : updates tier
+BenchmarkSurveySync ..> SurveyRepository : reads
+BenchmarkSurveySync ..> SurveyStepRepository : manages
+BenchmarkSurveySync ..> SurveyStepQuestionRepository : manages
+BenchmarkSurveySync ..> AssessmentQuestionRepository : reads
+BenchmarkSurveySync ..> AssessmentAnswerRepository : reads
+RecommendedPlanService ..> DailyPlanTemplateRepository : reads
+DailyPlanTemplateService ..> DailyPlanTemplateRepository : manages
+DailyPlanTemplateService ..> WorkoutRepository : reads
+DailyPlanTemplateService ..> FitnessLevelRepository : reads
+DailyPlanTemplateService ..> UserRepository : reads
+SurveyDefinitionLoader ..> SurveyStepRepository : reads
+SurveyDefinitionLoader ..> SurveyStepQuestionRepository : reads
+SurveyDefinitionLoader ..> AssessmentOptionRepository : reads
+StepQuestionWriter ..> AssessmentQuestionRepository : reads
+StepQuestionWriter ..> AssessmentOptionRepository : manages
+StepQuestionWriter ..> AssessmentAnswerRepository : reads
+StepQuestionWriter ..> LevelRuleCriterionRepository : reads
+LevelRuleSetLoader ..> LevelRuleCriterionRepository : reads
+LevelRuleSetLoader ..> LevelRuleOutcomeRepository : reads
+ProfileService ..> UserRepository : queries
+ProfileService ..> MemberProfileRepository : queries
+ProfileService ..> FitnessLevelRepository : reads
+ProfileService ..> AssessmentAnswerRepository : reads
+ProfileService ..> UserActivityRepository : logs
+MemberFitnessLevelService ..> MemberProfileRepository : updates
+MediaRegistryService ..> MediaFileRepository : manages
+MediaRegistryService ..> StorageSettingsRepository : reads
+MediaRegistryService ..> ExerciseRepository : reads
+MediaRegistryService ..> UserRepository : reads
+
+'==============================================================
+
+SurveyRepository ..|> JpaRepository : extends
+SurveyStepRepository ..|> JpaRepository : extends
+SurveyStepQuestionRepository ..|> JpaRepository : extends
+AssessmentQuestionRepository ..|> JpaRepository : extends
+AssessmentOptionRepository ..|> JpaRepository : extends
+AssessmentAnswerRepository ..|> JpaRepository : extends
+SurveySessionRepository ..|> JpaRepository : extends
+SurveyLevelResultRepository ..|> JpaRepository : extends
+LevelRuleSetRepository ..|> JpaRepository : extends
+LevelRuleCriterionRepository ..|> JpaRepository : extends
+LevelRuleOutcomeRepository ..|> JpaRepository : extends
+DailyPlanTemplateRepository ..|> JpaRepository : extends
+WorkoutRepository ..|> JpaRepository : extends
+MemberProfileRepository ..|> JpaRepository : extends
+FitnessLevelRepository ..|> JpaRepository : extends
+MediaFileRepository ..|> JpaRepository : extends
+StorageSettingsRepository ..|> JpaRepository : extends
+UserRepository ..|> JpaRepository : extends
+BenchmarkCriterionRepository ..|> JpaRepository : extends
+ExerciseRepository ..|> JpaRepository : extends
+UserActivityRepository ..> User : writes user_id only
+' ASSOCIATION - DAO manages Entity
+'==============================================================
+SurveyRepository -- Survey
+SurveyStepRepository -- SurveyStep
+SurveyStepQuestionRepository -- SurveyStepQuestion
+AssessmentQuestionRepository -- AssessmentQuestion
+AssessmentOptionRepository -- AssessmentOption
+AssessmentAnswerRepository -- AssessmentAnswer
+SurveySessionRepository -- SurveySession
+SurveyLevelResultRepository -- SurveyLevelResult
+LevelRuleSetRepository -- LevelRuleSet
+LevelRuleCriterionRepository -- LevelRuleCriterion
+LevelRuleOutcomeRepository -- LevelRuleOutcome
+DailyPlanTemplateRepository -- DailyPlanTemplate
+WorkoutRepository -- WorkoutEntry
+MemberProfileRepository -- MemberProfile
+FitnessLevelRepository -- FitnessLevel
+MediaFileRepository -- MediaFile
+StorageSettingsRepository -- StorageSettings
+MemberTrackingRepository ..> User : reads user_id only
+UserRepository -- User
+BenchmarkCriterionRepository -- BenchmarkCriterion
+ExerciseRepository -- Exercise
+
+'==============================================================
+' COMPOSITION - child cannot exist without the parent
+'==============================================================
+DailyPlanTemplate "1" *-- "1..*" DailyPlanDay : schedules
+WorkoutEntry "1" *-- "0..*" WorkoutExerciseItem : contains
+
+'==============================================================
+' AGGREGATION - entity foreign key
+'==============================================================
+SurveyStep "0..*" o-- "1" Survey : belongs to
+SurveyStep "0..*" o-- "1" User : updated by
+SurveyStepQuestion "0..*" o-- "1" SurveyStep : linked to
+SurveyStepQuestion "0..*" o-- "1" AssessmentQuestion : uses
+AssessmentOption "0..*" o-- "1" AssessmentQuestion : offers
+AssessmentAnswer "0..*" o-- "1" SurveySession : recorded in
+AssessmentAnswer "0..*" o-- "1" AssessmentQuestion : answers
+SurveySession "0..*" o-- "1" User : started by
+SurveySession "0..*" o-- "1" Survey : answers
+LevelRuleCriterion "0..*" o-- "1" LevelRuleSet : defined by
+LevelRuleBand "0..*" o-- "1" LevelRuleCriterion : bands
+LevelRuleBand "0..*" o-- "1" FitnessLevel : scores to
+LevelRuleOutcome "0..*" o-- "1" LevelRuleSet : defined by
+LevelRuleOutcome "0..*" o-- "1" FitnessLevel : results in
+SurveyLevelResult "0..*" o-- "1" SurveySession : evaluates
+SurveyLevelResult "0..*" o-- "1" LevelRuleSet : scored by
+SurveyLevelResult "0..*" o-- "1" FitnessLevel : results in
+MemberProfile "0..*" o-- "1" User : belongs to
+MemberProfile "0..*" o-- "1" FitnessLevel : current tier
+MediaFile "0..*" o-- "1" User : uploaded by
+StorageSettings "0..*" o-- "1" User : updated by
+DailyPlanDay "0..*" o-- "1" WorkoutEntry : trains
+WorkoutExerciseItem "0..*" o-- "1" Exercise : references
+DailyPlanTemplate "0..*" o-- "1" User : created by
+WorkoutEntry "0..*" o-- "1" User : created by
+Exercise "0..*" o-- "1" User : written by
+FitnessLevel "0..*" o-- "1" User : updated by
+
+'==============================================================
+' GENERALIZATION - class hierarchy
+'==============================================================
+AbstractQuestionTypeHandler ..|> QuestionTypeHandler : implements
+AbstractTextQuestionType --|> AbstractQuestionTypeHandler : extends
+NumberQuestionType --|> AbstractQuestionTypeHandler : extends
+BooleanQuestionType --|> AbstractQuestionTypeHandler : extends
+SingleSelectQuestionType --|> AbstractQuestionTypeHandler : extends
+MultipleSelectQuestionType --|> AbstractQuestionTypeHandler : extends
+TextQuestionType --|> AbstractTextQuestionType : extends
+TextareaQuestionType --|> AbstractTextQuestionType : extends
+
+@enduml

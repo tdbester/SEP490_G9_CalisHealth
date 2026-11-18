@@ -21,6 +21,7 @@ import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import { contentManagerApi, mediaUrl } from "../api/contentManager";
 import { useApiMutation, useApiQuery } from "../hooks";
+import { isDuplicateNameMessage } from "../utils/apiError";
 import { useLevelNames } from "../useLevelNames";
 import { CONTENT_PATHS, ContentPageHeader } from "../components/ContentShared";
 import { CM } from "../theme-content";
@@ -259,7 +260,7 @@ function SystemExerciseDetailContent() {
       },
       onError: (requestError) => {
         const message = requestError.message || "";
-        setSaveError(/already exists|duplicate/i.test(message) ? t("contentManager.form.errDuplicateName") : message);
+        setSaveError(isDuplicateNameMessage(message) ? t("contentManager.form.errDuplicateName") : message);
       },
     },
   );

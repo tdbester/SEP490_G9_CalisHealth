@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="1377px" preserveAspectRatio="none" style="width:1858px;height:1377px;background:#FFFFFF;" version="1.1" viewBox="0 0 1858 1377" width="1858px" zoomAndPan="magnify"><defs/>
+<text fill="#000000" font-family="Segoe UI" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="358.1963" x="746.1223" y="30.1074">DS2 - Manage the survey steps and the plan templates</text>
+<text fill="#000000" font-family="Segoe UI" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="262.2266" x="794.1072" y="48.7285">(Sequence Diagram - Content Manager)</text>
+<rect fill="none" height="276.3086" style="stroke:#000000;stroke-width:1.5;" width="1652.0527" x="189.3882" y="526.7344"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="62" x2="62" y1="104.8438" y2="803"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="256.3882" x2="256.3882" y1="104.8438" y2="803"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="481.7095" x2="481.7095" y1="104.8438" y2="803"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="690.6313" x2="690.6313" y1="104.8438" y2="803"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="857.6499" x2="857.6499" y1="104.8438" y2="677"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1002.9507" x2="1002.9507" y1="104.8438" y2="646"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1142.606" x2="1142.606" y1="104.8438" y2="615"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1282.7495" x2="1282.7495" y1="104.8438" y2="615"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1441.0435" x2="1441.0435" y1="104.8438" y2="615"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1660.6704" x2="1660.6704" y1="104.8438" y2="520"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1788.3901" x2="1788.3901" y1="104.8438" y2="489"/>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="91.5244" x="17" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="77.5244" x="24" y="94.334">Content Manager</text>
+<rect fill="#FFFFFF" height="40.6016" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="90.4014" x="211.3882" y="63.2422"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="76.4014" x="218.3882" y="81.0332">Survey Step Page</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="30.3418" x="241.418" y="94.334">(React)</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="165.9238" x="399.7095" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="151.9238" x="406.7095" y="94.334">SurveyStepManagementController</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="153.0186" x="614.6313" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="139.0186" x="621.6313" y="94.334">SurveyStepManagementService</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="112.3008" x="801.6499" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="98.3008" x="808.6499" y="94.334">SurveyConfigValidator</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="110.6553" x="947.9507" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="96.6553" x="954.9507" y="94.334">QuestionTypeRegistry</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="101.1436" x="1092.606" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="87.1436" x="1099.606" y="94.334">StepQuestionWriter</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="110.2939" x="1227.7495" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="96.2939" x="1234.7495" y="94.334">SurveyStepRepository</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="139.625" x="1372.0435" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="125.625" x="1379.0435" y="94.334">DailyPlanTemplateController</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="126.7197" x="1597.6704" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="112.7197" x="1604.6704" y="94.334">DailyPlanTemplateService</text>
+<rect fill="#FFFFFF" height="40.6016" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="61.0508" x="1758.3901" y="63.2422"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="31.377" x="1773.2271" y="81.0332">MySQL</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="47.0508" x="1765.3901" y="94.334">(Database)</text>
+<rect fill="#EEEEEE" height="3" style="stroke:#EEEEEE;stroke-width:1.0;" width="1851.4409" x="0" y="134.4941"/>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1851.4409" y1="134.4941" y2="134.4941"/>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1851.4409" y1="137.4941" y2="137.4941"/>
+<rect fill="#EEEEEE" height="21.3008" style="stroke:#000000;stroke-width:2.0;" width="176.2949" x="837.573" y="124.8438"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="159.5361" x="843.573" y="139.6348">LIST AND CREATE A SURVEY STEP</text>
+<polyline points="244.5889,170.1152 254.5889,174.1152 244.5889,178.1152" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="62.7622" x2="250.5889" y1="174.1152" y2="174.1152"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="143.5737" x="69.7622" y="169.8564">Open the survey step list of a survey</text>
+<polyline points="470.6714,196.0859 480.6714,200.0859 470.6714,204.0859" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="256.5889" x2="476.6714" y1="200.0859" y2="200.0859"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="105.4995" x="263.5889" y="195.8271">List the steps of the survey</text>
+<polyline points="679.1406,222.0566 689.1406,226.0566 679.1406,230.0566" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="482.6714" x2="685.1406" y1="226.0566" y2="226.0566"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="105.4995" x="489.6714" y="221.7979">List the steps of the survey</text>
+<polyline points="1270.8965,248.0273 1280.8965,252.0273 1270.8965,256.0273" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="691.1406" x2="1276.8965" y1="252.0273" y2="252.0273"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="111.6035" x="698.1406" y="247.7686">Load the steps of the survey</text>
+<polyline points="1776.9155,273.998 1786.9155,277.998 1776.9155,281.998" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1282.8965" x2="1782.9155" y1="277.998" y2="277.998"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="53.6792" x="1289.8965" y="273.7393">run the query</text>
+<polyline points="1293.8965,299.9688 1283.8965,303.9688 1293.8965,307.9688" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1287.8965" x2="1787.9155" y1="303.9688" y2="303.9688"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="73.7095" x="1299.8965" y="299.71">the matching rows</text>
+<polyline points="702.1406,325.9395 692.1406,329.9395 702.1406,333.9395" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="696.1406" x2="1281.8965" y1="329.9395" y2="329.9395"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="45.8745" x="708.1406" y="325.6807">the step list</text>
+<polyline points="493.6714,351.9102 483.6714,355.9102 493.6714,359.9102" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="487.6714" x2="690.1406" y1="355.9102" y2="355.9102"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="45.8745" x="499.6714" y="351.6514">the step list</text>
+<polyline points="267.5889,377.8809 257.5889,381.8809 267.5889,385.8809" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="261.5889" x2="481.6714" y1="381.8809" y2="381.8809"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="69.9917" x="273.5889" y="377.6221">Show the step list</text>
+<polyline points="244.5889,403.8516 254.5889,407.8516 244.5889,411.8516" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="62.7622" x2="250.5889" y1="407.8516" y2="407.8516"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="110.8301" x="69.7622" y="403.5928">Fill in a new step and save it</text>
+<polyline points="470.6714,429.8223 480.6714,433.8223 470.6714,437.8223" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="256.5889" x2="476.6714" y1="433.8223" y2="433.8223"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="202.0825" x="263.5889" y="429.5635">Create the step (survey code, version, step request)</text>
+<polyline points="679.1406,455.793 689.1406,459.793 679.1406,463.793" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="482.6714" x2="685.1406" y1="459.793" y2="459.793"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="60.3896" x="489.6714" y="455.5342">Create the step</text>
+<polyline points="845.8003,481.7637 855.8003,485.7637 845.8003,489.7637" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="691.1406" x2="851.8003" y1="485.7637" y2="485.7637"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="114.3325" x="698.1406" y="481.5049">Check the step configuration</text>
+<polyline points="702.1406,507.7344 692.1406,511.7344 702.1406,515.7344" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="696.1406" x2="856.8003" y1="511.7344" y2="511.7344"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="124.7607" x="708.1406" y="507.4756">the configuration is valid or not</text>
+<path d="M189.3882,526.7344 L246.5024,526.7344 L246.5024,532.0352 L236.5024,542.0352 L189.3882,542.0352 L189.3882,526.7344 " fill="#EEEEEE" style="stroke:#000000;stroke-width:1.5;"/>
+<rect fill="none" height="276.3086" style="stroke:#000000;stroke-width:1.5;" width="1652.0527" x="189.3882" y="526.7344"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="12.1143" x="204.3882" y="538.5254">alt</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="166.5088" x="261.5024" y="539.5254">[the step configuration is not valid]</text>
+<polyline points="493.6714,567.9766 483.6714,571.9766 493.6714,575.9766" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="487.6714" x2="690.1406" y1="571.9766" y2="571.9766"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="58.8296" x="499.6714" y="555.7471">Reject the step</text>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="144.0879" x="499.6714" y="567.7178">(400 BAD_REQUEST with the reason)</text>
+<polyline points="267.5889,593.9473 257.5889,597.9473 267.5889,601.9473" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="261.5889" x2="481.6714" y1="597.9473" y2="597.9473"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="153.3911" x="273.5889" y="593.6885">Show the validation errors on the form</text>
+<line style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="189.3882" x2="1841.4409" y1="606.9473" y2="606.9473"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="147.6953" x="194.3882" y="617.7383">[the step configuration is valid]</text>
+<polyline points="991.2783,635.2188 1001.2783,639.2188 991.2783,643.2188" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="691.1406" x2="997.2783" y1="639.2188" y2="639.2188"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="151.563" x="698.1406" y="634.96">Resolve the question types of the step</text>
+<polyline points="1131.1777,661.1895 1141.1777,665.1895 1131.1777,669.1895" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="691.1406" x2="1137.1777" y1="665.1895" y2="665.1895"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="187.9849" x="698.1406" y="660.9307">Write the questions and the options of the step</text>
+<polyline points="1270.8965,687.1602 1280.8965,691.1602 1270.8965,695.1602" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="691.1406" x2="1276.8965" y1="691.1602" y2="691.1602"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="124.6289" x="698.1406" y="686.9014">Save the step with its questions</text>
+<polyline points="1776.9155,713.1309 1786.9155,717.1309 1776.9155,721.1309" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1282.8965" x2="1782.9155" y1="717.1309" y2="717.1309"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="53.6792" x="1289.8965" y="712.8721">run the query</text>
+<polyline points="1293.8965,739.1016 1283.8965,743.1016 1293.8965,747.1016" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1287.8965" x2="1787.9155" y1="743.1016" y2="743.1016"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="73.7095" x="1299.8965" y="738.8428">the matching rows</text>
+<polyline points="493.6714,765.0723 483.6714,769.0723 493.6714,773.0723" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="487.6714" x2="690.1406" y1="769.0723" y2="769.0723"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="104.1592" x="499.6714" y="764.8135">The step has been created</text>
+<polyline points="267.5889,791.043 257.5889,795.043 267.5889,799.043" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="261.5889" x2="481.6714" y1="795.043" y2="795.043"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="157.0693" x="273.5889" y="790.7842">Show the step detail and refresh the list</text>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1851.4409" y1="829.6934" y2="829.6934"/>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1851.4409" y1="832.6934" y2="832.6934"/>
+<polyline points="244.5889,865.3145 254.5889,869.3145 244.5889,873.3145" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="62.7622" x2="250.5889" y1="869.3145" y2="869.3145"/>
+<polyline points="470.6714,891.2852 480.6714,895.2852 470.6714,899.2852" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="256.5889" x2="476.6714" y1="895.2852" y2="895.2852"/>
+<polyline points="679.1406,917.2559 689.1406,921.2559 679.1406,925.2559" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="482.6714" x2="685.1406" y1="921.2559" y2="921.2559"/>
+<polyline points="1270.8965,943.2266 1280.8965,947.2266 1270.8965,951.2266" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="691.1406" x2="1276.8965" y1="947.2266" y2="947.2266"/>
+<polyline points="1776.9155,969.1973 1786.9155,973.1973 1776.9155,977.1973" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1282.8965" x2="1782.9155" y1="973.1973" y2="973.1973"/>
+<polyline points="1293.8965,995.168 1283.8965,999.168 1293.8965,1003.168" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1287.8965" x2="1787.9155" y1="999.168" y2="999.168"/>
+<polyline points="493.6714,1021.1387 483.6714,1025.1387 493.6714,1029.1387" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="487.6714" x2="690.1406" y1="1025.1387" y2="1025.1387"/>
+<polyline points="267.5889,1047.1094 257.5889,1051.1094 267.5889,1055.1094" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="261.5889" x2="481.6714" y1="1051.1094" y2="1051.1094"/>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1851.4409" y1="1078.7598" y2="1078.7598"/>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1851.4409" y1="1081.7598" y2="1081.7598"/>
+<polyline points="244.5889,1114.3809 254.5889,1118.3809 244.5889,1122.3809" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="62.7622" x2="250.5889" y1="1118.3809" y2="1118.3809"/>
+<polyline points="1429.856,1140.3516 1439.856,1144.3516 1429.856,1148.3516" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="256.5889" x2="1435.856" y1="1144.3516" y2="1144.3516"/>
+<polyline points="1649.0303,1166.3223 1659.0303,1170.3223 1649.0303,1174.3223" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1441.856" x2="1655.0303" y1="1170.3223" y2="1170.3223"/>
+<polyline points="1452.856,1192.293 1442.856,1196.293 1452.856,1200.293" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1446.856" x2="1660.0303" y1="1196.293" y2="1196.293"/>
+<polyline points="267.5889,1218.2637 257.5889,1222.2637 267.5889,1226.2637" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="261.5889" x2="1440.856" y1="1222.2637" y2="1222.2637"/>
+<polyline points="244.5889,1244.2344 254.5889,1248.2344 244.5889,1252.2344" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="62.7622" x2="250.5889" y1="1248.2344" y2="1248.2344"/>
+<polyline points="1429.856,1270.2051 1439.856,1274.2051 1429.856,1278.2051" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="256.5889" x2="1435.856" y1="1274.2051" y2="1274.2051"/>
+<polyline points="1649.0303,1296.1758 1659.0303,1300.1758 1649.0303,1304.1758" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1441.856" x2="1655.0303" y1="1300.1758" y2="1300.1758"/>
+<polyline points="1452.856,1322.1465 1442.856,1326.1465 1452.856,1330.1465" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1446.856" x2="1660.0303" y1="1326.1465" y2="1326.1465"/>
+<polyline points="267.5889,1348.1172 257.5889,1352.1172 267.5889,1356.1172" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="261.5889" x2="1440.856" y1="1352.1172" y2="1352.1172"/></svg>

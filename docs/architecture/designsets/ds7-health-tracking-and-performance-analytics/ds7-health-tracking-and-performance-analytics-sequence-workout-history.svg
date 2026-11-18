@@ -1,0 +1,220 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="1760px" preserveAspectRatio="none" style="width:1706px;height:1760px;background:#FFFFFF;" version="1.1" viewBox="0 0 1706 1760" width="1706px" zoomAndPan="magnify"><defs/>
+<text fill="#000000" font-family="Segoe UI" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="399.4512" x="649.6716" y="30.1074">DS7 - View workout history and view the log of one workout</text>
+<text fill="#000000" font-family="Segoe UI" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="133.5264" x="782.634" y="48.7285">(Sequence Diagram)</text>
+<rect fill="none" height="470.375" style="stroke:#000000;stroke-width:1.5;" width="1224.6338" x="10" y="1266.2148"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="57" x2="57" y1="104.8438" y2="1737"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="233.2891" x2="233.2891" y1="104.8438" y2="1656"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="420.4834" x2="420.4834" y1="104.8438" y2="1656"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="620.9136" x2="620.9136" y1="104.8438" y2="1422"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="846.0444" x2="846.0444" y1="104.8438" y2="1317"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1151.7842" x2="1151.7842" y1="104.8438" y2="1212"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1422.6812" x2="1422.6812" y1="104.8438" y2="1203"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1651.7437" x2="1651.7437" y1="104.8438" y2="1002"/>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="51.4072" x="32" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="37.4072" x="39" y="94.334">Member</text>
+<rect fill="#FFFFFF" height="40.6016" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="111.168" x="178.2891" y="63.2422"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="97.168" x="185.2891" y="81.0332">Workout History Page</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="30.3418" x="218.7021" y="94.334">(React)</text>
+<rect fill="#FFFFFF" height="40.6016" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="102.7256" x="369.4834" y="63.2422"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="88.7256" x="376.4834" y="81.0332">Workout Log Modal</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="30.3418" x="405.6753" y="94.334">(React)</text>
+<rect fill="#FFFFFF" height="40.6016" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="64.3809" x="588.9136" y="63.2422"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="50.2637" x="595.9722" y="81.0332">trackingApi</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="50.3809" x="595.9136" y="94.334">(tracking.js)</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="132.7549" x="780.0444" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="118.7549" x="787.0444" y="94.334">MemberTrackingController</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="119.8496" x="1092.7842" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="105.8496" x="1099.7842" y="94.334">MemberTrackingService</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="135.9482" x="1355.6812" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="121.9482" x="1362.6812" y="94.334">MemberTrackingRepository</text>
+<rect fill="#FFFFFF" height="40.6016" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="61.0508" x="1621.7437" y="63.2422"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="31.377" x="1636.5806" y="81.0332">MySQL</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="47.0508" x="1628.7437" y="94.334">(Database)</text>
+<rect fill="#EEEEEE" height="3" style="stroke:#EEEEEE;stroke-width:1.0;" width="1699.7944" x="0" y="134.4941"/>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1699.7944" y1="134.4941" y2="134.4941"/>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1699.7944" y1="137.4941" y2="137.4941"/>
+<rect fill="#EEEEEE" height="21.3008" style="stroke:#000000;stroke-width:2.0;" width="163.9316" x="767.9314" y="124.8438"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="147.1729" x="773.9314" y="139.6348">READ THE WORKOUT HISTORY</text>
+<polyline points="221.873,170.1152 231.873,174.1152 221.873,178.1152" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="57.7036" x2="227.873" y1="174.1152" y2="174.1152"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="129.8936" x="64.7036" y="169.8564">Open the workout history screen</text>
+<polyline points="609.104,196.0859 619.104,200.0859 609.104,204.0859" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="233.873" x2="615.104" y1="200.0859" y2="200.0859"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="193.4912" x="240.873" y="195.8271">Ask for the finished workouts of the selected day</text>
+<polyline points="834.4219,222.0566 844.4219,226.0566 834.4219,230.0566" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="621.104" x2="840.4219" y1="226.0566" y2="226.0566"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="201.3179" x="628.104" y="221.7979">Read the workout history of the signed-in member</text>
+<polyline points="1140.709,248.0273 1150.709,252.0273 1140.709,256.0273" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="846.4219" x2="1146.709" y1="252.0273" y2="252.0273"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="99.9097" x="853.4219" y="247.7686">Read the workout history</text>
+<polyline points="1411.6553,273.998 1421.6553,277.998 1411.6553,281.998" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1152.709" x2="1417.6553" y1="277.998" y2="277.998"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="180.356" x="1159.709" y="273.7393">Look up the member profile by email address</text>
+<polyline points="1640.269,299.9688 1650.269,303.9688 1640.269,307.9688" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1423.6553" x2="1646.269" y1="303.9688" y2="303.9688"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="53.6792" x="1430.6553" y="299.71">run the query</text>
+<polyline points="1434.6553,325.9395 1424.6553,329.9395 1434.6553,333.9395" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1428.6553" x2="1651.269" y1="329.9395" y2="329.9395"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="73.7095" x="1440.6553" y="325.6807">the matching rows</text>
+<polyline points="1163.709,351.9102 1153.709,355.9102 1163.709,359.9102" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1157.709" x2="1422.6553" y1="355.9102" y2="355.9102"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="86.6382" x="1169.709" y="351.6514">the member profile id</text>
+<polyline points="1411.6553,377.8809 1421.6553,381.8809 1411.6553,385.8809" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1152.709" x2="1417.6553" y1="381.8809" y2="381.8809"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="246.9463" x="1159.709" y="377.6221">Load the finished workouts with the accuracy of every exercise</text>
+<polyline points="1640.269,403.8516 1650.269,407.8516 1640.269,411.8516" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1423.6553" x2="1646.269" y1="407.8516" y2="407.8516"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="53.6792" x="1430.6553" y="403.5928">run the query</text>
+<polyline points="1434.6553,429.8223 1424.6553,433.8223 1434.6553,437.8223" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1428.6553" x2="1651.269" y1="433.8223" y2="433.8223"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="73.7095" x="1440.6553" y="429.5635">the matching rows</text>
+<polyline points="1640.269,455.793 1650.269,459.793 1640.269,463.793" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1423.6553" x2="1646.269" y1="459.793" y2="459.793"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="53.6792" x="1430.6553" y="455.5342">run the query</text>
+<polyline points="1434.6553,481.7637 1424.6553,485.7637 1434.6553,489.7637" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1428.6553" x2="1651.269" y1="485.7637" y2="485.7637"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="169.519" x="1440.6553" y="481.5049">the number of workouts and the total time</text>
+<polyline points="1640.269,507.7344 1650.269,511.7344 1640.269,515.7344" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1423.6553" x2="1646.269" y1="511.7344" y2="511.7344"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="53.6792" x="1430.6553" y="507.4756">run the query</text>
+<polyline points="1434.6553,533.7051 1424.6553,537.7051 1434.6553,541.7051" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1428.6553" x2="1651.269" y1="537.7051" y2="537.7051"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="128.6587" x="1440.6553" y="533.4463">the clean reps and the hold time</text>
+<polyline points="1163.709,559.6758 1153.709,563.6758 1163.709,567.6758" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1157.709" x2="1422.6553" y1="563.6758" y2="563.6758"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="183.9287" x="1169.709" y="559.417">WorkoutHistoryResponse(summary, workouts)</text>
+<polyline points="857.4219,585.6465 847.4219,589.6465 857.4219,593.6465" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="851.4219" x2="1151.709" y1="589.6465" y2="589.6465"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="183.9287" x="863.4219" y="585.3877">WorkoutHistoryResponse(summary, workouts)</text>
+<polyline points="632.104,611.6172 622.104,615.6172 632.104,619.6172" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="626.104" x2="845.4219" y1="615.6172" y2="615.6172"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="77.4756" x="638.104" y="611.3584">the workout history</text>
+<polyline points="244.873,637.5879 234.873,641.5879 244.873,645.5879" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="238.873" x2="620.104" y1="641.5879" y2="641.5879"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="129.4146" x="250.873" y="637.3291">the session list and the summary</text>
+<line style="stroke:#333333;stroke-width:1.0;" x1="233.873" x2="275.873" y1="691.5" y2="691.5"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="275.873" x2="275.873" y1="691.5" y2="704.5"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="234.873" x2="275.873" y1="704.5" y2="704.5"/>
+<polyline points="244.873,700.5 234.873,704.5 244.873,708.5" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="163.0898" x="240.873" y="663.2998">Sort the workouts by the completed time</text>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="133.4355" x="240.873" y="675.2705">and draw the four summary cards</text>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="172.9731" x="240.873" y="687.2412">(workouts, total time, clean ratio, hold time)</text>
+<polyline points="68.7036,738.4414 58.7036,742.4414 68.7036,746.4414" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="62.7036" x2="232.873" y1="742.4414" y2="742.4414"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="149.2646" x="74.7036" y="726.2119">Show the list of the finished workouts</text>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="75.1948" x="74.7036" y="738.1826">of the selected day</text>
+<rect fill="#EEEEEE" height="3" style="stroke:#EEEEEE;stroke-width:1.0;" width="1699.7944" x="0" y="770.0918"/>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1699.7944" y1="770.0918" y2="770.0918"/>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1699.7944" y1="773.0918" y2="773.0918"/>
+<rect fill="#EEEEEE" height="21.3008" style="stroke:#000000;stroke-width:2.0;" width="180.3672" x="759.7136" y="760.4414"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="163.6084" x="765.7136" y="775.2324">READ THE LOG OF ONE WORKOUT</text>
+<polyline points="221.873,805.7129 231.873,809.7129 221.873,813.7129" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="57.7036" x2="227.873" y1="809.7129" y2="809.7129"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="122.9414" x="64.7036" y="805.4541">Click on one workout in the list</text>
+<polyline points="609.104,831.6836 619.104,835.6836 609.104,839.6836" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="233.873" x2="615.104" y1="835.6836" y2="835.6836"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="131.6118" x="240.873" y="831.4248">Ask for the detail of that workout</text>
+<polyline points="834.4219,857.6543 844.4219,861.6543 834.4219,865.6543" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="621.104" x2="840.4219" y1="861.6543" y2="861.6543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="152.0508" x="628.104" y="857.3955">Read the detail of the workout session</text>
+<polyline points="1140.709,883.625 1150.709,887.625 1140.709,891.625" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="846.4219" x2="1146.709" y1="887.625" y2="887.625"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="152.0508" x="853.4219" y="883.3662">Read the detail of the workout session</text>
+<polyline points="1411.6553,909.5957 1421.6553,913.5957 1411.6553,917.5957" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1152.709" x2="1417.6553" y1="913.5957" y2="913.5957"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="180.356" x="1159.709" y="909.3369">Look up the member profile by email address</text>
+<polyline points="1640.269,935.5664 1650.269,939.5664 1640.269,943.5664" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1423.6553" x2="1646.269" y1="939.5664" y2="939.5664"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="53.6792" x="1430.6553" y="935.3076">run the query</text>
+<polyline points="1434.6553,961.5371 1424.6553,965.5371 1434.6553,969.5371" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1428.6553" x2="1651.269" y1="965.5371" y2="965.5371"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="73.7095" x="1440.6553" y="961.2783">the matching rows</text>
+<polyline points="1163.709,987.5078 1153.709,991.5078 1163.709,995.5078" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1157.709" x2="1422.6553" y1="991.5078" y2="991.5078"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="86.6382" x="1169.709" y="987.249">the member profile id</text>
+<polyline points="1411.6553,1013.4785 1421.6553,1017.4785 1411.6553,1021.4785" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1152.709" x2="1417.6553" y1="1017.4785" y2="1017.4785"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="197.5825" x="1159.709" y="1013.2197">Load the session and the exercises of the workout</text>
+<polyline points="1640.269,1039.4492 1650.269,1043.4492 1640.269,1047.4492" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1423.6553" x2="1646.269" y1="1043.4492" y2="1043.4492"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="53.6792" x="1430.6553" y="1039.1904">run the query</text>
+<polyline points="1434.6553,1065.4199 1424.6553,1069.4199 1434.6553,1073.4199" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1428.6553" x2="1651.269" y1="1069.4199" y2="1069.4199"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="73.7095" x="1440.6553" y="1065.1611">the matching rows</text>
+<polyline points="1640.269,1091.3906 1650.269,1095.3906 1640.269,1099.3906" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1423.6553" x2="1646.269" y1="1095.3906" y2="1095.3906"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="53.6792" x="1430.6553" y="1091.1318">run the query</text>
+<polyline points="1434.6553,1117.3613 1424.6553,1121.3613 1434.6553,1125.3613" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1428.6553" x2="1651.269" y1="1121.3613" y2="1121.3613"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="204.6138" x="1440.6553" y="1117.1025">the exercises with their sets and their form accuracy</text>
+<polyline points="1163.709,1143.332 1153.709,1147.332 1163.709,1151.332" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1157.709" x2="1422.6553" y1="1147.332" y2="1147.332"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="199.3799" x="1169.709" y="1143.0732">WorkoutSessionDetailResponse(session, exercises)</text>
+<polyline points="1411.6553,1169.3027 1421.6553,1173.3027 1411.6553,1177.3027" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1152.709" x2="1417.6553" y1="1173.3027" y2="1173.3027"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="190.1426" x="1159.709" y="1169.0439">Check that the workout belongs to this member</text>
+<polyline points="1640.269,1195.2734 1650.269,1199.2734 1640.269,1203.2734" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1423.6553" x2="1646.269" y1="1199.2734" y2="1199.2734"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="53.6792" x="1430.6553" y="1195.0146">run the query</text>
+<polyline points="1434.6553,1221.2441 1424.6553,1225.2441 1434.6553,1229.2441" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1428.6553" x2="1651.269" y1="1225.2441" y2="1225.2441"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="73.7095" x="1440.6553" y="1220.9854">the matching rows</text>
+<polyline points="1163.709,1247.2148 1153.709,1251.2148 1163.709,1255.2148" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1157.709" x2="1422.6553" y1="1251.2148" y2="1251.2148"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="144.145" x="1169.709" y="1246.9561">the workout belongs to the member</text>
+<path d="M10,1266.2148 L67.1143,1266.2148 L67.1143,1271.5156 L57.1143,1281.5156 L10,1281.5156 L10,1266.2148 " fill="#EEEEEE" style="stroke:#000000;stroke-width:1.5;"/>
+<rect fill="none" height="470.375" style="stroke:#000000;stroke-width:1.5;" width="1224.6338" x="10" y="1266.2148"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="12.1143" x="25" y="1278.0059">alt</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="133.6865" x="82.1143" y="1279.0059">[the workout does not exist]</text>
+<polyline points="857.4219,1307.457 847.4219,1311.457 857.4219,1315.457" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="851.4219" x2="1151.709" y1="1311.457" y2="1311.457"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="71.7671" x="863.4219" y="1295.2275">Reject the request</text>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="192.1465" x="863.4219" y="1307.1982">(404 NOT_FOUND "Workout session not found")</text>
+<polyline points="632.104,1333.4277 622.104,1337.4277 632.104,1341.4277" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="626.104" x2="845.4219" y1="1337.4277" y2="1337.4277"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="71.8286" x="638.104" y="1333.1689">the error message</text>
+<polyline points="244.873,1359.3984 234.873,1363.3984 244.873,1367.3984" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="238.873" x2="620.104" y1="1363.3984" y2="1363.3984"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="71.8286" x="250.873" y="1359.1396">the error message</text>
+<polyline points="68.7036,1385.3691 58.7036,1389.3691 68.7036,1393.3691" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="62.7036" x2="232.873" y1="1389.3691" y2="1389.3691"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="152.1694" x="74.7036" y="1385.1104">Show the error message on the screen</text>
+<line style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="10" x2="1234.6338" y1="1398.3691" y2="1398.3691"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="199.5898" x="15" y="1409.1602">[the workout belongs to another member]</text>
+<polyline points="857.4219,1438.6113 847.4219,1442.6113 857.4219,1446.6113" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="851.4219" x2="1151.709" y1="1442.6113" y2="1442.6113"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="71.7671" x="863.4219" y="1426.3818">Reject the request</text>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="273.2871" x="863.4219" y="1438.3525">(403 FORBIDDEN "You are not allowed to view this workout session")</text>
+<polyline points="632.104,1464.582 622.104,1468.582 632.104,1472.582" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="626.104" x2="845.4219" y1="1468.582" y2="1468.582"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="71.8286" x="638.104" y="1464.3232">the error message</text>
+<polyline points="244.873,1490.5527 234.873,1494.5527 244.873,1498.5527" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="238.873" x2="620.104" y1="1494.5527" y2="1494.5527"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="71.8286" x="250.873" y="1490.2939">the error message</text>
+<polyline points="68.7036,1516.5234 58.7036,1520.5234 68.7036,1524.5234" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="62.7036" x2="232.873" y1="1520.5234" y2="1520.5234"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="152.1694" x="74.7036" y="1516.2646">Show the error message on the screen</text>
+<line style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="10" x2="1234.6338" y1="1529.5234" y2="1529.5234"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="118.7305" x="15" y="1540.3145">[the workout is readable]</text>
+<polyline points="857.4219,1557.7949 847.4219,1561.7949 857.4219,1565.7949" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="851.4219" x2="1151.709" y1="1561.7949" y2="1561.7949"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="282.2871" x="863.4219" y="1557.5361">WorkoutSessionDetailResponse(id, name, category, accuracy, exercises)</text>
+<polyline points="632.104,1583.7656 622.104,1587.7656 632.104,1591.7656" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="626.104" x2="845.4219" y1="1587.7656" y2="1587.7656"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="98.4419" x="638.104" y="1583.5068">the detail of the workout</text>
+<polyline points="244.873,1609.7363 234.873,1613.7363 244.873,1617.7363" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="238.873" x2="620.104" y1="1613.7363" y2="1613.7363"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="98.4419" x="250.873" y="1609.4775">the detail of the workout</text>
+<polyline points="408.8462,1647.6777 418.8462,1651.6777 408.8462,1655.6777" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="233.873" x2="414.8462" y1="1651.6777" y2="1651.6777"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="115.2202" x="240.873" y="1635.4482">Open the workout log modal</text>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="127.0063" x="240.873" y="1647.4189">with the exercises of the session</text>
+<line style="stroke:#333333;stroke-width:1.0;" x1="420.8462" x2="462.8462" y1="1689.6191" y2="1689.6191"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="462.8462" x2="462.8462" y1="1689.6191" y2="1702.6191"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="421.8462" x2="462.8462" y1="1702.6191" y2="1702.6191"/>
+<polyline points="431.8462,1698.6191 421.8462,1702.6191 431.8462,1706.6191" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="172.6304" x="427.8462" y="1673.3896">Show the sets, the reps or the hold seconds</text>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="186.2578" x="427.8462" y="1685.3604">per set and the form accuracy of every exercise</text>
+<polyline points="68.7036,1724.5898 58.7036,1728.5898 68.7036,1732.5898" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="62.7036" x2="419.8462" y1="1728.5898" y2="1728.5898"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="113.3174" x="74.7036" y="1724.3311">Show the log of the workout</text></svg>

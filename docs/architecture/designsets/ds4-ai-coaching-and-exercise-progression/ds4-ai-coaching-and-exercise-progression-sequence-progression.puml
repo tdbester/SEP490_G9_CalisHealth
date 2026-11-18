@@ -1,0 +1,92 @@
+@startuml
+'==============================================================
+' DESIGN SET DS4 - AI Coaching and Exercise Progression
+' Sequence: The member submits an exercise result and reads the progression
+'==============================================================
+skinparam shadowing false
+skinparam linetype ortho
+skinparam ArrowFontSize 9
+skinparam ArrowColor #333333
+skinparam defaultFontName Segoe UI
+skinparam defaultFontSize 10
+skinparam sequence {
+  ArrowColor #333333
+  LifeLineBorderColor #777777
+  ParticipantBorderColor #333333
+  ParticipantBackgroundColor #FFFFFF
+  ArrowFontSize 9
+}
+skinparam ParticipantPadding 12
+
+'===============================================================
+' Every layer is a rectangle with a single head at the top.
+' The life lines get shorter from the left to the right.
+'===============================================================
+hide footbox
+skinparam ParticipantBorderThickness 1.2
+title DS4 - Submit an exercise result and read the progression\n(Sequence Diagram)
+
+participant "Member" as Member
+participant "Workout Page\n(React)" as Page
+participant "MemberProgressionController" as Ctl
+participant "ProgressionRuleService" as Svc
+participant "SessionExerciseResultRepository" as ResRepo
+participant "SessionSetResultRepository" as SetRepo
+participant "MemberSkillProgressRepository" as ProgRepo
+participant "ProgressionRuleRepository" as RuleRepo
+participant "ExerciseRepository" as ExRepo
+participant "MySQL\n(Database)" as DB
+
+== SUBMIT AN EXERCISE RESULT ==
+
+Member -> Page : Finish the exercise and send the result
+Page -> Ctl : Submit the result of the exercise
+Ctl -> Svc : Submit the result of the exercise
+Svc -> SetRepo : Save the results of the sets
+SetRepo -> DB : run the query
+DB --> SetRepo : the matching rows
+Svc -> ResRepo : Save the result of the exercise
+ResRepo -> DB : run the query
+DB --> ResRepo : the matching rows
+Svc -> RuleRepo : Load the progression rules of the exercise
+RuleRepo -> DB : run the query
+DB --> RuleRepo : the matching rows
+RuleRepo --> Svc : the matching rules
+Svc -> ProgRepo : Update the skill progress of the member
+ProgRepo -> DB : run the query
+DB --> ProgRepo : the matching rows
+Svc -> ExRepo : Load the exercise for the next level
+ExRepo -> DB : run the query
+DB --> ExRepo : the matching rows
+ExRepo --> Svc : the exercise and the next level
+Svc --> Ctl : ExerciseResultResponse(result, new progress, next exercise)
+Ctl --> Page : Show the progress and the next exercise
+
+== READ THE FORM CORRECTION PLAN ==
+
+Member -> Page : Open the form correction plan
+Page -> Ctl : Get the form correction plan
+Ctl -> Svc : Get the form correction plan
+Svc -> ResRepo : Load the recent results of the member
+ResRepo -> DB : run the query
+DB --> ResRepo : the matching rows
+Svc -> ProgRepo : Load the skill progress of the member
+ProgRepo -> DB : run the query
+DB --> ProgRepo : the matching rows
+ProgRepo --> Svc : the skill progress
+Svc --> Ctl : the correction plan of the form
+Ctl --> Page : Show the correction plan
+
+== READ THE FORM RULES ==
+
+Member -> Page : Open the list of the form rules
+Page -> Ctl : List the form rules
+Ctl -> Svc : List the form rules
+Svc -> ProgRepo : Load the rules and their status
+ProgRepo -> DB : run the query
+DB --> ProgRepo : the matching rows
+ProgRepo --> Svc : the rule list
+Svc --> Ctl : the rule list
+Ctl --> Page : Show the form rules
+
+@enduml

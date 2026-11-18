@@ -1,0 +1,190 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="1604px" preserveAspectRatio="none" style="width:1761px;height:1604px;background:#FFFFFF;" version="1.1" viewBox="0 0 1761 1604" width="1761px" zoomAndPan="magnify"><defs/>
+<text fill="#000000" font-family="Segoe UI" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="221.2998" x="766.262" y="30.1074">DS4 - Ask the AI coach a question</text>
+<text fill="#000000" font-family="Segoe UI" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="133.5264" x="810.1487" y="48.7285">(Sequence Diagram)</text>
+<rect fill="none" height="779.0137" style="stroke:#000000;stroke-width:1.5;" width="1645.1665" x="99.6572" y="292.998"/>
+<rect fill="none" height="566.6172" style="stroke:#000000;stroke-width:1.5;" width="1625.1665" x="109.6572" y="498.3945"/>
+<rect fill="none" height="354.2207" style="stroke:#000000;stroke-width:1.5;" width="1605.1665" x="119.6572" y="703.791"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="42" x2="42" y1="104.8438" y2="1072"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="183.6572" x2="183.6572" y1="104.8438" y2="1072"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="416.8638" x2="416.8638" y1="104.8438" y2="1072"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="680.2275" x2="680.2275" y1="104.8438" y2="1072"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="890.2925" x2="890.2925" y1="104.8438" y2="879"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1056.5981" x2="1056.5981" y1="104.8438" y2="879"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1226.4214" x2="1226.4214" y1="104.8438" y2="782"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1401.894" x2="1401.894" y1="104.8438" y2="782"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1557.2993" x2="1557.2993" y1="104.8438" y2="685"/>
+<line style="stroke:#777777;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1671.7729" x2="1671.7729" y1="104.8438" y2="637"/>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="51.4072" x="17" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="37.4072" x="24" y="94.334">Member</text>
+<rect fill="#FFFFFF" height="40.6016" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="85.8506" x="141.6572" y="63.2422"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="71.8506" x="148.6572" y="81.0332">AI Support Page</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="30.3418" x="169.4116" y="94.334">(React)</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="139.7178" x="347.8638" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="125.7178" x="354.8638" y="94.334">MemberAiSupportController</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="89.4053" x="636.2275" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="75.4053" x="643.2275" y="94.334">AiSupportService</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="132.3057" x="824.2925" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="118.3057" x="831.2925" y="94.334">ContentModerationService</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="132.8232" x="990.5981" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="118.8232" x="997.5981" y="94.334">AiSupportUsageRepository</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="138.4727" x="1157.4214" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="124.4727" x="1164.4214" y="94.334">AiSupportSessionRepository</text>
+<rect fill="#FFFFFF" height="27.3008" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="144.4053" x="1329.894" y="76.543"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="130.4053" x="1336.894" y="94.334">AiSupportMessageRepository</text>
+<rect fill="#FFFFFF" height="40.6016" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="99.4736" x="1508.2993" y="63.2422"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="48.5938" x="1533.7393" y="81.0332">AI Provider</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="85.4736" x="1515.2993" y="94.334">(OpenAI or Gemini)</text>
+<rect fill="#FFFFFF" height="40.6016" rx="2.5" ry="2.5" style="stroke:#333333;stroke-width:1.2;" width="61.0508" x="1641.7729" y="63.2422"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="31.377" x="1656.6099" y="81.0332">MySQL</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" lengthAdjust="spacing" textLength="47.0508" x="1648.7729" y="94.334">(Database)</text>
+<rect fill="#EEEEEE" height="3" style="stroke:#EEEEEE;stroke-width:1.0;" width="1754.8237" x="0" y="134.4941"/>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1754.8237" y1="134.4941" y2="134.4941"/>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1754.8237" y1="137.4941" y2="137.4941"/>
+<rect fill="#EEEEEE" height="21.3008" style="stroke:#000000;stroke-width:2.0;" width="98.6875" x="828.0681" y="124.8438"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="81.9287" x="834.0681" y="139.6348">ASK A QUESTION</text>
+<polyline points="172.5825,170.1152 182.5825,174.1152 172.5825,178.1152" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="42.7036" x2="178.5825" y1="174.1152" y2="174.1152"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="117.8789" x="49.7036" y="169.8564">Type the question and send it</text>
+<polyline points="405.7227,196.0859 415.7227,200.0859 405.7227,204.0859" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="184.5825" x2="411.7227" y1="200.0859" y2="200.0859"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="209.1401" x="191.5825" y="195.8271">Ask the AI coach (exercise code, question, session id)</text>
+<polyline points="668.9302,222.0566 678.9302,226.0566 668.9302,230.0566" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="417.7227" x2="674.9302" y1="226.0566" y2="226.0566"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="65.8037" x="424.7227" y="221.7979">Ask the AI coach</text>
+<polyline points="878.4453,248.0273 888.4453,252.0273 878.4453,256.0273" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="680.9302" x2="884.4453" y1="252.0273" y2="252.0273"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="185.5151" x="687.9302" y="247.7686">Check the question for inappropriate language</text>
+<polyline points="691.9302,273.998 681.9302,277.998 691.9302,281.998" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="685.9302" x2="889.4453" y1="277.998" y2="277.998"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="112.5835" x="697.9302" y="273.7393">the flagged word or nothing</text>
+<path d="M99.6572,292.998 L156.7715,292.998 L156.7715,298.2988 L146.7715,308.2988 L99.6572,308.2988 L99.6572,292.998 " fill="#EEEEEE" style="stroke:#000000;stroke-width:1.5;"/>
+<rect fill="none" height="779.0137" style="stroke:#000000;stroke-width:1.5;" width="1645.1665" x="99.6572" y="292.998"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="12.1143" x="114.6572" y="304.7891">alt</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="222.1826" x="171.7715" y="305.7891">[the question contains inappropriate language]</text>
+<polyline points="428.7227,334.2402 418.7227,338.2402 428.7227,342.2402" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="422.7227" x2="679.9302" y1="338.2402" y2="338.2402"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="76.478" x="434.7227" y="322.0107">Reject the question</text>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="209.1841" x="434.7227" y="333.9814">(400 BAD_REQUEST "Please rephrase your question")</text>
+<polyline points="195.5825,360.2109 185.5825,364.2109 195.5825,368.2109" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="189.5825" x2="416.7227" y1="364.2109" y2="364.2109"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="140.3438" x="201.5825" y="359.9521">Show the error message in the chat</text>
+<line style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="99.6572" x2="1744.8237" y1="373.2109" y2="373.2109"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="115.9229" x="104.6572" y="384.002">[the question is allowed]</text>
+<polyline points="1045.0098,401.4824 1055.0098,405.4824 1045.0098,409.4824" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="680.9302" x2="1051.0098" y1="405.4824" y2="405.4824"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="142.1499" x="687.9302" y="401.2236">Lock the daily usage of the member</text>
+<polyline points="1660.2983,427.4531 1670.2983,431.4531 1660.2983,435.4531" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1057.0098" x2="1666.2983" y1="431.4531" y2="431.4531"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="53.6792" x="1064.0098" y="427.1943">run the query</text>
+<polyline points="1068.0098,453.4238 1058.0098,457.4238 1068.0098,461.4238" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1062.0098" x2="1671.2983" y1="457.4238" y2="457.4238"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="73.7095" x="1074.0098" y="453.165">the matching rows</text>
+<polyline points="691.9302,479.3945 681.9302,483.3945 691.9302,487.3945" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="685.9302" x2="1056.0098" y1="483.3945" y2="483.3945"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="138.9155" x="697.9302" y="479.1357">the used question count of the day</text>
+<path d="M109.6572,498.3945 L166.7715,498.3945 L166.7715,503.6953 L156.7715,513.6953 L109.6572,513.6953 L109.6572,498.3945 " fill="#EEEEEE" style="stroke:#000000;stroke-width:1.5;"/>
+<rect fill="none" height="566.6172" style="stroke:#000000;stroke-width:1.5;" width="1625.1665" x="109.6572" y="498.3945"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="12.1143" x="124.6572" y="510.1855">alt</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="128.3057" x="181.7715" y="511.1855">[the daily quota is used up]</text>
+<polyline points="428.7227,539.6367 418.7227,543.6367 428.7227,547.6367" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="422.7227" x2="679.9302" y1="543.6367" y2="543.6367"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="76.478" x="434.7227" y="527.4072">Reject the question</text>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="229.0913" x="434.7227" y="539.3779">(429 TOO_MANY_REQUESTS "The daily quota is used up")</text>
+<polyline points="195.5825,565.6074 185.5825,569.6074 195.5825,573.6074" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="189.5825" x2="416.7227" y1="569.6074" y2="569.6074"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="144.2725" x="201.5825" y="565.3486">Show the quota message in the chat</text>
+<line style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="109.6572" x2="1734.8237" y1="578.6074" y2="578.6074"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="147.1191" x="114.6572" y="589.3984">[the daily quota is not used up]</text>
+<polyline points="1214.6577,606.8789 1224.6577,610.8789 1214.6577,614.8789" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="680.9302" x2="1220.6577" y1="610.8789" y2="610.8789"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="145.6479" x="687.9302" y="606.6201">Lock the chat session of the member</text>
+<polyline points="1660.2983,632.8496 1670.2983,636.8496 1660.2983,640.8496" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1226.6577" x2="1666.2983" y1="636.8496" y2="636.8496"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="53.6792" x="1233.6577" y="632.5908">run the query</text>
+<polyline points="1237.6577,658.8203 1227.6577,662.8203 1237.6577,666.8203" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1231.6577" x2="1671.2983" y1="662.8203" y2="662.8203"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="73.7095" x="1243.6577" y="658.5615">the matching rows</text>
+<polyline points="691.9302,684.791 681.9302,688.791 691.9302,692.791" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="685.9302" x2="1225.6577" y1="688.791" y2="688.791"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="153.3911" x="697.9302" y="684.5322">the used question count of the session</text>
+<path d="M119.6572,703.791 L176.7715,703.791 L176.7715,709.0918 L166.7715,719.0918 L119.6572,719.0918 L119.6572,703.791 " fill="#EEEEEE" style="stroke:#000000;stroke-width:1.5;"/>
+<rect fill="none" height="354.2207" style="stroke:#000000;stroke-width:1.5;" width="1605.1665" x="119.6572" y="703.791"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="12.1143" x="134.6572" y="715.582">alt</text>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="139.2822" x="191.7715" y="716.582">[the session quota is used up]</text>
+<polyline points="428.7227,745.0332 418.7227,749.0332 428.7227,753.0332" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="422.7227" x2="679.9302" y1="749.0332" y2="749.0332"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="76.478" x="434.7227" y="732.8037">Reject the question</text>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="239.2075" x="434.7227" y="744.7744">(429 TOO_MANY_REQUESTS "The session quota is used up")</text>
+<polyline points="195.5825,771.0039 185.5825,775.0039 195.5825,779.0039" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="189.5825" x2="416.7227" y1="775.0039" y2="775.0039"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="144.2725" x="201.5825" y="770.7451">Show the quota message in the chat</text>
+<line style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="119.6572" x2="1724.8237" y1="784.0039" y2="784.0039"/>
+<text fill="#000000" font-family="Segoe UI" font-size="10" font-weight="bold" lengthAdjust="spacing" textLength="158.0957" x="124.6572" y="794.7949">[the session quota is not used up]</text>
+<polyline points="1546.0361,812.2754 1556.0361,816.2754 1546.0361,820.2754" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="680.9302" x2="1552.0361" y1="816.2754" y2="816.2754"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="164.5005" x="687.9302" y="812.0166">Send the question with the safety context</text>
+<polyline points="691.9302,838.2461 681.9302,842.2461 691.9302,846.2461" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="685.9302" x2="1557.0361" y1="842.2461" y2="842.2461"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="105.4072" x="697.9302" y="837.9873">the answer of the AI coach</text>
+<polyline points="1390.0967,864.2168 1400.0967,868.2168 1390.0967,872.2168" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="680.9302" x2="1396.0967" y1="868.2168" y2="868.2168"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="133.7212" x="687.9302" y="863.958">Save the question and the answer</text>
+<polyline points="1660.2983,890.1875 1670.2983,894.1875 1660.2983,898.1875" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1402.0967" x2="1666.2983" y1="894.1875" y2="894.1875"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="53.6792" x="1409.0967" y="889.9287">run the query</text>
+<polyline points="1413.0967,916.1582 1403.0967,920.1582 1413.0967,924.1582" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1407.0967" x2="1671.2983" y1="920.1582" y2="920.1582"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="73.7095" x="1419.0967" y="915.8994">the matching rows</text>
+<polyline points="1045.0098,942.1289 1055.0098,946.1289 1045.0098,950.1289" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="680.9302" x2="1051.0098" y1="946.1289" y2="946.1289"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="169.6729" x="687.9302" y="941.8701">Increase the daily and the session counters</text>
+<polyline points="1660.2983,968.0996 1670.2983,972.0996 1660.2983,976.0996" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1057.0098" x2="1666.2983" y1="972.0996" y2="972.0996"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="53.6792" x="1064.0098" y="967.8408">run the query</text>
+<polyline points="1068.0098,994.0703 1058.0098,998.0703 1068.0098,1002.0703" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1062.0098" x2="1671.2983" y1="998.0703" y2="998.0703"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="73.7095" x="1074.0098" y="993.8115">the matching rows</text>
+<polyline points="428.7227,1020.041 418.7227,1024.041 428.7227,1028.041" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="422.7227" x2="679.9302" y1="1024.041" y2="1024.041"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="121.4517" x="434.7227" y="1019.7822">AskQuestionResponse(answer)</text>
+<polyline points="195.5825,1046.0117 185.5825,1050.0117 195.5825,1054.0117" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="189.5825" x2="416.7227" y1="1050.0117" y2="1050.0117"/>
+<text fill="#000000" font-family="Segoe UI" font-size="9" lengthAdjust="spacing" textLength="111.6606" x="201.5825" y="1045.7529">Show the answer in the chat</text>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1754.8237" y1="1098.6621" y2="1098.6621"/>
+<line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1754.8237" y1="1101.6621" y2="1101.6621"/>
+<polyline points="172.5825,1134.2832 182.5825,1138.2832 172.5825,1142.2832" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="42.7036" x2="178.5825" y1="1138.2832" y2="1138.2832"/>
+<polyline points="405.7227,1160.2539 415.7227,1164.2539 405.7227,1168.2539" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="184.5825" x2="411.7227" y1="1164.2539" y2="1164.2539"/>
+<polyline points="668.9302,1186.2246 678.9302,1190.2246 668.9302,1194.2246" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="417.7227" x2="674.9302" y1="1190.2246" y2="1190.2246"/>
+<polyline points="1390.0967,1212.1953 1400.0967,1216.1953 1390.0967,1220.1953" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="680.9302" x2="1396.0967" y1="1216.1953" y2="1216.1953"/>
+<polyline points="1660.2983,1238.166 1670.2983,1242.166 1660.2983,1246.166" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1402.0967" x2="1666.2983" y1="1242.166" y2="1242.166"/>
+<polyline points="1413.0967,1264.1367 1403.0967,1268.1367 1413.0967,1272.1367" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1407.0967" x2="1671.2983" y1="1268.1367" y2="1268.1367"/>
+<polyline points="691.9302,1290.1074 681.9302,1294.1074 691.9302,1298.1074" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="685.9302" x2="1401.0967" y1="1294.1074" y2="1294.1074"/>
+<polyline points="428.7227,1316.0781 418.7227,1320.0781 428.7227,1324.0781" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="422.7227" x2="679.9302" y1="1320.0781" y2="1320.0781"/>
+<polyline points="195.5825,1342.0488 185.5825,1346.0488 195.5825,1350.0488" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="189.5825" x2="416.7227" y1="1346.0488" y2="1346.0488"/>
+<polyline points="172.5825,1368.0195 182.5825,1372.0195 172.5825,1376.0195" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="42.7036" x2="178.5825" y1="1372.0195" y2="1372.0195"/>
+<polyline points="405.7227,1393.9902 415.7227,1397.9902 405.7227,1401.9902" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="184.5825" x2="411.7227" y1="1397.9902" y2="1397.9902"/>
+<polyline points="668.9302,1419.9609 678.9302,1423.9609 668.9302,1427.9609" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="417.7227" x2="674.9302" y1="1423.9609" y2="1423.9609"/>
+<polyline points="1045.0098,1445.9316 1055.0098,1449.9316 1045.0098,1453.9316" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="680.9302" x2="1051.0098" y1="1449.9316" y2="1449.9316"/>
+<polyline points="1660.2983,1471.9023 1670.2983,1475.9023 1660.2983,1479.9023" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;" x1="1057.0098" x2="1666.2983" y1="1475.9023" y2="1475.9023"/>
+<polyline points="1068.0098,1497.873 1058.0098,1501.873 1068.0098,1505.873" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1062.0098" x2="1671.2983" y1="1501.873" y2="1501.873"/>
+<polyline points="691.9302,1523.8438 681.9302,1527.8438 691.9302,1531.8438" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="685.9302" x2="1056.0098" y1="1527.8438" y2="1527.8438"/>
+<polyline points="428.7227,1549.8145 418.7227,1553.8145 428.7227,1557.8145" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="422.7227" x2="679.9302" y1="1553.8145" y2="1553.8145"/>
+<polyline points="195.5825,1575.7852 185.5825,1579.7852 195.5825,1583.7852" fill="none" style="stroke:#333333;stroke-width:1.0;stroke-linecap:round;stroke-linejoin:round;"/>
+<line style="stroke:#333333;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="189.5825" x2="416.7227" y1="1579.7852" y2="1579.7852"/></svg>

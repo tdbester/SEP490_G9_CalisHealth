@@ -1,0 +1,108 @@
+﻿@startuml
+'==============================================================
+' DESIGN SET DS7 - Health Tracking & Performance Analytics
+' Sequence 2 of 3: View workout history (+ View log workout)
+'
+' Front end : client/src/pages/WorkoutHistory.jsx        
+'            client/src/components/tracking/WorkoutLogModal.jsx
+'            client/src/api/tracking.js
+' Back end  : MemberTrackingController -> MemberTrackingService
+'            -> MemberTrackingRepository -> MySQL
+'==============================================================
+skinparam shadowing false
+skinparam linetype ortho
+skinparam ArrowFontSize 9
+skinparam ArrowColor #333333
+skinparam defaultFontName Segoe UI
+skinparam defaultFontSize 10
+skinparam sequence {
+  ArrowColor #333333
+  LifeLineBorderColor #777777
+  ParticipantBorderColor #333333
+  ParticipantBackgroundColor #FFFFFF
+  ArrowFontSize 9
+}
+skinparam ParticipantPadding 12
+
+'===============================================================
+' Every layer is a rectangle with a single head at the top.
+' The life lines get shorter from the left to the right.
+'===============================================================
+hide footbox
+skinparam ParticipantBorderThickness 1.2
+title DS7 - View workout history and view the log of one workout\n(Sequence Diagram)
+
+participant "Member" as User
+participant "Workout History Page\n(React)" as Page
+participant "Workout Log Modal\n(React)" as Modal
+participant "trackingApi\n(tracking.js)" as Api
+participant "MemberTrackingController" as Ctl
+participant "MemberTrackingService" as Svc
+participant "MemberTrackingRepository" as Repo
+participant "MySQL\n(Database)" as DB
+
+== READ THE WORKOUT HISTORY ==
+
+User -> Page : Open the workout history screen
+Page -> Api : Ask for the finished workouts of the selected day
+Api -> Ctl : Read the workout history of the signed-in member
+Ctl -> Svc : Read the workout history
+Svc -> Repo : Look up the member profile by email address
+Repo -> DB : run the query
+DB --> Repo : the matching rows
+Repo --> Svc : the member profile id
+Svc -> Repo : Load the finished workouts with the accuracy of every exercise
+Repo -> DB : run the query
+DB --> Repo : the matching rows
+Repo -> DB : run the query
+DB --> Repo : the number of workouts and the total time
+Repo -> DB : run the query
+DB --> Repo : the clean reps and the hold time
+Repo --> Svc : WorkoutHistoryResponse(summary, workouts)
+Svc --> Ctl : WorkoutHistoryResponse(summary, workouts)
+Ctl --> Api : the workout history
+Api --> Page : the session list and the summary
+Page -> Page : Sort the workouts by the completed time\nand draw the four summary cards\n(workouts, total time, clean ratio, hold time)
+Page --> User : Show the list of the finished workouts\nof the selected day
+
+== READ THE LOG OF ONE WORKOUT ==
+
+User -> Page : Click on one workout in the list
+Page -> Api : Ask for the detail of that workout
+Api -> Ctl : Read the detail of the workout session
+Ctl -> Svc : Read the detail of the workout session
+Svc -> Repo : Look up the member profile by email address
+Repo -> DB : run the query
+DB --> Repo : the matching rows
+Repo --> Svc : the member profile id
+Svc -> Repo : Load the session and the exercises of the workout
+Repo -> DB : run the query
+DB --> Repo : the matching rows
+Repo -> DB : run the query
+DB --> Repo : the exercises with their sets and their form accuracy
+Repo --> Svc : WorkoutSessionDetailResponse(session, exercises)
+Svc -> Repo : Check that the workout belongs to this member
+Repo -> DB : run the query
+DB --> Repo : the matching rows
+Repo --> Svc : the workout belongs to the member
+
+alt the workout does not exist
+  Svc --> Ctl : Reject the request\n(404 NOT_FOUND "Workout session not found")
+  Ctl --> Api : the error message
+  Api --> Page : the error message
+  Page --> User : Show the error message on the screen
+else the workout belongs to another member
+  Svc --> Ctl : Reject the request\n(403 FORBIDDEN "You are not allowed to view this workout session")
+  Ctl --> Api : the error message
+  Api --> Page : the error message
+  Page --> User : Show the error message on the screen
+else the workout is readable
+  Svc --> Ctl : WorkoutSessionDetailResponse(id, name, category, accuracy, exercises)
+  Ctl --> Api : the detail of the workout
+  Api --> Page : the detail of the workout
+  Page -> Modal : Open the workout log modal\nwith the exercises of the session
+  Modal -> Modal : Show the sets, the reps or the hold seconds\nper set and the form accuracy of every exercise
+  Modal --> User : Show the log of the workout
+end
+
+@enduml

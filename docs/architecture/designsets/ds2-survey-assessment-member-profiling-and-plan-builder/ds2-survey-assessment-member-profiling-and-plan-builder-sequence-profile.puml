@@ -1,0 +1,106 @@
+@startuml
+'==============================================================
+' DESIGN SET DS2 - Survey Assessment, Member Profiling and Plan Builder
+' Sequence: The member reads and updates the profile
+'==============================================================
+skinparam shadowing false
+skinparam linetype ortho
+skinparam ArrowFontSize 9
+skinparam ArrowColor #333333
+skinparam defaultFontName Segoe UI
+skinparam defaultFontSize 10
+skinparam sequence {
+  ArrowColor #333333
+  LifeLineBorderColor #777777
+  ParticipantBorderColor #333333
+  ParticipantBackgroundColor #FFFFFF
+  ArrowFontSize 9
+}
+skinparam ParticipantPadding 12
+
+'===============================================================
+' Every layer is a rectangle with a single head at the top.
+' The life lines get shorter from the left to the right.
+'===============================================================
+hide footbox
+skinparam ParticipantBorderThickness 1.2
+title DS2 - Read and update the member profile\n(Sequence Diagram)
+
+participant "Member" as Member
+participant "Profile Page\n(React)" as Page
+participant "ProfileController" as Ctl
+participant "ProfileService" as Svc
+participant "UserRepository" as UserRepo
+participant "MemberProfileRepository" as ProfRepo
+participant "MemberFitnessLevelService" as LevelSvc
+participant "ProfileAvatarStorageService" as AvatarSvc
+participant "MySQL\n(Database)" as DB
+
+== READ THE PROFILE ==
+
+Member -> Page : Open the profile page
+Page -> Ctl : Get the profile of the member
+Ctl -> Svc : Get the profile of the member
+Svc -> UserRepo : Load the account of the member
+UserRepo -> DB : run the query
+DB --> UserRepo : the matching rows
+Svc -> ProfRepo : Load the profile of the member
+ProfRepo -> DB : run the query
+DB --> ProfRepo : the matching rows
+ProfRepo --> Svc : the member profile
+Svc -> LevelSvc : Load the current fitness level
+LevelSvc --> Svc : the current fitness level
+Svc --> Ctl : ProfileResponse(profile, fitness level)
+Ctl --> Page : Show the profile and the fitness level
+
+== UPDATE THE PROFILE ==
+
+Member -> Page : Change the profile fields and save
+Page -> Ctl : Update the profile of the member
+Ctl -> Svc : Update the profile of the member
+Svc -> ProfRepo : Save the changed profile fields
+ProfRepo -> DB : run the query
+DB --> ProfRepo : the matching rows
+Svc --> Ctl : ProfileResponse(profile)
+Ctl --> Page : Show the updated profile
+
+== UPLOAD AND REMOVE THE AVATAR ==
+
+Member -> Page : Choose a picture and upload it
+Page -> Ctl : Upload the avatar of the member
+Ctl -> Svc : Upload the avatar of the member
+Svc -> AvatarSvc : Store the picture and register it in the media registry
+AvatarSvc --> Svc : the URL of the stored picture
+Svc -> ProfRepo : Save the new avatar URL
+ProfRepo -> DB : run the query
+DB --> ProfRepo : the matching rows
+Svc --> Ctl : ProfileResponse(profile)
+Ctl --> Page : Show the new avatar
+
+Member -> Page : Remove the avatar
+Page -> Ctl : Remove the avatar of the member
+Ctl -> Svc : Remove the avatar of the member
+Svc -> AvatarSvc : Remove the picture from the storage
+Svc -> ProfRepo : Clear the avatar URL
+ProfRepo -> DB : run the query
+DB --> ProfRepo : the matching rows
+Svc --> Ctl : ProfileResponse(profile)
+Ctl --> Page : Show the member without an avatar
+
+== CHANGE THE PASSWORD FROM THE PROFILE ==
+
+Member -> Page : Type the old and the new password and save
+Page -> Ctl : Change the password of the member
+Ctl -> Svc : Change the password of the member
+Svc -> UserRepo : Check the old password and save the new hash
+UserRepo -> DB : run the query
+DB --> UserRepo : the matching rows
+alt the old password is wrong
+  Svc --> Ctl : Reject the request\n(400 BAD_REQUEST "Incorrect old password")
+  Ctl --> Page : Show the error message on the form
+else the password has been changed
+  Svc --> Ctl : The password has been changed
+  Ctl --> Page : Show the success message
+end
+
+@enduml

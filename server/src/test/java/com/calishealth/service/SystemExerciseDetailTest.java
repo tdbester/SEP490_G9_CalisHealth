@@ -61,22 +61,6 @@ class SystemExerciseDetailTest {
         return rule;
     }
 
-    /**
-     * Bài nằm trong cây tiến trình khi có progression rule liên quan.
-     * V83 bỏ bảng `exercise_tree_edges` + cột `exercises.exercise_tree_id`, nên cây
-     * bài tập giờ lấy từ `progression_rules` (nguồn duy nhất).
-     */
-    private ProgressionRule rule(Long exerciseId, Long prerequisiteId, String prerequisiteName) {
-        Exercise prerequisite = new Exercise();
-        prerequisite.setId(prerequisiteId);
-        prerequisite.setName(prerequisiteName);
-        ProgressionRule rule = new ProgressionRule();
-        rule.setExercise(new Exercise());
-        rule.getExercise().setId(exerciseId);
-        rule.setPrerequisiteExercise(prerequisite);
-        return rule;
-    }
-
     @Test
     void mapsAcceptedSystemExerciseDetails() {
         Exercise exercise = new Exercise();

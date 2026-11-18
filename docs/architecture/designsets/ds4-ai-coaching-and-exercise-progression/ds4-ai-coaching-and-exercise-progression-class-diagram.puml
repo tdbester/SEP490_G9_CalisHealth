@@ -1,0 +1,703 @@
+@startuml
+left to right direction
+'==============================================================
+' DESIGN SET DS4 - AI Coaching and Exercise Progression
+' Class Diagram: Controller -> Service -> DTO -> DAO -> Entity
+'
+' UML notation - exactly the six symbols of the project reference:
+'   --      Association            solid line, no head
+'   --|>    Generalization          solid line, hollow triangle
+'   ..|>    Realization             dashed line, hollow triangle
+'   ..>     Dependency              dashed line, OPEN arrow head
+'   o--     Aggregation             solid line, hollow diamond
+'   *--     Composition             solid line, filled diamond
+'==============================================================
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam arrowThickness 1.2
+skinparam defaultLineThickness 1.2
+skinparam ArrowFontSize 9
+skinparam ArrowColor #333333
+skinparam nodesep 30
+skinparam ranksep 45
+skinparam defaultFontName Segoe UI
+skinparam defaultFontSize 10
+skinparam class {
+  BorderThickness 1.2
+  BackgroundColor #FFFFFF
+  FontColor #000000
+  AttributeFontColor #1F3864
+  MethodFontColor #7B3F00
+}
+skinparam package {
+  BorderThickness 1.2
+  FontStyle bold
+  FontSize 11
+  BackColor #E4E4E4
+}
+skinparam stereotype {
+  FontSize 8
+  FontStyle italic
+}
+
+title DESIGN SET DS4 - AI Coaching and Exercise Progression\n(Class Diagram)
+
+'==============================================================
+' CONTROLLER
+'==============================================================
+package "Controller" as CTL {
+  class MemberAiSupportController <<Controller>> {
+    - aiSupport : AiSupportService
+    --
+    + quota(Authentication authentication, String sessionId) : QuotaResponse
+    + ask(AskQuestionRequest request, Authentication authentication) : AskQuestionResponse
+    + history(Authentication authentication, String sessionId) : List<HistoryItem>
+    + alerts(String exerciseCode, Authentication authentication) : List<PhysiologyAlertDTO>
+  }
+
+  class MemberFormCorrectionController <<Controller>> {
+    - formCorrection : FormCorrectionService
+    --
+    + plan(String exerciseCode, String failedJoints) : FormCorrectionPlanResponse
+  }
+
+  class MemberFormRuleController <<Controller>> {
+    - formRuleService : MemberFormRuleService
+    --
+    + getFormRules(String exerciseCode) : FormRulesResponse
+  }
+
+  class MemberProgressionController <<Controller>> {
+    - progressionRules : ProgressionRuleService
+    --
+    + submit(SubmitExerciseResultRequest request, Authentication authentication) : ExerciseResultResponse
+  }
+
+  class ProgressionRuleController <<Controller>> {
+    - progressionRules : ProgressionRuleService
+    --
+    + list() : RuleList
+    + tree() : RuleTree
+    + detail(Long id) : RuleDetail
+    + create(SaveRuleRequest request) : RuleDetail
+    + update(Long id, UpdateRuleRequest request) : RuleDetail
+    + updateStatus(Long id, String status) : RuleDetail
+    + delete(Long id) : void
+  }
+
+  class PhysiologyEvidenceController <<Controller>> {
+    - physiologyService : ExercisePhysiologyService
+    --
+    + evidence(String keyword) : List<PhysiologyEvidenceDTO>
+  }
+
+  class MemberExerciseController <<Controller>> {
+    - memberExerciseService : MemberExerciseService
+    --
+    + getMemberExercises(MemberExerciseFilterRequestDTO filter, Authentication authentication) : ResponseEntity<PageResponseDTO<MemberExerciseItemResponseDTO>>
+    + getMemberExerciseDetail(Long id, Authentication authentication) : ResponseEntity<MemberExerciseDetailResponseDTO>
+  }
+}
+
+'==============================================================
+' SERVICE
+'==============================================================
+package "Service" as SVC {
+  class AiSupportService <<Service>> {
+    - usageRepository : AiSupportUsageRepository
+    - messageRepository : AiSupportMessageRepository
+    - sessionRepository : AiSupportSessionRepository
+    - users : UserRepository
+    - exercises : ExerciseRepository
+    - formRules : FormRuleRepository
+    - openAi : OpenAiChatService
+    - gemini : GeminiChatService
+    - moderation : ContentModerationService
+    - physiologyService : ExercisePhysiologyService
+    - physiologyAlerts : PhysiologyAlertService
+    - safetyService : ExerciseSafetyService
+    - aiProvider : String
+    --
+    + quota(String email, String sessionId) : QuotaResponse
+    + history(String email) : List<HistoryItem>
+    + sessionHistory(String email, String sessionId) : List<HistoryItem>
+    + alertsFor(String exerciseCode) : List<PhysiologyAlertDTO>
+    + alertsFor(String exerciseCode, Long userId) : List<PhysiologyAlertDTO>
+    + ask(String email, AskQuestionRequest request) : AskQuestionResponse
+  }
+
+  class OpenAiChatService <<Service>> {
+    - restClient : RestClient
+    - apiKey : String
+    - model : String
+    - baseUrl : String
+    - maxOutputTokens : int
+    - demoFallbackEnabled : boolean
+    - mapper : ObjectMapper
+    --
+    + isConfigured() : boolean
+    + isDemoFallbackEnabled() : boolean
+    + model() : String
+    + baseUrl() : String
+    + chat(String systemPrompt, String userPrompt) : ChatResult
+    + chat(String systemPrompt, List<ChatMessage> messages) : ChatResult
+    + toAnswer(String rawContent) : AnswerResponse
+  }
+
+  class GeminiChatService <<Service>> {
+    - restClient : RestClient
+    - apiKey : String
+    - model : String
+    - baseUrl : String
+    - maxOutputTokens : int
+    - demoFallbackEnabled : boolean
+    - mapper : ObjectMapper
+    --
+    + isConfigured() : boolean
+    + isDemoFallbackEnabled() : boolean
+    + model() : String
+    + baseUrl() : String
+    + chat(String systemPrompt, String userPrompt) : ChatResult
+    + chat(String systemPrompt, List<ChatMessage> messages) : ChatResult
+    + toAnswer(String rawContent) : AnswerResponse
+  }
+
+  class FormCorrectionService <<Service>> {
+    - exercises : ExerciseRepository
+    - formRules : FormRuleRepository
+    --
+    + plan(String exerciseCode, List<String> failedJoints) : FormCorrectionPlanResponse
+  }
+
+  class MemberFormRuleService <<Service>> {
+    - formRules : FormRuleRepository
+    --
+    + getFormRules(String exerciseCode) : FormRulesResponse
+  }
+
+  class ProgressionRuleService <<Service>> {
+    - rules : ProgressionRuleRepository
+    - exercises : ExerciseRepository
+    - skillProgress : MemberSkillProgressRepository
+    - memberProfiles : MemberProfileRepository
+    - users : UserRepository
+    - exerciseResults : SessionExerciseResultRepository
+    - setResults : SessionSetResultRepository
+    - events : ApplicationEventPublisher
+    - jdbc : JdbcTemplate
+    --
+    + list() : RuleList
+    + tree() : RuleTree
+    + orderedTreeRules() : List<ProgressionRule>
+    + detail(Long id) : RuleDetail
+    + create(SaveRuleRequest request) : RuleDetail
+    + update(Long id, UpdateRuleRequest request) : RuleDetail
+    + delete(Long id) : void
+    + updateStatus(Long id, String status) : RuleDetail
+    + submitResult(String email, SubmitExerciseResultRequest request) : ExerciseResultResponse
+  }
+
+  class ExercisePhysiologyService <<Service>> {
+    - jdbcTemplate : JdbcTemplate
+    --
+    + upsert(Long exerciseId, String exerciseSource, ExercisePhysiologyInputDTO input) : void
+    + delete(Long exerciseId) : void
+    + loadProfile(Long exerciseId) : ExercisePhysiologyDTO
+    + loadEvidences(List<String> codes) : List<PhysiologyEvidenceDTO>
+    + listEvidence(String keyword) : List<PhysiologyEvidenceDTO>
+  }
+
+  class PhysiologyAlertService <<Service>> {
+    - jdbcTemplate : JdbcTemplate
+    --
+    + listActiveRules() : List<PhysiologyAlertDTO>
+    + evaluate(ExercisePhysiologyDTO profile) : List<PhysiologyAlertDTO>
+    + evaluate(ExercisePhysiologyDTO profile, int staticCount) : List<PhysiologyAlertDTO>
+    + evaluate(ExercisePhysiologyDTO profile, int staticCount, Long userId) : List<PhysiologyAlertDTO>
+    + countStaticExercisesInLatestSession(Long userId) : int
+    + acuteChronicRatio(Long userId) : Optional<Double>
+  }
+
+  class ExerciseSafetyService <<Service>> {
+    + redFlagMessage(String question) : String
+    + matchedContraindications(ExercisePhysiologyDTO profile, String question) : List<String>
+  }
+
+  class ContentModerationService <<Service>> {
+    - profanityWords : ProfanityWordRepository
+    --
+    + moderate(String title, String description, List<String> guideSteps, MultipartFile video) : ModerationResult
+    + combine(String textReason, String videoReason) : String
+    + checkText(String title, String description, List<String> guideSteps) : String
+    + checkText(String title, String description, List<String> guideSteps, String targetMuscle) : String
+    + findFlaggedWords(String title, String description, List<String> guideSteps, String targetMuscle) : List<String>
+    + checkVideo(MultipartFile video) : String
+  }
+
+  class MemberFavoriteService <<Service>> {
+    - favorites : MemberFavoriteRepository
+    - users : UserRepository
+    - exercises : ExerciseRepository
+    - workouts : WorkoutRepository
+    --
+    + toggle(String memberEmail, String itemType, Long itemId) : FavoriteToggleResponseDTO
+    + list(String memberEmail) : List<FavoriteItemResponseDTO>
+  }
+
+  class MemberExerciseService <<Service>> {
+    - exercises : ExerciseRepository
+    - favorites : MemberFavoriteRepository
+    - users : UserRepository
+    --
+    + getMemberExerciseDetail(Long exerciseId, String memberEmail) : MemberExerciseDetailResponseDTO
+    + getMemberExercises(MemberExerciseFilterRequestDTO filter, String memberEmail) : PageResponseDTO<MemberExerciseItemResponseDTO>
+  }
+}
+
+'==============================================================
+' DTO
+'==============================================================
+package "DTO" as DTO {
+  class AiSupportDtos <<DTO>> {
+    + AskQuestionRequest
+    + AskQuestionResponse
+    + QuotaResponse
+    + HistoryItem
+    + MessageItem
+  }
+
+  class FormCorrectionDtos <<DTO>> {
+    + FormCorrectionPlanResponse
+    + CorrectionStep
+    + FormRulesResponse
+    + FormRuleItem
+  }
+
+  class ExerciseResultDtos <<DTO>> {
+    + SubmitExerciseResultRequest
+    + ExerciseResultResponse
+    + SetResultItem
+    + NextExerciseHint
+  }
+
+  class ProgressionRuleDtos <<DTO>> {
+    + RuleList
+    + RuleTree
+    + RuleDetail
+    + SaveRuleRequest
+    + RuleNode
+  }
+
+  class PhysiologyDtos <<DTO>> {
+    + ExercisePhysiologyDTO
+    + ExercisePhysiologyInputDTO
+    + PhysiologyAlertDTO
+    + PhysiologyEvidenceDTO
+  }
+
+  class FavoriteDtos <<DTO>> {
+    + FavoriteToggleResponseDTO
+    + FavoriteItemResponseDTO
+  }
+
+  class MemberExerciseDtos <<DTO>> {
+    + MemberExerciseItemResponseDTO
+    + MemberExerciseDetailResponseDTO
+  }
+}
+
+'==============================================================
+' DAO
+'==============================================================
+package "DAO" as DAO {
+  interface JpaRepository <<Interface>> {
+    + findById(ID id) : Optional<T>
+    + save(S entity) : T
+    + findAll() : List<T>
+    + deleteById(ID id) : void
+    + count() : long
+  }
+
+
+  interface AiSupportSessionRepository <<DAO>> {
+    + ensureSessionRow(Long userId, String sessionId) : void
+    + findForUpdate(Long userId, String sessionId) : Optional<AiSupportSession>
+    + countQuestions(Long userId, String sessionId) : int
+  }
+
+  interface AiSupportMessageRepository <<DAO>> {
+    + findByUser_IdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(Long userId, LocalDateTime from) : List<AiSupportMessage>
+    + countByUser_IdAndSessionId(Long userId, String sessionId) : long
+    + findByUser_IdAndSessionIdOrderByCreatedAtAsc(Long userId, String sessionId) : List<AiSupportMessage>
+  }
+
+  interface AiSupportUsageRepository <<DAO>> {
+    + findByUser_IdAndUsageDate(Long userId, LocalDate usageDate) : Optional<AiSupportUsage>
+    + ensureUsageRow(Long userId, LocalDate usageDate) : void
+    + findForUpdate(Long userId, LocalDate usageDate) : Optional<AiSupportUsage>
+  }
+
+  interface FormRuleRepository <<DAO>> {
+    + findByExerciseCode(String code) : List<FormRule>
+  }
+
+  interface ProgressionRuleRepository <<DAO>> {
+    + existsByExercise_IdAndPrerequisiteExercise_Id(Long exerciseId, Long prerequisiteExerciseId) : boolean
+    + findAllByStatus(String status) : List<ProgressionRule>
+    + findAllByOrderByIdAsc() : List<ProgressionRule>
+    + findAllByPrerequisiteExercise_IdAndStatus(Long prerequisiteExerciseId, String status) : List<ProgressionRule>
+  }
+
+  interface SessionExerciseResultRepository <<DAO>> {
+  }
+
+  interface SessionSetResultRepository <<DAO>> {
+  }
+
+  interface ExerciseRepository <<DAO>> {
+    + findByCode(String code) : Optional<Exercise>
+    + existsByCode(String code) : boolean
+    + findAllByCodeIn(List<String> codes) : List<Exercise>
+    + findByNameIgnoreCase(String name) : Optional<Exercise>
+    + existsByNameIgnoreCaseAndSource(String name, String source) : boolean
+    + findAcceptedSystemById(Long id) : Optional<Exercise>
+    + countAcceptedSystemExercisesByType(String type) : long
+    + countAcceptedMemberExercisesByAuthorId(Long authorId) : long
+  }
+
+  interface MemberProfileRepository <<DAO>> {
+    + findByUserId(Long userId) : Optional<MemberProfile>
+    + findByUser_Email(String email) : Optional<MemberProfile>
+    + countByFitnessLevel_Id(Long fitnessLevelId) : long
+    + findAllByUser_Role(UserRole role) : List<MemberProfile>
+  }
+
+  interface MemberSkillProgressRepository <<DAO>> {
+    + findByMemberProfile_IdAndExercise_Id(Long memberProfileId, Long exerciseId) : Optional<MemberSkillProgress>
+    + findAllByMemberProfile_IdAndExercise_IdIn(Long memberProfileId, Collection<Long> exerciseIds) : List<MemberSkillProgress>
+    + countByExercise_IdAndStatus(Long exerciseId, String status) : long
+  }
+
+  interface UserRepository <<DAO>> {
+    + findByEmail(String email) : Optional<User>
+    + existsByEmail(String email) : boolean
+    + countByEnabledAndBlocked(boolean enabled, boolean blocked) : long
+    + countByRole(UserRole role) : long
+  }
+
+  interface NotificationRepository <<DAO>> {
+    + findAllByOrderByCreatedAtDesc() : List<Notification>
+    + findAllByTypeInOrderByCreatedAtDesc(Collection<String> types) : List<Notification>
+    + findAllByTypeOrderByCreatedAtDesc(String type) : List<Notification>
+    + findAllByStatusOrderByCreatedAtDesc(String status) : List<Notification>
+    + findAllByIdIn(Collection<Long> ids) : List<Notification>
+    + countByType(String type) : long
+    + deleteAllByIdIn(Collection<Long> ids) : int
+  }
+
+  interface MemberFavoriteRepository <<DAO>> {
+    + findByMemberIdAndItemTypeAndItemId(Long memberId, MemberFavorite.ItemType itemType, Long itemId) : Optional<MemberFavorite>
+    + findAllByMemberId(Long memberId) : List<MemberFavorite>
+    + deleteByMemberIdAndItemTypeAndItemId(Long memberId, MemberFavorite.ItemType itemType, Long itemId) : void
+    + existsByMemberIdAndItemTypeAndItemId(Long memberId, MemberFavorite.ItemType itemType, Long itemId) : boolean
+  }
+
+  interface WorkoutRepository <<DAO>> {
+    + findByCode(String code) : Optional<WorkoutEntry>
+    + existsByLevelIgnoreCase(String level) : boolean
+  }
+
+  interface ProfanityWordRepository <<DAO>> {
+    + findByActiveTrueOrderByIdAsc() : List<ProfanityWord>
+  }
+}
+
+'==============================================================
+' ENTITY
+'==============================================================
+package "Entity - AI Support" as ENTAI {
+  class AiSupportSession <<Entity>> {
+    - id : Long <<PK>>
+    - user : User <<FK>>
+    - sessionId : String <<UK>>
+    - questionCount : int
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+
+  class AiSupportMessage <<Entity>> {
+    - id : Long <<PK>>
+    - user : User <<FK>>
+    - exercise : Exercise <<FK>>
+    - sessionId : String
+    - question : String
+    - answer : String
+    - totalTokens : int
+    - createdAt : LocalDateTime
+  }
+
+  class AiSupportUsage <<Entity>> {
+    - id : Long <<PK>>
+    - user : User <<FK>>
+    - usageDate : LocalDate
+    - questionCount : int
+    - totalTokens : int
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+}
+
+package "Entity - Coaching" as ENTCO {
+  class ProgressionRule <<Entity>> {
+    - id : Long <<PK>>
+    - ruleName : String
+    - relationship : String
+    - measureType : String
+    - requiredReps : Integer
+    - requiredSets : int
+    - requiredSeconds : Integer
+    - minAccuracy : BigDecimal
+    - status : String
+    - updatedAt : LocalDateTime
+    - exercise : Exercise <<FK>>
+    - prerequisiteExercise : Exercise <<FK>>
+  }
+
+  class SessionExerciseResult <<Entity>> {
+    - id : Long <<PK>>
+    - workoutSessionId : Long
+    - setsCompleted : Integer
+    - validReps : Integer
+    - invalidReps : Integer
+    - accuracy : BigDecimal
+    - activeSeconds : Integer
+    - cleanSeconds : Integer
+    - exercise : Exercise <<FK>>
+  }
+
+  class SessionSetResult <<Entity>> {
+    - id : Long <<PK>>
+    - setNumber : Integer
+    - totalReps : Integer
+    - cleanReps : Integer
+    - totalSeconds : Integer
+    - cleanSeconds : Integer
+    - sessionExerciseResult : SessionExerciseResult <<FK>>
+  }
+
+  class FormRule <<Entity>> {
+    - id : Long <<PK>>
+    - joint : String
+    - angleThreshold : BigDecimal
+    - romDepth : BigDecimal
+    - feedbackMessage : String
+    - exercise : Exercise <<FK>>
+  }
+
+  class MemberSkillProgress <<Entity>> {
+    - id : Long <<PK>>
+    - status : String
+    - bestReps : Integer
+    - bestAccuracy : BigDecimal
+    - unlockedAt : LocalDateTime
+    - exercise : Exercise <<FK>>
+    - memberProfile : MemberProfile <<FK>>
+  }
+
+  class MemberProfile <<Entity>> {
+    - id : Long <<PK>>
+    - user : User <<FK, unique>>
+    - fitnessLevel : FitnessLevel <<FK>>
+  }
+}
+
+package "Entity - Shared" as ENTSH {
+  class Exercise <<Entity>> {
+    - id : Long <<PK>>
+    - code : String <<UK>>
+    - name : String
+    - type : String
+    - difficultyLevel : String
+    - source : String
+    - moderationStatus : String
+    - active : boolean
+    - createdBy : User <<FK>>
+  }
+
+  class User <<Entity>> {
+    - id : Long <<PK>>
+    - email : String <<UK>>
+    - fullName : String
+    - role : UserRole
+  }
+
+  class FitnessLevel <<Entity>> {
+    - id : Long <<PK>>
+    - name : String <<UK>>
+  }
+
+  class MemberFavorite <<Entity>> {
+    - id : Long <<PK>>
+    - memberId : Long
+    - itemType : ItemType
+    - itemId : Long
+    - createdAt : LocalDateTime
+  }
+
+  class WorkoutEntry <<Entity>> {
+    - id : Long <<PK>>
+    - code : String <<UK>>
+    - name : String
+    - description : String
+    - type : String
+    - level : String
+    - source : String
+    - sharedWithCommunity : boolean
+    - moderationStatus : String
+    - templateStatus : String
+    - daysPerWeek : int
+    - createdBy : User <<FK>>
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+
+  class ProfanityWord <<Entity>> {
+    - id : Long <<PK>>
+    - word : String
+    - language : String
+    - severity : String
+    - active : boolean
+    - createdAt : LocalDateTime
+  }
+
+  class Notification <<Entity>> {
+    - id : Long <<PK>>
+    - title : String
+    - message : String
+    - type : String
+    - status : String
+    - createdBy : Long
+    - userId : Long
+    - targetAudience : String
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+}
+
+'==============================================================
+' DIRECTED ASSOCIATION - Controller -> Service -> DTO
+'==============================================================
+MemberAiSupportController ..> AiSupportService : delegates
+MemberAiSupportController ..> AiSupportDtos: consumes
+MemberFormCorrectionController ..> FormCorrectionService : delegates
+MemberFormCorrectionController ..> FormCorrectionDtos: consumes
+MemberFormRuleController ..> MemberFormRuleService : delegates
+MemberFormRuleController ..> FormCorrectionDtos: consumes
+MemberProgressionController ..> ProgressionRuleService : delegates
+MemberProgressionController ..> ExerciseResultDtos: consumes
+ProgressionRuleController ..> ProgressionRuleService : delegates
+ProgressionRuleController ..> ProgressionRuleDtos: consumes
+PhysiologyEvidenceController ..> ExercisePhysiologyService : delegates
+PhysiologyEvidenceController ..> PhysiologyDtos: consumes
+MemberExerciseController ..> MemberExerciseService : delegates
+MemberExerciseController ..> MemberExerciseDtos: consumes
+AiSupportService ..> AiSupportDtos: produces
+FormCorrectionService ..> FormCorrectionDtos: produces
+MemberFormRuleService ..> FormCorrectionDtos: produces
+ProgressionRuleService ..> ProgressionRuleDtos: produces
+ExercisePhysiologyService ..> PhysiologyDtos: produces
+PhysiologyAlertService ..> PhysiologyDtos: produces
+MemberFavoriteService ..> FavoriteDtos: produces
+MemberExerciseService ..> MemberExerciseDtos: produces
+
+'==============================================================
+' DIRECTED ASSOCIATION - Service -> Service / DAO
+'==============================================================
+AiSupportService ..> AiSupportSessionRepository : manages
+AiSupportService ..> AiSupportMessageRepository : manages
+AiSupportService ..> AiSupportUsageRepository : manages
+AiSupportService ..> UserRepository : reads
+AiSupportService ..> ExerciseRepository : reads
+AiSupportService ..> FormRuleRepository : reads
+AiSupportService ..> OpenAiChatService : calls provider
+AiSupportService ..> GeminiChatService : calls provider
+AiSupportService ..> ContentModerationService : checks input
+AiSupportService ..> ExercisePhysiologyService : loads profile
+AiSupportService ..> PhysiologyAlertService : evaluates alerts
+AiSupportService ..> ExerciseSafetyService : checks red flags
+FormCorrectionService ..> FormRuleRepository : reads
+FormCorrectionService ..> ExerciseRepository : reads
+MemberFormRuleService ..> FormRuleRepository : reads
+ProgressionRuleService ..> ProgressionRuleRepository : manages
+ProgressionRuleService ..> ExerciseRepository : reads
+ProgressionRuleService ..> MemberSkillProgressRepository : manages
+ProgressionRuleService ..> MemberProfileRepository : reads
+ProgressionRuleService ..> UserRepository : reads
+ProgressionRuleService ..> SessionExerciseResultRepository : reads
+ProgressionRuleService ..> SessionSetResultRepository : reads
+ExercisePhysiologyService ..> Exercise : writes exercise_physiology_profiles
+PhysiologyAlertService ..> Exercise : reads exercise_physiology_profiles
+ContentModerationService ..> ProfanityWordRepository : reads
+MemberFavoriteService ..> MemberFavoriteRepository : manages
+MemberFavoriteService ..> UserRepository : reads
+MemberFavoriteService ..> ExerciseRepository : reads
+MemberFavoriteService ..> WorkoutRepository : reads
+MemberExerciseService ..> ExerciseRepository : reads
+MemberExerciseService ..> MemberFavoriteRepository : reads
+MemberExerciseService ..> UserRepository : reads
+
+'==============================================================
+
+AiSupportSessionRepository ..|> JpaRepository : extends
+AiSupportMessageRepository ..|> JpaRepository : extends
+AiSupportUsageRepository ..|> JpaRepository : extends
+FormRuleRepository ..|> JpaRepository : extends
+ProgressionRuleRepository ..|> JpaRepository : extends
+SessionExerciseResultRepository ..|> JpaRepository : extends
+SessionSetResultRepository ..|> JpaRepository : extends
+ExerciseRepository ..|> JpaRepository : extends
+MemberProfileRepository ..|> JpaRepository : extends
+MemberSkillProgressRepository ..|> JpaRepository : extends
+UserRepository ..|> JpaRepository : extends
+NotificationRepository ..|> JpaRepository : extends
+MemberFavoriteRepository ..|> JpaRepository : extends
+WorkoutRepository ..|> JpaRepository : extends
+ProfanityWordRepository ..|> JpaRepository : extends
+' ASSOCIATION - DAO manages Entity
+'==============================================================
+AiSupportSessionRepository -- AiSupportSession
+AiSupportMessageRepository -- AiSupportMessage
+AiSupportUsageRepository -- AiSupportUsage
+FormRuleRepository -- FormRule
+ProgressionRuleRepository -- ProgressionRule
+SessionExerciseResultRepository -- SessionExerciseResult
+SessionSetResultRepository -- SessionSetResult
+ExerciseRepository -- Exercise
+MemberProfileRepository -- MemberProfile
+MemberSkillProgressRepository -- MemberSkillProgress
+UserRepository -- User
+NotificationRepository -- Notification
+MemberFavoriteRepository -- MemberFavorite
+WorkoutRepository -- WorkoutEntry
+ProfanityWordRepository -- ProfanityWord
+
+'==============================================================
+' AGGREGATION - entity foreign key
+'==============================================================
+AiSupportSession "0..*" o-- "1" User : owned by
+AiSupportMessage "0..*" o-- "1" User : asked by
+AiSupportMessage "0..*" o-- "1" Exercise : about
+AiSupportUsage "0..*" o-- "1" User : consumed by
+ProgressionRule "0..*" o-- "1" Exercise : unlocks
+ProgressionRule "0..*" o-- "1" Exercise : requires
+SessionExerciseResult "0..*" o-- "1" Exercise : performed
+SessionSetResult "0..*" o-- "1" SessionExerciseResult : breaks down
+FormRule "0..*" o-- "1" Exercise : corrects
+MemberSkillProgress "0..*" o-- "1" Exercise : tracks
+MemberSkillProgress "0..*" o-- "1" MemberProfile : owned by
+MemberProfile "0..*" o-- "1" User : belongs to
+MemberProfile "0..*" o-- "1" FitnessLevel : current tier
+Exercise "0..*" o-- "1" User : written by
+
+@enduml

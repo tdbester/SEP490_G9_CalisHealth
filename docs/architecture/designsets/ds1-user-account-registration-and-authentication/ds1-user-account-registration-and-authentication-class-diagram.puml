@@ -1,0 +1,452 @@
+@startuml
+left to right direction
+'==============================================================
+' DESIGN SET DS1 - User Account Registration & Authentication
+' Class Diagram
+'
+' SCOPE - every class below exists in the backend source code and
+' takes part in one of the three DS1 sequence diagrams:
+'   1. Sign in (Member / Content Manager / Admin)
+'   2. Register a new account and confirm the email address (Member)
+'   3. Forgot password and reset the password (all roles)
+'
+' The survey part is present only because the sign-in flow routes a
+' Member to the onboarding survey (SurveyController + SurveySessionController).
+' The deeper survey configuration (questions, options, level rules)
+' belongs to Design Set DS2 and is not repeated here.
+'
+' SOURCE FILES
+'   controllers/AuthController.java            controllers/SurveyController.java
+'   controllers/SurveySessionController.java   service/AuthService.java
+'   service/JwtService.java                   service/EmailService.java
+'   service/SurveyService.java                service/SurveySessionService.java
+'   repository/UserRepository.java            repository/TokenRepository.java
+'   repository/UserActivityRepository.java    repository/SurveyRepository.java
+'   repository/SurveySessionRepository.java   repository/SurveyStepRepository.java
+'   models/User.java                          models/AuthToken.java
+'   models/Survey.java                        models/SurveySession.java
+'   models/SurveyStep.java                    models/UserRole.java
+'   dtos/AuthDtos.java                        dtos/SurveyDtos.java
+'
+' UML notation - exactly the six symbols of the project reference:
+'   --      Association            solid line, no head
+'   --|>    Generalization          solid line, hollow triangle
+'   ..|>    Realization             dashed line, hollow triangle
+'   ..>     Dependency              dashed line, OPEN arrow head
+'   o--     Aggregation             solid line, hollow diamond
+'   *--     Composition             solid line, filled diamond
+'==============================================================
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam arrowThickness 1.2
+skinparam defaultLineThickness 1.2
+skinparam ArrowFontSize 9
+skinparam ArrowColor #333333
+skinparam nodesep 30
+skinparam ranksep 45
+skinparam defaultFontName Segoe UI
+skinparam defaultFontSize 10
+skinparam class {
+  BorderThickness 1.2
+  BackgroundColor #FFFFFF
+  FontColor #000000
+  AttributeFontColor #1F3864
+  MethodFontColor #7B3F00
+}
+skinparam package {
+  BorderThickness 1.2
+  FontStyle bold
+  FontSize 11
+  BackColor #E4E4E4
+}
+skinparam stereotype {
+  FontSize 8
+  FontStyle italic
+}
+
+title DESIGN SET DS1 - User Account Registration & Authentication\n(Class Diagram)
+
+'==============================================================
+' CONTROLLER
+'==============================================================
+package "Controller" as CTL {
+  class AuthController <<Controller>> {
+    - auth : AuthService
+    --
+    + register(RegisterRequest r) : ResponseEntity<?>
+    + checkVerificationToken(String token) : ResponseEntity<?>
+    + verify(String token) : ResponseEntity<?>
+    + login(LoginRequest r) : AuthResponse
+    + forgot(ForgotRequest r) : ResponseEntity<?>
+    + verifyResetToken(String token) : ResponseEntity<?>
+    + reset(ResetRequest r) : ResponseEntity<?>
+    + change(Authentication a, ChangePasswordRequest r) : ResponseEntity<?>
+    + me(Authentication a) : AuthResponse
+    - msg(String m) : ResponseEntity<Map<String, String>>
+  }
+
+  class SurveyController <<Controller>> {
+    - surveys : SurveyService
+    --
+    + definition(String surveyCode, Integer version) : SurveyDefinitionResponse
+  }
+
+  class SurveySessionController <<Controller>> {
+    - sessions : SurveySessionService
+    --
+    + list(Authentication a, String surveyCode) : List<SessionSummaryResponse>
+  }
+}
+
+'==============================================================
+' SERVICE
+'==============================================================
+package "Service" as SVC {
+  class AuthService <<Service>> {
+    - users : UserRepository
+    - tokens : TokenRepository
+    - encoder : PasswordEncoder
+    - jwt : JwtService
+    - mail : EmailService
+    - activity : UserActivityRepository
+    - frontendUrl : String
+    --
+    + register(RegisterRequest r) : void
+    + checkEmailVerificationToken(String token) : void
+    + verifyEmail(String token) : void
+    + verifyResetToken(String token) : void
+    + login(LoginRequest r) : AuthResponse
+    + forgotPassword(ForgotRequest r) : void
+    + resetPassword(ResetRequest r) : void
+    + changePassword(String email, ChangePasswordRequest r) : void
+    + me(String email) : User
+    - err(HttpStatus s, String msg) : ResponseStatusException
+    - createToken(User u, TokenType type, long minutes) : AuthToken
+    - validToken(String token, TokenType type) : AuthToken
+  }
+
+  class JwtService <<Service>> {
+    - secret : String
+    - expirationMs : long
+    --
+    + generate(String email) : String
+    + extractEmail(String token) : String
+    - key() : SecretKey
+  }
+
+  class EmailService <<Service>> {
+    - mailSender : JavaMailSender
+    - from : String
+    --
+    + send(String to, String subject, String body) : void
+  }
+
+  class SurveyService <<Service>> {
+    - surveys : SurveyRepository
+    - steps : SurveyStepRepository
+    - loader : SurveyDefinitionLoader
+    --
+    + getDefinition(String surveyCode, Integer version) : SurveyDefinitionResponse
+    + activeResultStep(Survey survey) : ResultStepResponse
+    + findActiveSurvey(String surveyCode) : Survey
+  }
+
+  class SurveySessionService <<Service>> {
+    - sessions : SurveySessionRepository
+    - users : UserRepository
+    - surveys : SurveyService
+    --
+    + list(String email, String surveyCode) : List<SessionSummaryResponse>
+    + get(String email, Long sessionId) : SessionResponse
+  }
+}
+
+'==============================================================
+' SECURITY
+'==============================================================
+package "Security" as SEC {
+  interface PasswordEncoder <<Interface>> {
+    + encode(String rawPassword) : String
+    + matches(String rawPassword, String encodedPassword) : boolean
+  }
+}
+
+'==============================================================
+' DTO
+'==============================================================
+package "DTO" as DTO {
+  class RegisterRequest <<DTO>> {
+    + fullName : String
+    + email : String
+    + password : String
+    + confirmPassword : String
+    --
+    + isPasswordConfirmed() : boolean
+  }
+
+  class LoginRequest <<DTO>> {
+    + email : String
+    + password : String
+  }
+
+  class ForgotRequest <<DTO>> {
+    + email : String
+  }
+
+  class ResetRequest <<DTO>> {
+    + token : String
+    + newPassword : String
+    + confirmNewPassword : String
+    --
+    + isNewPasswordConfirmed() : boolean
+  }
+
+  class ChangePasswordRequest <<DTO>> {
+    + oldPassword : String
+    + newPassword : String
+    + confirmNewPassword : String
+    --
+    + isNewPasswordConfirmed() : boolean
+  }
+
+  class AuthResponse <<DTO>> {
+    + token : String
+    + email : String
+    + fullName : String
+    + role : String
+    + mustChangePassword : boolean
+  }
+
+  class SurveyDefinitionResponse <<DTO>> {
+    + surveyCode : String
+    + surveyName : String
+    + description : String
+    + version : int
+    + steps : List<StepResponse>
+    + result : ResultStepResponse
+  }
+
+  class SessionSummaryResponse <<DTO>> {
+    + sessionId : Long
+    + surveyCode : String
+    + surveyVersion : int
+    + status : String
+    + startedAt : LocalDateTime
+    + completedAt : LocalDateTime
+    + skippedAt : LocalDateTime
+  }
+}
+
+'==============================================================
+' DAO
+'==============================================================
+package "DAO" as DAO {
+  interface JpaRepository <<Interface>> {
+    + findById(ID id) : Optional<T>
+    + save(T entity) : T
+    + findAll() : List<T>
+    + deleteById(ID id) : void
+    + count() : long
+  }
+
+  interface UserRepository <<DAO>> {
+    + findByEmail(String email) : Optional<User>
+    + existsByEmail(String email) : boolean
+    + countByEnabledAndBlocked(boolean enabled, boolean blocked) : long
+    + countByRole(UserRole role) : long
+  }
+
+  interface TokenRepository <<DAO>> {
+    + findByTokenAndType(String token, TokenType type) : Optional<AuthToken>
+    + deleteByUserAndType(User user, TokenType type) : void
+  }
+
+  class UserActivityRepository <<DAO>> {
+    - jdbc : JdbcTemplate
+    --
+    + logEvent(Long userId, String eventType, String description, String status) : void
+  }
+
+  interface SurveyRepository <<DAO>> {
+    + findBySurveyCodeAndStatus(String surveyCode, Survey.Status status) : Optional<Survey>
+    + findBySurveyCodeAndVersion(String surveyCode, int version) : Optional<Survey>
+    + findFirstBySurveyCodeAndStatusOrderByVersionDesc(String surveyCode, Survey.Status status) : Optional<Survey>
+    + findByStatus(Survey.Status status) : List<Survey>
+    + existsBySurveyCode(String surveyCode) : boolean
+  }
+
+  interface SurveySessionRepository <<DAO>> {
+    + findByUserAndSurveyCode(Long userId, String surveyCode) : List<SurveySession>
+  }
+
+  interface SurveyStepRepository <<DAO>> {
+    + findBySurveyIdOrderBySortOrderAsc(Long surveyId) : List<SurveyStep>
+    + findBySurveyIdAndStepTypeAndStatus(Long surveyId, SurveyStep.Type stepType, SurveyStep.Status status) : Optional<SurveyStep>
+  }
+}
+
+'==============================================================
+' ENTITY
+'==============================================================
+package "Entity" as ENT {
+  class User <<Entity>> {
+    - id : Long <<PK>>
+    - email : String <<UK>>
+    - password : String
+    - fullName : String
+    - phone : String
+    - gender : String
+    - dateOfBirth : LocalDate
+    - bio : String
+    - avatarUrl : String
+    - role : UserRole
+    - enabled : boolean
+    - blocked : boolean
+    - mustChangePassword : boolean
+    - passwordChangedAt : LocalDateTime
+    - createdAt : LocalDateTime
+    --
+    + isActive() : boolean
+  }
+
+  class AuthToken <<Entity>> {
+    - id : Long <<PK>>
+    - token : String <<UK>>
+    - user : User <<FK>>
+    - type : TokenType
+    - expiresAt : LocalDateTime
+  }
+
+  class Survey <<Entity>> {
+    - id : Long <<PK>>
+    - surveyCode : String <<UK>>
+    - surveyName : String
+    - description : String
+    - version : int
+    - status : Status
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+
+  class SurveySession <<Entity>> {
+    - id : Long <<PK>>
+    - user : User <<FK>>
+    - survey : Survey <<FK>>
+    - surveyVersion : int
+    - status : Status
+    - startedAt : LocalDateTime
+    - completedAt : LocalDateTime
+    - skippedAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+
+  class SurveyStep <<Entity>> {
+    - id : Long <<PK>>
+    - survey : Survey <<FK>>
+    - stepCode : String
+    - stepName : String
+    - description : String
+    - stepType : Type
+    - resultConfig : String
+    - sortOrder : int
+    - status : Status
+    - revision : int
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+    - updatedBy : User <<FK>>
+    --
+    + isResult() : boolean
+  }
+
+  enum TokenType <<Enum>> {
+    VERIFY_EMAIL
+    RESET_PASSWORD
+  }
+
+  enum UserRole <<Enum>> {
+    MEMBER
+    CONTENT_MANAGER
+    ADMIN
+  }
+}
+
+'==============================================================
+' DEPENDENCY - Controller -> Service
+'==============================================================
+AuthController ..> AuthService : delegates
+SurveyController ..> SurveyService : delegates
+SurveySessionController ..> SurveySessionService : delegates
+
+'==============================================================
+' DEPENDENCY - Controller -> DTO
+'==============================================================
+AuthController ..> RegisterRequest : consumes
+AuthController ..> LoginRequest : consumes
+AuthController ..> ForgotRequest : consumes
+AuthController ..> ResetRequest : consumes
+AuthController ..> ChangePasswordRequest : consumes
+AuthController ..> AuthResponse : produces
+SurveyController ..> SurveyDefinitionResponse : produces
+SurveySessionController ..> SessionSummaryResponse : produces
+
+'==============================================================
+' DEPENDENCY - Service -> DTO
+'==============================================================
+AuthService ..> RegisterRequest : consumes
+AuthService ..> LoginRequest : consumes
+AuthService ..> ForgotRequest : consumes
+AuthService ..> ResetRequest : consumes
+AuthService ..> ChangePasswordRequest : consumes
+AuthService ..> AuthResponse : produces
+SurveyService ..> SurveyDefinitionResponse : produces
+SurveySessionService ..> SessionSummaryResponse : produces
+
+'==============================================================
+' DEPENDENCY - Service -> helper services
+'==============================================================
+AuthService ..> JwtService : signs the access token
+AuthService ..> EmailService : sends the verification / reset mail
+AuthService ..> PasswordEncoder : hashes and matches the password
+SurveyService ..> SurveyDefinitionLoader : loads the survey definition
+SurveySessionService ..> SurveyService : reads the survey
+
+'==============================================================
+' DEPENDENCY - Service -> DAO
+'==============================================================
+AuthService ..> UserRepository : queries
+AuthService ..> TokenRepository : manages
+AuthService ..> UserActivityRepository : logs
+SurveyService ..> SurveyRepository : queries
+SurveyService ..> SurveyStepRepository : reads the steps
+SurveySessionService ..> SurveySessionRepository : queries
+SurveySessionService ..> UserRepository : queries
+
+'==============================================================
+' REALIZATION - repository extends JpaRepository
+'==============================================================
+UserRepository ..|> JpaRepository : extends
+TokenRepository ..|> JpaRepository : extends
+SurveyRepository ..|> JpaRepository : extends
+SurveySessionRepository ..|> JpaRepository : extends
+SurveyStepRepository ..|> JpaRepository : extends
+
+'==============================================================
+' ASSOCIATION - DAO manages Entity
+'==============================================================
+UserRepository -- User
+TokenRepository -- AuthToken
+UserActivityRepository ..> User : writes user_id only
+SurveyRepository -- Survey
+SurveySessionRepository -- SurveySession
+SurveyStepRepository -- SurveyStep
+
+'==============================================================
+' AGGREGATION - entity foreign key
+'==============================================================
+AuthToken "0..*" o-- "1" User : issued for
+SurveySession "0..*" o-- "1" User : started by
+SurveySession "0..*" o-- "1" Survey : answers
+SurveyStep "0..*" o-- "1" Survey : belongs to
+
+@enduml

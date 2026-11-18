@@ -165,8 +165,14 @@ export default function ContentManagerDashboard() {
   const memberLevelsQuery = useApiQuery(() => contentManagerApi.memberLevels());
   const memberLevels = Array.isArray(memberLevelsQuery.data) ? memberLevelsQuery.data : [];
   const totalMembers = memberLevels.reduce((total, item) => total + Number(item.memberCount || 0), 0);
-  const { levelTone } = useLevelNames();
+  const { levelTone, levels: systemLevels } = useLevelNames();
   const colorOf = (levelName) => (TONE_STYLES[levelTone(levelName)] ?? TONE_STYLES.neutral).color;
+  // Preview của card "Level & Benchmark Criteria" lấy từ level đang cấu hình thật
+  // (Content Manager có thể thêm/đổi tên level) thay vì hard-code Beginner/Intermediate/Advanced.
+  const levelPreviewItems = systemLevels.slice(0, 3).map((levelName) => ({
+    label: levelName,
+    detail: t("contentManager.dashboard.previewLevel", { level: levelName }),
+  }));
 
   return (
     <Box sx={{ maxWidth: 1240, mx: "auto", px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 2.5 } }}>
@@ -226,7 +232,7 @@ export default function ContentManagerDashboard() {
             to={CONTENT_PATHS.levelCriteria}
             action={t("contentManager.dashboard.manageCriteria")}
             icon={RuleRoundedIcon}
-            preview={<PreviewList items={[{ label: "Beginner", detail: "Foundation" }, { label: "Intermediate", detail: "Building" }, { label: "Advanced", detail: "Performance" }]} tone={CARD_TONES[3]} />}
+            preview={<PreviewList items={levelPreviewItems.length ? levelPreviewItems : [{ label: t("contentManager.dashboard.previewLevel", { level: "—" }), detail: "" }]} tone={CARD_TONES[3]} />}
             tone={CARD_TONES[3]}
           />
         </Box>

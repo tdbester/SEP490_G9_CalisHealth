@@ -43,6 +43,28 @@ public class ContentNameGuardService {
     }
 
     /**
+     * Kiểm tra tên bài tập mới (đang tạo/sửa) có trùng tên bài tập khác nào không.
+     *
+     * <p>Dùng chung cho cả ba khu: Content Manager tạo/sửa bài tập hệ thống và
+     * Member tạo/sửa bài tập cá nhân đều phải tuân theo cùng một quy tắc —
+     * một tên chỉ được dùng cho một bài tập duy nhất trong thư viện.</p>
+     *
+     * @param name              tên bài tập mới
+     * @param excludeExerciseId id bài tập đang sửa (bỏ qua chính nó), null khi tạo mới
+     */
+    public void assertExerciseNameNotUsedByExercise(String name, Long excludeExerciseId) {
+        if (name == null || name.isBlank()) {
+            return;
+        }
+        // id = -1 khi tạo mới: không bài tập nào có id âm nên coi như không loại trừ gì.
+        long excludedId = excludeExerciseId == null ? -1L : excludeExerciseId;
+        if (exercises.existsOtherNotDeletedByNameIgnoreCase(excludedId, name.trim())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "This title is already used by an exercise. Choose a different title.");
+        }
+    }
+
+    /**
      * Kiểm tra tên workout mới (đang tạo/sửa) có trùng tên bài tập nào không.
      *
      * @param name            tên workout mới

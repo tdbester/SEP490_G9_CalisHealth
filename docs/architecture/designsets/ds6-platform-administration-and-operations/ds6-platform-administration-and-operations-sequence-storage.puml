@@ -1,0 +1,106 @@
+@startuml
+'==============================================================
+' DESIGN SET DS6 - Platform Administration and Operations
+' Sequence: The admin manages the media storage
+'==============================================================
+skinparam shadowing false
+skinparam linetype ortho
+skinparam ArrowFontSize 9
+skinparam ArrowColor #333333
+skinparam defaultFontName Segoe UI
+skinparam defaultFontSize 10
+skinparam sequence {
+  ArrowColor #333333
+  LifeLineBorderColor #777777
+  ParticipantBorderColor #333333
+  ParticipantBackgroundColor #FFFFFF
+  ArrowFontSize 9
+}
+skinparam ParticipantPadding 12
+
+'===============================================================
+' Every layer is a rectangle with a single head at the top.
+' The life lines get shorter from the left to the right.
+'===============================================================
+hide footbox
+skinparam ParticipantBorderThickness 1.2
+title DS6 - Manage the media storage\n(Sequence Diagram - Admin)
+
+participant "Admin" as Admin
+participant "Storage Page\n(React)" as Page
+participant "AdminStorageController" as Ctl
+participant "AdminStorageService" as Svc
+participant "MediaRegistryService" as Registry
+participant "MediaCleanupService" as Cleanup
+participant "CloudinaryUsageService" as Usage
+participant "CreditGuardService" as Guard
+participant "MediaFileRepository" as MediaRepo
+participant "StorageSettingsRepository" as SettingsRepo
+participant "MySQL\n(Database)" as DB
+
+== READ THE OVERVIEW AND THE MEDIA LIST ==
+
+Admin -> Page : Open the storage dashboard
+Page -> Ctl : Get the storage overview
+Ctl -> Svc : Get the storage overview
+Svc -> Usage : Read the current usage of the cloud storage
+Usage --> Svc : the used and the available space
+Svc -> SettingsRepo : Load the storage settings
+SettingsRepo -> DB : run the query
+DB --> SettingsRepo : the matching rows
+SettingsRepo --> Svc : the settings
+Svc --> Ctl : Overview(usage, settings)
+Ctl --> Page : Show the storage overview
+
+Admin -> Page : Open the media list
+Page -> Ctl : List the media files with the filters
+Ctl -> Svc : List the media files with the filters
+Svc -> MediaRepo : Load the media files of the page
+MediaRepo -> DB : run the query
+DB --> MediaRepo : the matching rows
+MediaRepo --> Svc : the media list
+Svc --> Ctl : MediaPage(files, total)
+Ctl --> Page : Show the media list
+
+== MOVE THE MEDIA TO THE TRASH AND BACK ==
+
+Admin -> Page : Move some media to the trash
+Page -> Ctl : Move the media to the trash
+Ctl -> Svc : Move the media to the trash
+Svc -> Registry : Mark the media as deleted
+Svc -> MediaRepo : Save the new state of the media
+MediaRepo -> DB : run the query
+DB --> MediaRepo : the matching rows
+Svc --> Ctl : TrashResult(moved, failed)
+Ctl --> Page : Show the result and refresh the list
+
+Admin -> Page : Restore some media from the trash
+Page -> Ctl : Restore the media
+Ctl -> Svc : Restore the media
+Svc -> Registry : Mark the media as active again
+Svc -> MediaRepo : Save the new state of the media
+MediaRepo -> DB : run the query
+DB --> MediaRepo : the matching rows
+Svc --> Ctl : RestoreResult(restored, failed)
+Ctl --> Page : Show the result and refresh the list
+
+== EXTEND THE RETENTION AND FREE THE SPACE ==
+
+Admin -> Page : Keep some media for longer
+Page -> Ctl : Extend the retention of the media
+Ctl -> Svc : Extend the retention of the media
+Svc -> MediaRepo : Save the new expiration date
+MediaRepo -> DB : run the query
+DB --> MediaRepo : the matching rows
+Svc --> Ctl : the updated media
+Ctl --> Page : Show the new expiration date
+
+Admin -> Page : Free the space of the cloud account
+Page -> Ctl : Free the space of the cloud account
+Ctl -> Svc : Free the space of the cloud account
+Svc -> Guard : Check the credit of the cloud account
+Guard --> Svc : the credit and the result
+Svc --> Ctl : CreditGuardResult(credit, freed)
+Ctl --> Page : Show the result of the operation
+
+@enduml

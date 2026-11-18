@@ -1082,6 +1082,15 @@ export default {
     couldNotLoadAccepted: "Không tải được danh sách bài tập đã duyệt.",
     couldNotSaveWorkout: "Không lưu được workout này.",
     fillRequiredFields: "Vui lòng điền đúng và đầy đủ các trường bắt buộc.",
+    // Trùng tên: tên workout đã có một bài tập cùng tên, hoặc trùng workout khác của bạn.
+    nameMatchesExercise:
+      "Tên này đã được dùng cho một bài tập. Vui lòng chọn một tên khác.",
+    nameTaken:
+      "Bạn đã có một workout cùng tên này. Vui lòng chọn một tên khác.",
+    // Trùng tên khi tạo/sửa bài tập cá nhân: tên đã có một bài tập khác, hoặc trùng
+    // tên một workout nào đó.
+    nameMatchesWorkout:
+      "Tên này đã được dùng cho một workout. Vui lòng chọn một tên khác.",
 
     // Sửa workout cá nhân
     updateWorkoutTitle: "Sửa workout cá nhân",

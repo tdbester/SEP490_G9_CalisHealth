@@ -1,0 +1,664 @@
+﻿@startuml
+left to right direction
+'==============================================================
+' DESIGN SET DS7 - Health Tracking & Performance Analytics
+' Class Diagram
+'
+' SCOPE - only the classes that appear in the three sequence
+' diagrams of this design set:
+'
+'   sequence-health-tracking-progress
+'     Member -> Health Tracking Page -> Update Stats Modal
+'     -> trackingApi -> MemberTrackingController
+'     -> MemberTrackingService -> MemberTrackingRepository -> MySQL
+'
+'   sequence-workout-history
+'     Member -> Workout History Page -> Workout Log Modal
+'     -> trackingApi -> MemberTrackingController
+'     -> MemberTrackingService -> MemberTrackingRepository -> MySQL
+'
+'   sequence-performance-analytics
+'     Member -> Performance Analytics Page -> BarChart
+'     -> trackingApi -> MemberTrackingController
+'     -> MemberTrackingService -> MemberTrackingRepository -> MySQL
+'
+'   Every back end class below is on a life line of at least one
+'   of those three sequences, and every table below is the table
+'   that one of those sequences reads or writes.
+'
+' THE SCREENS (front end - the participants of the sequences)
+'   client/src/pages/HealthTracking.jsx
+'   client/src/pages/WorkoutHistory.jsx
+'   client/src/pages/PerformanceAnalytics.jsx
+'   client/src/components/tracking/UpdateStatsModal.jsx
+'   client/src/components/tracking/WorkoutLogModal.jsx
+'   client/src/components/common/BarChart.jsx
+'   client/src/utils/bmi.js (calculateBmi, classifyBmi)
+'   client/src/api/tracking.js
+'
+' THE BACK END
+'   controllers/MemberTrackingController.java
+'   service/MemberTrackingService.java
+'   repository/MemberTrackingRepository.java
+'   models/User.java   models/MemberProfile.java   models/Exercise.java
+'   models/FitnessLevel.java   models/SessionExerciseResult.java
+'   models/SurveySession.java  models/AssessmentQuestion.java
+'   models/AssessmentAnswer.java
+'   dtos/MemberTrackingDtos.java
+'
+' FIELD RULE - every class below lists ALL of its fields, exactly
+'   as they are declared in the source (JPA entity) or in the table
+'   (raw table). Nothing is hidden and nothing is invented.
+'
+'   The schema follows the migrations:
+'     V66  drop the dead columns (member_profiles.avatar_url, ...)
+'     V81  consolidate gender / date_of_birth / bio into member_profiles
+'     V83  drop the dead columns (workout_sessions.category, notes,
+'          exercises.exercise_tree_id, exercises.save_count)
+'
+'   Note on the tables: MemberTrackingRepository talks to MySQL with
+'   plain SQL through JdbcTemplate, so it never goes through the JPA
+'   entities. The two tables that have no JPA entity (workout_sessions,
+'   member_body_metrics) are therefore drawn as raw tables with their
+'   full column list; the tables that do have an entity are drawn as
+'   that entity.
+'
+' UML notation - only the six standard symbols:
+'   --      Association            solid line, no head
+'   --|>    Generalization          solid line, hollow triangle
+'   ..|>    Realization             dashed line, hollow triangle
+'   ..>     Dependency              dashed line, OPEN arrow head
+'   o--     Aggregation             solid line, hollow diamond
+'   *--     Composition             solid line, filled diamond
+'==============================================================
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam arrowThickness 1.2
+skinparam defaultLineThickness 1.2
+skinparam ArrowFontSize 9
+skinparam ArrowColor #333333
+skinparam nodesep 26
+skinparam ranksep 34
+skinparam defaultFontName Segoe UI
+skinparam defaultFontSize 10
+skinparam class {
+  BorderThickness 1.2
+  BackgroundColor #FFFFFF
+  FontColor #000000
+  AttributeFontColor #1F3864
+  MethodFontColor #7B3F00
+}
+skinparam package {
+  BorderThickness 1.2
+  FontStyle bold
+  FontSize 11
+  BackColor #E4E4E4
+}
+skinparam stereotype {
+  FontSize 8
+  FontStyle italic
+}
+
+title DESIGN SET DS7 - Health Tracking & Performance Analytics\n(Class Diagram)
+
+'==============================================================
+' CONTROLLER - the life line "MemberTrackingController" of the 3 sequences
+'==============================================================
+package "Controller" as CTL {
+  class MemberTrackingController <<Controller>> {
+    - trackingService : MemberTrackingService
+    --
+    + getOverview(Authentication authentication) : HealthTrackingOverviewResponse
+    + updateMeasurements(Authentication authentication, UpdateMeasurementsRequest request) : BodyMetricsDto
+    + getWorkoutHistory(Authentication authentication, String category, LocalDate date) : WorkoutHistoryResponse
+    + getWorkoutSessionDetail(Authentication authentication, Long sessionId) : WorkoutSessionDetailResponse
+    + getAnalytics(Authentication authentication, String range) : PerformanceAnalyticsResponse
+  }
+}
+
+'==============================================================
+' SERVICE - the life line "MemberTrackingService" of the 3 sequences
+'==============================================================
+package "Service" as SVC {
+  class MemberTrackingService <<Service>> {
+    - trackingRepository : MemberTrackingRepository
+    --
+    + getOverview(String email) : HealthTrackingOverviewResponse
+    + recordMeasurements(String email, UpdateMeasurementsRequest request) : BodyMetricsDto
+    + getWorkoutHistory(String email, String category, LocalDate date) : WorkoutHistoryResponse
+    + getWorkoutSessionDetail(String email, Long sessionId) : WorkoutSessionDetailResponse
+    + getPerformanceAnalytics(String email, String range) : PerformanceAnalyticsResponse
+    + calculateBmi(BigDecimal weightKg, BigDecimal heightCm) : BigDecimal
+    --
+    - getProfileId(String email) : Long
+  }
+}
+
+'==============================================================
+' DTO - the payloads that travel on the arrows of the 3 sequences
+'   (com.calishealth.dtos.MemberTrackingDtos)
+'==============================================================
+package "DTO" as DTO {
+  '--- 1. Health & Tracking progress ---
+  class UpdateMeasurementsRequest <<DTO Record>> {
+    + weightKg : BigDecimal
+    + heightCm : BigDecimal
+    + note : String
+  }
+
+  class HealthTrackingOverviewResponse <<DTO Record>> {
+    + healthScore : HealthScoreDto
+    + bodyMetrics : BodyMetricsDto
+    + bmiOverview : BmiOverviewDto
+  }
+
+  class HealthScoreDto <<DTO Record>> {
+    + score : int
+    + changePercent : Integer
+    + peerPercentile : int
+    + statusHeadline : String
+    + statusDescription : String
+  }
+
+  class BodyMetricsDto <<DTO Record>> {
+    + weightKg : BigDecimal
+    + heightCm : BigDecimal
+    + weightChangeKg : BigDecimal
+    + weightNote : String
+    + heightNote : String
+    + updatedAt : LocalDateTime
+  }
+
+  class BmiOverviewDto <<DTO Record>> {
+    + currentBmi : BigDecimal
+    + classification : String
+    + tone : String
+    + records : List<BmiMonthRecordDto>
+    + latestReadingTimestamp : LocalDateTime
+  }
+
+  class BmiMonthRecordDto <<DTO Record>> {
+    + month : String
+    + bmi : BigDecimal
+  }
+
+  '--- 2. View workout history ---
+  class WorkoutHistoryResponse <<DTO Record>> {
+    + summary : WorkoutHistorySummaryDto
+    + workouts : List<WorkoutSessionSummaryDto>
+  }
+
+  class WorkoutHistorySummaryDto <<DTO Record>> {
+    + totalWorkouts : int
+    + totalMinutes : int
+    + totalHours : double
+    + cleanRepRatio : Integer
+    + totalHoldSeconds : int
+  }
+
+  class WorkoutSessionSummaryDto <<DTO Record>> {
+    + id : Long
+    + name : String
+    + category : String
+    + completedAt : LocalDateTime
+    + durationMin : int
+    + accuracy : Integer
+    + exerciseCount : int
+    + isLatest : boolean
+  }
+
+  class WorkoutSessionDetailResponse <<DTO Record>> {
+    + id : Long
+    + name : String
+    + category : String
+    + completedAt : LocalDateTime
+    + durationMin : int
+    + accuracy : Integer
+    + exercises : List<ExerciseDetailDto>
+  }
+
+  class ExerciseDetailDto <<DTO Record>> {
+    + exerciseId : Long
+    + name : String
+    + type : String
+    + hold : boolean
+    + sets : int
+    + reps : int
+    + durationSec : int
+    + formAccuracy : Double
+  }
+
+  '--- 3. View performance analytics ---
+  class PerformanceAnalyticsResponse <<DTO Record>> {
+    + range : String
+    + sessions : int
+    + reps : RepsSummaryDto
+    + hold : HoldSummaryDto
+    + volume : List<VolumeProgressionDto>
+    + duration : DurationBreakdownDto
+    + insight : AiInsightDto
+  }
+
+  class RepsSummaryDto <<DTO Record>> {
+    + valid : int
+    + total : int
+    + cleanRatio : int
+  }
+
+  class HoldSummaryDto <<DTO Record>> {
+    + entries : int
+    + totalSeconds : int
+    + bestSetSeconds : int
+    + formScore : Integer
+  }
+
+  class VolumeProgressionDto <<DTO Record>> {
+    + label : String
+    + reps : int
+    + holdSeconds : int
+  }
+
+  class DurationBreakdownDto <<DTO Record>> {
+    + totalMin : int
+    + activeMin : int
+    + restMin : int
+    + activePercent : int
+    + restPercent : int
+  }
+
+  class AiInsightDto <<DTO Record>> {
+    + title : String
+    + text : String
+  }
+}
+
+'==============================================================
+' DAO - the life line "MemberTrackingRepository" of the 3 sequences
+'==============================================================
+package "DAO" as DAO {
+  class MemberTrackingRepository <<DAO>> {
+    - jdbcTemplate : JdbcTemplate
+    --
+    + findProfileIdByEmail(String email) : Optional<Long>
+    + syncFromSurveyIfMissing(Long profileId) : void
+    + findLatestBodyMetrics(Long memberProfileId) : BodyMetricsDto
+    + findBmiRecordsLast6Months(Long memberProfileId) : List<BmiMonthRecordDto>
+    + calculateWeightChangeThisMonth(Long memberProfileId, BigDecimal currentWeight) : BigDecimal
+    + hasMetric(Long profileId, BigDecimal weightKg, BigDecimal heightCm) : boolean
+    + saveBodyMetric(Long profileId, BigDecimal weightKg, BigDecimal heightCm, BigDecimal bmi, String note) : void
+    + updateMemberProfileMeasurements(Long profileId, BigDecimal weightKg, BigDecimal heightCm) : void
+    + calculateHealthScore(Long profileId, BigDecimal currentBmi) : HealthScoreDto
+    + findWorkoutHistory(Long profileId, String category, LocalDate date) : WorkoutHistoryResponse
+    + isSessionOwnedByMember(Long sessionId, Long profileId) : boolean
+    + findWorkoutSessionDetail(Long sessionId) : WorkoutSessionDetailResponse
+    + findPerformanceAnalytics(Long profileId, String range) : PerformanceAnalyticsResponse
+    --
+    - findWeeklyGoalDays(Long profileId) : int
+    - countGoalWeekStreak(List<LocalDate> trainingDays, int weeklyGoal, LocalDate thisMonday) : int
+    - findVolumeBucket(Long profileId, String label, LocalDate from, LocalDate to) : VolumeProgressionDto
+    - currentQuarterStart() : YearMonth
+    - formatHold(int totalSeconds) : String
+    - isUsableMeasurement(BigDecimal weight, BigDecimal height) : boolean
+    - decimal(Object raw) : BigDecimal
+  }
+}
+
+'==============================================================
+' ENTITY - the classes behind the tables read by the 3 sequences
+'==============================================================
+package "Entity" as ENT {
+  class User <<Entity>> {
+    - id : Long <<PK>>
+    - email : String <<UK>>
+    - password : String
+    - fullName : String
+    - phone : String
+    - avatarUrl : String
+    - role : UserRole
+    - enabled : boolean
+    - blocked : boolean
+    - mustChangePassword : boolean
+    - passwordChangedAt : LocalDateTime
+    - createdAt : LocalDateTime
+    --
+    + isActive() : boolean
+  }
+
+  class MemberProfile <<Entity>> {
+    - id : Long <<PK>>
+    - gender : String
+    - dateOfBirth : LocalDate
+    - weight : BigDecimal
+    - height : BigDecimal
+    - goals : String
+    - streakCount : int
+    - longestStreak : int
+    - bio : String
+    - user : User <<FK, unique>>
+    - fitnessLevel : FitnessLevel <<FK>>
+    - daysPerWeek : int
+  }
+
+  class FitnessLevel <<Entity>> {
+    - id : Long <<PK>>
+    - name : String <<UK>>
+    - scoreMin : int
+    - scoreMax : int
+    - status : String
+    - updatedAt : LocalDateTime
+    - updatedBy : User <<FK>>
+  }
+
+  class Exercise <<Entity>> {
+    - id : Long <<PK>>
+    - code : String <<UK>>
+    - name : String
+    - type : String
+    - category : String
+    - difficultyLevel : String
+    - instructions : String
+    - executionSteps : String
+    - videoUrl : String
+    - anatomyImageUrl : String
+    - defaultSets : Integer
+    - defaultReps : Integer
+    - duration : Integer
+    - source : String
+    - moderationStatus : String
+    - active : boolean
+    - updatedAt : LocalDateTime
+    - createdBy : User <<FK>>
+    - createdAt : LocalDateTime
+    - saveCount : Integer <<@Formula>>
+    - shareWithCommunity : boolean
+    - equipment : String
+    - goal : EntryGoal
+    - targetSkill : EntryTargetSkill
+    - movementGroup : MovementGroup
+    - treeLevel : Integer
+    - icon : String
+    - muscleGroups : List<ExerciseMuscleGroup>
+    - muscleGroupInput : String <<@Transient>>
+    --
+    + isSystem() : boolean
+    + getAuthorId() : Long
+    + getAuthor() : User
+  }
+
+  class ExerciseMuscleGroup <<Entity>> {
+    - id : ExerciseMuscleGroupId <<PK>>
+    - exercise : Exercise <<FK>>
+    - muscleGroup : MuscleGroup <<FK>>
+  }
+
+  class ExerciseMuscleGroupId <<Embeddable>> {
+    - exerciseId : Long <<PK>>
+    - muscleGroupId : Long <<PK>>
+  }
+
+  class MuscleGroup <<Entity>> {
+    - id : Long <<PK>>
+    - name : String <<UK>>
+    - dashboardCode : String <<UK>>
+    - iconKey : String
+    - tone : String
+    - exercises : List<ExerciseMuscleGroup>
+  }
+
+  class SessionExerciseResult <<Entity>> {
+    - id : Long <<PK>>
+    - setsCompleted : Integer
+    - validReps : Integer
+    - invalidReps : Integer
+    - accuracy : BigDecimal
+    - activeSeconds : Integer
+    - cleanSeconds : Integer
+    - workoutSessionId : Long <<FK>>
+    - exercise : Exercise <<FK>>
+  }
+
+  class Survey <<Entity>> {
+    - id : Long <<PK>>
+    - surveyCode : String <<UK>>
+    - surveyName : String
+    - description : String
+    - version : int
+    - status : SurveyStatus
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+
+  class SurveySession <<Entity>> {
+    - id : Long <<PK>>
+    - user : User <<FK>>
+    - survey : Survey <<FK>>
+    - surveyVersion : int
+    - status : SurveySessionStatus
+    - startedAt : LocalDateTime
+    - completedAt : LocalDateTime
+    - skippedAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+
+  class AssessmentQuestion <<Entity>> {
+    - id : Long <<PK>>
+    - questionCode : String <<UK>>
+    - questionText : String
+    - description : String
+    - questionType : String
+    - required : boolean
+    - validationRules : String
+    - displayConfig : String
+    - unit : String
+    - defaultValue : String
+    - status : ConfigStatus
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+
+  class AssessmentAnswer <<Entity>> {
+    - id : Long <<PK>>
+    - session : SurveySession <<FK>>
+    - question : AssessmentQuestion <<FK>>
+    - answerValue : String
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+  }
+}
+
+'==============================================================
+' ENUM - the enums used by the fields of the classes above
+'==============================================================
+package "Enum" as ENM {
+  enum UserRole <<Enum>> {
+    MEMBER
+    CONTENT_MANAGER
+    ADMIN
+  }
+
+  enum EntryGoal <<Enum>> {
+    LOSE_WEIGHT
+    BUILD_MUSCLE
+    STAY_FIT
+  }
+
+  enum EntryTargetSkill <<Enum>> {
+    HANDSTAND
+    MUSCLE_UP
+    FRONT_LEVER
+    PLANCHE
+  }
+
+  enum MovementGroup <<Enum>> {
+    PUSH
+    PULL
+    LEGS
+    CORE
+  }
+
+  enum ConfigStatus <<Enum>> {
+    ACTIVE
+    INACTIVE
+  }
+
+  enum SurveySessionStatus <<Enum>> {
+    IN_PROGRESS
+    COMPLETED
+    SKIPPED
+  }
+
+  enum SurveyStatus <<Enum>> {
+    DRAFT
+    ACTIVE
+    ARCHIVED
+  }
+}
+
+'==============================================================
+' RAW TABLE - the tables without a JPA entity, read by the 3 sequences
+'==============================================================
+package "Raw Table" as RAW {
+  class "workout_sessions" as T_workout_sessions <<Raw Table>> {
+    - id : Long <<PK>>
+    - member_profile_id : Long <<FK>>
+    - workout_id : Long
+    - workout_name : String
+    - session_date : LocalDate
+    - status : String
+    - started_at : LocalDateTime
+    - finished_at : LocalDateTime
+    - active_seconds : int
+    - total_reps : int
+    - source : String
+    - created_at : LocalDateTime
+    - updated_at : LocalDateTime
+  }
+
+  class "member_body_metrics" as T_member_body_metrics <<Raw Table>> {
+    - id : Long <<PK>>
+    - member_profile_id : Long <<FK>>
+    - weight_kg : BigDecimal
+    - height_cm : BigDecimal
+    - bmi : BigDecimal
+    - recorded_at : LocalDateTime
+    - note : String
+  }
+}
+
+'==============================================================
+' DEPENDENCY - Controller -> Service
+'==============================================================
+MemberTrackingController ..> MemberTrackingService : delegates
+
+'==============================================================
+' DEPENDENCY - Controller -> DTO
+'==============================================================
+MemberTrackingController ..> UpdateMeasurementsRequest : consumes
+MemberTrackingController ..> HealthTrackingOverviewResponse : produces
+MemberTrackingController ..> BodyMetricsDto : produces
+MemberTrackingController ..> WorkoutHistoryResponse : produces
+MemberTrackingController ..> WorkoutSessionDetailResponse : produces
+MemberTrackingController ..> PerformanceAnalyticsResponse : produces
+
+'==============================================================
+' DEPENDENCY - Service -> DTO
+'==============================================================
+MemberTrackingService ..> UpdateMeasurementsRequest : consumes
+MemberTrackingService ..> HealthTrackingOverviewResponse : produces
+MemberTrackingService ..> BodyMetricsDto : produces
+MemberTrackingService ..> WorkoutHistoryResponse : produces
+MemberTrackingService ..> WorkoutSessionDetailResponse : produces
+MemberTrackingService ..> PerformanceAnalyticsResponse : produces
+
+'==============================================================
+' DEPENDENCY - Service -> DAO
+'==============================================================
+MemberTrackingService ..> MemberTrackingRepository : queries
+
+'==============================================================
+' DEPENDENCY - DAO -> the DTO records it builds
+'==============================================================
+MemberTrackingRepository ..> BodyMetricsDto : builds
+MemberTrackingRepository ..> BmiMonthRecordDto : builds
+MemberTrackingRepository ..> HealthScoreDto : builds
+MemberTrackingRepository ..> WorkoutHistoryResponse : builds
+MemberTrackingRepository ..> WorkoutHistorySummaryDto : builds
+MemberTrackingRepository ..> WorkoutSessionSummaryDto : builds
+MemberTrackingRepository ..> WorkoutSessionDetailResponse : builds
+MemberTrackingRepository ..> ExerciseDetailDto : builds
+MemberTrackingRepository ..> PerformanceAnalyticsResponse : builds
+MemberTrackingRepository ..> RepsSummaryDto : builds
+MemberTrackingRepository ..> HoldSummaryDto : builds
+MemberTrackingRepository ..> VolumeProgressionDto : builds
+MemberTrackingRepository ..> DurationBreakdownDto : builds
+MemberTrackingRepository ..> AiInsightDto : builds
+
+'==============================================================
+' COMPOSITION - the DTO records nested in each other
+'==============================================================
+HealthTrackingOverviewResponse *-- HealthScoreDto
+HealthTrackingOverviewResponse *-- BodyMetricsDto
+HealthTrackingOverviewResponse *-- BmiOverviewDto
+BmiOverviewDto *-- BmiMonthRecordDto
+WorkoutHistoryResponse *-- WorkoutHistorySummaryDto
+WorkoutHistoryResponse *-- "0..*" WorkoutSessionSummaryDto
+WorkoutSessionDetailResponse *-- "0..*" ExerciseDetailDto
+PerformanceAnalyticsResponse *-- RepsSummaryDto
+PerformanceAnalyticsResponse *-- HoldSummaryDto
+PerformanceAnalyticsResponse *-- "0..*" VolumeProgressionDto
+PerformanceAnalyticsResponse *-- DurationBreakdownDto
+PerformanceAnalyticsResponse *-- AiInsightDto
+
+'==============================================================
+' DEPENDENCY - DAO -> the tables it reads with raw SQL
+'   (the tables of the three sequences)
+'==============================================================
+MemberTrackingRepository ..> User : queries users
+MemberTrackingRepository ..> MemberProfile : queries member_profiles
+MemberTrackingRepository ..> T_member_body_metrics : queries member_body_metrics
+MemberTrackingRepository ..> T_workout_sessions : queries workout_sessions
+MemberTrackingRepository ..> SessionExerciseResult : queries session_exercise_results
+MemberTrackingRepository ..> Exercise : queries exercises
+MemberTrackingRepository ..> SurveySession : queries survey_sessions
+MemberTrackingRepository ..> AssessmentQuestion : queries assessment_questions
+MemberTrackingRepository ..> AssessmentAnswer : queries assessment_answers
+
+'==============================================================
+' DEPENDENCY - the enums of the entity fields
+'==============================================================
+User ..> UserRole : role
+Exercise ..> EntryGoal : goal
+Exercise ..> EntryTargetSkill : targetSkill
+Exercise ..> MovementGroup : movementGroup
+AssessmentQuestion ..> ConfigStatus : status
+SurveySession ..> SurveySessionStatus : status
+Survey ..> SurveyStatus : status
+
+'==============================================================
+' AGGREGATION - the foreign keys of the entities
+'==============================================================
+MemberProfile "1" o-- "1" User : user_id
+MemberProfile "0..*" o-- "0..1" FitnessLevel : fitness_level_id
+FitnessLevel "0..*" o-- "0..1" User : updated_by
+Exercise "0..*" o-- "0..1" User : created_by
+ExerciseMuscleGroupId "1" o-- "1" Exercise : exercise_id
+ExerciseMuscleGroupId "1" o-- "1" MuscleGroup : muscle_group_id
+ExerciseMuscleGroup "0..*" o-- "1" ExerciseMuscleGroupId : id
+ExerciseMuscleGroup "0..*" o-- "1" Exercise : exercise
+ExerciseMuscleGroup "0..*" o-- "1" MuscleGroup : muscleGroup
+MuscleGroup "0..*" o-- "1..*" ExerciseMuscleGroup : exercises
+SessionExerciseResult "0..*" o-- "1" Exercise : exercise_id
+SurveySession "0..*" o-- "1" User : user_id
+SurveySession "0..*" o-- "1" Survey : survey_id
+AssessmentAnswer "0..*" o-- "1" SurveySession : session_id
+AssessmentAnswer "0..*" o-- "1" AssessmentQuestion : question_id
+
+'==============================================================
+' AGGREGATION - the foreign keys of the raw tables
+'==============================================================
+T_workout_sessions "0..*" o-- "1" MemberProfile : member_profile_id
+T_member_body_metrics "0..*" o-- "1" MemberProfile : member_profile_id
+T_workout_sessions "0..*" o-- "1" SessionExerciseResult : session_exercise_results.workout_session_id
+
+@enduml

@@ -132,4 +132,25 @@ class ContentNameGuardServiceTest {
         assertThatThrownBy(() -> guard.assertWorkoutNameNotUsedByExercise("Push-up", null))
                 .isInstanceOf(ResponseStatusException.class);
     }
+
+    @Test
+    @DisplayName("Tên bài tập trùng tên một bài tập khác thì bị chặn 409")
+    void exerciseNameMustBeUniqueAmongExercises() {
+        when(exercises.existsOtherNotDeletedByNameIgnoreCase(eq(-1L), eq("Push-up"))).thenReturn(true);
+
+        assertThatThrownBy(() -> guard.assertExerciseNameNotUsedByExercise("Push-up", null))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.CONFLICT));
+    }
+
+    @Test
+    @DisplayName("Sửa bài tập thì chính nó bị bỏ qua khi so trùng tên")
+    void exerciseNameExcludesItselfOnUpdate() {
+        when(exercises.existsOtherNotDeletedByNameIgnoreCase(eq(42L), eq("Push-up"))).thenReturn(false);
+
+        assertThatCode(() -> guard.assertExerciseNameNotUsedByExercise("Push-up", 42L))
+                .doesNotThrowAnyException();
+        verify(exercises).existsOtherNotDeletedByNameIgnoreCase(42L, "Push-up");
+    }
 }

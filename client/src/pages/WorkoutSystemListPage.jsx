@@ -258,8 +258,10 @@ function RadioIcon({ checked }) {
 }
 
 function titleCaseLevel(level) {
-  const normalized = String(level || "Beginner").trim().toUpperCase();
-  return normalized.charAt(0) + normalized.slice(1).toLowerCase();
+  const normalized = String(level || "").trim();
+  if (!normalized) return "";
+  const upper = normalized.toUpperCase();
+  return upper.charAt(0) + upper.slice(1).toLowerCase();
 }
 
 function getMinutes(totalTime) {
@@ -312,7 +314,7 @@ function matchesMuscleGroup(workout, selectedGroup) {
 
 function ExerciseCard({ workout, onClick }) {
   const { t } = useTranslation();
-  const level = workout.level || workout.difficultyLevel || "Intermediate";
+  const level = workout.level || workout.difficultyLevel || "";
   const localized = localizeSeedDeep(workout);  const details = [
     localized.muscleGroup,
     t("member.catalog.totalExercises", { count: workout.exerciseCount }),
@@ -354,8 +356,8 @@ function ExerciseCard({ workout, onClick }) {
             {t("member.catalog.workoutLockedBadge")}
           </span>
         )}
-        <span className={`min-w-[96px] rounded-full px-4 py-1.5 text-center text-xs font-bold tracking-wide capitalize ${getLevelBadgeStyle(level)}`}>
-          {getLevelLabel(level)}
+        <span className={`min-w-[96px] rounded-full px-4 py-1.5 text-center text-xs font-bold tracking-wide capitalize ${level ? getLevelBadgeStyle(level) : "bg-slate-500/10 text-slate-400"}`}>
+          {level ? getLevelLabel(level) : "—"}
         </span>
       </span>
     </div>

@@ -185,11 +185,12 @@ function ChevronDownIcon({ className = "w-4 h-4" }) {
 }
 
 function LevelBadge({ level }) {
-  const { t } = useTranslation();
-  const displayLevel = level || "Intermediate";
+  // Level do Content Manager cấu hình động: chưa gán level thì hiện "—" thay vì
+  // hard-code một tên level mặc định.
+  const displayLevel = level || "";
   return (
-    <span className={`rounded-full px-3 py-0.5 text-[11px] font-medium capitalize ${getLevelBadgeStyle(displayLevel)}`}>
-      {getLevelLabel(displayLevel)}
+    <span className={`rounded-full px-3 py-0.5 text-[11px] font-medium capitalize ${displayLevel ? getLevelBadgeStyle(displayLevel) : "bg-slate-500/10 text-slate-400"}`}>
+      {displayLevel ? getLevelLabel(displayLevel) : "—"}
     </span>
   );
 }
@@ -203,9 +204,6 @@ function FilterDropdown({ value, onChange, options, widthClass }) {
   const { t } = useTranslation();
   const labelFor = (option) => {
     if (option.label === "All levels") return t("member.catalog.allLevels");
-    if (option.label === "Beginner") return t("member.catalog.beginner");
-    if (option.label === "Intermediate") return t("member.catalog.intermediate");
-    if (option.label === "Advanced") return t("member.catalog.advanced");
     if (option.label === "Any length") return t("member.catalog.anyLength");
     if (option.label === "Under 10 min") return t("member.catalog.under10");
     if (option.label === "10–15 min") return t("member.catalog.between10and15");
@@ -213,7 +211,9 @@ function FilterDropdown({ value, onChange, options, widthClass }) {
     if (option.label === "Newest") return t("member.catalog.sortNewest");
     if (option.label === "Oldest") return t("member.catalog.sortOldest");
     if (option.label === "Most saved") return t("member.catalog.sortMostSaved");
-    return option.label;
+    // Level do Content Manager đặt tên động -> dùng `getLevelLabel` để tra bản dịch,
+    // level lạ sẽ hiển thị đúng tên gốc.
+    return getLevelLabel(option.label);
   };
   return (
     <div className={`relative h-7 ${widthClass} min-w-0`}>

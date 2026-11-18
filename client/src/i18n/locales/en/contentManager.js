@@ -35,6 +35,7 @@ export default {
     previewWorkout: "Workout",
     previewDay: "Day {{number}}",
     previewUpperBodyA: "Upper body A",
+    previewLevel: "Level {{level}}",
     previewFullBodyA: "Full Body A",
     previewFullBodyB: "Full Body B",
     previewFullBodyC: "Full Body C",
