@@ -51,6 +51,14 @@ spring:
 server:
   port: 8080
 
+logging:
+  level:
+    # Log "token hợp lệ" của JwtAuthFilter để ở DEBUG (mặc định tắt) vì frontend
+    # poll /api/notifications mỗi 10 giây -> ở INFO console bị ngập vài nghìn
+    # dòng/ngày mà không có thông tin chẩn đoán nào.
+    # Bật lại khi cần debug token: JWT_LOG_LEVEL=DEBUG trong file .env
+    com.calishealth.security: ${JWT_LOG_LEVEL:INFO}
+
 maintenance:
   # Job quét bảng `maintenance_schedules` để gửi nhắc nhở cho member trước
   # khi lịch bảo trì bắt đầu. Đơn vị: mili-giây.
