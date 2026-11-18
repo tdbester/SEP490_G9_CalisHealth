@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,6 +26,7 @@ class ExerciseTreeServiceTest {
     private MemberSkillProgressRepository skillProgress;
     private MemberProfileRepository memberProfiles;
     private UserRepository users;
+    private ExerciseUnlockService unlockService;
     private ExerciseTreeService service;
 
     @BeforeEach
@@ -33,7 +35,8 @@ class ExerciseTreeServiceTest {
         skillProgress = mock(MemberSkillProgressRepository.class);
         memberProfiles = mock(MemberProfileRepository.class);
         users = mock(UserRepository.class);
-        service = new ExerciseTreeService(progressionRules, skillProgress, memberProfiles, users);
+        unlockService = mock(ExerciseUnlockService.class);
+        service = new ExerciseTreeService(progressionRules, users, unlockService);
     }
 
     @Test
@@ -46,9 +49,9 @@ class ExerciseTreeServiceTest {
         profile.setId(77L);
         when(memberProfiles.findByUserId(5L)).thenReturn(Optional.of(profile));
 
-        Exercise levelOne = entry(101L, "Incline push-up", 1);
-        Exercise levelTwo = entry(102L, "Push-up", 2);
-        Exercise levelThree = entry(103L, "Diamond push-up", 3);
+        Exercise levelOne = entry(101L, "Incline push-up");
+        Exercise levelTwo = entry(102L, "Push-up");
+        Exercise levelThree = entry(103L, "Diamond push-up");
         when(progressionRules.orderedTreeRules()).thenReturn(List.of(
                 rule(levelTwo, levelOne),
                 rule(levelThree, levelTwo)));
@@ -56,6 +59,12 @@ class ExerciseTreeServiceTest {
         // member đã chinh phục bài level 1 -> trạng thái MASTERED trong cây.
         when(skillProgress.findAllByMemberProfile_IdAndExercise_IdIn(eq(77L), anyCollection()))
                 .thenReturn(List.of(skill(levelOne, ProgressionRuleService.PROGRESS_UNLOCKED)));
+
+        // Trạng thái do ExerciseUnlockService tính (dùng chung với luồng chặn tập).
+        when(unlockService.statesByExercise(5L)).thenReturn(Map.of(
+                101L, ExerciseUnlockService.STATE_MASTERED,
+                102L, ExerciseUnlockService.STATE_CURRENT,
+                103L, ExerciseUnlockService.STATE_LOCKED));
 
         var result = service.getTree(
                 ExerciseTreeService.TreeOrder.HARD_TO_EASY,
@@ -86,15 +95,19 @@ class ExerciseTreeServiceTest {
         profile.setId(77L);
         when(memberProfiles.findByUserId(5L)).thenReturn(Optional.of(profile));
 
-        Exercise plank = entry(201L, "Plank", 1);
-        Exercise handstand = entry(202L, "Handstand", 2);
+        Exercise plank = entry(201L, "Plank");
+        Exercise handstand = entry(202L, "Handstand");
         handstand.setMovementGroup(Exercise.MovementGroup.PUSH);
         ProgressionRule activeRule = rule(handstand, plank);
-        ProgressionRule inactiveRule = rule(entry(203L, "Hollow Body Hold", 2), plank);
+        ProgressionRule inactiveRule = rule(entry(203L, "Hollow Body Hold"), plank);
         inactiveRule.setStatus("INACTIVE");
         when(progressionRules.orderedTreeRules()).thenReturn(List.of(activeRule, inactiveRule));
         when(skillProgress.findAllByMemberProfile_IdAndExercise_IdIn(eq(77L), anyCollection()))
                 .thenReturn(List.of());
+        when(unlockService.statesByExercise(5L)).thenReturn(Map.of(
+                201L, ExerciseUnlockService.STATE_CURRENT,
+                202L, ExerciseUnlockService.STATE_CURRENT,
+                203L, ExerciseUnlockService.STATE_CURRENT));
 
         var result = service.getTree(
                 ExerciseTreeService.TreeOrder.EASY_TO_HARD,
@@ -120,9 +133,12 @@ class ExerciseTreeServiceTest {
         when(users.findByEmail("member@example.com")).thenReturn(Optional.of(member));
         when(memberProfiles.findByUserId(5L)).thenReturn(Optional.empty());
 
-        Exercise levelOne = entry(101L, "Incline push-up", 1);
-        Exercise levelTwo = entry(102L, "Push-up", 2);
+        Exercise levelOne = entry(101L, "Incline push-up");
+        Exercise levelTwo = entry(102L, "Push-up");
         when(progressionRules.orderedTreeRules()).thenReturn(List.of(rule(levelTwo, levelOne)));
+        when(unlockService.statesByExercise(5L)).thenReturn(Map.of(
+                101L, ExerciseUnlockService.STATE_CURRENT,
+                102L, ExerciseUnlockService.STATE_LOCKED));
 
         var result = service.getTree(
                 ExerciseTreeService.TreeOrder.EASY_TO_HARD,
@@ -134,6 +150,61 @@ class ExerciseTreeServiceTest {
                 com.calishealth.dtos.ExerciseTreeNodeDTO::state).containsExactly("CURRENT", "LOCKED");
     }
 
+    @Test
+    void computesTreeLevelFromTheProgressionGraphInsteadOfAStoredColumn() {
+        User member = new User();
+        member.setId(5L);
+        when(users.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(memberProfiles.findByUserId(5L)).thenReturn(Optional.empty());
+
+        // Chuỗi 3 bài: A -> B -> C. Do sau phai la 1, 2, 3 - tinh tu do thi rule.
+        Exercise a = entry(101L, "Incline push-up");
+        Exercise b = entry(102L, "Push-up");
+        Exercise c = entry(103L, "Diamond push-up");
+        when(progressionRules.orderedTreeRules()).thenReturn(List.of(
+                rule(b, a),
+                rule(c, b)));
+        when(unlockService.statesByExercise(5L)).thenReturn(Map.of(
+                101L, ExerciseUnlockService.STATE_CURRENT,
+                102L, ExerciseUnlockService.STATE_CURRENT,
+                103L, ExerciseUnlockService.STATE_CURRENT));
+
+        var result = service.getTree(
+                ExerciseTreeService.TreeOrder.EASY_TO_HARD,
+                "member@example.com");
+
+        assertThat(result.nodes()).extracting(
+                com.calishealth.dtos.ExerciseTreeNodeDTO::code).containsExactly("EX-101", "EX-102", "EX-103");
+        assertThat(result.nodes()).extracting(
+                com.calishealth.dtos.ExerciseTreeNodeDTO::level).containsExactly(1, 2, 3);
+    }
+
+    @Test
+    void handlesACycleInTheProgressionGraphWithoutLoopingForever() {
+        User member = new User();
+        member.setId(5L);
+        when(users.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(memberProfiles.findByUserId(5L)).thenReturn(Optional.empty());
+
+        // Vong: A -> B -> A. Khong co bai goc nao, nhung phai tra ve du lieu, khong treo.
+        Exercise a = entry(101L, "Incline push-up");
+        Exercise b = entry(102L, "Push-up");
+        when(progressionRules.orderedTreeRules()).thenReturn(List.of(
+                rule(b, a),
+                rule(a, b)));
+        when(unlockService.statesByExercise(5L)).thenReturn(Map.of(
+                101L, ExerciseUnlockService.STATE_LOCKED,
+                102L, ExerciseUnlockService.STATE_LOCKED));
+
+        var result = service.getTree(
+                ExerciseTreeService.TreeOrder.EASY_TO_HARD,
+                "member@example.com");
+
+        assertThat(result.nodes()).hasSize(2);
+        assertThat(result.nodes()).extracting(
+                com.calishealth.dtos.ExerciseTreeNodeDTO::level).doesNotContainNull();
+    }
+
     private MemberSkillProgress skill(Exercise exercise, String status) {
         MemberSkillProgress progress = new MemberSkillProgress();
         progress.setExercise(exercise);
@@ -141,14 +212,13 @@ class ExerciseTreeServiceTest {
         return progress;
     }
 
-    private Exercise entry(Long id, String name, int level) {
+    private Exercise entry(Long id, String name) {
         Exercise entry = new Exercise();
         entry.setId(id);
         entry.setCode("EX-" + id);
         entry.setName(name);
         entry.setSource("SYSTEM");
         entry.setMovementGroup(Exercise.MovementGroup.PUSH);
-        entry.setTreeLevel(level);
         entry.setDifficultyLevel("BEGINNER");
         entry.setMuscleGroup("Chest");
         return entry;

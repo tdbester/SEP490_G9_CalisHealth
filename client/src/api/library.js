@@ -196,6 +196,9 @@ const normalizeWorkout = (workout) => ({
   )} min`,
   createdLabel: workout.createdAt ? `Created ${timeAgo(workout.createdAt)}` : "",
   isShared: Boolean(workout.isSharedWithCommunity),
+  // Workout hệ thống chỉ tập được khi MỌI bài trong nó đã mở khoá trong Exercise Tree.
+  locked: Boolean(workout.locked),
+  lockedExerciseNames: Array.isArray(workout.lockedExerciseNames) ? workout.lockedExerciseNames : [],
   exercises: Array.isArray(workout.exercises)
     ? workout.exercises.map((exercise) => ({
         id: exercise.exerciseId,

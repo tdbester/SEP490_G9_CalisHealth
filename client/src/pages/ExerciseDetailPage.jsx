@@ -444,6 +444,12 @@ export default function ExerciseDetailPage() {
 
   const [exercise, setExercise] = useState(catalogItem);
   const [failedAnatomyImageUrl, setFailedAnatomyImageUrl] = useState("");
+  /**
+   * Bài đang khoá trong Exercise Tree (server trả `locked`) — member chỉ tập được
+   * bài đã mở khoá. Chỉ bài hệ thống mới có cờ này; bài của member tự tạo thì tập
+   * được bình thường.
+   */
+  const isExerciseLocked = Boolean(exercise.locked);
   // Chuỗi của dữ liệu mẫu được dịch lúc render để đổi ngôn ngữ không cần tải lại trang.
   const localizedExercise = localizeSeedDeep(exercise);
   const displayedMemberAuthor = exercise.authorName || memberAuthor;
@@ -764,13 +770,30 @@ export default function ExerciseDetailPage() {
               <button
                 type="button"
                 onClick={() => startLibraryExercise(navigate, exercise)}
-                className="exercise-start-btn flex items-center gap-2 rounded-2xl bg-[#22c55e] px-5 py-2 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#16a34a]"
+                disabled={isExerciseLocked}
+                aria-disabled={isExerciseLocked}
+                className={`exercise-start-btn flex items-center gap-2 rounded-2xl px-5 py-2 text-sm font-semibold text-white shadow-md transition-all ${
+                  isExerciseLocked
+                    ? "cursor-not-allowed bg-slate-600 opacity-70"
+                    : "bg-[#22c55e] hover:bg-[#16a34a]"
+                }`}
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M8 5v14l11-7z" />
                 </svg>
-                {t("member.catalog.startWorkout")}
+                {isExerciseLocked
+                  ? t("member.catalog.exerciseLockedBadge")
+                  : t("member.catalog.startWorkout")}
               </button>
+            )}
+            {/* Bài đang khoá trong Exercise Tree -> member phải mở khoá trước khi tập. */}
+            {isExerciseLocked && (
+              <div
+                role="alert"
+                className="rounded-xl border border-amber-800/70 bg-amber-950/30 px-4 py-3 text-xs text-amber-200"
+              >
+                {t("member.catalog.exerciseLocked")}
+              </div>
             )}
             {canOpenExerciseTree && (
               <button

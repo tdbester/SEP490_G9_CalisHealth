@@ -124,7 +124,7 @@ public class WorkoutService {
         return toResponse(workout);
     }
 
-    /** Clone Template: same level, schedule and exercise settings, saved as a DRAFT for the target month. */
+    /** Clone Template: same level, schedule and exercise settings, saved as a DRAFT copy. */
     @Transactional
     public WorkoutResponse cloneTemplate(String code, CloneWorkoutRequest request, String creatorEmail) {
         WorkoutEntry source = workouts.findByCode(code)
@@ -132,18 +132,14 @@ public class WorkoutService {
         if (DAILY_TRAINING_PLAN.equals(source.getType())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only workout templates can be cloned");
         }
-        int month = request == null || request.monthNumber() == null ? source.getMonthNumber() + 1 : request.monthNumber();
-        if (month < 1 || month > 24) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Target month must be between 1 and 24");
-        }
         String name = request != null && request.name() != null && !request.name().isBlank()
                 ? request.name().trim()
-                : cloneName(source.getName(), month);
+                : cloneName(source.getName());
         if (name.length() > 60) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Workout title must be at most 60 characters");
         }
-        // Chỉ chặn khi Content Manager TỰ đặt tên (tên tự sinh "X - Month N" có thể
-        // trùng khi clone nhiều lần cùng tháng — đó là thao tác hợp lệ).
+        // Chỉ chặn khi Content Manager TỰ đặt tên (tên tự sinh có thể trùng khi
+        // clone nhiều lần — đó là thao tác hợp lệ).
         if (request != null && request.name() != null && !request.name().isBlank()) {
             contentNameGuard.assertWorkoutNameNotUsedByExercise(name, null);
             contentNameGuard.assertSystemWorkoutNameNotUsedByWorkout(name, null);
@@ -156,7 +152,6 @@ public class WorkoutService {
         copy.setType(source.getType());
         copy.setSource("SYSTEM");
         copy.setLevel(source.getLevel());
-        copy.setMonthNumber(month);
         copy.setDaysPerWeek(source.getDaysPerWeek());
         copy.setDaySequence(source.getDaySequence());
         copy.setTemplateStatus("DRAFT");
@@ -206,10 +201,11 @@ public class WorkoutService {
         return Math.max(min, Math.min(max, value));
     }
 
-    /** "Full Body A - Month 1" -> "Full Body A - Month 2"; otherwise appends the target month. */
-    private static String cloneName(String name, int month) {
-        String base = name == null ? "Workout" : name.replaceFirst("(?i)\\s*-?\\s*month\\s*\\d+\\s*$", "").trim();
-        String result = base + " - Month " + month;
+    /** "Full Body A - Month 1" -> "Full Body A - Copy"; bỏ hậu tố "Month N" cũ nếu có. */
+    private static String cloneName(String name) {
+        String base = name == null ? "Workout"
+                : name.replaceFirst("(?i)\\s*-?\\s*month\\s*\\d+\\s*$", "").trim();
+        String result = base + " - Copy";
         return result.length() > 60 ? result.substring(0, 60).trim() : result;
     }
 
@@ -321,11 +317,10 @@ public class WorkoutService {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Workout data is required");
         }
-        int month = request.monthNumber() == null ? 1 : request.monthNumber();
         int days = request.daysPerWeek() == null ? 3 : request.daysPerWeek();
         int sequence = request.daySequence() == null ? 1 : request.daySequence();
-        if (month < 1 || month > 24 || days < 1 || days > 7 || sequence < 1 || sequence > days) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Month, training days, and day sequence are invalid");
+        if (days < 1 || days > 7 || sequence < 1 || sequence > days) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Training days and day sequence are invalid");
         }
         if (request.name() == null || request.name().isBlank() || request.name().length() > 60) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Workout title is required and must be at most 60 characters");
@@ -427,7 +422,6 @@ public class WorkoutService {
     }
 
     private void applyTemplateMetadata(WorkoutEntry workout, CreateWorkoutRequest request) {
-        workout.setMonthNumber(request.monthNumber() == null ? 1 : request.monthNumber());
         workout.setDaysPerWeek(request.daysPerWeek() == null ? 3 : request.daysPerWeek());
         workout.setDaySequence(request.daySequence() == null ? 1 : request.daySequence());
         String status = request.templateStatus() == null || request.templateStatus().isBlank()
@@ -467,7 +461,7 @@ public class WorkoutService {
                 )).toList();
         return new WorkoutResponse(workout.getCode(), workout.getName(), workout.getDescription(),
                 workout.getType() == null ? REGULAR_WORKOUT : workout.getType(),
-                workout.getLevel(), workout.getMonthNumber(), workout.getDaysPerWeek(), workout.getDaySequence(),
+                workout.getLevel(), workout.getDaysPerWeek(), workout.getDaySequence(),
                 workout.getTemplateStatus(), workout.isActive() && isLevelActive(workout.getLevel()),
                 workout.getUpdatedAt(), workout.getSource(),
                 workout.getCreatedBy() == null ? null : workout.getCreatedBy().getFullName(),

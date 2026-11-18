@@ -4,10 +4,12 @@ import com.calishealth.dtos.ExerciseFilterRequestDTO;
 import com.calishealth.dtos.ExerciseItemResponseDTO;
 import com.calishealth.dtos.PageResponseDTO;
 import com.calishealth.dtos.SystemExerciseDetailResponseDTO;
+import com.calishealth.security.SessionIdentity;
 import com.calishealth.service.ExerciseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,15 +24,21 @@ public class LibraryExerciseController {
 
     @GetMapping
     public ResponseEntity<PageResponseDTO<ExerciseItemResponseDTO>> getSystemExercises(
-            @Valid @ModelAttribute ExerciseFilterRequestDTO filterRequest
+            @Valid @ModelAttribute ExerciseFilterRequestDTO filterRequest,
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(exerciseService.getSystemExercises(filterRequest));
+        return ResponseEntity.ok(exerciseService.getSystemExercises(
+                filterRequest,
+                SessionIdentity.emailOf(authentication)));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<SystemExerciseDetailResponseDTO> getSystemExerciseDetail(
-            @PathVariable Long id
+            @PathVariable Long id,
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(exerciseService.getSystemExerciseDetail(id));
+        return ResponseEntity.ok(exerciseService.getSystemExerciseDetail(
+                id,
+                SessionIdentity.emailOf(authentication)));
     }
 }

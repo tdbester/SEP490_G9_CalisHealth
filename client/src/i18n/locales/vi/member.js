@@ -950,6 +950,12 @@ export default {
     setSummary: "{{sets}} hiệp · {{dosage}} · nghỉ {{rest}}",
     startWorkout: "Bắt đầu tập",
     couldNotStart: "Workout này chưa có bài tập nào để bắt đầu.",
+    workoutLockedBadge: "Đang khoá",
+    workoutLocked:
+      "Workout này đang bị khoá. Hãy mở khoá {{exercises}} trong Cây bài tập trước khi bắt đầu.",
+    exerciseLockedBadge: "Đang khoá",
+    exerciseLocked:
+      "Bài tập này vẫn đang khoá. Hãy hoàn thành các bài tiền kiện trong Cây bài tập trước.",
     invalidExerciseId: "Bài tập trong workout này không có ID hợp lệ.",
     loadingExercises: "Đang tải bài tập...",
     loadFailed: "Không tải được danh sách bài tập của bạn. Vui lòng thử lại.",

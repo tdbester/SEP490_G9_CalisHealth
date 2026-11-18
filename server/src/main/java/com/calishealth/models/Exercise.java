@@ -116,9 +116,6 @@ public class Exercise {
     @Column(name = "movement_group", length = 20)
     private MovementGroup movementGroup;
 
-    @Column(name = "tree_level")
-    private Integer treeLevel;
-
     @Column(length = 255)
     private String icon;
 

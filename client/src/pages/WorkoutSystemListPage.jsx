@@ -289,6 +289,8 @@ function normalizeWorkout(workout) {
       : 0,
     totalTime,
     description: workout.description || "",
+    // Workout hệ thống có bài chưa mở khoá trong Exercise Tree -> không tập được.
+    locked: Boolean(workout.locked),
     isMock: Boolean(workout.isMock),
   };
 }
@@ -343,6 +345,15 @@ function ExerciseCard({ workout, onClick }) {
           itemId={workout.id}
           label={workout.title}
         />
+        {/* Workout có bài chưa mở khoá trong Exercise Tree -> báo trước cho member. */}
+        {workout.locked && (
+          <span
+            title={t("member.catalog.workoutLockedBadge")}
+            className="rounded-full border border-amber-700/70 bg-amber-950/40 px-2.5 py-1 text-[10px] font-semibold text-amber-300"
+          >
+            {t("member.catalog.workoutLockedBadge")}
+          </span>
+        )}
         <span className={`min-w-[96px] rounded-full px-4 py-1.5 text-center text-xs font-bold tracking-wide capitalize ${getLevelBadgeStyle(level)}`}>
           {getLevelLabel(level)}
         </span>

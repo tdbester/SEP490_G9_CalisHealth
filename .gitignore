@@ -83,3 +83,15 @@ vite.err
 
 # ===== Prototype local (khong commit) =====
 prototype/
+
+# ===== File sinh ra khi chay app / build (khong commit) =====
+# Log cua Spring Boot khi chay boi mvnw spring-boot:run
+server/*.log
+server/nohup.out
+# Bien moi truong cua Vite (client khong can file env nen bo qua)
+client/.env
+client/.env.local
+client/.env.*.local
+# File kiem tra tam sinh khi debug
+*.tmp
+*.bak

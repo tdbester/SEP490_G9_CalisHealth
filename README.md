@@ -2,8 +2,28 @@
 
 Ứng dụng sức khỏe & kỹ năng calisthenics.
 
-- **Backend**: Spring Boot 3 + JWT + MySQL (xem `src/main/java/com/calishealth/`)
+- **Backend**: Spring Boot 4 + JWT + MySQL (xem `server/src/main/java/com/calishealth/`)
 - **Frontend**: React 18 + Vite + JavaScript + Tailwind CSS
+
+---
+
+## 🚀 Chạy local
+
+> **Mới pull code về? Đọc [SETUP.md](SETUP.md) trước** — hướng dẫn đầy đủ từ A→Z,
+> gồm các lỗi thường gặp và tài khoản demo có sẵn.
+
+Tóm tắt:
+
+```bash
+# Backend
+cp .env.example .env      # rồi sửa DB_PASSWORD / JWT_SECRET nếu cần
+cd server && ./mvnw spring-boot:run     # http://localhost:8080
+
+# Frontend (terminal khác)
+cd client && npm install && npm run dev # http://localhost:5173
+```
+
+Tài khoản demo: `admin@calishealth.com` / `Test@123`
 
 ---
 

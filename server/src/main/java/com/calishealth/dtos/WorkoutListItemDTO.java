@@ -16,5 +16,10 @@ public record WorkoutListItemDTO(
         int totalSets,
         int estimatedDuration,
         String muscleGroup,
-        boolean isSharedWithCommunity
+        boolean isSharedWithCommunity,
+        /**
+         * Workout hệ thống đang bị khoá vì có bài chưa mở khoá trong Exercise Tree.
+         * Member chỉ tập được workout khi MỌI bài trong nó đã mở khoá.
+         */
+        boolean locked
 ) {}

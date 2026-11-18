@@ -4,11 +4,7 @@ import com.calishealth.dtos.ExerciseTreeEdgeDTO;
 import com.calishealth.dtos.ExerciseTreeNodeDTO;
 import com.calishealth.dtos.ExerciseTreeResponseDTO;
 import com.calishealth.models.Exercise;
-import com.calishealth.models.MemberProfile;
-import com.calishealth.models.MemberSkillProgress;
 import com.calishealth.models.ProgressionRule;
-import com.calishealth.repository.MemberProfileRepository;
-import com.calishealth.repository.MemberSkillProgressRepository;
 import com.calishealth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -16,14 +12,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
 import java.util.Set;
 
 @Service
@@ -32,9 +26,8 @@ public class ExerciseTreeService {
     public enum TreeOrder { EASY_TO_HARD, HARD_TO_EASY }
 
     private final ProgressionRuleService progressionRules;
-    private final MemberSkillProgressRepository skillProgress;
-    private final MemberProfileRepository memberProfiles;
     private final UserRepository users;
+    private final ExerciseUnlockService unlockService;
 
     @Transactional(readOnly = true)
     public ExerciseTreeResponseDTO getTree(TreeOrder order, String memberEmail) {
@@ -62,14 +55,18 @@ public class ExerciseTreeService {
             }
         }
 
+        // V84 bo cot `exercises.tree_level`: do sau cua cay duoc tinh truc tiep tu
+        // do thi `progression_rules` (nguon su that duy nhat), dung thuat toan giong
+        // frontend (`exerciseTreeLayout.js`) - do sau dai nhat tinh tu bai goc.
+        Map<Long, Integer> depthByExercise = depthByExercise(allRules, exercises.keySet());
+
         Set<Long> exerciseIds = exercises.keySet();
-        Map<Long, String> storedStates = exerciseIds.isEmpty()
-                ? Map.of()
-                : loadSkillStates(memberId, exerciseIds);
-        Map<Long, String> states = resolveStates(exercises, prerequisites, activePrerequisites, storedStates);
+        // Trạng thái mở khoá do ExerciseUnlockService tính (nguồn dùng chung với luồng
+        // chặn tập) để cây hiển thị và quy tắc "chỉ tập bài đã mở khoá" luôn khớp nhau.
+        Map<Long, String> states = unlockService.statesByExercise(memberId);
 
         Comparator<Exercise> comparator = Comparator
-                .comparing(Exercise::getTreeLevel, Comparator.nullsLast(Integer::compareTo))
+                .comparing((Exercise exercise) -> depthByExercise.getOrDefault(exercise.getId(), 0))
                 .thenComparing(Exercise::getId);
         if (order == TreeOrder.HARD_TO_EASY) comparator = comparator.reversed();
         List<ExerciseTreeNodeDTO> nodes = exercises.values().stream()
@@ -80,7 +77,7 @@ public class ExerciseTreeService {
                         exercise.getName(),
                         exercise.getType(),
                         exercise.getCategory(),
-                        exercise.getTreeLevel(),
+                        depthByExercise.getOrDefault(exercise.getId(), 0),
                         displayDifficulty(exercise.getDifficultyLevel()),
                         exercise.getMovementGroup() == null ? null : exercise.getMovementGroup().name(),
                         states.get(exercise.getId()),
@@ -98,83 +95,55 @@ public class ExerciseTreeService {
         return response(order, nodes, edges);
     }
 
-    /**
-     * Đọc trạng thái tiến độ của member trên các bài trong cây.
-     *
-     * <p>Nguồn sự thật là {@code member_skill_progress} (bảng {@code ProgressionRuleService} ghi khi
-     * member tập xong bài và mở khoá bài kế tiếp): {@code UNLOCKED} = đã chinh phục, còn lại
-     * ({@code IN_PROGRESS} / chưa có dòng) = đang tập. Trạng thái trả về dùng đúng 3 giá trị mà
-     * frontend dựng cây: MASTERED / CURRENT / LOCKED.
-     */
-    private Map<Long, String> loadSkillStates(Long memberId, Set<Long> exerciseIds) {
-        MemberProfile profile = memberProfiles.findByUserId(memberId).orElse(null);
-        if (profile == null) {
-            return Map.of();
-        }
-        Map<Long, String> states = new HashMap<>();
-        for (MemberSkillProgress row : skillProgress.findAllByMemberProfile_IdAndExercise_IdIn(
-                profile.getId(), exerciseIds)) {
-            Long exerciseId = row.getExercise() == null ? null : row.getExercise().getId();
-            if (exerciseId == null) {
-                continue;
-            }
-            String status = row.getStatus();
-            states.put(exerciseId, ProgressionRuleService.PROGRESS_UNLOCKED.equals(status)
-                    ? "MASTERED"
-                    : "CURRENT");
-        }
-        return states;
-    }
-
-    private Map<Long, String> resolveStates(
-            Map<Long, Exercise> exercises,
-            Map<Long, Set<Long>> prerequisites,
-            Map<Long, Set<Long>> activePrerequisites,
-            Map<Long, String> storedStates
-    ) {
-        Comparator<Long> byDifficulty = Comparator
-                .comparing((Long id) -> exercises.get(id).getTreeLevel(), Comparator.nullsLast(Integer::compareTo))
-                .thenComparingLong(Long::longValue);
-        Map<Long, Integer> remainingPrerequisites = new HashMap<>();
-        Map<Long, List<Long>> nextExercises = new HashMap<>();
-        exercises.keySet().forEach(id -> remainingPrerequisites.put(id, 0));
-        activePrerequisites.forEach((exerciseId, prerequisiteIds) -> {
-            remainingPrerequisites.put(exerciseId, prerequisiteIds.size());
-            prerequisiteIds.forEach(prerequisiteId ->
-                    nextExercises.computeIfAbsent(prerequisiteId, ignored -> new ArrayList<>()).add(exerciseId));
-        });
-
-        PriorityQueue<Long> ready = new PriorityQueue<>(byDifficulty);
-        remainingPrerequisites.forEach((id, count) -> {
-            if (count == 0) ready.add(id);
-        });
-
-        Map<Long, String> states = new HashMap<>();
-        while (!ready.isEmpty()) {
-            Long id = ready.remove();
-            String savedState = storedStates.get(id);
-            if ("MASTERED".equals(savedState) || "CURRENT".equals(savedState)) {
-                states.put(id, savedState);
-            } else if (activePrerequisites.containsKey(id)) {
-                boolean unlocked = activePrerequisites.get(id).stream()
-                        .allMatch(prerequisiteId -> "MASTERED".equals(states.get(prerequisiteId)));
-                states.put(id, unlocked ? "CURRENT" : "LOCKED");
-            } else {
-                states.put(id, "CURRENT");
-            }
-
-            for (Long nextId : nextExercises.getOrDefault(id, List.of())) {
-                int remaining = remainingPrerequisites.compute(nextId, (ignored, count) -> count - 1);
-                if (remaining == 0) ready.add(nextId);
-            }
-        }
-
-        exercises.keySet().forEach(id -> states.putIfAbsent(id, "LOCKED"));
-        return states;
-    }
-
     private List<Long> sortedIds(Set<Long> ids) {
         return ids == null ? List.of() : ids.stream().sorted().toList();
+    }
+
+    /**
+     * Độ sâu của mỗi bài trong cây: số cạnh dài nhất từ bài gốc (bài không là đích của rule nào).
+     *
+     * <p>Tính bằng cách duyệt lặp cho tới khi không còn bài nào đổi độ sâu, nên an toàn với dữ liệu
+     * có vòng (một bài là tiền kiện của chính nó): số vòng bị chặn bởi số bài. Cùng thuật toán
+     * với {@code client/src/exerciseTreeLayout.js}, nên cột hiển thị ở frontend khớp với cột
+     * mà API trả về.
+     *
+     * @param allRules mọi rule của cây (kể cả rule INACTIVE, vì cây vẫn hiển thị cạnh đó)
+     * @param exerciseIds các bài cần tinh do sau
+     * @return do sau (bat dau tu 1 cho bai goc) theo id bai
+     */
+    private Map<Long, Integer> depthByExercise(List<ProgressionRule> allRules, Set<Long> exerciseIds) {
+        Map<Long, Integer> depth = new HashMap<>();
+        // Bài gốc: xuất hiện trong rule nhưng không là đích của rule nào -> do sau 1.
+        Set<Long> targets = new HashSet<>();
+        for (ProgressionRule rule : allRules) {
+            targets.add(rule.getExercise().getId());
+        }
+        for (Long exerciseId : exerciseIds) {
+            if (!targets.contains(exerciseId)) {
+                depth.put(exerciseId, 1);
+            }
+        }
+        // Bai co the nam trong vong: gan do sau 1 de khong bi NULL.
+        for (Long exerciseId : exerciseIds) {
+            depth.putIfAbsent(exerciseId, 1);
+        }
+
+        // Lan toi theo canh prerequisite -> exercise, lap lai den khi khong con doi.
+        for (int pass = 0; pass < exerciseIds.size(); pass++) {
+            boolean changed = false;
+            for (ProgressionRule rule : allRules) {
+                Integer prerequisiteDepth = depth.get(rule.getPrerequisiteExercise().getId());
+                if (prerequisiteDepth == null) continue;
+                int next = prerequisiteDepth + 1;
+                Integer current = depth.get(rule.getExercise().getId());
+                if (current == null || current < next) {
+                    depth.put(rule.getExercise().getId(), next);
+                    changed = true;
+                }
+            }
+            if (!changed) break;
+        }
+        return depth;
     }
 
     private ExerciseTreeResponseDTO response(

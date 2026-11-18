@@ -3,10 +3,10 @@ package com.calishealth.service;
 import com.calishealth.dtos.AiSupportDtos.AnswerResponse;
 import com.calishealth.dtos.AiSupportDtos.LikelyCause;
 import com.calishealth.exception.OpenAiException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -50,7 +50,7 @@ public class OpenAiChatService implements AiChatProvider {
      */
     private final int maxOutputTokens;
     private final boolean demoFallbackEnabled;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final JsonMapper mapper = JsonMapper.builder().build();
 
     public OpenAiChatService(
             @Value("${app.openai.api-key:}") String apiKey,

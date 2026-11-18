@@ -41,7 +41,24 @@ class SystemExerciseDetailTest {
                 mock(ExerciseMuscleGroupCatalog.class),
                 mock(SystemNotificationService.class),
                 mock(ExercisePhysiologyService.class),
-                mock(ContentNameGuardService.class));
+                mock(ContentNameGuardService.class),
+                mock(ExerciseUnlockService.class));
+    }
+
+    /**
+     * Bài nằm trong cây tiến trình khi có progression rule liên quan.
+     * V83 bỏ bảng `exercise_tree_edges` + cột `exercises.exercise_tree_id`, nên cây
+     * bài tập giờ lấy từ `progression_rules` (nguồn duy nhất).
+     */
+    private ProgressionRule rule(Long exerciseId, Long prerequisiteId, String prerequisiteName) {
+        Exercise prerequisite = new Exercise();
+        prerequisite.setId(prerequisiteId);
+        prerequisite.setName(prerequisiteName);
+        ProgressionRule rule = new ProgressionRule();
+        rule.setExercise(new Exercise());
+        rule.getExercise().setId(exerciseId);
+        rule.setPrerequisiteExercise(prerequisite);
+        return rule;
     }
 
     /**
@@ -132,7 +149,6 @@ class SystemExerciseDetailTest {
         exercise.setName("Bench Dips");
         exercise.setMuscleGroup("Arm/Shoulders");
         exercise.setMovementGroup(Exercise.MovementGroup.PUSH);
-        exercise.setTreeLevel(1);
         when(exerciseRepository.findAcceptedByIdAndSource(118L, "SYSTEM")).thenReturn(Optional.of(exercise));
         when(progressionRules.findAllByExercise_IdOrPrerequisiteExercise_Id(118L, 118L))
                 .thenReturn(List.of(rule(118L, 119L, "Push-up")));
