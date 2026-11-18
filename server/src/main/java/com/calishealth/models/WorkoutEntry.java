@@ -61,12 +61,10 @@ public class WorkoutEntry {
     @Column(name = "estimated_duration", nullable = false)
     private Integer estimatedDuration = 0;
 
-    @Column(name = "month_number", nullable = false)
-    private int monthNumber = 1;
-
     @Column(name = "days_per_week", nullable = false)
     private int daysPerWeek = 3;
 
+    /** Thứ tự ngày tập trong tuần của workout (Day 1..N). */
     @Column(name = "day_sequence", nullable = false)
     private int daySequence = 1;
 

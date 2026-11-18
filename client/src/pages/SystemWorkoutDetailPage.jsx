@@ -88,8 +88,19 @@ export default function SystemWorkoutDetailPage() {
   /**
    * Bấm "Start workout" -> xếp hàng toàn bộ bài trong workout và mở buổi tập với
    * AI Pose Tracking, giống luồng kế hoạch ngày (Exercise 1 of N -> ... -> kết quả).
+   *
+   * Workout hệ thống có bài đang khoá trong Exercise Tree thì không tập được:
+   * phải mở khoá TẤT CẢ bài trong workout trước.
    */
   const startWorkout = () => {
+    if (workout?.locked) {
+      setErrorMessage(
+        t("member.catalog.workoutLocked", {
+          exercises: (workout.lockedExerciseNames || []).join(", "),
+        }),
+      );
+      return;
+    }
     const started = startLibraryWorkout(navigate, workout?.exercises || []);
     if (!started) {
       setErrorMessage(t("member.catalog.couldNotStart"));
@@ -136,13 +147,32 @@ export default function SystemWorkoutDetailPage() {
               <button
                 type="button"
                 onClick={startWorkout}
-                className="inline-flex items-center gap-2 rounded-xl border border-emerald-600/80 bg-emerald-700 px-5 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-600"
+                disabled={workout.locked}
+                aria-disabled={workout.locked}
+                className={`inline-flex items-center gap-2 rounded-xl border px-5 py-2.5 text-xs font-semibold text-white transition-colors ${
+                  workout.locked
+                    ? "cursor-not-allowed border-slate-600/60 bg-slate-700/60 opacity-70"
+                    : "border-emerald-600/80 bg-emerald-700 hover:bg-emerald-600"
+                }`}
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M8 5v14l11-7z" />
                 </svg>
-                {t("member.catalog.startWorkout")}
+                {workout.locked
+                  ? t("member.catalog.workoutLockedBadge")
+                  : t("member.catalog.startWorkout")}
               </button>
+            )}
+            {/* Giải thích vì sao workout bị khoá — member biết cần mở khoá bài nào. */}
+            {workout.locked && !isMock && (
+              <div
+                role="alert"
+                className="rounded-xl border border-amber-800/70 bg-amber-950/30 px-4 py-3 text-xs text-amber-200"
+              >
+                {t("member.catalog.workoutLocked", {
+                  exercises: (workout.lockedExerciseNames || []).join(", "),
+                })}
+              </div>
             )}
           </section>
           <section className="space-y-3">

@@ -77,7 +77,6 @@ public final class ExerciseDtos {
             String description,
             String type,
             String level,
-            int monthNumber,
             int daysPerWeek,
             int daySequence,
             String templateStatus,
@@ -94,7 +93,6 @@ public final class ExerciseDtos {
             String description,
             String type,
             String level,
-            Integer monthNumber,
             Integer daysPerWeek,
             Integer daySequence,
             String templateStatus,
@@ -105,8 +103,8 @@ public final class ExerciseDtos {
             List<WorkoutExerciseItemRequest> items
     ) {}
 
-    /** Clone Workout Template: copies every exercise setting into a new DRAFT template for the target month. */
-    public record CloneWorkoutRequest(Integer monthNumber, String name) {}
+    /** Clone Workout Template: copies every exercise setting into a new DRAFT template. */
+    public record CloneWorkoutRequest(String name) {}
 
     /**
      * Quick Update Sets/Reps: adds the deltas to every exercise of the template (progressive overload).

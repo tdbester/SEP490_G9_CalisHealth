@@ -11,6 +11,7 @@ import com.calishealth.dtos.SystemExerciseDetailResponseDTO;
 import com.calishealth.models.Exercise;
 import com.calishealth.models.FitnessLevel;
 import com.calishealth.models.ProgressionRule;
+import com.calishealth.models.User;
 import com.calishealth.repository.ExerciseRepository;
 import com.calishealth.repository.FitnessLevelRepository;
 import com.calishealth.repository.ExerciseModerationHistoryRepository;
@@ -62,15 +63,34 @@ public class ExerciseService {
     private final SystemNotificationService systemNotifications;
     private final ExercisePhysiologyService physiologyService;
     private final ContentNameGuardService contentNameGuard;
+    private final ExerciseUnlockService unlockService;
 
     @Transactional(readOnly = true)
     public PageResponseDTO<ExerciseItemResponseDTO> getSystemExercises(ExerciseFilterRequestDTO filter) {
+        return getSystemExercises(filter, null);
+    }
+
+    /**
+     * Danh sách bài hệ thống, kèm trạng thái mở khoá của member đang xem.
+     *
+     * @param filter      bộ lọc danh sách
+     * @param memberEmail email member (null khi khách) — dùng để tính cờ {@code locked}
+     */
+    @Transactional(readOnly = true)
+    public PageResponseDTO<ExerciseItemResponseDTO> getSystemExercises(
+            ExerciseFilterRequestDTO filter,
+            String memberEmail
+    ) {
         if (filter == null || filter.getType() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exercise type is required");
         }
         Page<Exercise> result = exercises.findAll(
                 ExerciseSpecification.withFilters(filter),
                 PageRequest.of(filter.getPage(), filter.getSize()));
+
+        // Tập bài đang khoá của member — tính MỘT LẦN cho cả trang để tránh N+1 query.
+        Set<Long> lockedExerciseIds = lockedExerciseIdsOf(memberEmail, result.getContent());
+
         List<ExerciseItemResponseDTO> content = result.getContent().stream()
                 .map(exercise -> new ExerciseItemResponseDTO(
                         exercise.getId(),
@@ -86,7 +106,8 @@ public class ExerciseService {
                                 : ExerciseFilterRequestDTO.ExerciseGoal.valueOf(exercise.getGoal().name()),
                         exercise.getTargetSkill() == null ? null
                                 : ExerciseFilterRequestDTO.TargetSkill.valueOf(exercise.getTargetSkill().name()),
-                        exercise.getIcon()))
+                        exercise.getIcon(),
+                        lockedExerciseIds == null ? null : lockedExerciseIds.contains(exercise.getId())))
                 .toList();
         return new PageResponseDTO<>(
                 content,
@@ -98,8 +119,40 @@ public class ExerciseService {
                 result.hasPrevious());
     }
 
+    /**
+     * Gom các bài đang khoá của member trong danh sách bài tập.
+     *
+     * <p>Gọi {@code statesByExercise} đúng một lần cho cả trang thay vì gọi
+     * {@code isLocked} cho từng bài (mỗi lần đó lại quét cả cây progression).</p>
+     */
+    private Set<Long> lockedExerciseIdsOf(String memberEmail, List<Exercise> exercises) {
+        if (memberEmail == null || memberEmail.isBlank() || exercises.isEmpty()) {
+            return null;
+        }
+        User member = users.findByEmail(memberEmail).orElse(null);
+        if (member == null) {
+            return null;
+        }
+        Map<Long, String> states = unlockService.statesByExercise(member.getId());        Set<Long> locked = exercises.stream()
+                .map(Exercise::getId)
+                .filter(id -> ExerciseUnlockService.STATE_LOCKED.equals(states.get(id)))
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        return locked;
+    }
+
     @Transactional(readOnly = true)
     public SystemExerciseDetailResponseDTO getSystemExerciseDetail(Long exerciseId) {
+        return getSystemExerciseDetail(exerciseId, null);
+    }
+
+    /**
+     * Chi tiết bài hệ thống, kèm trạng thái mở khoá của member đang xem.
+     *
+     * @param exerciseId id bài tập
+     * @param memberEmail email member (null khi khách) — dùng để tính cờ {@code locked}
+     */
+    @Transactional(readOnly = true)
+    public SystemExerciseDetailResponseDTO getSystemExerciseDetail(Long exerciseId, String memberEmail) {
         Exercise exercise = exercises.findAcceptedByIdAndSource(exerciseId, "SYSTEM")
                 .filter(Exercise::isActive)
                 .orElseThrow(() -> new com.calishealth.exception.ResourceNotFoundException("System exercise not found"));
@@ -156,6 +209,12 @@ public class ExerciseService {
 
         ExercisePhysiologyDTO physiology = loadPhysiology(exercise.getId());
 
+        Boolean locked = null;
+        if (memberEmail != null && !memberEmail.isBlank()) {
+            Long memberId = users.findByEmail(memberEmail).map(com.calishealth.models.User::getId).orElse(null);
+            locked = memberId != null && unlockService.isLocked(exercise.getId(), memberId);
+        }
+
         return new SystemExerciseDetailResponseDTO(
                 exercise.getId(),
                 exercise.getCode(),
@@ -178,7 +237,8 @@ public class ExerciseService {
                 exercise.getMovementGroup() == null ? null : exercise.getMovementGroup().name(),
                 previous,
                 next,
-                physiology);
+                physiology,
+                locked);
     }
 
     /**

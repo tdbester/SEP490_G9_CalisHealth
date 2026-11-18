@@ -16,5 +16,10 @@ public record ExerciseItemResponseDTO(
         String equipment,
         ExerciseGoal goal,
         TargetSkill targetSkill,
-        String icon
+        String icon,
+        /**
+         * Bài đang khoá trong Exercise Tree với member đang xem hay không.
+         * Null khi khách (guest) xem — guest không tập được nên không cần biết.
+         */
+        Boolean locked
 ) {}

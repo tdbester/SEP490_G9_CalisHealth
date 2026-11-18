@@ -53,7 +53,13 @@ public class MailHealthIndicator extends AbstractHealthIndicator {
             }
             builder.up().withDetail("smtp", "Kết nối SMTP thành công");
         } catch (Exception exception) {
-            builder.down(exception).withDetail("smtp", "Không kết nối được SMTP");
+            // SMTP sai thông tin (ví dụ mật khẩu ứng dụng Gmail đã hết hạn) cũng KHÔNG phải lỗi
+            // sức khoẻ: `EmailService` bắt lỗi và in nội dung mail ra console, nên app vẫn chạy
+            // và mọi luồng gửi mail vẫn hoàn tất. Đánh DOWN ở đây khiến /actuator/health trả
+            // 503 dù ứng dụng hoạt động bình thường - team tưởng app đang lỗi.
+            builder.up()
+                    .withDetail("smtp", "Không kết nối được SMTP (" + exception.getMessage()
+                            + ") - nội dung mail sẽ được in ra console thay vì gửi qua email");
         }
     }
 }

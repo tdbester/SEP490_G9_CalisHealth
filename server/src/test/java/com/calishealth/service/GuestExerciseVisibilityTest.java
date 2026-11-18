@@ -46,7 +46,8 @@ class GuestExerciseVisibilityTest {
                 mock(ExerciseMuscleGroupCatalog.class),
                 mock(SystemNotificationService.class),
                 mock(ExercisePhysiologyService.class),
-                mock(ContentNameGuardService.class));
+                mock(ContentNameGuardService.class),
+                mock(ExerciseUnlockService.class));
     }
 
     private static Exercise activeExercise() {

@@ -12,6 +12,7 @@ import com.calishealth.repository.MaintenanceScheduleRepository;
 import com.calishealth.repository.NotificationRepository;
 import com.calishealth.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Service
+@Slf4j
 public class MaintenanceScheduleService {
     /** A schedule turns red this long before its window starts and stays red until the window ends. */
     public static final int DUE_WINDOW_MINUTES = 30;
@@ -215,7 +217,7 @@ public class MaintenanceScheduleService {
         return toResponse(schedules.save(schedule));
     }
 
-    @Scheduled(fixedDelayString = "${maintenance.reminder-poll-ms:60000}")
+    @Scheduled(fixedDelayString = "${maintenance.reminder-poll-ms:300000}")
     @Transactional
     public void sendDueReminders() {
         LocalDateTime now = LocalDateTime.now();
@@ -225,6 +227,7 @@ public class MaintenanceScheduleService {
                         now,
                         now.plusHours(maxReminderHours)
                 );
+        int sent = 0;
         for (MaintenanceSchedule schedule : dueSchedules) {
             if (schedule.getStartsAt().minusHours(schedule.getReminderHours()).isAfter(now)) continue;
 
@@ -236,7 +239,12 @@ public class MaintenanceScheduleService {
             reminder.setCreatedBy(schedule.getCreatedBy());
             schedule.setReminderNotificationId(notifications.save(reminder).getId());
             schedule.setReminderSent(true);
+            sent++;
         }
+        // DEBUG vì job chạy mỗi 5 phút — ở INFO sẽ lấp đầy console mà không
+        // mang thông tin gì. Bật lên khi cần theo dõi job bảo trì.
+        log.debug("Maintenance reminder scan: {} schedule(s) due, {} reminder(s) sent",
+                dueSchedules.size(), sent);
     }
 
     private void validate(CreateMaintenanceScheduleRequestDto request) {

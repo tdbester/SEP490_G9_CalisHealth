@@ -49,7 +49,10 @@ public class WeeklyLeaderboardService {
      */
     @Transactional
     public void computeScoresForWeek(LocalDate weekStart) {
-        log.info("Computing weekly leaderboard scores for week starting {}", weekStart);
+        // Mỗi tuần lại log ở DEBUG: job backfill lúc start gọi hàm này 12 lần
+        // (12 tuần), log ở INFO sẽ làm console lúc khởi động rối mà không có
+        // thông tin gì dùng được.
+        log.debug("Computing weekly leaderboard scores for week starting {}", weekStart);
 
         // Chỉ tài khoản role = MEMBER mới được xếp hạng.
         List<MemberProfile> members = memberProfileRepository.findAllByUser_Role(UserRole.MEMBER);
@@ -65,7 +68,7 @@ public class WeeklyLeaderboardService {
         scoreRepository.flush();
 
         reassignRanks(weekStart);
-        log.info("Completed: {} member scores computed for week {}", weekScores.size(), weekStart);
+        log.debug("Completed: {} member scores computed for week {}", weekScores.size(), weekStart);
     }
 
     /**

@@ -82,6 +82,7 @@ public class ProgressionRuleService {
     private final SessionSetResultRepository setResults;
     private final ApplicationEventPublisher events;
     private final JdbcTemplate jdbc;
+    private final ExerciseUnlockService unlockService;
 
     @Transactional(readOnly = true)
     public RuleList list() {
@@ -212,6 +213,19 @@ public class ProgressionRuleService {
         }
         var profile = memberProfiles.findByUserId(user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member profile not found"));
+
+        // Bài đang khoá trong Exercise Tree thì member không được tập.
+        //
+        // Chỉ chặn luồng LIBRARY (member tự chọn bài trong thư viện): kế hoạch ngày
+        // (DAILY_PLAN) do Content Manager giao nên vẫn cho tập, nếu không thì member
+        // mới sẽ bị chặn ngay ở bài đầu tiên của kế hoạch.
+        //
+        // Đây là chốt chặn ở server nên không bypass được bằng cách gọi API trực tiếp.
+        if (SOURCE_LIBRARY.equals(normalizeSource(request.source()))
+                && unlockService.isLocked(exercise.getId(), user.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "This exercise is still locked. Complete its prerequisites in the Exercise Tree first.");
+        }
 
         int totalReps = request.sets().stream().mapToInt(SetResultInput::totalReps).sum();
         int cleanReps = request.sets().stream().mapToInt(SetResultInput::cleanReps).sum();

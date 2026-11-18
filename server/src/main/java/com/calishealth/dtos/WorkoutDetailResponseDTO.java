@@ -17,5 +17,18 @@ public record WorkoutDetailResponseDTO(
         int totalExercises,
         int totalSets,
         int estimatedDuration,
-        List<WorkoutExerciseItemDTO> exercises
+        List<WorkoutExerciseItemDTO> exercises,
+        /**
+         * Workout có tập được không.
+         *
+         * <p>Workout hệ thống chỉ tập được khi TẤT CẢ bài trong nó đã mở khoá trong
+         * Exercise Tree. Còn workout do member tự tạo / cộng đồng thì luôn tập được
+         * vì member chủ động chọn bài.</p>
+         */
+        boolean locked,
+        /**
+         * Tên các bài đang khoá trong workout — member biết cần mở khoá bài nào.
+         * Rỗng khi {@code locked} = false.
+         */
+        List<String> lockedExerciseNames
 ) {}
