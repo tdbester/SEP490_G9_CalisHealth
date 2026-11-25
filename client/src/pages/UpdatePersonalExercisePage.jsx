@@ -17,6 +17,8 @@ import {
 } from '../api/library';
 import { getLevelLabel } from '../utils/levelLabel';
 import { useSystemLevels } from '../useSystemLevels';
+import { normalizeRules } from '../components/exercise/formRuleUtils';
+import MemberFormRuleSection from '../components/exercise/MemberFormRuleSection';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
@@ -105,6 +107,10 @@ export default function UpdatePersonalExercisePage() {
   const [anatomyImageFile, setAnatomyImageFile] = useState(null);
   const [anatomyPreview, setAnatomyPreview] = useState('');
   const [confirmCancel, setConfirmCancel] = useState(false);
+  /** Nhóm chuyển động — dùng để gợi ý ngưỡng chấm form (rỗng = tự suy ra). */
+  const [movementGroup, setMovementGroup] = useState('');
+  /** Ngưỡng chấm form do member khai báo (tuỳ chọn). */
+  const [formRules, setFormRules] = useState([]);
 
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -165,6 +171,7 @@ export default function UpdatePersonalExercisePage() {
       setGuide(initialState.guide);
       setVideo(initialState.video);
       setTargetMuscles(initialState.targetMuscles);
+      setMovementGroup(mockExercise.movementGroup || '');
       setBaseline(JSON.stringify(initialState));
       return () => {
         active = false;
@@ -198,6 +205,7 @@ export default function UpdatePersonalExercisePage() {
         setGuide(initialState.guide);
         setVideo(initialState.video);
         setTargetMuscles(initialState.targetMuscles);
+        setMovementGroup(currentExercise.movementGroup || '');
         setBaseline(JSON.stringify(initialState));
       })
       .catch((error) => {
@@ -334,6 +342,9 @@ export default function UpdatePersonalExercisePage() {
         defaultReps: exercise.defaultReps ?? null,
         defaultDuration: exercise.defaultDuration ?? null,
         keepCurrentVideo: Boolean(video && !uploadedFile),
+        // Chọn "Tự động suy ra" -> gửi null để server suy ra từ tên bài / nhóm cơ.
+        movementGroup: movementGroup || null,
+        formRules: normalizeRules(formRules),
       };
       if (exercise.isMock) {
         const mockPendingExercise = {
@@ -569,6 +580,18 @@ export default function UpdatePersonalExercisePage() {
           </div>
           {showFieldError('level') && validationErrors.level && <p className="text-rose-400 text-[11px] mt-1">{validationErrors.level}</p>}
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-[#33285f] bg-[#15102e] p-6 space-y-4 shadow-xl shadow-purple-950/20">
+        <h2 className="text-sm font-semibold text-white">{t("member.personal.aiFormRules")}</h2>
+        <p className="text-[11px] text-slate-500">{t("member.personal.aiFormRulesHint")}</p>
+        <MemberFormRuleSection
+          rules={formRules}
+          onChange={setFormRules}
+          movementGroup={movementGroup}
+          onMovementGroupChange={setMovementGroup}
+          category={exercise?.defaultDuration ? 'HOLD' : 'REPS'}
+        />
       </section>
 
       <section className="rounded-2xl border border-[#33285f] bg-[#15102e] p-6 space-y-4 shadow-xl shadow-purple-950/20">

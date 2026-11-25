@@ -18,6 +18,8 @@ import {
   validatePersonalExercise,
   validateVideoFile,
 } from "./libraryFormValidation";
+import { normalizeRules } from "../components/exercise/formRuleUtils";
+import MemberFormRuleSection from "../components/exercise/MemberFormRuleSection";
 
 export default function CreatePersonalExercisePage() {
   const navigate = useNavigate();
@@ -51,6 +53,10 @@ export default function CreatePersonalExercisePage() {
     "",
   ]);
   const [videoFile, setVideoFile] = useState(null);
+  /** Nhóm chuyển động — dùng để gợi ý ngưỡng chấm form (rỗng = tự suy ra). */
+  const [movementGroup, setMovementGroup] = useState('');
+  /** Ngưỡng chấm form do member khai báo (tuỳ chọn). */
+  const [formRules, setFormRules] = useState([]);
   const [videoUploadsUnderMaintenance, setVideoUploadsUnderMaintenance] = useState(false);
   const [maintenanceStatusLoading, setMaintenanceStatusLoading] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
@@ -343,6 +349,9 @@ export default function CreatePersonalExercisePage() {
         defaultReps: countType === "reps_sets" ? reps : null,
         defaultDuration: countType === "duration" ? duration : null,
         shareWithCommunity: true,
+        // Chọn "Tự động suy ra" -> gửi null để server suy ra từ tên bài / nhóm cơ.
+        movementGroup: movementGroup || null,
+        formRules: normalizeRules(formRules),
       }, videoFile, anatomyImageFile);
       if (created.status === "REJECTED") {
         setTextCheckStatus("failed");
@@ -714,10 +723,26 @@ export default function CreatePersonalExercisePage() {
         </div>
       </section>
 
-      {/* C. KHỐI 2: GUIDE */}
+      {/* C. KHỐI 2: AI FORM RULES */}
+      <section className="rounded-2xl border border-[#231b46] bg-[#120d29]/90 p-6 space-y-4 shadow-xl">
+        <h2 className="text-sm font-semibold text-white">
+          {t("member.personal.aiFormRules")}
+        </h2>
+        <p className="text-[11px] text-slate-500">
+          {t("member.personal.aiFormRulesHint")}
+        </p>
+        <MemberFormRuleSection
+          rules={formRules}
+          onChange={setFormRules}
+          movementGroup={movementGroup}
+          onMovementGroupChange={setMovementGroup}
+          category={countType === "duration" ? "HOLD" : "REPS"}
+        />
+      </section>
+
+      {/* D. KHỐI 3: GUIDE */}
       <section className="rounded-2xl border border-[#231b46] bg-[#120d29]/90 p-6 space-y-4 shadow-xl">
         <h2 className="text-sm font-semibold text-white">{t("member.personal.guide")}</h2>
-
         {/* Steps inputs list */}
         <div id="guide-step-list" className="space-y-3">
           {guideSteps.map((step, index) => (

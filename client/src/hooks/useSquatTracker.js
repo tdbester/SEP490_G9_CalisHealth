@@ -47,16 +47,28 @@ function isVisible(point) {
 }
 
 /**
- * Tìm rule của khớp KNEE trong danh sách rule từ server.
- * @returns {{ angleThreshold: number, romDepth: number, feedbackMessage: string } | null}
+ * Tìm rule của một khớp trong danh sách rule từ server.
+ *
+ * @param {Array} formRules - danh sách rule do server trả về
+ * @param {string} joint - tên khớp cần tìm (KNEE | ELBOW | HIP | ...)
+ * @returns {object|null} rule tương ứng, null nếu không có
  */
-export function findKneeRule(formRules) {
+export function findRule(formRules, joint) {
   if (!Array.isArray(formRules)) return null;
+  const target = String(joint || "").toUpperCase();
+  if (!target) return null;
   return (
     formRules.find(
-      (rule) => String(rule?.joint || "").toUpperCase() === "KNEE",
+      (rule) => String(rule?.joint || "").toUpperCase() === target,
     ) || null
   );
+}
+
+/**
+ * Tìm rule của khớp KNEE — giữ lại để các nơi gọi cũ không bị đổi.
+ */
+export function findKneeRule(formRules) {
+  return findRule(formRules, "KNEE");
 }
 
 const PHASE = {
@@ -501,7 +513,8 @@ export default function useSquatTracker({
 
     // Ngưỡng có thể override bằng form rule do Content Manager khai báo.
     const rule = current.kneeRule;
-    const deepAngle = rule?.romDepth != null ? DEEP_ANGLE + (rule.romDepth - 60) : DEEP_ANGLE;
+    // rom_depth la goc DO (khong phai phan tram ROM) -> lay thang gia tri tu rule.
+    const deepAngle = rule?.romDepth != null ? rule.romDepth : DEEP_ANGLE;
     const standingAngle = rule?.angleThreshold != null
       ? Math.min(180, Math.max(deepAngle + 30, rule.angleThreshold))
       : STANDING_ANGLE;
@@ -588,11 +601,6 @@ export default function useSquatTracker({
       } else if (feedback.includes("chest up")) {
         current.formIssues.add(FORM_ISSUES.torso);
       }
-    }
-    // Rule do Content Manager khai báo (ví dụ gối đầu gối lệch trong) -> ghi nhận.
-    const ruleFeedback = current.kneeRule?.feedbackMessage;
-    if (ruleFeedback && /knee/i.test(ruleFeedback)) {
-      current.formIssues.add(FORM_ISSUES.knee);
     }
 
     // Số liệu đo chi tiết cho màn Form correction.

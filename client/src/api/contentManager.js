@@ -166,6 +166,13 @@ export const contentManagerApi = {
       .then((r) => r.data)
       .catch((error) => { throw requestError(error); }),
 
+  /** Đọc ngưỡng chấm form của một bài tập. */
+  getExerciseFormRules: (code) =>
+    contentApi
+      .get(`/content/exercises/${encodeURIComponent(code)}/form-rules`)
+      .then((r) => r.data)
+      .catch((error) => { throw requestError(error); }),
+
   deleteExercise: (code) =>
     contentApi
       .delete(`/content/exercises/${encodeURIComponent(code)}`)

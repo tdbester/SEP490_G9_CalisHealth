@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import usePoseDetection, { POSE_CONNECTIONS, POSE_LANDMARKS } from "../hooks/usePoseDetection";
 import useSquatTracker, { findKneeRule } from "../hooks/useSquatTracker";
 import useHoldTracker from "../hooks/useHoldTracker";
+import usePushUpTracker from "../hooks/usePushUpTracker";
 import trackingApi from "../api/tracking";
 import api from "../api/client";
 import SessionTopbar from "../components/session/SessionTopbar";
@@ -184,6 +185,15 @@ export default function PoseTrackingPage() {
   const [voiceMuted] = useVoiceMuted();
   const speakEnabled = !voiceMuted;
   const [kneeRule, setKneeRule] = useState(null);
+  /** Toàn bộ rule chấm form của bài (nhiều khớp) — dùng cho push-up và plank. */
+  const [formRules, setFormRules] = useState([]);
+  /** Rule đo góc thân cho bài HOLD (plank) — rule có khớp HIP/SHOULDER. */
+  const holdBodyRule = useMemo(
+    () => formRules.find(
+      (rule) => String(rule?.joint || "").toUpperCase() === "HIP",
+    ) || formRules[0] || null,
+    [formRules],
+  );
   const [landmarkCount, setLandmarkCount] = useState(0);
   const kneeTipRef = useRef(null);
   /** Ảnh anatomy do Content Manager tải lên — nếu lỗi thì fallback sang hình vẽ mặc định. */
@@ -197,6 +207,27 @@ export default function PoseTrackingPage() {
   /** Bài HOLD (plank) đếm theo thời gian giữ + set, không tính rep. */
   const isHold = config.category === "HOLD";
   const targetHoldSeconds = config.durationSeconds || DEFAULT_HOLD_SECONDS;
+
+  /**
+   * Bài PUSH (push-up, diamond, archer…) đếm rep bằng góc khuỷu tay và chấm
+   * form theo khoảng cách dọc vai–cổ tay (góc má nghiêng).
+   *
+   * Nhận biết theo 2 tín hiệu: rule có khớp ELBOW, hoặc tên/nhóm chuyển động
+   * của bài là PUSH. Không có tín hiệu nào thì coi như squat (mặc định cũ).
+   */
+  const isPushUp = useMemo(() => {
+    if (isHold) return false;
+    if (formRules.some((rule) => String(rule?.joint || "").toUpperCase() === "ELBOW")) {
+      return true;
+    }
+    const movementGroup = String(
+      exerciseDetail?.movementGroup || config.exercise?.movementGroup || "",
+    ).toUpperCase();
+    if (movementGroup === "PUSH") return true;
+    return /\b(push[- ]?up|pushup|dip|press|planche|handstand)\b/i.test(
+      config.exerciseName || "",
+    );
+  }, [isHold, formRules, exerciseDetail, config.exercise, config.exerciseName]);
 
   /** Nhóm cơ của bài đang tập — dùng để vẽ ảnh giải phẫu. */
   const muscleGroups = useMemo(
@@ -230,7 +261,26 @@ export default function PoseTrackingPage() {
     getSetResults: getHoldSetResults,
     getFormIssues: getHoldFormIssues,
     getIssueStats: getHoldIssueStats,
-  } = useHoldTracker({ targetSeconds: targetHoldSeconds, maxSets: config.sets });
+  } = useHoldTracker({
+    targetSeconds: targetHoldSeconds,
+    maxSets: config.sets,
+    bodyRule: holdBodyRule,
+  });
+  const {
+    state: pushUp,
+    onFrame: onPushUpFrame,
+    restore: restorePushUp,
+    getSetResults: getPushUpSetResults,
+    getFormIssues: getPushUpFormIssues,
+    getIssueStats: getPushUpIssueStats,
+  } = usePushUpTracker({
+    targetReps: config.reps,
+    maxSets: config.sets,
+    formRules,
+  });
+
+  /** Tracker đang dùng — chọn theo loại bài (plank / push-up / squat). */
+  const tracker = isHold ? "hold" : isPushUp ? "pushup" : "squat";
 
   /**
    * Khi chuyển sang bài tiếp theo (cùng route `/session/tracking`) component
@@ -243,6 +293,8 @@ export default function PoseTrackingPage() {
     lastExerciseRef.current = config.exerciseCode;
     if (isHold) {
       restoreHold([], 1);
+    } else if (isPushUp) {
+      restorePushUp([], config.reps, 1);
     } else {
       restore([], config.reps, 1);
     }
@@ -253,7 +305,7 @@ export default function PoseTrackingPage() {
       // Không quan trọng.
     }
     setRunning(true);
-  }, [config.exerciseCode, config.reps, isHold, restoreHold, restore]);
+  }, [config.exerciseCode, config.reps, isHold, isPushUp, restoreHold, restorePushUp, restore]);
 
   /**
    * Bài đang tập có sẵn trong route state không (bài đầu tiên mở từ màn chi tiết
@@ -295,7 +347,10 @@ export default function PoseTrackingPage() {
     api
       .get("/member/form-rules", { params: { exerciseCode: config.exerciseCode } })
       .then(({ data }) => {
-        if (!cancelled) setKneeRule(findKneeRule(data?.rules));
+        if (cancelled) return;
+        const rules = Array.isArray(data?.rules) ? data.rules : [];
+        setFormRules(rules);
+        setKneeRule(findKneeRule(rules));
       })
       .catch(() => {
         // Không có rule thì dùng ngưỡng mặc định trong tracker.
@@ -355,7 +410,11 @@ export default function PoseTrackingPage() {
   );
 
   const lastSpokenRef = useRef("");
-  const activeFeedback = isHold ? hold.lastFeedback : squat.lastFeedback;
+  const activeFeedback = isHold
+    ? hold.lastFeedback
+    : isPushUp
+      ? pushUp.lastFeedback
+      : squat.lastFeedback;
   useEffect(() => {
     if (!activeFeedback) return;
     if (activeFeedback === lastSpokenRef.current) return;
@@ -386,11 +445,13 @@ export default function PoseTrackingPage() {
 
       if (isHold) {
         onHoldFrame(landmarks, timestamp);
+      } else if (isPushUp) {
+        onPushUpFrame(landmarks);
       } else {
         onSquatFrame(landmarks);
       }
     },
-    [onSquatFrame, onHoldFrame, isHold],
+    [onSquatFrame, onHoldFrame, onPushUpFrame, isHold, isPushUp],
   );
 
   const { status: modelStatus, error: modelError, fps } = usePoseDetection(
@@ -511,7 +572,11 @@ export default function PoseTrackingPage() {
    * @returns {Promise<{accuracy:number, validCount:number, invalidCount:number, totalCount:number, formIssues:string[]}>}
    */
   const recordExerciseResult = useCallback(async (setsOverride) => {
-    const allSets = setsOverride ?? (isHold ? getHoldSetResults() : getSetResults());
+    const allSets = setsOverride ?? (isHold
+      ? getHoldSetResults()
+      : isPushUp
+        ? getPushUpSetResults()
+        : getSetResults());
     // Set chưa có dữ liệu (bỏ dở) không gửi lên — server cần ít nhất 1 mẫu.
     const sets = allSets.filter((set) =>
       isHold ? (set.totalSeconds || 0) > 0 : (set.totalReps || 0) > 0,
@@ -522,7 +587,11 @@ export default function PoseTrackingPage() {
     // Bài HOLD đo theo giây -> "rep hợp lệ" là số giây giữ đúng tư thế.
     const totalSeconds = sets.reduce((sum, set) => sum + (set.totalSeconds || 0), 0);
     const cleanSeconds = sets.reduce((sum, set) => sum + (set.cleanSeconds || 0), 0);
-    const formIssues = isHold ? getHoldFormIssues() : getSquatFormIssues();
+    const formIssues = isHold
+      ? getHoldFormIssues()
+      : isPushUp
+        ? getPushUpFormIssues()
+        : getSquatFormIssues();
     // Gộp với lỗi form đã phát hiện ở các set trước (đã đi qua màn nghỉ).
     const mergedIssues = Array.from(
       new Set([...readFormIssues(), ...formIssues]),
@@ -577,7 +646,11 @@ export default function PoseTrackingPage() {
       invalidCount: Math.max(0, totalCount - validCount),
       totalCount,
       formIssues: mergedIssues,
-      issueStats: isHold ? getHoldIssueStats() : getSquatIssueStats(),
+      issueStats: isHold
+        ? getHoldIssueStats()
+        : isPushUp
+          ? getPushUpIssueStats()
+          : getSquatIssueStats(),
       source: "camera",
     });
 
@@ -588,8 +661,9 @@ export default function PoseTrackingPage() {
       totalCount,
       formIssues: mergedIssues,
     };
-  }, [isHold, getHoldSetResults, getSetResults, getHoldFormIssues, getSquatFormIssues,
-      getHoldIssueStats, getSquatIssueStats, config.exerciseCode]);
+  }, [isHold, isPushUp, getHoldSetResults, getSetResults, getPushUpSetResults,
+    getHoldFormIssues, getSquatFormIssues, getPushUpFormIssues,
+    getHoldIssueStats, getSquatIssueStats, getPushUpIssueStats, config.exerciseCode]);
 
   /**
    * Lưu kết quả bài hiện tại vào buổi tập, rồi điều hướng:
@@ -675,7 +749,11 @@ export default function PoseTrackingPage() {
   const startRest = () => {
     // Giữ cả set đang tập dở: bấm "Continue" nghĩa là kết thúc set hiện tại
     // và sang set kế tiếp, nên số set phải tăng đúng 1.
-    const finishedSets = isHold ? getHoldSetResults() : getSetResults();
+    const finishedSets = isHold
+      ? getHoldSetResults()
+      : isPushUp
+        ? getPushUpSetResults()
+        : getSetResults();
 
     // Số liệu set vừa xong để màn nghỉ hiển thị "Last set summary".
     const lastSet = isHold
@@ -686,13 +764,21 @@ export default function PoseTrackingPage() {
           angle: hold.bodyAngle,
           feedback: hold.lastFeedback,
         }
-      : {
-          totalReps: squat.setReps,
-          cleanReps: squat.setCleanReps,
-          formScore: squat.formScore,
-          angle: squat.kneeAngle,
-          feedback: squat.lastFeedback,
-        };
+      : isPushUp
+        ? {
+            totalReps: pushUp.setReps,
+            cleanReps: pushUp.setCleanReps,
+            formScore: pushUp.formScore,
+            angle: pushUp.elbowAngle,
+            feedback: pushUp.lastFeedback,
+          }
+        : {
+            totalReps: squat.setReps,
+            cleanReps: squat.setCleanReps,
+            formScore: squat.formScore,
+            angle: squat.kneeAngle,
+            feedback: squat.lastFeedback,
+          };
 
     try {
       sessionStorage.setItem(COMPLETED_SETS_KEY, JSON.stringify(finishedSets));
@@ -746,6 +832,8 @@ export default function PoseTrackingPage() {
 
     if (isHold) {
       restoreHold(saved, nextSetNumber);
+    } else if (isPushUp) {
+      restorePushUp(saved, config.reps, nextSetNumber);
     } else {
       restore(saved, config.reps, nextSetNumber);
     }
@@ -774,13 +862,17 @@ export default function PoseTrackingPage() {
     }
 
     setRunning(true);
-  }, [isHold, config.reps, config.sets, restoreHold, restore, location.state?.completedSets, location.state?.nextSetNumber, location.state?.finishWorkout, location.state?.endWorkout, submitResults, goToNextExercise, navigate]);
+  }, [isHold, isPushUp, config.reps, config.sets, restoreHold, restore, restorePushUp, location.state?.completedSets, location.state?.nextSetNumber, location.state?.finishWorkout, location.state?.endWorkout, submitResults, goToNextExercise, navigate]);
 
-  const formScore = isHold ? hold.formScore : squat.formScore;
+  const formScore = isHold
+    ? hold.formScore
+    : isPushUp
+      ? pushUp.formScore
+      : squat.formScore;
   const formTone = formScore >= 80 ? "good" : formScore >= 60 ? "warn" : "bad";
 
   /** Số set đã xong (hiển thị "Set 2 / 3"). */
-  const currentSetNumber = isHold ? hold.setNumber : squat.setNumber;
+  const currentSetNumber = isHold ? hold.setNumber : isPushUp ? pushUp.setNumber : squat.setNumber;
 
   /** Thông số chính: reps cho bài REPS, giây cho bài HOLD. */
   const primaryMetric = useMemo(() => {
@@ -794,14 +886,16 @@ export default function PoseTrackingPage() {
         secondaryValue: `${remaining}s`,
       };
     }
+    const activeReps = isPushUp ? pushUp.setCleanReps : squat.setCleanReps;
+    const activeRepsLeft = isPushUp ? pushUp.repsLeft : squat.repsLeft;
     return {
       label: `${config.exerciseName} · Reps`,
-      value: String(squat.setCleanReps).padStart(2, "0"),
+      value: String(activeReps).padStart(2, "0"),
       sub: `/ ${config.reps} reps · Set ${currentSetNumber} · ${formatClock(elapsed)}`,
       secondaryLabel: t("member.tracking.repsLeft"),
-      secondaryValue: String(squat.repsLeft),
+      secondaryValue: String(activeRepsLeft),
     };
-  }, [isHold, config.exerciseName, config.reps, hold.holdSeconds, targetHoldSeconds, currentSetNumber, elapsed, squat.setCleanReps, squat.repsLeft]);
+  }, [isHold, isPushUp, config.exerciseName, config.reps, hold.holdSeconds, targetHoldSeconds, currentSetNumber, elapsed, pushUp.setCleanReps, pushUp.repsLeft, squat.setCleanReps, squat.repsLeft]);
 
   return (
     <div className="pt-page">
@@ -908,7 +1002,7 @@ export default function PoseTrackingPage() {
               />
             </div>
             <p className="pt-tip">
-              {activeFeedback || kneeRule?.feedbackMessage || t("member.tracking.formTipDefault")}
+              {activeFeedback || t("member.tracking.formTipDefault")}
             </p>
           </section>
 
@@ -923,9 +1017,7 @@ export default function PoseTrackingPage() {
               <p className="pt-card-label">{t("member.tracking.voiceCoach")}</p>
             </div>
             <p className="pt-voice-text">
-              {activeFeedback
-                ? activeFeedback
-                : kneeRule?.feedbackMessage || t("member.tracking.voiceDefault")}
+              {activeFeedback || t("member.tracking.voiceDefault")}
             </p>
           </section>
 
@@ -935,7 +1027,12 @@ export default function PoseTrackingPage() {
                 {isHold ? t("member.tracking.bodyAngle") : t("member.tracking.kneeAngle")}
               </p>
               <p className="pt-metric-value">
-                {isHold ? (hold.bodyAngle ?? "--") : (squat.kneeAngle ?? "--")}°
+                {isHold
+                  ? (hold.bodyAngle ?? "--")
+                  : isPushUp
+                    ? (pushUp.elbowAngle ?? "--")
+                    : (squat.kneeAngle ?? "--")}
+                °
               </p>
             </section>
             <section className="pt-metric">

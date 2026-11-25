@@ -36,9 +36,6 @@ export const HOLD_FORM_ISSUES = {
   },
 };
 
-/** Góc thân tối thiểu để coi là giữ đúng tư thế (độ). */
-const STRAIGHT_BODY_TARGET = 150;
-
 function isVisible(point) {
   return !!point && (point.visibility ?? 0) >= MIN_VISIBILITY;
 }
@@ -48,7 +45,11 @@ function isVisible(point) {
  * @param {number} options.targetSeconds - số giây cần giữ trong 1 set
  * @param {number} options.maxSets - tổng số set của bài (chặn set counter vượt quá)
  */
-export default function useHoldTracker({ targetSeconds = 30, maxSets = Infinity } = {}) {
+export default function useHoldTracker({
+  targetSeconds = 30,
+  maxSets = Infinity,
+  bodyRule = null,
+} = {}) {
   const [state, setState] = useState({
     /** Số giây đã giữ trong set hiện tại. */
     holdSeconds: 0,
@@ -68,6 +69,7 @@ export default function useHoldTracker({ targetSeconds = 30, maxSets = Infinity 
   const ref = useRef({
     holdSeconds: 0,
     targetSeconds,
+    bodyRule,
     setNumber: 1,
     completedSets: [],
     totalFrames: 0,
@@ -91,11 +93,17 @@ export default function useHoldTracker({ targetSeconds = 30, maxSets = Infinity 
     ref.current.targetSeconds = targetSeconds;
   }, [targetSeconds]);
 
+  // Rule thân thẳng có thể đến sau (server trả rule bất đồng bộ) -> cập nhật ref.
+  useEffect(() => {
+    ref.current.bodyRule = bodyRule;
+  }, [bodyRule]);
+
   const reset = useCallback((newTargetSeconds) => {
     const previous = ref.current;
     ref.current = {
       holdSeconds: 0,
       targetSeconds: newTargetSeconds ?? previous.targetSeconds,
+      bodyRule: previous.bodyRule,
       setNumber: 1,
       completedSets: [],
       totalFrames: 0,
@@ -306,7 +314,12 @@ export default function useHoldTracker({ targetSeconds = 30, maxSets = Infinity 
     current.holdSeconds += delta;
     current.totalFrames += 1;
 
-    const isStraight = bodyAngle == null ? true : bodyAngle >= STRAIGHT_BODY_ANGLE;
+    // Nguong goc than theo tung bai (Content Manager khai bao) -> fallback 150 do.
+    const rule = current.bodyRule;
+    const straightTarget = rule?.minAngle != null ? rule.minAngle : STRAIGHT_BODY_ANGLE;
+
+    // Khong do duoc goc than -> khong coi la dung tu the (tranh tinh goodFrames cho frame khong do).
+    const isStraight = bodyAngle != null && bodyAngle >= straightTarget;
     if (isStraight) current.goodFrames += 1;
 
     current.bodyAngle = bodyAngle == null ? current.bodyAngle : Math.round(bodyAngle);
@@ -340,7 +353,7 @@ export default function useHoldTracker({ targetSeconds = 30, maxSets = Infinity 
           label: HOLD_FORM_ISSUES.alignment,
           joint: "HIP",
           measured,
-          target: STRAIGHT_BODY_TARGET,
+          target: Math.round(straightTarget),
           direction: "min",
           occurrences: 1,
         });

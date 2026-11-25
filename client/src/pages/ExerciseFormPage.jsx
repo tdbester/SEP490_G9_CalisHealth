@@ -46,6 +46,7 @@ import { CONTENT_PATHS, ContentPageHeader, DarkPill, TONE_STYLES } from "../comp
 import { CM } from "../theme-content";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import ExercisePhysiologyFields, { EMPTY_PHYSIOLOGY, normalizeContraindications } from "../components/exercise/ExercisePhysiologyFields";
+import FormRuleEditor, { MOVEMENT_GROUPS as MOVEMENT_GROUP_OPTIONS, normalizeRules } from "../components/exercise/FormRuleEditor";
 
 const rise = keyframes`
   from { opacity: 0; transform: translateY(8px); }
@@ -391,7 +392,6 @@ export function buildPhysiologyPayload(physiology) {
     breathingCue: physiology.breathingCue?.trim() || null,
     contraindications: normalizeContraindications(physiology.contraindications),
     physiologyNote: physiology.physiologyNote?.trim() || null,
-    evidenceRefs: Array.isArray(physiology.evidenceRefs) ? physiology.evidenceRefs : [],
   };
 }
 
@@ -430,6 +430,12 @@ export function ExerciseFields({
   onPhysiologyChange,
   physiologyEnabled = false,
   onPhysiologyEnabledChange,
+  /** Khối khai báo ngưỡng chấm form (AI Pose Tracking) cho bài hệ thống. */
+  showFormRules = false,
+  formRules = [],
+  onFormRulesChange,
+  movementGroup = "PUSH",
+  onMovementGroupChange,
 }) {
   const { t } = useTranslation();
   const { levels: LEVELS, activeLevels } = useLevelNames();
@@ -500,7 +506,7 @@ export function ExerciseFields({
                 label={t("contentManager.form.fieldCategory")}
                 size="small"
                 fullWidth
-                value={CATEGORY_OPTIONS.includes(value.category) ? value.category : ""}
+                value={CATEGORY_OPTIONS.includes(value.category) ? value.category : "REPS"}
                 onChange={(event) => onChange({ ...value, category: event.target.value || "REPS" })}
                 helperText=" "
                 SelectProps={{
@@ -510,12 +516,13 @@ export function ExerciseFields({
                       component="span"
                       sx={{ color: selected ? CM.text : CM.textDim }}
                     >
-                      {CATEGORY_LABELS[selected] ? t(CATEGORY_LABELS[selected]) : t("contentManager.form.selectCategory")}
+                      {CATEGORY_LABELS[selected]
+                        ? t(CATEGORY_LABELS[selected])
+                        : t("contentManager.form.categoryReps")}
                     </Box>
                   ),
                 }}
               >
-                <MenuItem value="">{t("contentManager.form.selectCategory")}</MenuItem>
                 {CATEGORY_OPTIONS.map((category) => (
                   <MenuItem key={category} value={category}>
                     {t(`contentManager.form.${category === "HOLD" ? "categoryHold" : "categoryReps"}`)}
@@ -716,6 +723,61 @@ export function ExerciseFields({
                 {t("contentManager.form.physiology.offHint")}
               </Typography>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {showFormRules && (
+        <Card sx={{ overflow: "hidden" }}>
+          <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
+            <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.5 }}>
+              <Box sx={{ width: 34, height: 34, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}` }}>
+                <FitnessCenterRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
+                  {t("contentManager.form.formRules.title")}
+                </Typography>
+                <Typography variant="caption" sx={{ color: CM.textMuted }}>
+                  {t("contentManager.form.formRules.caption")}
+                </Typography>
+              </Box>
+            </Stack>
+            <TextField
+              select
+              label={t("contentManager.form.formRules.movementGroup")}
+              size="small"
+              fullWidth
+              sx={{ mb: 1.5 }}
+              value={MOVEMENT_GROUP_OPTIONS.includes(movementGroup) ? movementGroup : ""}
+              onChange={(event) => onMovementGroupChange?.(event.target.value)}
+              helperText={t("contentManager.form.formRules.movementGroupHint")}
+              SelectProps={{
+                // MUI coi giá trị "" là rỗng nên không hiển thị gì ->
+                // phải tự render nhãn "Tự động suy ra" khi chưa chọn nhóm.
+                displayEmpty: true,
+                renderValue: (selected) => (
+                  <Box component="span" sx={{ color: selected ? CM.text : CM.textDim }}>
+                    {selected
+                      ? t(`contentManager.form.formRules.group.${selected}`)
+                      : t("contentManager.form.formRules.autoDetect")}
+                  </Box>
+                ),
+              }}
+            >
+              <MenuItem value="">{t("contentManager.form.formRules.autoDetect")}</MenuItem>
+              {MOVEMENT_GROUP_OPTIONS.map((group) => (
+                <MenuItem key={group} value={group}>
+                  {t(`contentManager.form.formRules.group.${group}`)}
+                </MenuItem>
+              ))}
+            </TextField>
+            <FormRuleEditor
+              rules={formRules}
+              onChange={onFormRulesChange}
+              movementGroup={movementGroup}
+              category={value.category}
+            />
           </CardContent>
         </Card>
       )}
@@ -1549,6 +1611,10 @@ export default function ExerciseFormPage() {
   const [anatomyImageError, setAnatomyImageError] = useState(null);
   const [physiology, setPhysiology] = useState(EMPTY_PHYSIOLOGY);
   const [physiologyEnabled, setPhysiologyEnabled] = useState(false);
+  /** Ngưỡng chấm form do CM khai báo cho bài hệ thống. */
+  const [formRules, setFormRules] = useState([]);
+  /** Nhóm chuyển động của bài hệ thống (rỗng = tự suy ra từ tên/nhóm cơ). */
+  const [movementGroup, setMovementGroup] = useState("");
   const [workout, setWorkout] = useState(EMPTY_WORKOUT);
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [exerciseLevel, setExerciseLevel] = useState("all");
@@ -1719,6 +1785,8 @@ export default function ExerciseFormPage() {
           guide: exercise.guide,
           muscleGroup: selectedMuscles.join(" · "),
           physiology: physiologyEnabled ? buildPhysiologyPayload(physiology) : null,
+          formRules: normalizeRules(formRules),
+          movementGroup: movementGroup || null,
         },
         video: demoVideo,
         image: anatomyImage,
@@ -1880,6 +1948,11 @@ export default function ExerciseFormPage() {
               setPhysiologyEnabled(next);
               clearField("physiology");
             }}
+            showFormRules
+            formRules={formRules}
+            onFormRulesChange={setFormRules}
+            movementGroup={movementGroup}
+            onMovementGroupChange={setMovementGroup}
           />
         ) : (
           <WorkoutFields
