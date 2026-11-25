@@ -370,4 +370,4 @@ cd client; npm run build
 | `ADMIN_DASHBOARD_CONTEXT.md` | Lịch sử làm Admin Dashboard (Figma frames, quyết định shell) |
 | `MEMBER_SCHEDULE_API.md` | API lịch tập của Member |
 | `docs/workflow/survey-management-step-by-step.md` | Quy trình quản lý survey |
-| `server/docs/survey-management/SURVEY_MANAGEMENT_BE.md` | Backend survey management |
+| `D:\doc-caps\module-docs\survey-management\SURVEY_MANAGEMENT_BE.md` | Backend survey management |

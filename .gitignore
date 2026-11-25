@@ -35,6 +35,8 @@ application-local.properties
 
 # ===== Test / coverage =====
 jacoco/
+target/site/jacoco/
+target/jacoco.exec
 
 # ===== File cá nhân / debug =====
 verify-token.txt
@@ -72,6 +74,8 @@ mockup-result.png
 calishealth@0.1.0
 /npm
 /cd
+# npm sinh file nay o goc repo khi chay nham `npm install` o goc (khong can)
+/package-lock.json
 
 # ===== Log chay server local (khong commit) =====
 server/server-run.out
@@ -101,7 +105,5 @@ docs/architecture/designsets/**/*.puml
 docs/architecture/designsets/**/*.svg
 docs/architecture/designsets/**/*.png
 
-# ===== ERD / Database design (sinh tu DB that, chay local, khong commit) =====
-# File sinh boi script doc schema MySQL sau khi Flyway chay xong.
-# Chi dung de xem trinh duyet local (mo file .html bang Chrome).
-server/docs/erd/
+# ===== ERD / Database design =====
+# Da chuyen sang D:\doc-caps\ (tai lieu cho bao cao, khong nam trong repo).

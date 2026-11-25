@@ -102,7 +102,7 @@ src/
 
 ## API test nhanh
 
-Import collection `postman/CalisHealth-Auth-Pro.postman_collection.json` vào Postman — đã có sẵn các endpoint:
+Import collection `D:\doc-caps\api-docs\postman\CalisHealth-Auth-Pro.postman_collection.json` vào Postman — đã có sẵn các endpoint:
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
@@ -129,12 +129,29 @@ Request cập nhật thông báo dùng cùng các trường; thông báo `MAINTE
 
 ### Onboarding survey
 
-Collection `postman/CalisHealth-Survey.postman_collection.json` cùng environment `postman/CalisHealth-Local.postman_environment.json` chứa 63 request có assertion. Hướng dẫn chạy nằm ở [postman/README-Survey.md](postman/README-Survey.md), còn kiến trúc, cách thêm câu hỏi và cách thêm loại câu hỏi nằm ở [server/docs/survey-engine.md](server/docs/survey-engine.md).
+Collection `D:\doc-caps\api-docs\postman\CalisHealth-Survey.postman_collection.json` cùng environment `D:\doc-caps\api-docs\postman\CalisHealth-Local.postman_environment.json` chứa 63 request có assertion. Hướng dẫn chạy nằm ở [D:\doc-caps\api-docs\postman\README-Survey.md](D:/doc-caps/api-docs/postman/README-Survey.md), còn kiến trúc, cách thêm câu hỏi và cách thêm loại câu hỏi nằm ở [D:\doc-caps\api-docs\survey-engine\survey-engine.md](D:/doc-caps/api-docs/survey-engine/survey-engine.md).
 
 - `GET  /api/surveys/{surveyCode}`
 - `POST /api/survey-sessions` · `GET /api/survey-sessions?surveyCode=` · `GET /api/survey-sessions/{id}`
 - `PUT  /api/survey-sessions/{id}/steps/{stepCode}/answers`
 - `POST /api/survey-sessions/{id}/complete` · `/skip` · `/resume`
+
+## Chạy test & coverage
+
+```bash
+cd server
+.\mvnw.cmd test              # 2205 test, cần MySQL đang chạy
+```
+
+Backend dùng **JaCoCo** (`server/pom.xml`):
+
+| Lệnh | Kết quả |
+|---|---|
+| `.\mvnw.cmd test` | `target/jacoco.exec` + `target/site/jacoco/index.html` |
+| Mở `server/target/site/jacoco/index.html` | Báo cáo HTML (dòng/class/package) |
+| Chạy test trong IntelliJ | tab **Coverage** hiển thị % phủ ngay trong IDE |
+
+Frontend: `cd client && npm run test:tracker` (chưa có coverage).
 
 ## Roadmap
 

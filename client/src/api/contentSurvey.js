@@ -3,7 +3,7 @@ import { ONBOARDING_SURVEY_CODE } from "./survey";
 
 /**
  * Survey management của Content Manager: /api/content/surveys/{surveyCode}/steps
- * (server/docs/survey-management/SURVEY_MANAGEMENT_BE.md, F1–F10).
+ * (D:\doc-caps\module-docs\survey-management\SURVEY_MANAGEMENT_BE.md, F1–F10).
  */
 const base = (surveyCode = ONBOARDING_SURVEY_CODE) => `/content/surveys/${surveyCode}/steps`;
 const data = (res) => res.data;
