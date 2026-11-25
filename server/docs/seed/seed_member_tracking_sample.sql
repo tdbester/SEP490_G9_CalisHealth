@@ -112,12 +112,14 @@ INSERT IGNORE INTO exercises (id, name, type, category, difficulty_level, update
     (20, 'Muscle-up', 'STRENGTH', 'Full Body', 'Advanced', NOW(6));
 
 -- Seed các luật chấm dáng AI
-INSERT IGNORE INTO form_rules (id, joint, angle_threshold, feedback_message, exercise_id) VALUES 
-    (1, 'Lumbar spine', 15.0, 'Lower back arch', 17),
-    (2, 'Elbow joint', 90.0, 'Limited ROM', 17),
-    (3, 'Knee joint', 10.0, 'Knee alignment', 9),
-    (4, 'Shoulder blade', 20.0, 'Incomplete extension', 16),
-    (5, 'Hip joint', 15.0, 'Hip sagging', 19);
+-- Lưu ý: không có feedback_message (V89 đã gừ cột)
+-- Các khớp dùng đệ cho giới: KNEE | HIP | ELBOW | SHOULDER | WRIST | ANKLE
+INSERT IGNORE INTO form_rules (id, joint, angle_threshold, exercise_id) VALUES 
+    (1, 'KNEE', 15.0, 17),
+    (2, 'ELBOW', 90.0, 17),
+    (3, 'KNEE', 10.0, 9),
+    (4, 'SHOULDER', 20.0, 16),
+    (5, 'HIP', 15.0, 19);
 
 -- -------------------------------------------------------------------------------------
 -- 5. Seed Các buổi tập hoàn thành (Workout Sessions - Màn 5.3 & Day Streak)
