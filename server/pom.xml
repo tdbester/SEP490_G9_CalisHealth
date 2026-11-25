@@ -131,6 +131,43 @@
 
     <build>
         <plugins>
+            <!--
+              JaCoCo: do phu truy cover cho test backend.
+              - `mvnw test` -> sinh target/jacoco.exec
+              - `mvnw jacoco:report` -> sinh target/site/jacoco/index.html
+              IntelliJ IDEA tu doc file .exec nay va hien thi % cover o khung Coverage.
+            -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.13</version>
+                <!--
+                  Chi do phu truy class trong package service, bo qua
+                  config / controllers / dtos / models / repository...
+                  Dat o cap <plugin> de ap dung cho ca khi goi `mvnw jacoco:report`
+                  truc tiep tu CLI (execution config bi bo qua khi goi goal truc tiep).
+                -->
+                <configuration>
+                    <includes>
+                        <include>com/calishealth/service/**</include>
+                    </includes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

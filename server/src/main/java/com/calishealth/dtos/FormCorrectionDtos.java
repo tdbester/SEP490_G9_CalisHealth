@@ -10,15 +10,21 @@ public class FormCorrectionDtos {
      * Một rule form của bài tập (lấy từ bảng {@code form_rules}).
      *
      * @param joint           khớp cần theo dõi (KNEE | HIP | ELBOW | ...)
-     * @param targetAngle     góc tối đa (độ) để coi là đạt
-     * @param romDepth        góc (độ) coi là đã xuống đủ sâu
-     * @param feedbackMessage câu nhắc cho voice coach / mẹo sửa
+     * @param targetAngle     góc tối đa (độ) ở vị trí trên cùng
+     * @param romDepth        góc (độ) ở vị trí đáy
+     * @param minAngle        biên dưới của dải góc "đạt" (bài giữ — plank)
+     * @param maxAngle        biên trên của dải góc "đạt" (bài giữ — plank)
+     * @param weight          trọng số thành phần này trong tổng điểm rep
+     * @param tolerance       dung sai cho phép (độ)
      */
     public record CorrectionRule(
             String joint,
             BigDecimal targetAngle,
             BigDecimal romDepth,
-            String feedbackMessage
+            BigDecimal minAngle,
+            BigDecimal maxAngle,
+            BigDecimal weight,
+            BigDecimal tolerance
     ) {}
 
     /**

@@ -551,9 +551,6 @@ public class AiSupportService {
                             .append(rule.getRomDepth().stripTrailingZeros().toPlainString())
                             .append("°");
                 }
-                if (rule.getFeedbackMessage() != null && !rule.getFeedbackMessage().isBlank()) {
-                    prompt.append("; tracker message: \"").append(rule.getFeedbackMessage()).append('"');
-                }
             }
         }
 
@@ -579,9 +576,9 @@ public class AiSupportService {
     /**
      * Thêm ngữ cảnh sinh lý (V76) vào system prompt.
      *
-     * <p>Hồ sơ sinh lý do Content Manager khai báo và đã đối chiếu với nguồn học
-     * thuật. AI được phép dùng các dữ kiện này để giải thích cơ chế, nhưng vẫn
-     * không được chẩn đoán hay khuyến nghị điều trị.
+     * <p>Hồ sơ sinh lý do Content Manager khai báo. AI được phép dùng các dữ kiện
+     * này để giải thích cơ chế, nhưng vẫn không được chẩn đoán hay khuyến nghị
+     * điều trị.
      */
     private void appendPhysiologyContext(StringBuilder prompt, ExercisePhysiologyDTO physiology,
                                          List<PhysiologyAlertDTO> alerts,
@@ -590,7 +587,7 @@ public class AiSupportService {
             return;
         }
         prompt.append("\n\nPhysiology profile for this exercise");
-        prompt.append(" (declared by the content team and checked against published evidence).");
+        prompt.append(" (declared by the content team).");
         prompt.append(" Use it to explain WHY a form error happens and how to train safely.");
 
         if (physiology != null) {
@@ -629,14 +626,6 @@ public class AiSupportService {
             }
             if (physiology.physiologyNote() != null && !physiology.physiologyNote().isBlank()) {
                 prompt.append("\n- note: \"").append(physiology.physiologyNote()).append('"');
-            }
-            if (physiology.evidences() != null && !physiology.evidences().isEmpty()) {
-                prompt.append("\n- evidence sources (cite by name when you explain the mechanism): ");
-                prompt.append(physiology.evidences().stream()
-                        .map(com.calishealth.dtos.PhysiologyEvidenceDTO::title)
-                        .filter(java.util.Objects::nonNull)
-                        .limit(4)
-                        .collect(java.util.stream.Collectors.joining("; ")));
             }
         }
 
@@ -700,7 +689,6 @@ public class AiSupportService {
                                           List<String> formIssues, String question) {
         List<LikelyCause> causes = new ArrayList<>();
         String joint = rules.isEmpty() ? "BODY" : rules.get(0).getJoint();
-        String feedback = rules.isEmpty() ? null : rules.get(0).getFeedbackMessage();
         String name = exercise.getName();
         String lower = question == null ? "" : question.toLowerCase(Locale.ROOT);
 
@@ -818,9 +806,7 @@ public class AiSupportService {
             causes.remove(causes.size() - 1);
         }
 
-        String tip = feedback != null && !feedback.isBlank()
-                ? "Tip: " + feedback
-                : "Tip: slow the set down and hold the correct position for a beat at the bottom.";
+        String tip = "Tip: slow the set down and hold the correct position for a beat at the bottom.";
 
         List<String> followUps = List.of(
                 "How do I warm up for " + name + "?",

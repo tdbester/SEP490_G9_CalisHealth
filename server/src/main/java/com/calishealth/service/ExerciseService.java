@@ -3,6 +3,7 @@ package com.calishealth.service;
 import com.calishealth.dtos.ExerciseDtos.CreateExerciseRequest;
 import com.calishealth.dtos.ExerciseDtos.ExerciseResponse;
 import com.calishealth.dtos.ExerciseDtos.ExerciseModerationHistoryResponse;
+import com.calishealth.dtos.FormRuleAdminDtos.FormRulesRequest;
 import com.calishealth.dtos.ExerciseFilterRequestDTO;
 import com.calishealth.dtos.ExerciseItemResponseDTO;
 import com.calishealth.dtos.ExercisePhysiologyDTO;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -64,6 +66,7 @@ public class ExerciseService {
     private final ExercisePhysiologyService physiologyService;
     private final ContentNameGuardService contentNameGuard;
     private final ExerciseUnlockService unlockService;
+    private final FormRuleAdminService formRuleAdminService;
 
     @Transactional(readOnly = true)
     public PageResponseDTO<ExerciseItemResponseDTO> getSystemExercises(ExerciseFilterRequestDTO filter) {
@@ -242,11 +245,11 @@ public class ExerciseService {
     }
 
     /**
-     * Đọc hồ sơ sinh lý của bài tập (V76) kèm thư viện bằng chứng.
+     * Đọc hồ sơ sinh lý của bài tập (V76).
      * Không có hồ sơ -> trả null để FE ẩn panel, không vỡ trang cũ.
      *
      * CHỈ bài của hệ thống (source = SYSTEM) mới có hồ sơ sinh lý.
-     * Bài do Member tải lên không có hồ sơ được duyệt bằng chứng học thuật
+     * Bài do Member tải lên không có hồ sơ được đối chiếu với nguồn học thuật
      * nên tuyệt đối không được gán sẵn.
      *
      * Logic đọc nằm trong {@link ExercisePhysiologyService} để dùng chung với
@@ -445,6 +448,7 @@ public class ExerciseService {
         exercise.setSource(SOURCE_SYSTEM);
         exercise.setModerationStatus(STATUS_ACTIVE);
         exercise.setActive(true);
+        applyMovementGroup(exercise, request, false);
         exercise.setCreatedBy(users.findByEmail(createdByEmail)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "The signed-in user no longer exists")));
         Exercise saved = exercises.save(exercise);
@@ -453,6 +457,13 @@ public class ExerciseService {
         muscleGroupCatalog.assign(saved, request.muscleGroup());
         Exercise result = exercises.save(saved);
         physiologyService.upsert(result.getId(), result.getSource(), request.physiology());
+        // Ngưỡng chấm form do CM khai báo cùng lúc tạo bài (nếu có).
+        if (request.formRules() != null && !request.formRules().isEmpty()) {
+            formRuleAdminService.replaceFormRules(
+                    result.getCode(),
+                    new FormRulesRequest(request.formRules()),
+                    FormRuleAdminService.SOURCE_CONTENT_MANAGER);
+        }
         return toResponse(result, levelActivity(), true);
     }
 
@@ -512,8 +523,16 @@ public class ExerciseService {
         if (demoVideoUrl != null) exercise.setVideoUrl(demoVideoUrl);
         if (anatomyImageUrl != null) exercise.setAnatomyImageUrl(anatomyImageUrl);
         muscleGroupCatalog.assign(exercise, request.muscleGroup());
+        applyMovementGroup(exercise, request, true);
         Exercise saved = exercises.save(exercise);
         physiologyService.upsert(saved.getId(), saved.getSource(), request.physiology());
+        // CM khai báo lại ngưỡng chấm form khi sửa bài (nếu có).
+        if (request.formRules() != null && !request.formRules().isEmpty()) {
+            formRuleAdminService.replaceFormRules(
+                    saved.getCode(),
+                    new FormRulesRequest(request.formRules()),
+                    FormRuleAdminService.SOURCE_CONTENT_MANAGER);
+        }
         if (demoVideoUrl != null && !demoVideoUrl.equals(previousVideoUrl)) mediaRegistry.release(previousVideoUrl, "Replaced by a newer video");
         if (anatomyImageUrl != null && !anatomyImageUrl.equals(previousAnatomyImageUrl)) mediaRegistry.release(previousAnatomyImageUrl, "Replaced by a newer image");
         return toResponse(saved, levelActivity(), true);
@@ -630,6 +649,71 @@ public class ExerciseService {
 
     private ExerciseResponse toResponse(Exercise exercise) {
         return toResponse(exercise, levelActivity(), false);
+    }
+
+    /**
+     * Gán nhóm chuyển động cho bài hệ thống.
+     *
+     * <p>CM khai báo nhóm khi tạo/sửa bài; nếu không khai báo thì suy ra từ tên
+     * bài và nhóm cơ — dùng cùng quy tắc với client
+     * ({@code utils/exerciseMedia.js}) để gợi ý ngưỡng khớp với nhóm mà
+     * màn Exercise Tree đang hiển thị.
+     */
+    private void applyMovementGroup(Exercise exercise, CreateExerciseRequest request,
+            boolean keepExisting) {
+        String group = request.movementGroup();
+        if (group == null || group.isBlank()) {
+            if (keepExisting && exercise.getMovementGroup() != null) {
+                return;
+            }
+            group = inferMovementGroup(exercise.getName(), request.muscleGroup());
+        }
+        try {
+            exercise.setMovementGroup(Exercise.MovementGroup.valueOf(group.trim().toUpperCase(Locale.ROOT)));
+        } catch (IllegalArgumentException invalidGroup) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Movement group must be PUSH, PULL, LEGS or CORE");
+        }
+    }
+
+    /**
+     * Suy ra nhóm chuyển động từ tên bài và nhóm cơ — dùng khi CM không chọn nhóm.
+     *
+     * <p>Thứ tự kiểm tra từ cụ thể nhất tới rộng nhất. Dạng số nhiều ("squats",
+     * "push-ups") cũng được chấp nhận.
+     */
+    private String inferMovementGroup(String name, String muscleGroup) {
+        String text = ((name == null ? "" : name) + " " + (muscleGroup == null ? "" : muscleGroup))
+                .toLowerCase(Locale.ROOT);
+        if (matchesKeyword(text, "pull", "row", "lever", "muscle up", "chin up", "ring row", "hang")) {
+            return "PULL";
+        }
+        if (matchesKeyword(text, "plank", "hollow", "sit", "flag", "abs", "core",
+                "leg raise", "knee tuck", "knee raise")) {
+            return "CORE";
+        }
+        if (matchesKeyword(text, "squat", "lunge", "calf", "leg", "nordic", "pistol")) {
+            return "LEGS";
+        }
+        if (matchesKeyword(text, "push", "dip", "press", "planche", "handstand")) {
+            return "PUSH";
+        }
+        return "PUSH";
+    }
+
+    /**
+     * Kiểm tra văn bản có chứa một trong các từ khoá hay không.
+     *
+     * <p>Từ khoá được so khớp theo ranh giới từ và cho phép hậu tố số nhiều
+     * ("s" hoặc "es") để "squats"/"push-ups" vẫn khớp với "squat"/"push".
+     */
+    private static boolean matchesKeyword(String text, String... keywords) {
+        for (String keyword : keywords) {
+            if (text.matches(".*\\b" + Pattern.quote(keyword) + "(s|es)?\\b.*")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** {@code active} is the effective status: the exercise is active AND its level is active. */

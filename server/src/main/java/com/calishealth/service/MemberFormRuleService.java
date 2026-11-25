@@ -27,7 +27,11 @@ public class MemberFormRuleService {
                         rule.getJoint(),
                         rule.getAngleThreshold(),
                         rule.getRomDepth(),
-                        rule.getFeedbackMessage()))
+                        rule.getMinAngle(),
+                        rule.getMaxAngle(),
+                        rule.getWeight(),
+                        rule.getTolerance(),
+                        rule.getSource()))
                 .toList();
         return new FormRulesResponse(exerciseCode, rules);
     }

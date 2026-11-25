@@ -32,7 +32,7 @@ public final class ExerciseDtos {
             boolean selfActive,
             /** False when the exercise's level is inactive in Level &amp; Benchmark Criteria. */
             boolean levelActive,
-            /** Hồ sơ sinh lý V76 (null khi chưa có) — CM xem nguồn trích dẫn. */
+            /** Hồ sơ sinh lý V76 (null khi chưa có) — CM xem hồ sơ vận động học. */
             ExercisePhysiologyDTO physiology
     ) {}
 
@@ -48,8 +48,49 @@ public final class ExerciseDtos {
             Integer defaultReps,
             Integer duration,
             /** Hồ sơ sinh lý (chỉ dùng cho bài SYSTEM). Null = không tạo/cập nhật hồ sơ. */
-            ExercisePhysiologyInputDTO physiology
-    ) {}
+            ExercisePhysiologyInputDTO physiology,
+            /** Ngưỡng chấm form do Content Manager khai báo (null = không khai báo). */
+            List<FormRuleAdminDtos.FormRuleInput> formRules,
+            /** Nhóm chuyển động: PUSH | PULL | LEGS | CORE (null = suy ra từ tên/nhóm cơ). */
+            String movementGroup
+    ) {
+        /** Constructor tương thích ngược — bài tạo trước khi có ngưỡng chấm form. */
+        public CreateExerciseRequest(
+                String name,
+                String type,
+                String description,
+                String category,
+                String muscleGroup,
+                String level,
+                String guide,
+                Integer defaultSets,
+                Integer defaultReps,
+                Integer duration,
+                ExercisePhysiologyInputDTO physiology
+        ) {
+            this(name, type, description, category, muscleGroup, level, guide, defaultSets,
+                    defaultReps, duration, physiology, null, null);
+        }
+
+        /** Constructor tương thích ngược — bài tạo trước khi có nhóm chuyển động. */
+        public CreateExerciseRequest(
+                String name,
+                String type,
+                String description,
+                String category,
+                String muscleGroup,
+                String level,
+                String guide,
+                Integer defaultSets,
+                Integer defaultReps,
+                Integer duration,
+                ExercisePhysiologyInputDTO physiology,
+                List<FormRuleAdminDtos.FormRuleInput> formRules
+        ) {
+            this(name, type, description, category, muscleGroup, level, guide, defaultSets,
+                    defaultReps, duration, physiology, formRules, null);
+        }
+    }
 
     public record ExerciseStatusRequest(boolean active, String rejectionReason) {}
 

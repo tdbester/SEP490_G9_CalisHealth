@@ -69,8 +69,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/library/system-workouts").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/library/overview").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/library/muscle-groups").permitAll()
-                        .requestMatchers("/api/v1/library/exercises/**").hasRole("MEMBER")
-                        .requestMatchers("/api/v1/library/system-workouts/**").hasRole("MEMBER")
+                        // Chi tiết bài hệ thống: MEMBER xem trong thư viện, CONTENT_MANAGER
+                        // cũng cần xem (mở từ khu quản trị nội dung để sửa bài).
+                        .requestMatchers("/api/v1/library/exercises/**").hasAnyRole("MEMBER", "CONTENT_MANAGER")
+                        .requestMatchers("/api/v1/library/system-workouts/**").hasAnyRole("MEMBER", "CONTENT_MANAGER")
                         .requestMatchers("/api/v1/library/favorites/**").hasRole("MEMBER")
                         .requestMatchers("/api/v1/library/feedback/**").hasRole("MEMBER")
                         .requestMatchers("/api/v1/library/exercise-tree/**").hasAnyRole("MEMBER", "CONTENT_MANAGER")
@@ -92,6 +94,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/library/member-exercises").hasRole("MEMBER")
                         .requestMatchers("/api/library/exercises/**").hasRole("MEMBER")
                         .requestMatchers("/api/member/form-rules/**").hasAnyRole("MEMBER", "CONTENT_MANAGER", "ADMIN")
+                        // Cấu hình chấm form là việc của Content Manager — member chỉ được đọc.
+                        .requestMatchers("/api/content/exercises/*/form-rules/**")
+                        .hasAnyRole("CONTENT_MANAGER", "ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
