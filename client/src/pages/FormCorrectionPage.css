@@ -97,6 +97,63 @@
   color: var(--text-muted);
 }
 
+/* Bảng giải thích các góc đo (mở rộng của nút "?"). */
+.fc-glossary {
+  margin: 14px 0 0;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: #141029;
+  border: 1px solid #2f2757;
+}
+
+.fc-glossary-title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #c4b5fd;
+}
+
+.fc-glossary-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+
+.fc-glossary-item {
+  display: grid;
+  gap: 3px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.fc-glossary-item:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.fc-glossary-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e9e4ff;
+}
+
+.fc-glossary-help {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.fc-glossary-example {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #a99be8;
+  font-style: italic;
+}
+
 /* ------------------------------------------------------------------ grid */
 .fc-grid {
   display: grid;

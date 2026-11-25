@@ -5,8 +5,7 @@ import java.util.List;
 /**
  * Input của hồ sơ sinh lý do Content Manager nhập ở màn Create/Update System Exercise.
  *
- * <p>Không chứa {@code evidences} vì phần trích dẫn chi tiết luôn được server
- * nạp lại từ bảng {@code physiology_evidence} theo {@code evidenceRefs}.
+ * <p>Chỉ gồm dữ liệu vận động học; không có trường trích dẫn nguồn học thuật.
  */
 public record ExercisePhysiologyInputDTO(
         /** DYNAMIC | ISOMETRIC | STATIC */
@@ -34,8 +33,6 @@ public record ExercisePhysiologyInputDTO(
         /** Danh sách mã số bệnh nên tránh: hypertension, glaucoma, knee_pain... */
         List<String> contraindications,
         /** Ghi chú tổng quan hiển thị cho member ở màn chi tiết bài tập. */
-        String physiologyNote,
-        /** Danh sách mã nguồn trích dẫn (physiology_evidence.code). */
-        List<String> evidenceRefs
+        String physiologyNote
 ) {
 }

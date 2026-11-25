@@ -117,7 +117,10 @@ public class FormCorrectionService {
                         rule.getJoint(),
                         rule.getAngleThreshold(),
                         rule.getRomDepth(),
-                        rule.getFeedbackMessage()))
+                        rule.getMinAngle(),
+                        rule.getMaxAngle(),
+                        rule.getWeight(),
+                        rule.getTolerance()))
                 .toList();
 
         return new FormCorrectionPlanResponse(
@@ -142,10 +145,9 @@ public class FormCorrectionService {
      * Dựng danh sách bước sửa.
      *
      * Thứ tự ưu tiên:
-     *  1. Câu nhắc của Content Manager cho khớp vừa bị lỗi.
-     *  2. Mẹo chung theo khớp vừa bị lỗi.
-     *  3. Mẹo chung theo các khớp khác đang được theo dõi.
-     *  4. Mẹo theo nhóm bài (giữ hay đếm lần) để lấp đầy danh sách.
+     *  1. Mẹo chung theo khớp vừa bị lỗi.
+     *  2. Mẹo chung theo các khớp khác đang được theo dõi.
+     *  3. Mẹo theo nhóm bài (giữ hay đếm lần) để lấp đầy danh sách.
      *
      * @param rules        các rule form của bài
      * @param failedJoints các khớp vừa bị lỗi
@@ -155,19 +157,7 @@ public class FormCorrectionService {
         List<CorrectionTip> tips = new ArrayList<>();
         List<String> titles = new ArrayList<>();
 
-        // 1. Câu nhắc của Content Manager cho khớp vừa bị lỗi.
-        for (String joint : failedJoints) {
-            if (tips.size() >= MAX_TIPS) break;
-            FormRule rule = findRule(rules, joint);
-            if (rule == null) continue;
-            String feedback = rule.getFeedbackMessage();
-            if (feedback == null || feedback.isBlank()) continue;
-            if (isDuplicate(titles, feedback)) continue;
-            tips.add(new CorrectionTip(rule.getJoint(), feedback, ""));
-            titles.add(feedback);
-        }
-
-        // 2. Mẹo chung theo khớp vừa bị lỗi (chỉ với bài đếm lần — mẹo squat
+        // 1. Mẹo chung theo khớp vừa bị lỗi (chỉ với bài đếm lần — mẹo squat
         //    không áp dụng cho bài giữ tư thế).
         if (!isHold) {
             for (String joint : failedJoints) {
@@ -176,7 +166,7 @@ public class FormCorrectionService {
             }
         }
 
-        // 3. Mẹo chung theo các khớp khác đang được theo dõi.
+        // 2. Mẹo chung theo các khớp khác đang được theo dõi.
         if (!isHold) {
             for (FormRule rule : rules) {
                 if (tips.size() >= MAX_TIPS) break;
@@ -184,7 +174,7 @@ public class FormCorrectionService {
             }
         }
 
-        // 4. Mẹo theo nhóm bài để lấp đầy danh sách.
+        // 3. Mẹo theo nhóm bài để lấp đầy danh sách.
         for (String[] item : (isHold ? HOLD_TIPS : TEMPO_TIPS)) {
             if (tips.size() >= MAX_TIPS) break;
             if (isDuplicate(titles, item[0])) continue;
@@ -213,28 +203,11 @@ public class FormCorrectionService {
         }
     }
 
-    /**
-     * Tìm rule của một khớp trong danh sách rule của bài.
-     *
-     * @param rules danh sách rule
-     * @param joint khớp cần tìm
-     * @return rule tương ứng hoặc null
-     */
-    private FormRule findRule(List<FormRule> rules, String joint) {
-        if (joint == null) return null;
-        String target = joint.trim().toUpperCase(Locale.ROOT);
-        return rules.stream()
-                .filter(rule -> rule.getJoint() != null)
-                .filter(rule -> rule.getJoint().trim().toUpperCase(Locale.ROOT).equals(target))
-                .findFirst()
-                .orElse(null);
-    }
 
     /**
      * Kiểm tra 2 tiêu đề có mang nội dung giống nhau không.
      *
-     * So trùng theo tỉ lệ từ khóa chung — tránh trường hợp câu nhắc của Content
-     * Manager và mẹo chung nói cùng một ý.
+     * So trùng theo tỉ lệ từ khóa chung — tránh trường hợp hai mẹo nói cùng một ý.
      *
      * @param titles các tiêu đề đã dùng
      * @param candidate tiêu đề mới

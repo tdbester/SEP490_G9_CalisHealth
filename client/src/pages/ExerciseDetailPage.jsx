@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import api from "../api/client";
 import { getExerciseDetail, getSystemExerciseDetail } from "../api/library";
 import { FAVORITE_ITEM_TYPES } from "../api/favorites";
 import FavoriteButton from "../components/favorites/FavoriteButton";
@@ -492,6 +493,31 @@ export default function ExerciseDetailPage() {
   const canShowPhysiology = isSystemExercise && !isMemberExercise && !isCustomExercise;
 
   /**
+   * Nút "Sửa bài tập" chỉ dành cho Content Manager, và chỉ mở được cho bài của
+   * HỆ THỐNG (bài do member tạo thì không sửa ở khu /content được).
+   *
+   * <p>Role lấy từ `/auth/me` (cache `localStorage.user` có thể thiếu role ở
+   * phiên cũ) — màn này nằm trong khu member nên không dùng được guard của
+   * Content Manager.</p>
+   */
+  const [viewerRole, setViewerRole] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    api.get("/auth/me")
+      .then(({ data }) => {
+        if (!cancelled) setViewerRole(data?.role || null);
+      })
+      .catch(() => {
+        if (!cancelled) setViewerRole(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const canEditExercise =
+    viewerRole === "CONTENT_MANAGER" && isSystemExercise && !isMemberExercise && !isCustomExercise;
+
+  /**
    * Loại favorite của bài đang xem. Dựa trên URL vì API chi tiết không trả về
    * `source` / `isSystem` — chỉ đường dẫn mới phân biệt được bài của hệ thống
    * với bài do Member cung cấp.
@@ -539,7 +565,8 @@ export default function ExerciseDetailPage() {
             ...(isSystemExercise
               ? {
                   ...data,
-                  name: data.title || prev.name,
+                  // API chi tiết bài hệ thống trả `name` (không phải `title`).
+                  name: data.name || data.title || prev.name,
                   videoUrl: data.videoUrl || data.demoVideoUrl || prev.videoUrl,
                   targetMuscle: data.targetMuscle || data.muscleGroup || prev.targetMuscle,
                   steps: (data.guideSteps?.length ? data.guideSteps : prev.steps || []).map((content, index) => ({
@@ -558,7 +585,7 @@ export default function ExerciseDetailPage() {
                     content,
                   })),
                 }),
-            name: data.title || data.name || prev.name,
+            name: data.name || data.title || prev.name,
             level: data.level || prev.level,
             targetMuscle: normalizeMuscleGroups(
               data.targetMuscle,
@@ -824,6 +851,19 @@ export default function ExerciseDetailPage() {
                 className="exercise-tree-btn shrink-0 flex items-center gap-2 rounded-2xl bg-[#7c5dfa] px-5 py-2 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#6c47ff]"
               >
                 {t("member.exerciseTree.title")}
+              </button>
+            )}
+            {/* Content Manager sửa bài ở khu /content — màn này chỉ là lối vào. */}
+            {canEditExercise && exercise.code && (
+              <button
+                type="button"
+                onClick={() => navigate(`/content/exercises/${encodeURIComponent(exercise.code)}?edit=1`)}
+                className="shrink-0 flex items-center gap-2 rounded-2xl border border-[#7c5dfa] bg-transparent px-5 py-2 text-sm font-semibold text-[#c4b5fd] transition-all hover:bg-[#24194f] hover:text-white"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                </svg>
+                {t("member.exerciseDetail.editExercise")}
               </button>
             )}
           </div>

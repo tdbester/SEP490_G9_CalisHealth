@@ -20,6 +20,12 @@ import "./FormCorrectionPage.css";
 /** Số bước sửa tối đa hiển thị (Figma hiển thị 3 bước). */
 const MAX_TIPS = 3;
 
+/**
+ * Các field góc hiển thị trong phần giải thích (nút "?").
+ * Dùng chung nội dung với phần khai báo ngưỡng của người tạo bài.
+ */
+const GLOSSARY_FIELDS = ["topAngle", "bottomAngle", "minAngle", "maxAngle", "tolerance"];
+
 /** Cấu hình mặc định khi bài tập không khai báo (khớp với màn tracking). */
 const DEFAULT_REPS = 12;
 const DEFAULT_SETS = 3;
@@ -361,6 +367,28 @@ export default function FormCorrectionPage() {
           <p className="fc-help-text">
             {t("member.correction.helpText")}
           </p>
+        ) : null}
+
+        {/* ------------------------------------------------ giải thích góc đo */}
+        {showHelp ? (
+          <section className="fc-glossary" aria-label={t("member.correction.glossaryTitle")}>
+            <h2 className="fc-glossary-title">{t("member.correction.glossaryTitle")}</h2>
+            <ul className="fc-glossary-list">
+              {GLOSSARY_FIELDS.map((field) => (
+                <li key={field} className="fc-glossary-item">
+                  <span className="fc-glossary-label">
+                    {t(`formRuleHelp.fields.${field}.label`)}
+                  </span>
+                  <span className="fc-glossary-help">
+                    {t(`formRuleHelp.fields.${field}.help`)}
+                  </span>
+                  <span className="fc-glossary-example">
+                    {t(`formRuleHelp.fields.${field}.example`)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
         ) : null}
 
         <div className="fc-grid">

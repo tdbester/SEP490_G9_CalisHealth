@@ -43,7 +43,7 @@ class PhysiologyAlertServiceTest {
     private static ExercisePhysiologyDTO profile(String contractionType, String bpEffect) {
         return new ExercisePhysiologyDTO(
                 contractionType, 3, 3, 60, 75, bpEffect, "MODERATE", "NONE", 3, "SPINE",
-                "Thở đều", List.of(), "Ghi chú", List.of("EV_PLANK_2026"), List.of());
+                "Thở đều", List.of(), "Ghi chú");
     }
 
     @Test

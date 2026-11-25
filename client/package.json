@@ -9,7 +9,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test:tracker": "node scripts/verify-squat-tracker.mjs"
+    "test:tracker": "node scripts/verify-squat-tracker.mjs",
+    "test:tracker:pushup": "node scripts/verify-pushup-tracker.mjs",
+    "test:tracker:all": "npm run test:tracker && npm run test:tracker:pushup"
   },
   "dependencies": {
     "@emotion/react": "^11.13.3",

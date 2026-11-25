@@ -45,7 +45,7 @@ class PhysiologyAlertServiceAcuteChronicTest {
     private static ExercisePhysiologyDTO neutralProfile() {
         return new ExercisePhysiologyDTO(
                 "DYNAMIC", 2, 3, 60, 75, "NEUTRAL", "NONE", "LOW", 1, "SPINE",
-                "Thở đều", List.of(), "Ghi chú", List.of("EV_PLANK_2026"), List.of());
+                "Thở đều", List.of(), "Ghi chú");
     }
 
     private void stubWorkload(long acuteLoad, long totalLoad, long sessionCount) {

@@ -17,4 +17,26 @@ public interface FormRuleRepository extends JpaRepository<FormRule, Long> {
             ORDER BY fr.id
             """)
     List<FormRule> findByExerciseCode(@Param("code") String code);
+
+    /**
+     * Các rule của mọi bài tập thuộc một nhóm chuyển động — nguồn dữ liệu để
+     * tính gợi ý ngưỡng cho member khi tạo bài custom.
+     *
+     * <p>Chỉ lấy bài đang hoạt động để số liệu gợi ý phản ánh các ngưỡng đang
+     * thực sự được áp dụng.
+     */
+    @Query("""
+            SELECT fr FROM FormRule fr
+            JOIN fr.exercise e
+            WHERE e.movementGroup = :movementGroup
+              AND e.active = true
+              AND (:category IS NULL OR e.category = :category)
+            ORDER BY fr.joint, fr.id
+            """)
+    List<FormRule> findByMovementGroup(
+            @Param("movementGroup") String movementGroup,
+            @Param("category") String category);
+
+    /** Xoá toàn bộ rule của một bài tập (dùng khi khai báo lại từ đầu). */
+    void deleteByExerciseId(Long exerciseId);
 }

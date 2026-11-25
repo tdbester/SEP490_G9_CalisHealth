@@ -228,7 +228,7 @@ cd server
 ./mvnw test          # Windows: .\mvnw.cmd test
 ```
 
-Cần MySQL đang chạy. Test hiện có **367 test**.
+Cần MySQL đang chạy. Test hiện có **2205 test**.
 
 Frontend:
 
@@ -236,6 +236,22 @@ Frontend:
 cd client
 npm run test:tracker
 ```
+
+### Xem độ phủ test (coverage)
+
+Backend đã cấu hình **JaCoCo** trong `server/pom.xml`:
+
+```bash
+cd server
+.\mvnw.cmd test              # -> sinh target/jacoco.exec + target/site/jacoco/index.html
+```
+
+Mở báo cáo HTML: `server/target/site/jacoco/index.html`.
+
+Trong IntelliJ IDEA: chạy test → tab **Coverage** hiển thị % phủ theo từng dòng/class.
+> Nếu tab Coverage trống, kiểm tra Run Configuration có bật agent JaCoCo hay chưa.
+
+Frontend hiện **chưa** có coverage (chỉ có script `npm run test:tracker`).
 
 ---
 

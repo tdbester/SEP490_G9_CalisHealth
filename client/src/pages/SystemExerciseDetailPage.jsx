@@ -1,4 +1,4 @@
-import { Link as RouterLink, useParams } from "react-router-dom";
+import { Link as RouterLink, useParams, useSearchParams } from "react-router-dom";
 import { Component, useEffect, useState } from "react";
 import {
   Alert,
@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   CircularProgress,
   Divider,
   Grid,
@@ -15,7 +16,6 @@ import {
 import { keyframes } from "@mui/material/styles";
 import { useTranslation, withTranslation } from "react-i18next";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
-import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
@@ -35,6 +35,7 @@ import {
   validatePhysiology,
 } from "./ExerciseFormPage";
 import { EMPTY_PHYSIOLOGY } from "../components/exercise/ExercisePhysiologyFields";
+import { denormalizeRules, normalizeRules } from "../components/exercise/formRuleUtils";
 
 function getUploadedDemoVideoUrl(value) {
   if (typeof value !== "string" || !value.trim()) return null;
@@ -92,6 +93,31 @@ function DetailField({ label, value, full, sx }) {
         </Typography>
       </Box>
     </Grid>
+  );
+}
+
+/** Một ô giá trị nhỏ trong khối ngưỡng chấm form (chế độ xem). */
+function RuleValue({ label, value }) {
+  return (
+    <Box
+      sx={{
+        border: `1px solid ${CM.border}`,
+        bgcolor: CM.surfaceSoft,
+        borderRadius: "12px",
+        p: 1.25,
+        height: "100%",
+      }}
+    >
+      <Typography
+        variant="caption"
+        sx={{ color: CM.textDim, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 10, fontWeight: 700 }}
+      >
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={600} sx={{ mt: 0.4, color: "#fff" }}>
+        {value ?? "—"}
+      </Typography>
+    </Box>
   );
 }
 
@@ -209,6 +235,7 @@ function SystemExerciseDetailContent() {
     { enabled: Boolean(code), deps: [code] },
   );
   const [editing, setEditing] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [form, setForm] = useState(null);
   const [video, setVideo] = useState(null);
@@ -218,9 +245,34 @@ function SystemExerciseDetailContent() {
   const [imageError, setImageError] = useState(null);
   const [physiology, setPhysiology] = useState(EMPTY_PHYSIOLOGY);
   const [physiologyEnabled, setPhysiologyEnabled] = useState(false);
+  /** Ngưỡng chấm form của bài hệ thống. */
+  const [formRules, setFormRules] = useState([]);
+  /** Nhóm chuyển động (rỗng = tự suy ra từ tên/nhóm cơ). */
+  const [movementGroup, setMovementGroup] = useState("");
   const demoVideoUrl = entry
     ? getUploadedDemoVideoUrl(entry.videoUrl || entry.demoVideoUrl || entry.video_url)
     : null;
+
+  // Nạp ngưỡng chấm form đã khai báo của bài để CM chỉnh sửa tiếp.
+  const { data: formRuleData } = useApiQuery(
+    () => contentManagerApi.getExerciseFormRules(code),
+    { enabled: Boolean(code), deps: [code] },
+  );
+  useEffect(() => {
+    setFormRules(denormalizeRules(formRuleData?.rules || []));
+  }, [formRuleData]);
+
+  /** Danh sách ngưỡng chấm form đã lưu (dạng số) để hiển thị ở chế độ xem. */
+  const formRuleList = Array.isArray(formRuleData?.rules) ? formRuleData.rules : [];
+  /** Bài giữ tư thế dùng dải góc min/max, bài đếm lần dùng góc trên/đáy. */
+  const isHoldExercise = String(entry?.category || "").toUpperCase() === "HOLD";
+
+  // Deep-link từ danh sách bài tập: /content/exercises/:code?edit=1 -> mở thẳng form sửa.
+  useEffect(() => {
+    if (searchParams.get("edit") === "1" && entry?.source === "SYSTEM") {
+      setEditing(true);
+    }
+  }, [searchParams, entry]);
 
   useEffect(() => {
     if (!entry) return;
@@ -237,6 +289,7 @@ function SystemExerciseDetailContent() {
         : [],
       guide: entry.guide || "",
     });
+    setMovementGroup(entry.movementGroup || "");
     // Nạp hồ sơ sinh lý sẵn có của bài tập hệ thống để CM chỉnh sửa tiếp.
     const current = entry.physiology || null;
     setPhysiologyEnabled(Boolean(current));
@@ -244,7 +297,6 @@ function SystemExerciseDetailContent() {
       ...EMPTY_PHYSIOLOGY,
       ...(current || {}),
       contraindications: Array.isArray(current?.contraindications) ? current.contraindications : [],
-      evidenceRefs: Array.isArray(current?.evidenceRefs) ? current.evidenceRefs : [],
     });
   }, [entry]);
 
@@ -256,6 +308,12 @@ function SystemExerciseDetailContent() {
         setVideo(null);
         setImage(null);
         setSaveError("");
+        // Bỏ cờ deep-link sau khi lưu để F5 không mở lại form sửa.
+        if (searchParams.get("edit")) {
+          const next = new URLSearchParams(searchParams);
+          next.delete("edit");
+          setSearchParams(next, { replace: true });
+        }
         refetch();
       },
       onError: (requestError) => {
@@ -283,6 +341,11 @@ function SystemExerciseDetailContent() {
     setVideoError(null);
     setImageError(null);
     setSaveError("");
+    if (searchParams.get("edit")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("edit");
+      setSearchParams(next, { replace: true });
+    }
     if (entry) {
       setForm({
         name: entry.name || "",
@@ -303,7 +366,6 @@ function SystemExerciseDetailContent() {
         ...EMPTY_PHYSIOLOGY,
         ...(current || {}),
         contraindications: Array.isArray(current?.contraindications) ? current.contraindications : [],
-        evidenceRefs: Array.isArray(current?.evidenceRefs) ? current.evidenceRefs : [],
       });
     }
   };
@@ -423,8 +485,10 @@ function SystemExerciseDetailContent() {
                 defaultSets: Number(form.defaultSets),
                 defaultReps: form.category === "REPS" ? Number(form.value) : null,
                 duration: form.category === "HOLD" ? Number(form.value) : null,
-                muscleGroup: form.muscleGroup.join(" · "),
-                physiology: physiologyEnabled ? buildPhysiologyPayload(physiology) : null,
+        muscleGroup: form.muscleGroup.join(" · "),
+        physiology: physiologyEnabled ? buildPhysiologyPayload(physiology) : null,
+        formRules: normalizeRules(formRules),
+        movementGroup: movementGroup || null,
               },
               demoVideo: video,
               anatomyImage: image,
@@ -468,6 +532,11 @@ function SystemExerciseDetailContent() {
               setPhysiologyEnabled(next);
               setSaveError("");
             }}
+            showFormRules
+            formRules={formRules}
+            onFormRulesChange={setFormRules}
+            movementGroup={movementGroup}
+            onMovementGroupChange={setMovementGroup}
           />
           {saveError && <Alert severity="error" sx={{ mt: 2 }}>{saveError}</Alert>}
           <Divider sx={{ mt: 3 }} />
@@ -593,19 +662,86 @@ function SystemExerciseDetailContent() {
               </Box>
             </Grid>
             <DetailField label={t("contentManager.detail.source")} value={entry.source === "CUSTOM" ? t("contentManager.detail.sourceCustom") : t("contentManager.detail.sourceSystem")} />
-            {entry.source === "SYSTEM" && (
-              <Grid item xs={12} sm={4} sx={{ display: "flex", alignItems: "center" }}>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<AccountTreeRoundedIcon />}
-                >
-                  {t("contentManager.detail.calisthenicsTree")}
-                </Button>
-              </Grid>
-            )}
             {entry.source === "CUSTOM" && <DetailField label={t("contentManager.detail.createdBy")} value={entry.createdByName} />}
           </Grid>
+
+          {/* Ngưỡng chấm form (AI) đã khai báo cho bài này — chỉ xem, sửa ở form Chỉnh sửa. */}
+          <Box sx={{ mt: 2.5 }}>
+            <Typography variant="subtitle2" fontWeight={700} sx={{ color: "#fff" }}>
+              {t("contentManager.detail.formRules.title")}
+            </Typography>
+            <Typography variant="caption" sx={{ color: CM.textDim, display: "block", mt: 0.25 }}>
+              {t("contentManager.detail.formRules.caption")}
+            </Typography>
+            {formRuleList.length > 0 ? (
+              <Stack spacing={1.25} sx={{ mt: 1.5 }}>
+                {formRuleList.map((rule, index) => (
+                  <Box
+                    key={rule.id ?? index}
+                    sx={{ border: `1px solid ${CM.border}`, borderRadius: 2, p: 1.5, bgcolor: "rgba(19,10,39,0.45)" }}
+                  >
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                      <Chip
+                        size="small"
+                        label={t(`contentManager.form.formRules.jointOption.${rule.joint}`, {
+                          defaultValue: rule.joint,
+                        })}
+                        sx={{ fontWeight: 700 }}
+                      />
+                      <Typography variant="caption" sx={{ color: CM.textDim }}>
+                        {t(`contentManager.detail.formRules.source_${String(rule.source || "CONTENT_MANAGER").toUpperCase()}`, {
+                          defaultValue: t("contentManager.detail.formRules.source_CONTENT_MANAGER"),
+                        })}
+                      </Typography>
+                    </Stack>
+                    <Grid container spacing={1.25}>
+                      {isHoldExercise ? (
+                        <>
+                          <Grid item xs={6} sm={3}>
+                            <RuleValue
+                              label={t("contentManager.form.formRules.minAngle")}
+                              value={rule.minAngle}
+                            />
+                          </Grid>
+                          <Grid item xs={6} sm={3}>
+                            <RuleValue
+                              label={t("contentManager.form.formRules.maxAngle")}
+                              value={rule.maxAngle}
+                            />
+                          </Grid>
+                        </>
+                      ) : (
+                        <>
+                          <Grid item xs={6} sm={3}>
+                            <RuleValue
+                              label={t("contentManager.form.formRules.topAngle")}
+                              value={rule.angleThreshold}
+                            />
+                          </Grid>
+                          <Grid item xs={6} sm={3}>
+                            <RuleValue
+                              label={t("contentManager.form.formRules.bottomAngle")}
+                              value={rule.romDepth}
+                            />
+                          </Grid>
+                        </>
+                      )}
+                      <Grid item xs={6} sm={3}>
+                        <RuleValue label={t("contentManager.form.formRules.weight")} value={rule.weight} />
+                      </Grid>
+                      <Grid item xs={6} sm={3}>
+                        <RuleValue label={t("contentManager.form.formRules.tolerance")} value={rule.tolerance} />
+                      </Grid>
+                    </Grid>
+                  </Box>
+                ))}
+              </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                {t("contentManager.detail.formRules.empty")}
+              </Typography>
+            )}
+          </Box>
 
           {/* Hồ sơ sinh lý (V76) chỉ có ở bài của hệ thống — bài Member tải lên không có nguồn học thuật. */}
           {entry.source === "SYSTEM" && (

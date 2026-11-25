@@ -73,7 +73,6 @@ export const EMPTY_PHYSIOLOGY = {
   breathingCue: "",
   contraindications: [],
   physiologyNote: "",
-  evidenceRefs: [],
 };
 
 function RangeSlider({ label, value, onChange, min = 1, max = 5, helper }) {

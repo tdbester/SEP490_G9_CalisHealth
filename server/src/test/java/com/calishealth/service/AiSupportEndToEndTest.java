@@ -104,9 +104,7 @@ class AiSupportEndToEndTest {
 
             FormRule rule = new FormRule();
             rule.setJoint("KNEE");
-            rule.setRomDepth(new BigDecimal("90.000"));
-            rule.setFeedbackMessage("Bring your knees in line with your toes.");
-
+            rule.setRomDepth(new BigDecimal("90.000"));
             AiSupportUsage usage = new AiSupportUsage();
             usage.setUser(member);
             usage.setUsageDate(LocalDate.now());
@@ -290,9 +288,7 @@ class AiSupportEndToEndTest {
 
             FormRule rule = new FormRule();
             rule.setJoint("KNEE");
-            rule.setRomDepth(new BigDecimal("90.000"));
-            rule.setFeedbackMessage("Bring your knees in line with your toes.");
-
+            rule.setRomDepth(new BigDecimal("90.000"));
             AiSupportUsage usage = new AiSupportUsage();
             usage.setUser(member);
             usage.setUsageDate(LocalDate.now());
@@ -339,7 +335,7 @@ class AiSupportEndToEndTest {
             assertEquals(0, response.totalTokens());
             // Vẫn có câu trả lời dùng được để demo.
             assertEquals(3, response.answer().causes().size());
-            assertTrue(response.answer().tip().contains("Bring your knees in line"));
+            assertTrue(response.answer().tip().contains("slow the set down"));
             // Lượt vẫn được tính như bình thường.
             assertEquals(1, response.questionCount());
         } finally {

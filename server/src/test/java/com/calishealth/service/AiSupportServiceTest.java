@@ -4,7 +4,6 @@ import com.calishealth.dtos.AiSupportDtos.AskQuestionRequest;
 import com.calishealth.dtos.AiSupportDtos.QuotaResponse;
 import com.calishealth.dtos.ExercisePhysiologyDTO;
 import com.calishealth.dtos.PhysiologyAlertDTO;
-import com.calishealth.dtos.PhysiologyEvidenceDTO;
 import com.calishealth.exception.OpenAiException;
 import com.calishealth.models.AiSupportMessage;
 import com.calishealth.models.AiSupportSession;
@@ -400,11 +399,7 @@ class AiSupportServiceTest {
                 "ISOMETRIC", 4, 3, 60, 75, "RAISES", "HIGH", "NONE", 3, "SPINE",
                 "Thở đều, không nín thở quá 5 giây",
                 List.of("hypertension"),
-                "Bài co tĩnh làm nghẽn mạch máu ngoại vi nên huyết áp tăng.",
-                List.of("EV_PLANK_2026"),
-                List.of(new PhysiologyEvidenceDTO(
-                        "EV_PLANK_2026", "Static exercise and blood pressure", null, null,
-                        2026, null, null, "A", "Meta-analysis", "Tóm tắt")));
+                "Bài co tĩnh làm nghẽn mạch máu ngoại vi nên huyết áp tăng.");
     }
 
     @Test

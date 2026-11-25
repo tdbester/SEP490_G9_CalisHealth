@@ -3,6 +3,7 @@ package com.calishealth.service;
 import com.calishealth.dtos.CreatePersonalExerciseRequestDTO;
 import com.calishealth.dtos.ContentTextCheckRequestDTO;
 import com.calishealth.dtos.ContentTextCheckResponseDTO;
+import com.calishealth.dtos.FormRuleAdminDtos.FormRulesRequest;
 import com.calishealth.dtos.PageResponseDTO;
 import com.calishealth.dtos.PersonalExerciseResponseDTO;
 import com.calishealth.dtos.SubmissionCountsDTO;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 @Service
@@ -46,6 +48,7 @@ public class PersonalExerciseService {
     private final ExerciseMuscleGroupCatalog muscleGroupCatalog;
     private final SystemNotificationService systemNotifications;
     private final ContentNameGuardService contentNameGuard;
+    private final FormRuleAdminService formRuleAdminService;
 
     /**
      * Level do Content Manager quản lý trong Level & Benchmark Criteria nên tên level lấy động
@@ -142,10 +145,18 @@ public class PersonalExerciseService {
             exercise.setDemoVideoUrl(videoUrl);
             exercise.setAnatomyImageUrl(anatomyImageUrl);
             exercise.setShareWithCommunity(Boolean.TRUE.equals(request.shareWithCommunity()));
+            applyMovementGroup(exercise, request);
             Exercise saved = exercises.save(exercise);
             saved.setCode(customExerciseCode(saved.getId()));
             muscleGroupCatalog.assign(saved, request.targetMuscle());
             saved = exercises.save(saved);
+            // Ngưỡng chấm form do member khai báo cùng lúc tạo bài (nếu có).
+            if (request.formRules() != null && !request.formRules().isEmpty()) {
+                formRuleAdminService.replaceFormRules(
+                        saved.getCode(),
+                        new FormRulesRequest(request.formRules()),
+                        FormRuleAdminService.SOURCE_MEMBER);
+            }
             if (!result.isPassed()) {
                 recordRejection(saved, result.rejectionReason());
             } else {
@@ -290,7 +301,15 @@ public class PersonalExerciseService {
                     ? Exercise.EntryStatus.PENDING
                     : Exercise.EntryStatus.REJECTED);
             exercise.setActive(false);
+            applyMovementGroup(exercise, request);
             Exercise saved = exercises.save(exercise);
+            // Member khai báo lại ngưỡng chấm form khi sửa bài (nếu có).
+            if (request.formRules() != null && !request.formRules().isEmpty()) {
+                formRuleAdminService.replaceFormRules(
+                        saved.getCode(),
+                        new FormRulesRequest(request.formRules()),
+                        FormRuleAdminService.SOURCE_MEMBER);
+            }
             if (rejectionReason != null) {
                 recordRejection(saved, rejectionReason);
             } else {
@@ -382,7 +401,15 @@ public class PersonalExerciseService {
                     ? Exercise.EntryStatus.ACCEPTED
                     : Exercise.EntryStatus.REJECTED);
             exercise.setActive(rejectionReason == null);
+            applyMovementGroup(exercise, request);
             Exercise saved = exercises.save(exercise);
+            // Member khai báo lại ngưỡng chấm form khi sửa bài (nếu có).
+            if (request.formRules() != null && !request.formRules().isEmpty()) {
+                formRuleAdminService.replaceFormRules(
+                        saved.getCode(),
+                        new FormRulesRequest(request.formRules()),
+                        FormRuleAdminService.SOURCE_MEMBER);
+            }
             if (rejectionReason != null) {
                 recordRejection(saved, rejectionReason);
             }
@@ -447,6 +474,63 @@ public class PersonalExerciseService {
         exercise.setDefaultDuration(duration);
     }
 
+    /**
+     * Gán nhóm chuyển động cho bài của member.
+     *
+     * <p>Member khai báo nhóm khi tạo bài; nếu không khai báo thì suy ra từ tên
+     * bài và nhóm cơ đã chọn — dùng cùng quy tắc với client
+     * ({@code utils/exerciseMedia.js}) để gợi ý ngưỡng khớp với nhóm mà
+     * màn Exercise Tree đang hiển thị.
+     */
+    private void applyMovementGroup(Exercise exercise, CreatePersonalExerciseRequestDTO request) {
+        String group = request.movementGroup();
+        if (group == null || group.isBlank()) {
+            group = inferMovementGroup(exercise.getName(), request.targetMuscle());
+        }
+        exercise.setMovementGroup(Exercise.MovementGroup.valueOf(group));
+    }
+
+    /**
+     * Suy ra nhóm chuyển động từ tên bài và nhóm cơ — dùng khi member không
+     * chọn nhóm.
+     *
+     * <p>Dùng cùng quy tắc với {@link ExerciseService#inferMovementGroup} để
+     * gợi ý ngưỡng khớp với nhóm mà màn Exercise Tree đang hiển thị.
+     */
+    private String inferMovementGroup(String name, String targetMuscle) {
+        String text = ((name == null ? "" : name) + " " + (targetMuscle == null ? "" : targetMuscle))
+                .toLowerCase(Locale.ROOT);
+        if (matchesKeyword(text, "pull", "row", "lever", "muscle up", "chin up", "ring row", "hang")) {
+            return "PULL";
+        }
+        if (matchesKeyword(text, "plank", "hollow", "sit", "flag", "abs", "core",
+                "leg raise", "knee tuck", "knee raise")) {
+            return "CORE";
+        }
+        if (matchesKeyword(text, "squat", "lunge", "calf", "leg", "nordic", "pistol")) {
+            return "LEGS";
+        }
+        if (matchesKeyword(text, "push", "dip", "press", "planche", "handstand")) {
+            return "PUSH";
+        }
+        return "PUSH";
+    }
+
+    /**
+     * Kiểm tra văn bản có chứa một trong các từ khoá hay không.
+     *
+     * <p>Từ khoá được so khớp theo ranh giới từ và cho phép hậu tố số nhiều
+     * ("s" hoặc "es") để "squats"/"push-ups" vẫn khớp với "squat"/"push".
+     */
+    private static boolean matchesKeyword(String text, String... keywords) {
+        for (String keyword : keywords) {
+            if (text.matches(".*\\b" + Pattern.quote(keyword) + "(s|es)?\\b.*")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private User requireMember(String email) {
         return users.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated member not found"));
@@ -486,7 +570,8 @@ public class PersonalExerciseService {
                 exercise.getDefaultReps(),
                 exercise.getDefaultDuration(),
                 exercise.getCreatedAt(),
-                exercise.getUpdatedAt());
+                exercise.getUpdatedAt(),
+                exercise.getMovementGroup() == null ? null : exercise.getMovementGroup().name());
     }
 
     private String latestRejectionReason(Exercise exercise) {

@@ -2,7 +2,6 @@ package com.calishealth.service;
 
 import com.calishealth.dtos.ExercisePhysiologyDTO;
 import com.calishealth.dtos.ExercisePhysiologyInputDTO;
-import com.calishealth.dtos.PhysiologyEvidenceDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -23,9 +22,8 @@ import java.util.Set;
  * Bài do Member tải lên ({@code CUSTOM}) không bao giờ được gán hồ sơ vì không có
  * tuyên bố sinh lý nào được duyệt bằng chứng học thuật cho bài đó.
  *
- * <p>Thư viện nguồn học thuật không nằm trong DB mà nằm trong file tĩnh
- * {@code physiology-evidence-library.json} (xem {@link PhysiologyEvidenceLibrary});
- * bảng {@code physiology_evidence} đã bị bỏ ở V80.
+ * <p>Hồ sơ chỉ chứa dữ liệu vận động học (co tĩnh/động, đòn cân bằng, vùng nhịp
+ * tim, chống chỉ định, câu nhắc thở) — không mang lớp trích dẫn nguồn học thuật.
  */
 @Service
 @RequiredArgsConstructor
@@ -40,7 +38,6 @@ public class ExercisePhysiologyService {
     /** Mỗi mục trong {@code contraindications} là 1 bệnh / tình trạng do CM tự nhập (tối đa 120 ký tự). */
 
     private final JdbcTemplate jdbcTemplate;
-    private final PhysiologyEvidenceLibrary evidenceLibrary;
 
     /**
      * Tạo hoặc cập nhật hồ sơ sinh lý cho một bài tập hệ thống.
@@ -66,8 +63,8 @@ public class ExercisePhysiologyService {
                 "INSERT INTO exercise_physiology_profiles"
                         + " (exercise_id, contraction_type, lever_grade, cardiovascular_load,"
                         + " hr_zone_low, hr_zone_high, blood_pressure_effect, valsalva_risk, gi_risk,"
-                        + " tendon_load, primary_joint, breathing_cue, contraindications, physiology_note, evidence_refs)"
-                        + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON),?,CAST(? AS JSON))"
+                        + " tendon_load, primary_joint, breathing_cue, contraindications, physiology_note)"
+                        + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON),?)"
                         + " ON DUPLICATE KEY UPDATE contraction_type = VALUES(contraction_type),"
                         + " lever_grade = VALUES(lever_grade), cardiovascular_load = VALUES(cardiovascular_load),"
                         + " hr_zone_low = VALUES(hr_zone_low), hr_zone_high = VALUES(hr_zone_high),"
@@ -75,7 +72,7 @@ public class ExercisePhysiologyService {
                         + " valsalva_risk = VALUES(valsalva_risk), gi_risk = VALUES(gi_risk),"
                         + " tendon_load = VALUES(tendon_load), primary_joint = VALUES(primary_joint),"
                         + " breathing_cue = VALUES(breathing_cue), contraindications = VALUES(contraindications),"
-                        + " physiology_note = VALUES(physiology_note), evidence_refs = VALUES(evidence_refs)",
+                        + " physiology_note = VALUES(physiology_note)",
                 exerciseId,
                 input.contractionType(),
                 input.leverGrade(),
@@ -89,8 +86,7 @@ public class ExercisePhysiologyService {
                 input.primaryJoint(),
                 input.breathingCue(),
                 toJsonArray(cleanContraindications(input.contraindications())),
-                input.physiologyNote(),
-                toJsonArray(input.evidenceRefs()));
+                input.physiologyNote());
     }
 
     /** Chuẩn hoá danh sách bệnh cần lưu ý do CM tự nhập: trim, bỏ rỗng, khử trùng lặp. */
@@ -132,7 +128,7 @@ public class ExercisePhysiologyService {
     }
 
     /**
-     * Đọc hồ sơ sinh lý của một bài tập kèm thư viện bằng chứng.
+     * Đọc hồ sơ sinh lý của một bài tập.
      *
      * <p>CHỈ bài của hệ thống ({@code source = 'SYSTEM'}) mới có hồ sơ sinh lý.
      * Bài do Member tải lên không có hồ sơ được đối chiếu với nguồn học thuật
@@ -152,7 +148,7 @@ public class ExercisePhysiologyService {
                     "SELECT p.contraction_type, p.lever_grade, p.cardiovascular_load,"
                             + " p.hr_zone_low, p.hr_zone_high, p.blood_pressure_effect,"
                             + " p.valsalva_risk, p.gi_risk, p.tendon_load, p.primary_joint,"
-                            + " p.breathing_cue, p.contraindications, p.physiology_note, p.evidence_refs"
+                            + " p.breathing_cue, p.contraindications, p.physiology_note"
                             + " FROM exercise_physiology_profiles p"
                             + " JOIN exercises e ON e.id = p.exercise_id"
                             + " WHERE p.exercise_id = ? AND e.source = 'SYSTEM'",
@@ -165,7 +161,6 @@ public class ExercisePhysiologyService {
             return null;
         }
         Map<String, Object> row = rows.get(0);
-        List<String> evidenceRefs = parseJsonArray(row.get("evidence_refs"));
         List<String> contraindications = parseJsonArray(row.get("contraindications"));
         return new ExercisePhysiologyDTO(
                 str(row.get("contraction_type")),
@@ -180,42 +175,7 @@ public class ExercisePhysiologyService {
                 str(row.get("primary_joint")),
                 str(row.get("breathing_cue")),
                 contraindications,
-                str(row.get("physiology_note")),
-                evidenceRefs,
-                loadEvidences(evidenceRefs));
-    }
-
-    /**
-     * Thư viện bằng chứng theo danh sách mã nguồn, giữ đúng thứ tự đã khai báo.
-     *
-     * <p>Nguồn đến từ file tĩnh {@code physiology-evidence-library.json}
-     * (bảng {@code physiology_evidence} đã bị bỏ ở V80).
-     */
-    @Transactional(readOnly = true)
-    public List<PhysiologyEvidenceDTO> loadEvidences(List<String> codes) {
-        return evidenceLibrary.loadByCodes(codes);
-    }
-
-    /** Thư viện nguồn trích dẫn cho Content Manager chọn. */
-    @Transactional(readOnly = true)
-    public List<PhysiologyEvidenceDTO> listEvidence(String keyword) {
-        return evidenceLibrary.list(keyword);
-    }
-
-    /**
-     * Kiểm tra các mã nguồn có tồn tại trong thư viện không.
-     * CM được phép bỏ trống nguồn tham khảo.
-     */
-    private void assertEvidenceExists(List<String> codes) {
-        if (codes == null || codes.isEmpty()) {
-            // Không bắt buộc nguồn tham khảo.
-            return;
-        }
-        List<String> missing = evidenceLibrary.missingCodes(codes);
-        if (!missing.isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "Unknown evidence source(s): " + String.join(", ", missing));
-        }
+                str(row.get("physiology_note")));
     }
 
     private void validate(ExercisePhysiologyInputDTO input) {
@@ -261,7 +221,6 @@ public class ExercisePhysiologyService {
                         HttpStatus.BAD_REQUEST, "Each condition in contraindications must be 120 characters or fewer");
             }
         }
-        assertEvidenceExists(input.evidenceRefs());
     }
 
     private static void requireRange(Integer value, int min, int max, String label) {
