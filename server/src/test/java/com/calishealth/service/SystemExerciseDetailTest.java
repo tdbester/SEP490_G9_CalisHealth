@@ -42,7 +42,8 @@ class SystemExerciseDetailTest {
                 mock(SystemNotificationService.class),
                 mock(ExercisePhysiologyService.class),
                 mock(ContentNameGuardService.class),
-                mock(ExerciseUnlockService.class));
+                mock(ExerciseUnlockService.class),
+                mock(FormRuleAdminService.class));
     }
 
     /**
