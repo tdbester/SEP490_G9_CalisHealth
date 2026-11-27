@@ -20,6 +20,13 @@ const DEFAULT_REPS = 12;
 const DEFAULT_SETS = 3;
 /** Thời lượng giữ mặc định cho bài HOLD (plank) khi bài không khai báo. */
 const DEFAULT_HOLD_SECONDS = 30;
+/**
+ * Chờ (ms) trước khi tự chuyển sang màn nghỉ khi set đã đạt mục tiêu.
+ *
+ * Khoảng trễ ngắn để member kịp thấy bộ đếm dừng ở đúng mốc trước khi
+ * màn hình chuyển sang màn đếm ngược nghỉ.
+ */
+const AUTO_REST_DELAY_MS = 1200;
 
 /** Bảng màu lấy từ Figma (frame 549:683). */
 const COLORS = {
@@ -253,6 +260,8 @@ export default function PoseTrackingPage() {
     targetReps: config.reps,
     kneeRule,
     maxSets: config.sets,
+    // Member làm đủ số rep của set -> hệ thống tự chuyển sang màn nghỉ.
+    capAtTarget: true,
   });
   const {
     state: hold,
@@ -277,10 +286,15 @@ export default function PoseTrackingPage() {
     targetReps: config.reps,
     maxSets: config.sets,
     formRules,
+    // Member làm đủ số rep của set -> hệ thống tự chuyển sang màn nghỉ.
+    capAtTarget: true,
   });
 
   /** Tracker đang dùng — chọn theo loại bài (plank / push-up / squat). */
   const tracker = isHold ? "hold" : isPushUp ? "pushup" : "squat";
+
+  /** Số set đã xong (hiển thị "Set 2 / 3"). */
+  const currentSetNumber = isHold ? hold.setNumber : isPushUp ? pushUp.setNumber : squat.setNumber;
 
   /**
    * Khi chuyển sang bài tiếp theo (cùng route `/session/tracking`) component
@@ -759,7 +773,8 @@ export default function PoseTrackingPage() {
     const lastSet = isHold
       ? {
           totalSeconds: Math.round(hold.holdSeconds),
-          cleanSeconds: Math.round(hold.holdSeconds * (hold.formScore / 100)),
+          // Số giây giữ đúng tư thế đã tích luỹ thật trong tracker.
+          cleanSeconds: Math.round(hold.cleanSeconds),
           formScore: hold.formScore,
           angle: hold.bodyAngle,
           feedback: hold.lastFeedback,
@@ -805,6 +820,58 @@ export default function PoseTrackingPage() {
       },
     });
   };
+
+  /**
+   * Set hiện tại đã đạt mục tiêu chưa (đủ số rep / đủ thời gian giữ).
+   */
+  const setReachedTarget = isHold
+    ? hold.setComplete
+    : isPushUp
+      ? pushUp.setComplete
+      : squat.setComplete;
+
+  /**
+   * Ref giữ `startRest` mới nhất.
+   *
+   * Mỗi frame camera đều render lại -> hàm `startRest` được tạo lại mỗi lần.
+   * Effect tự chuyển màn nghỉ dùng ref này để không bị reset timer mỗi lần
+   * render (nếu không, timer sẽ bị huỷ liên tục và không bao giờ chạy).
+   */
+  const startRestRef = useRef(startRest);
+  useEffect(() => {
+    startRestRef.current = startRest;
+  });
+
+  /**
+   * Tự chuyển sang màn nghỉ khi member đã làm đủ số rep (hoặc giữ đủ thời
+   * gian) của set hiện tại.
+   *
+   * Trước đây bộ đếm cứ tiếp tục đếm vượt mốc và member phải bấm "Continue"
+   * mới sang màn nghỉ. Giờ đạt đúng mốc là hệ thống tự chuyển sang màn
+   * đếm ngược nghỉ, đúng như các app fitness khác.
+   *
+   * Chỉ chuyển khi còn set tiếp theo; nếu đây là set cuối thì để member bấm
+   * "Finish" để lưu kết quả và kết thúc bài (nhánh này do màn nghỉ xử lý).
+   */
+  const autoRestRef = useRef(false);
+  useEffect(() => {
+    if (!running) return undefined;
+    if (!setReachedTarget) {
+      // Chưa đạt mốc -> cho phép effect chạy lại ở set sau.
+      autoRestRef.current = false;
+      return undefined;
+    }
+    if (autoRestRef.current) return undefined;
+    // Đã là set cuối -> không tự chuyển, chờ member bấm "Finish".
+    if (currentSetNumber >= config.sets) return undefined;
+
+    autoRestRef.current = true;
+    // Chờ thêm một nhịp để member thấy bộ đếm dừng ở mốc rồi mới chuyển màn.
+    const timer = setTimeout(() => {
+      startRestRef.current();
+    }, AUTO_REST_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [setReachedTarget, running, currentSetNumber, config.sets]);
 
   /**
    * Quay lại từ màn nghỉ ngơi -> khôi phục các set đã hoàn thành rồi bắt đầu
@@ -871,22 +938,21 @@ export default function PoseTrackingPage() {
       : squat.formScore;
   const formTone = formScore >= 80 ? "good" : formScore >= 60 ? "warn" : "bad";
 
-  /** Số set đã xong (hiển thị "Set 2 / 3"). */
-  const currentSetNumber = isHold ? hold.setNumber : isPushUp ? pushUp.setNumber : squat.setNumber;
-
   /** Thông số chính: reps cho bài REPS, giây cho bài HOLD. */
   const primaryMetric = useMemo(() => {
     if (isHold) {
-      const remaining = Math.max(0, targetHoldSeconds - Math.floor(hold.holdSeconds));
+      // Đồng hồ đếm thời gian giữ ĐÚNG tư thế (không phải tổng thời gian giữ),
+      // vì set chỉ được tính là đạt khi giữ đúng đủ mốc.
+      const remaining = Math.max(0, targetHoldSeconds - Math.floor(hold.cleanSeconds));
       return {
         label: `${config.exerciseName} · Hold`,
-        value: formatClock(hold.holdSeconds),
+        value: formatClock(hold.cleanSeconds),
         sub: `/ ${targetHoldSeconds}s · Set ${currentSetNumber} · ${formatClock(elapsed)}`,
         secondaryLabel: t("member.tracking.secondsLeft"),
         secondaryValue: `${remaining}s`,
       };
     }
-    const activeReps = isPushUp ? pushUp.setCleanReps : squat.setCleanReps;
+    const activeReps = isPushUp ? pushUp.setReps : squat.setReps;
     const activeRepsLeft = isPushUp ? pushUp.repsLeft : squat.repsLeft;
     return {
       label: `${config.exerciseName} · Reps`,
@@ -895,7 +961,7 @@ export default function PoseTrackingPage() {
       secondaryLabel: t("member.tracking.repsLeft"),
       secondaryValue: String(activeRepsLeft),
     };
-  }, [isHold, isPushUp, config.exerciseName, config.reps, hold.holdSeconds, targetHoldSeconds, currentSetNumber, elapsed, pushUp.setCleanReps, pushUp.repsLeft, squat.setCleanReps, squat.repsLeft]);
+  }, [isHold, isPushUp, config.exerciseName, config.reps, hold.cleanSeconds, targetHoldSeconds, currentSetNumber, elapsed, pushUp.setReps, pushUp.repsLeft, squat.setReps, squat.repsLeft]);
 
   return (
     <div className="pt-page">
@@ -1004,6 +1070,11 @@ export default function PoseTrackingPage() {
             <p className="pt-tip">
               {activeFeedback || t("member.tracking.formTipDefault")}
             </p>
+            {isHold && hold.overTime && (
+              <p className="pt-tip pt-tip--warn">
+                {t("member.tracking.holdOverTime")}
+              </p>
+            )}
           </section>
 
           <section className="pt-card pt-card--voice">

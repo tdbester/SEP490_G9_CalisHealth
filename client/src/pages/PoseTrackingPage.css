@@ -253,6 +253,16 @@
   color: #a78bfa;
 }
 
+/* Cảnh báo bài HOLD: đã giữ quá lâu mà tư thế vẫn chưa đúng. */
+.pt-tip--warn {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #7f1d1d;
+  background: #2a1218;
+  color: #fca5a5;
+}
+
 .pt-card--voice {
   border-color: #3a2030;
   background: #1c0f26;

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -21,6 +22,8 @@ import {
   normalizeRules,
   denormalizeRules,
   suggestionsToRules,
+  validateFormRules,
+  groupRuleErrors,
 } from "./formRuleUtils";
 import FormRuleFieldHelp from "./FormRuleFieldHelp";
 
@@ -102,6 +105,23 @@ export default function FormRuleEditor({
     </span>
   );
 
+  /**
+   * Lỗi của từng rule (dạng form). Chỉ hiện sau khi CM bấm Lưu lần đầu
+   * hoặc khi ô đã được chạm vào — tránh báo lỗi ngay khi mới mở form.
+   */
+  const ruleErrors = validateFormRules(rules, category);
+  const errorsByRule = groupRuleErrors(ruleErrors);
+  const errorFor = (ruleIndex, field) => {
+    const fields = errorsByRule.get(ruleIndex);
+    if (!fields || !fields.has(field)) return null;
+    const error = ruleErrors.find(
+      (item) => item.ruleIndex === ruleIndex && item.field === field,
+    );
+    return error ? t(`contentManager.form.formRules.err.${error.key}`) : null;
+  };
+  /** Lỗi chung của cả khối (vd quá nhiều rule). */
+  const globalError = ruleErrors.find((item) => item.ruleIndex < 0) || null;
+
   return (
     <Box sx={{ mt: 1.5 }}>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
@@ -134,6 +154,12 @@ export default function FormRuleEditor({
           : t("formRuleHelp.categoryNoticeReps")}
       </Typography>
 
+      {globalError && (
+        <Alert severity="error" sx={{ mb: 1.5 }}>
+          {t(`contentManager.form.formRules.err.${globalError.key}`, { max: 6 })}
+        </Alert>
+      )}
+
       {list.map((rule, index) => (
         <Stack key={index} spacing={1} sx={{ mb: 1.5, p: 1.5, border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
           <Stack direction="row" spacing={1} alignItems="center">
@@ -147,6 +173,8 @@ export default function FormRuleEditor({
               value={rule.joint}
               onChange={(event) => update(index, { joint: event.target.value })}
               sx={{ minWidth: 140 }}
+              error={Boolean(errorFor(index, "joint"))}
+              helperText={errorFor(index, "joint") || " "}
             >
               {FORM_RULE_JOINTS.map((joint) => (
                 <MenuItem key={joint} value={joint}>
@@ -174,6 +202,8 @@ export default function FormRuleEditor({
                 )}
                 value={rule.minAngle}
                 onChange={(event) => update(index, { minAngle: event.target.value })}
+                error={Boolean(errorFor(index, "minAngle"))}
+                helperText={errorFor(index, "minAngle") || " "}
               />
               <TextField
                 size="small"
@@ -184,6 +214,8 @@ export default function FormRuleEditor({
                 )}
                 value={rule.maxAngle}
                 onChange={(event) => update(index, { maxAngle: event.target.value })}
+                error={Boolean(errorFor(index, "maxAngle"))}
+                helperText={errorFor(index, "maxAngle") || " "}
               />
             </Stack>
           ) : (
@@ -197,6 +229,8 @@ export default function FormRuleEditor({
                 )}
                 value={rule.angleThreshold}
                 onChange={(event) => update(index, { angleThreshold: event.target.value })}
+                error={Boolean(errorFor(index, "angleThreshold"))}
+                helperText={errorFor(index, "angleThreshold") || " "}
               />
               <TextField
                 size="small"
@@ -207,6 +241,8 @@ export default function FormRuleEditor({
                 )}
                 value={rule.romDepth}
                 onChange={(event) => update(index, { romDepth: event.target.value })}
+                error={Boolean(errorFor(index, "romDepth"))}
+                helperText={errorFor(index, "romDepth") || " "}
               />
             </Stack>
           )}
@@ -221,6 +257,8 @@ export default function FormRuleEditor({
               )}
               value={rule.weight}
               onChange={(event) => update(index, { weight: event.target.value })}
+              error={Boolean(errorFor(index, "weight"))}
+              helperText={errorFor(index, "weight") || " "}
             />
             <TextField
               size="small"
@@ -231,6 +269,8 @@ export default function FormRuleEditor({
               )}
               value={rule.tolerance}
               onChange={(event) => update(index, { tolerance: event.target.value })}
+              error={Boolean(errorFor(index, "tolerance"))}
+              helperText={errorFor(index, "tolerance") || " "}
             />
           </Stack>
         </Stack>
