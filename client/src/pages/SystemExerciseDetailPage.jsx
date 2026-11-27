@@ -33,9 +33,10 @@ import {
   buildPhysiologyPayload,
   validateExerciseUpload,
   validatePhysiology,
+  formatRuleErrorMessage,
 } from "./ExerciseFormPage";
 import { EMPTY_PHYSIOLOGY } from "../components/exercise/ExercisePhysiologyFields";
-import { denormalizeRules, normalizeRules } from "../components/exercise/formRuleUtils";
+import { denormalizeRules, normalizeRules, validateFormRules } from "../components/exercise/formRuleUtils";
 
 function getUploadedDemoVideoUrl(value) {
   if (typeof value !== "string" || !value.trim()) return null;
@@ -477,6 +478,12 @@ function SystemExerciseDetailContent() {
             }
             if (physiologyEnabled && !validatePhysiology(physiology)) {
               setSaveError(t("contentManager.form.physiology.errInvalidProfile"));
+              return;
+            }
+            // Ngưỡng chấm form: validate ngay để CM biết rule nào sai.
+            const ruleErrors = validateFormRules(formRules, form.category);
+            if (ruleErrors.length > 0) {
+              setSaveError(formatRuleErrorMessage(ruleErrors));
               return;
             }
             saveMutation.mutate({

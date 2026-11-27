@@ -17,7 +17,7 @@ import {
 } from '../api/library';
 import { getLevelLabel } from '../utils/levelLabel';
 import { useSystemLevels } from '../useSystemLevels';
-import { normalizeRules } from '../components/exercise/formRuleUtils';
+import { normalizeRules, validateFormRules } from '../components/exercise/formRuleUtils';
 import MemberFormRuleSection from '../components/exercise/MemberFormRuleSection';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
@@ -321,6 +321,17 @@ export default function UpdatePersonalExercisePage() {
     }
     if (!isDirty || !exercise || submissionLock.current) return;
     setHasSubmitted(true);
+    // Ngưỡng chấm form: chặn ngay khi có rule sai.
+    const ruleErrors = validateFormRules(
+      formRules,
+      exercise?.defaultDuration ? 'HOLD' : 'REPS',
+    );
+    if (ruleErrors.length > 0) {
+      toast.warning(t("member.personal.fillRequiredFields"));
+      const formRulesBlock = document.getElementById("exercise-form-rules");
+      formRulesBlock?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     if (Object.keys(validationErrors).length > 0 || targetMuscles.length === 0) {
       toast.warning(t("member.personal.fillRequiredFields"));
       focusFirstInvalidField(validationErrors);
@@ -582,7 +593,7 @@ export default function UpdatePersonalExercisePage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[#33285f] bg-[#15102e] p-6 space-y-4 shadow-xl shadow-purple-950/20">
+      <section id="exercise-form-rules" className="rounded-2xl border border-[#33285f] bg-[#15102e] p-6 space-y-4 shadow-xl shadow-purple-950/20">
         <h2 className="text-sm font-semibold text-white">{t("member.personal.aiFormRules")}</h2>
         <p className="text-[11px] text-slate-500">{t("member.personal.aiFormRulesHint")}</p>
         <MemberFormRuleSection

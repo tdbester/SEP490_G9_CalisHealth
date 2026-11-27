@@ -821,7 +821,28 @@ export default {
       minAngle: "Min angle (deg)",
       maxAngle: "Max angle (deg)",
       weight: "Weight (0-1)",
-      tolerance: "Tolerance (deg)",      jointOption: {
+      tolerance: "Tolerance (deg)",
+      // Detailed validation messages for each form-rule field.
+      err: {
+        tooMany: "You can declare at most {{max}} rules per exercise.",
+        jointRequired: "Choose the joint to track.",
+        jointUnknown: "Invalid joint.",
+        angleOutOfRange: "Value must be between 0 and 180.",
+        weightOutOfRange: "Weight must be between 0 and 1.",
+        minGreaterThanMax: "Min angle must not be greater than max angle.",
+        needThreshold:
+          "Enter min and max angle (hold exercise) or top and bottom angle (rep exercise).",
+      },
+      errField: {
+        joint: "Rule {{rule}} — Joint",
+        minAngle: "Rule {{rule}} — Min angle",
+        maxAngle: "Rule {{rule}} — Max angle",
+        angleThreshold: "Rule {{rule}} — Top angle",
+        romDepth: "Rule {{rule}} — Bottom angle",
+        weight: "Rule {{rule}} — Weight",
+        tolerance: "Rule {{rule}} — Tolerance",
+      },
+      jointOption: {
         KNEE: "Knee",
         HIP: "Hip",
         ELBOW: "Elbow",
@@ -840,6 +861,9 @@ export default {
     errValueRange: "Enter a whole number from 1 to 3600.",
     errSetsRange: "Enter a whole number from 1 to 20.",
     errMuscles: "Select at least one muscle group.",
+    errCategory: "Choose an exercise category: rep-count or hold.",
+    errGuide: "Add at least one execution step.",
+    errMovementGroup: "Movement group must be PUSH, PULL, LEGS or CORE.",
     categoryReps: "Count reps",
     categoryHold: "Hold (plank / timed)",
     typeHealth: "Health",

@@ -325,7 +325,12 @@ public class ProgressionRuleService {
                     return created;
                 });
         if (progress.getStatus() == null) progress.setStatus(PROGRESS_IN_PROGRESS);
-        int bestSet = sets.stream().mapToInt(SetResultInput::cleanReps).max().orElse(0);
+        // Bài HOLD đo theo giây nên lấy `cleanSeconds`; bài REPS lấy `cleanReps`.
+        boolean hold = MEASURE_HOLD.equals(measureOf(exercise));
+        int bestSet = sets.stream()
+                .mapToInt(set -> hold ? set.cleanSeconds() : set.cleanReps())
+                .max()
+                .orElse(0);
         if (progress.getBestReps() == null || bestSet > progress.getBestReps()) progress.setBestReps(bestSet);
         if (cleanRate != null && (progress.getBestAccuracy() == null || cleanRate.compareTo(progress.getBestAccuracy()) > 0)) {
             progress.setBestAccuracy(cleanRate);
@@ -354,15 +359,19 @@ public class ProgressionRuleService {
     record Outcome(boolean passed, int qualifyingSets, BigDecimal cleanRate, String message) {}
 
     /**
-     * Một set đạt khi có đủ rep sạch (REPS) hoặc đủ giây (HOLD). Rule đạt khi có đủ số set đạt và % clean của cả
-     * bài (tổng rep sạch / tổng rep, hoặc tổng giây đúng form / tổng giây) không thấp hơn ngưỡng.
+     * Một set đạt khi có đủ rep sạch (REPS) hoặc đủ giây giữ ĐÚNG tư thế (HOLD). Rule đạt khi có đủ số set đạt và
+     * % clean của cả bài (tổng rep sạch / tổng rep, hoặc tổng giây đúng form / tổng giây) không thấp hơn ngưỡng.
+     *
+     * <p>Với bài HOLD, số giây tính là <b>giây giữ đúng tư thế</b> ({@code cleanSeconds}), không phải tổng
+     * thời gian giữ ({@code totalSeconds}). Lý do: client chấm form theo thời gian, nếu server dùng tổng thời gian
+     * thì member giữ sai tư thế suốt set vẫn bị tính là đạt — lệch với ý nghĩa của {@code cleanSeconds}.
      */
     static Outcome evaluate(String measureType, int requiredSets, Integer requiredReps, Integer requiredSeconds,
                             BigDecimal minAccuracy, List<SetResultInput> sets) {
         boolean hold = MEASURE_HOLD.equals(measureType);
         int need = hold ? (requiredSeconds == null ? 0 : requiredSeconds) : (requiredReps == null ? 0 : requiredReps);
         int qualifying = (int) sets.stream()
-                .filter(set -> hold ? set.totalSeconds() >= need : set.cleanReps() >= need)
+                .filter(set -> hold ? set.cleanSeconds() >= need : set.cleanReps() >= need)
                 .count();
         BigDecimal cleanRate = rate(measureType, sets);
         if (cleanRate == null) {

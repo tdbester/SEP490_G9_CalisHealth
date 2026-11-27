@@ -73,6 +73,25 @@ vm.runInContext(
   sandbox,
 );
 
+// Nap utils/formScore.js de co scoreByDeviation / scoreByRange (dung chung
+// voi useHoldTracker.js).
+const formScoreSource = readFileSync(
+  new URL("../src/utils/formScore.js", import.meta.url),
+  "utf8",
+);
+vm.runInContext(
+  formScoreSource
+    .replace(/import\s+\{[^}]+\}\s+from\s+"[^"]+";/g, "")
+    .replace(/import\s+\w+\s+from\s+"[^"]+";/g, "")
+    .replace(/export const (\w+) =/g, "globalThis.$1 =")
+    .replace(/export function (\w+)\(/g, "globalThis.$1 = function ("),
+  sandbox,
+);
+vm.runInContext(
+  "var scoreByDeviation = globalThis.scoreByDeviation, scoreByRange = globalThis.scoreByRange;",
+  sandbox,
+);
+
 // Nap usePushUpTracker.js
 const trackerSource = readFileSync(
   new URL("../src/hooks/usePushUpTracker.js", import.meta.url),

@@ -197,6 +197,51 @@ check("sau nextSet: setReps reset 0", t.state.setReps, 0);
 check("sau nextSet: reps tổng giữ nguyên", t.state.reps, 1);
 check("sau nextSet: completedSets = 1", t.getSetResults().length, 2);
 
+// --- 8. Chế độ capAtTarget: dừng đếm khi đạt mốc ----------------------
+// Bật capAtTarget -> bộ đếm dừng ở mốc, không đếm vượt, và báo setComplete.
+t = tracker({ targetReps: 3, capAtTarget: true });
+for (let rep = 0; rep < 3; rep += 1) {
+  feed(t, 175, 5);
+  feed(t, 140, 3);
+  feed(t, 85, 10);
+  feed(t, 175, 5);
+}
+check("capAtTarget: setReps dừng ở mốc = 3", t.state.setReps, 3);
+check("capAtTarget: setComplete = true", t.state.setComplete, true);
+check("capAtTarget: repsLeft = 0", t.state.repsLeft, 0);
+
+// Làm thêm 2 rep nữa -> vẫn dừng ở mốc, không tăng.
+feed(t, 175, 5);
+feed(t, 140, 3);
+feed(t, 85, 10);
+feed(t, 175, 5);
+check("capAtTarget: không đếm vượt mốc", t.state.setReps, 3);
+check("capAtTarget: reps tổng cũng dừng", t.state.reps, 3);
+
+// --- 9. Không bật capAtTarget -> vẫn đếm vượt mốc (luồng quét video) ---
+t = tracker({ targetReps: 3 });
+for (let rep = 0; rep < 5; rep += 1) {
+  feed(t, 175, 5);
+  feed(t, 140, 3);
+  feed(t, 85, 10);
+  feed(t, 175, 5);
+}
+check("không cap: đếm đủ 5 rep", t.state.setReps, 5);
+check("không cap: setComplete = true", t.state.setComplete, true);
+
+// --- 10. nextSet sau khi cap -> set mới bắt đầu lại từ 0 -------------
+t = tracker({ targetReps: 3, capAtTarget: true });
+for (let rep = 0; rep < 3; rep += 1) {
+  feed(t, 175, 5);
+  feed(t, 140, 3);
+  feed(t, 85, 10);
+  feed(t, 175, 5);
+}
+t.nextSet(3);
+check("sau nextSet (cap): setReps reset 0", t.state.setReps, 0);
+check("sau nextSet (cap): setComplete reset false", t.state.setComplete, false);
+check("sau nextSet (cap): repsLeft = 3", t.state.repsLeft, 3);
+
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} test passed`);
 if (failed.length) process.exit(1);

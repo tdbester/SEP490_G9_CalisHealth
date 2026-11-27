@@ -6,6 +6,8 @@ import {
   MOVEMENT_GROUPS,
   emptyRule,
   suggestionsToRules,
+  validateFormRules,
+  groupRuleErrors,
 } from "./formRuleUtils";
 import FormRuleFieldHelp from "./FormRuleFieldHelp";
 
@@ -37,6 +39,21 @@ export default function MemberFormRuleSection({
   const list = Array.isArray(rules) ? rules : [];
 
   const isHold = category === "HOLD";
+
+  /**
+   * Lỗi của từng rule — hiển thị ngay dưới ô sai để member biết chỗ nào
+   * cần sửa, thay vì server trả lỗi chung.
+   */
+  const ruleErrors = validateFormRules(rules, category);
+  const errorsByRule = groupRuleErrors(ruleErrors);
+  const errorFor = (ruleIndex, field) => {
+    const fields = errorsByRule.get(ruleIndex);
+    if (!fields || !fields.has(field)) return null;
+    const error = ruleErrors.find(
+      (item) => item.ruleIndex === ruleIndex && item.field === field,
+    );
+    return error ? t(`contentManager.form.formRules.err.${error.key}`) : null;
+  };
 
   const update = (index, patch) => {
     onChange(list.map((rule, i) => (i === index ? { ...rule, ...patch } : rule)));
@@ -70,7 +87,7 @@ export default function MemberFormRuleSection({
     </span>
   );
 
-  const numberField = (field, labelText, value, onChangeValue, step) => (
+  const numberField = (field, labelText, value, onChangeValue, step, errorText) => (
     <label className="flex flex-col gap-1">
       {fieldLabel(field, labelText)}
       <input
@@ -78,8 +95,14 @@ export default function MemberFormRuleSection({
         step={step}
         value={value}
         onChange={(event) => onChangeValue(event.target.value)}
-        className="rounded-lg border border-[#2b2257] bg-[#17102f] px-2 py-1.5 text-[11px] text-slate-200"
+        aria-invalid={errorText ? "true" : undefined}
+        className={`rounded-lg border bg-[#17102f] px-2 py-1.5 text-[11px] text-slate-200 ${
+          errorText ? "border-rose-500/70" : "border-[#2b2257]"
+        }`}
       />
+      {errorText && (
+        <span className="text-[10px] font-medium text-rose-300">{errorText}</span>
+      )}
     </label>
   );
 
@@ -165,13 +188,17 @@ export default function MemberFormRuleSection({
                   "minAngle",
                   t("member.customExercise.formRules.minAngle"),
                   rule.minAngle,
-                  (value) => update(index, { minAngle: value })
+                  (value) => update(index, { minAngle: value }),
+                  undefined,
+                  errorFor(index, "minAngle")
                 )}
                 {numberField(
                   "maxAngle",
                   t("member.customExercise.formRules.maxAngle"),
                   rule.maxAngle,
-                  (value) => update(index, { maxAngle: value })
+                  (value) => update(index, { maxAngle: value }),
+                  undefined,
+                  errorFor(index, "maxAngle")
                 )}
               </>
             ) : (
@@ -180,13 +207,17 @@ export default function MemberFormRuleSection({
                   "topAngle",
                   t("member.customExercise.formRules.topAngle"),
                   rule.angleThreshold,
-                  (value) => update(index, { angleThreshold: value })
+                  (value) => update(index, { angleThreshold: value }),
+                  undefined,
+                  errorFor(index, "angleThreshold")
                 )}
                 {numberField(
                   "bottomAngle",
                   t("member.customExercise.formRules.bottomAngle"),
                   rule.romDepth,
-                  (value) => update(index, { romDepth: value })
+                  (value) => update(index, { romDepth: value }),
+                  undefined,
+                  errorFor(index, "romDepth")
                 )}
               </>
             )}
@@ -195,13 +226,16 @@ export default function MemberFormRuleSection({
               t("member.customExercise.formRules.weight"),
               rule.weight,
               (value) => update(index, { weight: value }),
-              "0.05"
+              "0.05",
+              errorFor(index, "weight")
             )}
             {numberField(
               "tolerance",
               t("member.customExercise.formRules.tolerance"),
               rule.tolerance,
-              (value) => update(index, { tolerance: value })
+              (value) => update(index, { tolerance: value }),
+              undefined,
+              errorFor(index, "tolerance")
             )}
           </div>
         </div>
