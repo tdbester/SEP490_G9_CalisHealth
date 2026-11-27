@@ -18,7 +18,7 @@ import {
   validatePersonalExercise,
   validateVideoFile,
 } from "./libraryFormValidation";
-import { normalizeRules } from "../components/exercise/formRuleUtils";
+import { normalizeRules, validateFormRules } from "../components/exercise/formRuleUtils";
 import MemberFormRuleSection from "../components/exercise/MemberFormRuleSection";
 
 export default function CreatePersonalExercisePage() {
@@ -290,6 +290,18 @@ export default function CreatePersonalExercisePage() {
       return;
     }
     if (submissionLock.current) return;
+    // Ngưỡng chấm form: chặn ngay khi có rule sai, báo đúng ô để sửa.
+    const ruleErrors = validateFormRules(
+      formRules,
+      countType === "duration" ? "HOLD" : "REPS",
+    );
+    if (ruleErrors.length > 0) {
+      setErrorMessage("");
+      toast.warning(t("member.personal.fillRequiredFields"));
+      const formRulesBlock = document.getElementById("exercise-form-rules");
+      formRulesBlock?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     if (Object.keys(validationErrors).length > 0 || targetMuscles.length === 0) {
       setErrorMessage("");
       toast.warning(t("member.personal.fillRequiredFields"));
@@ -724,7 +736,10 @@ export default function CreatePersonalExercisePage() {
       </section>
 
       {/* C. KHỐI 2: AI FORM RULES */}
-      <section className="rounded-2xl border border-[#231b46] bg-[#120d29]/90 p-6 space-y-4 shadow-xl">
+      <section
+        id="exercise-form-rules"
+        className="rounded-2xl border border-[#231b46] bg-[#120d29]/90 p-6 space-y-4 shadow-xl"
+      >
         <h2 className="text-sm font-semibold text-white">
           {t("member.personal.aiFormRules")}
         </h2>

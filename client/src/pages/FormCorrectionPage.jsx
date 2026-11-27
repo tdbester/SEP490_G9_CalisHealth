@@ -129,7 +129,10 @@ function metricPositionClass(item) {
       return "fc-metric--torso";
     case "knee":
       return "fc-metric--knee";
+    // Cac loi cua bai HOLD deu nam o khớp hông.
     case "alignment":
+    case "hipSag":
+    case "hipPike":
       return "fc-metric--hip";
     default: {
       const joint = (item.joint || "").toUpperCase();

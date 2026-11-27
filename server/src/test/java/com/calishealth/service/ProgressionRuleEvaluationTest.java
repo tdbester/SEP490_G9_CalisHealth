@@ -47,6 +47,29 @@ class ProgressionRuleEvaluationTest {
     }
 
     @Test
+    void holdSetQualifiesOnCleanSecondsNotTotalSeconds() {
+        // Giữ 40s nhưng chỉ 20s đúng tư thế (cleanSeconds = 20).
+        // Set KHÔNG đạt yêu cầu 30s dù tổng thời gian giữ là 40s.
+        List<SetResultInput> sets = List.of(hold(40, 20));
+
+        Outcome outcome = ProgressionRuleService.evaluate("HOLD", 1, null, 30, new BigDecimal("80"), sets);
+
+        assertThat(outcome.qualifyingSets()).isEqualTo(0);
+        assertThat(outcome.passed()).isFalse();
+    }
+
+    @Test
+    void holdSetQualifiesWhenCleanSecondsReachTheRequirement() {
+        // Giữ 40s, 32s đúng tư thế -> đạt yêu cầu 30s dù tổng thời gian là 40s.
+        List<SetResultInput> sets = List.of(hold(40, 32));
+
+        Outcome outcome = ProgressionRuleService.evaluate("HOLD", 1, null, 30, new BigDecimal("80"), sets);
+
+        assertThat(outcome.qualifyingSets()).isEqualTo(1);
+        assertThat(outcome.passed()).isTrue();
+    }
+
+    @Test
     void noSamplesMeansNotJudgedRatherThanPassOrFail() {
         assertThat(ProgressionRuleService.rate("REPS", List.of(reps(0, 0)))).isNull();
         Outcome outcome = ProgressionRuleService.evaluate("REPS", 1, 5, null, new BigDecimal("80"), List.of(reps(0, 0)));

@@ -225,6 +225,15 @@ export default function useSquatTracker({
   kneeRule = null,
   maxSets = Infinity,
   deepFramesRequired = DEEP_FRAMES_REQUIRED,
+  /**
+   * Dừng đếm khi set hiện tại đã đạt đủ `targetReps` lần.
+   *
+   * Chỉ bật cho luồng camera trực tiếp: khi member đã làm đủ số rep của set
+   * thì hệ thống tự chuyển sang màn nghỉ, không đếm vượt mốc.
+   * Luồng quét video (VideoScanPage) để mở vì video có thể chứa nhiều set
+   * liên tiếp — cần đếm hết rồi mới tách set.
+   */
+  capAtTarget = false,
 } = {}) {
   const [state, setState] = useState({
     phase: PHASE.STANDING,
@@ -237,6 +246,8 @@ export default function useSquatTracker({
     formScore: 100,
     setNumber: 1,
     repsLeft: targetReps,
+    /** Set hiện tại đã đạt đủ số reps mục tiêu chưa. */
+    setComplete: false,
     lastFeedback: "",
     feedbackTone: "good",
     completedSets: [],
@@ -258,6 +269,7 @@ export default function useSquatTracker({
     targetReps,
     kneeRule,
     deepFramesRequired,
+    capAtTarget,
     lastFeedback: "",
     feedbackTone: "good",
     completedSets: [],
@@ -280,6 +292,11 @@ export default function useSquatTracker({
   useEffect(() => {
     ref.current.deepFramesRequired = deepFramesRequired;
   }, [deepFramesRequired]);
+
+  // Chế độ dừng ở mốc reps -> cập nhật vào ref.
+  useEffect(() => {
+    ref.current.capAtTarget = capAtTarget;
+  }, [capAtTarget]);
 
   const reset = useCallback((newTargetReps) => {
     ref.current = {
@@ -312,6 +329,7 @@ export default function useSquatTracker({
       formScore: 100,
       setNumber: 1,
       repsLeft: ref.current.targetReps,
+      setComplete: false,
       lastFeedback: "",
       feedbackTone: "good",
     });
@@ -364,6 +382,7 @@ export default function useSquatTracker({
       formScore: 100,
       setNumber: nextSetNumber,
       repsLeft: (newTargetReps ?? current.targetReps) - 0,
+      setComplete: false,
       lastFeedback: "",
       feedbackTone: "good",
     });
@@ -414,6 +433,7 @@ export default function useSquatTracker({
       formScore: 100,
       setNumber,
       repsLeft: target,
+      setComplete: false,
       lastFeedback: "",
       feedbackTone: "good",
     });
@@ -529,6 +549,15 @@ export default function useSquatTracker({
     let feedback = current.lastFeedback;
     let tone = current.feedbackTone;
 
+    /**
+     * Set đã đạt đủ số rep mục tiêu chưa.
+     *
+     * Khi bật `capAtTarget`, member làm đủ số rep của set thì bộ đếm dừng lại
+     * — không đếm vượt mốc — để màn tracking tự chuyển sang màn nghỉ.
+     */
+    const targetReached = current.capAtTarget
+      && current.setReps >= current.targetReps;
+
     switch (current.phase) {
       case PHASE.STANDING:
         if (!isStanding && kneeAngle < standingAngle - 12) {
@@ -545,8 +574,10 @@ export default function useSquatTracker({
         } else if (isStanding) {
           // Đi lên lại mà chưa chạm ngưỡng "sâu" -> vẫn tính 1 rep,
           // nhưng không sạch (độ sâu không đạt).
-          current.reps += 1;
-          current.setReps += 1;
+          if (!targetReached) {
+            current.reps += 1;
+            current.setReps += 1;
+          }
           feedback = t("member:tracking.feedback.shallowRep");
           tone = "warn";
           current.phase = PHASE.STANDING;
@@ -559,16 +590,18 @@ export default function useSquatTracker({
         if (isStanding) {
           // Hoàn thành 1 rep: sạch nếu đã đủ sâu và lưng không gật quá nhiều.
           const isClean = current.deepFrames >= deepRequired && (torsoAngle == null || torsoAngle > 115);
-          current.reps += 1;
-          current.setReps += 1;
-          if (isClean) {
-            current.cleanReps += 1;
-            current.setCleanReps += 1;
-            feedback = t("member:tracking.feedback.goodRep");
-            tone = "good";
-          } else {
-            feedback = t("member:tracking.feedback.shallowRep");
-            tone = "warn";
+          if (!targetReached) {
+            current.reps += 1;
+            current.setReps += 1;
+            if (isClean) {
+              current.cleanReps += 1;
+              current.setCleanReps += 1;
+              feedback = t("member:tracking.feedback.goodRep");
+              tone = "good";
+            } else {
+              feedback = t("member:tracking.feedback.shallowRep");
+              tone = "warn";
+            }
           }
           current.phase = PHASE.ASCENDING;
           current.deepFrames = 0;
@@ -631,7 +664,9 @@ export default function useSquatTracker({
       kneeAngle: Math.round(kneeAngle),
       formScore,
       setNumber: current.setNumber,
-      repsLeft: Math.max(0, current.targetReps - current.setCleanReps),
+      repsLeft: Math.max(0, current.targetReps - current.setReps),
+      // Set đủ số rep mục tiêu -> màn tracking tự chuyển sang màn nghỉ.
+      setComplete: current.setReps >= current.targetReps,
       lastFeedback: feedback,
       feedbackTone: tone,
     });

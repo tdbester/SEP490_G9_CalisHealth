@@ -11,7 +11,10 @@
     "lint": "eslint .",
     "test:tracker": "node scripts/verify-squat-tracker.mjs",
     "test:tracker:pushup": "node scripts/verify-pushup-tracker.mjs",
-    "test:tracker:all": "npm run test:tracker && npm run test:tracker:pushup"
+    "test:tracker:hold": "node scripts/verify-hold-tracker.mjs",
+    "test:tracker:all": "npm run test:tracker && npm run test:tracker:pushup && npm run test:tracker:hold",
+    "test:formrules": "node scripts/verify-form-rule-validation.mjs",
+    "test:all": "npm run test:tracker:all && npm run test:formrules"
   },
   "dependencies": {
     "@emotion/react": "^11.13.3",

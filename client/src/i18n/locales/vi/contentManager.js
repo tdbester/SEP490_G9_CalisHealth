@@ -818,7 +818,28 @@ export default {
       minAngle: "Góc nhỏ nhất (độ)",
       maxAngle: "Góc lớn nhất (độ)",
       weight: "Trọng số (0-1)",
-      tolerance: "Dung sai (độ)",      jointOption: {
+      tolerance: "Dung sai (độ)",
+      // Thông báo lỗi chi tiết cho từng ô ngưỡng chấm form.
+      err: {
+        tooMany: "Chỉ được khai tối đa {{max}} ngưỡng cho một bài.",
+        jointRequired: "Chọn khớp cần theo dõi.",
+        jointUnknown: "Khớp không hợp lệ.",
+        angleOutOfRange: "Giá trị phải từ 0 đến 180.",
+        weightOutOfRange: "Trọng số phải từ 0 đến 1.",
+        minGreaterThanMax: "Góc nhỏ nhất không được lớn hơn góc lớn nhất.",
+        needThreshold:
+          "Cần nhập góc nhỏ nhất và góc lớn nhất (bài giữ) hoặc góc trên và góc đáy (bài đếm lần).",
+      },
+      errField: {
+        joint: "Ngưỡng {{rule}} — Khớp",
+        minAngle: "Ngưỡng {{rule}} — Góc nhỏ nhất",
+        maxAngle: "Ngưỡng {{rule}} — Góc lớn nhất",
+        angleThreshold: "Ngưỡng {{rule}} — Góc trên",
+        romDepth: "Ngưỡng {{rule}} — Góc đáy",
+        weight: "Ngưỡng {{rule}} — Trọng số",
+        tolerance: "Ngưỡng {{rule}} — Dung sai",
+      },
+      jointOption: {
         KNEE: "Đầu gối",
         HIP: "Hông",
         ELBOW: "Khuỷu tay",
@@ -837,6 +858,9 @@ export default {
     errValueRange: "Nhập số nguyên từ 1 đến 3600.",
     errSetsRange: "Nhập số nguyên từ 1 đến 20.",
     errMuscles: "Hãy chọn ít nhất một nhóm cơ.",
+    errCategory: "Chọn loại bài: đếm số lần hoặc giữ tư thế.",
+    errGuide: "Nhập ít nhất một bước hướng dẫn thực hiện.",
+    errMovementGroup: "Nhóm chuyển động phải là PUSH, PULL, LEGS hoặc CORE.",
     categoryReps: "Đếm số lần",
     categoryHold: "Giữ (plank / có thời gian)",
     typeHealth: "Sức khoẻ",

@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import i18n from "../i18n";
 import { POSE_LANDMARKS, angleBetween, midpoint } from "./usePoseDetection";
+import { scoreByDeviation } from "../utils/formScore";
 
 /** Dich chuoi phan hoi / loi form theo ngon ngu hien tai. */
 const t = (key) => i18n.t(key);
@@ -193,20 +194,10 @@ function verticalDistance(shoulder, wrist) {
  *
  * Vung dung rong tolerance/2 quanh muc tieu -> 100 diem. Lech >= tolerance -> 0.
  *
- * @param {number|null} measured - gia tri do duoc
- * @param {number} target - gia tri muc tieu
- * @param {number} tolerance - ban kinh vung dung
- * @returns {number} 0..100
+ * Ham nay da tach sang `utils/formScore.js` de `useHoldTracker.js` va hook nay
+ * dung chung mot cong thuc (truoc day 2 ban co the lech nhau).
  */
-function scoreByDeviation(measured, target, tolerance) {
-  if (measured == null || !Number.isFinite(measured)) return 0;
-  if (tolerance <= 0) return measured === target ? 100 : 0;
-  const deviation = Math.abs(measured - target);
-  if (deviation <= tolerance / 2) return 100;
-  if (deviation >= tolerance) return 0;
-  const ratio = (deviation - tolerance / 2) / (tolerance / 2);
-  return Math.round((1 - ratio) * 100);
-}
+
 
 /**
  * Diem thanh phan Depth: goc khu yu tai day cua rep so voi nguong day.
@@ -300,6 +291,11 @@ export default function usePushUpTracker({
   maxSets = Infinity,
   formRules = null,
   bottomFramesRequired = BOTTOM_FRAMES_REQUIRED,
+  /**
+   * Dung khi set hien tai da dat du `targetReps` lan -> dung dem, khong dem
+   * vuot moc (mian tracking tu chuyen sang man nghi).
+   */
+  capAtTarget = false,
 } = {}) {
   const [state, setState] = useState({
     phase: PHASE.TOP,
@@ -312,6 +308,8 @@ export default function usePushUpTracker({
     formScore: 100,
     setNumber: 1,
     repsLeft: targetReps,
+    /** Set hien tai da dat du so reps muc tieu chua. */
+    setComplete: false,
     lastFeedback: "",
     feedbackTone: "good",
     completedSets: [],
@@ -333,6 +331,7 @@ export default function usePushUpTracker({
     maxSets,
     formRules,
     bottomFramesRequired,
+    capAtTarget,
     lastFeedback: "",
     feedbackTone: "good",
     completedSets: [],
@@ -367,6 +366,10 @@ export default function usePushUpTracker({
   useEffect(() => {
     ref.current.bottomFramesRequired = bottomFramesRequired;
   }, [bottomFramesRequired]);
+
+  useEffect(() => {
+    ref.current.capAtTarget = capAtTarget;
+  }, [capAtTarget]);
 
   /**
    * Doc cac nguong tu rule cua server, fallback ve gia tri mac dinh.
@@ -440,6 +443,7 @@ export default function usePushUpTracker({
       formScore: 100,
       setNumber: 1,
       repsLeft: ref.current.targetReps,
+      setComplete: false,
       lastFeedback: "",
       feedbackTone: "good",
       completedSets: [],
@@ -493,6 +497,7 @@ export default function usePushUpTracker({
       formScore: 100,
       setNumber: nextSetNumber,
       repsLeft: ref.current.targetReps,
+      setComplete: false,
       lastFeedback: "",
       feedbackTone: "good",
     });
@@ -542,6 +547,7 @@ export default function usePushUpTracker({
       formScore: 100,
       setNumber,
       repsLeft: target,
+      setComplete: false,
       lastFeedback: "",
       feedbackTone: "good",
     });
@@ -710,17 +716,22 @@ export default function usePushUpTracker({
           const scores = scoreRep(current, {
             topAngle, bottomAngle, alignMin, tolerance,
           });
-          current.reps += 1;
-          current.setReps += 1;
-          current.repScores.push(scores.total);
-          if (scores.total >= CLEAN_REP_THRESHOLD) {
-            current.cleanReps += 1;
-            current.setCleanReps += 1;
-            feedback = t("member:tracking.feedback.goodRep");
-            tone = "good";
-          } else {
-            feedback = t("member:tracking.feedback.shallowRep");
-            tone = "warn";
+          // Set da dat du so rep muc tieu -> dung dem, khong dem vuot moc.
+          const targetReached = current.capAtTarget
+            && current.setReps >= current.targetReps;
+          if (!targetReached) {
+            current.reps += 1;
+            current.setReps += 1;
+            current.repScores.push(scores.total);
+            if (scores.total >= CLEAN_REP_THRESHOLD) {
+              current.cleanReps += 1;
+              current.setCleanReps += 1;
+              feedback = t("member:tracking.feedback.goodRep");
+              tone = "good";
+            } else {
+              feedback = t("member:tracking.feedback.shallowRep");
+              tone = "warn";
+            }
           }
           current.lastRepScore = scores.total;
           current.phase = PHASE.ASCENT;
@@ -771,7 +782,9 @@ export default function usePushUpTracker({
       bodyAngle: current.bodyAngle,
       formScore,
       setNumber: current.setNumber,
-      repsLeft: Math.max(0, current.targetReps - current.setCleanReps),
+      repsLeft: Math.max(0, current.targetReps - current.setReps),
+      // Set du so rep muc tieu -> mian tracking tu chuyen sang man nghi.
+      setComplete: current.setReps >= current.targetReps,
       lastFeedback: feedback,
       feedbackTone: tone,
     });

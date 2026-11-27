@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Alert,
@@ -47,6 +47,8 @@ import { CM } from "../theme-content";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import ExercisePhysiologyFields, { EMPTY_PHYSIOLOGY, normalizeContraindications } from "../components/exercise/ExercisePhysiologyFields";
 import FormRuleEditor, { MOVEMENT_GROUPS as MOVEMENT_GROUP_OPTIONS, normalizeRules } from "../components/exercise/FormRuleEditor";
+import { MAX_FORM_RULES, validateFormRules } from "../components/exercise/formRuleUtils";
+import i18n from "../i18n";
 
 const rise = keyframes`
   from { opacity: 0; transform: translateY(8px); }
@@ -213,7 +215,7 @@ function validateFile(file, { maxSize, allowedTypes, allowedExtensions, label })
 
 /* ------------------------------- Guide editor ------------------------------ */
 
-function GuideEditor({ value, onChange }) {
+function GuideEditor({ value, onChange, error = false }) {
   const { t } = useTranslation();
   const steps = value ? value.split("\n") : [""];
 
@@ -245,6 +247,8 @@ function GuideEditor({ value, onChange }) {
                 ? t("contentManager.form.guideStepPlaceholderFirst")
                 : t("contentManager.form.guideStepPlaceholderNext")
             }
+            error={error && !step.trim()}
+            helperText={error && !step.trim() ? t("contentManager.form.errGuide") : ""}
             inputProps={{ "aria-label": t("contentManager.form.guideStepAria", { number: index + 1 }) }}
           />
           <Button
@@ -436,6 +440,8 @@ export function ExerciseFields({
   onFormRulesChange,
   movementGroup = "PUSH",
   onMovementGroupChange,
+  /** Ref tới khối ngưỡng chấm form — trang cha dùng để cuộn tới khi có lỗi. */
+  formRulesRef = null,
 }) {
   const { t } = useTranslation();
   const { levels: LEVELS, activeLevels } = useLevelNames();
@@ -507,8 +513,12 @@ export function ExerciseFields({
                 size="small"
                 fullWidth
                 value={CATEGORY_OPTIONS.includes(value.category) ? value.category : "REPS"}
-                onChange={(event) => onChange({ ...value, category: event.target.value || "REPS" })}
-                helperText=" "
+                onChange={(event) => {
+                  onChange({ ...value, category: event.target.value || "REPS" });
+                  onClearField("category");
+                }}
+                error={invalid.category}
+                helperText={invalid.category ? t("contentManager.form.errCategory") : " "}
                 SelectProps={{
                   displayEmpty: true,
                   renderValue: (selected) => (
@@ -638,7 +648,7 @@ export function ExerciseFields({
               </Typography>
             </Box>
           </Stack>
-          <GuideEditor value={value.guide} onChange={(guide) => onChange({ ...value, guide })} />
+          <GuideEditor value={value.guide} onChange={(guide) => onChange({ ...value, guide })} error={invalid.guide} />
         </CardContent>
       </Card>
 
@@ -728,7 +738,7 @@ export function ExerciseFields({
       )}
 
       {showFormRules && (
-        <Card sx={{ overflow: "hidden" }}>
+        <Card sx={{ overflow: "hidden" }} ref={formRulesRef}>
           <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
             <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.5 }}>
               <Box sx={{ width: 34, height: 34, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}` }}>
@@ -748,10 +758,37 @@ export function ExerciseFields({
               label={t("contentManager.form.formRules.movementGroup")}
               size="small"
               fullWidth
-              sx={{ mb: 1.5 }}
+              sx={{
+                mb: 1.5,
+                // Nhãn đã tách khỏi viền -> không cần khe hở (notch) trên viền.
+                "& .MuiOutlinedInput-notchedOutline legend": { display: "none" },
+              }}
               value={MOVEMENT_GROUP_OPTIONS.includes(movementGroup) ? movementGroup : ""}
               onChange={(event) => onMovementGroupChange?.(event.target.value)}
-              helperText={t("contentManager.form.formRules.movementGroupHint")}
+              error={invalid.movementGroup}
+              helperText={
+                invalid.movementGroup
+                  ? t("contentManager.form.errMovementGroup")
+                  : t("contentManager.form.formRules.movementGroupHint")
+              }
+              slotProps={{
+                // Nhãn nằm cố định phía TRÊN ô chọn, không nằm chồng lên
+                // danh sách dropdown (MUI mặc định đặt nhãn bên trong viền).
+                inputLabel: {
+                  sx: {
+                    position: "static",
+                    transform: "none",
+                    maxWidth: "100%",
+                    marginBottom: 6,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    color: CM.textMuted,
+                    "&.Mui-focused": { color: CM.violetBright },
+                  },
+                },
+              }}
               SelectProps={{
                 // MUI coi giá trị "" là rỗng nên không hiển thị gì ->
                 // phải tự render nhãn "Tự động suy ra" khi chưa chọn nhóm.
@@ -1574,6 +1611,41 @@ export function WorkoutFields({
 
 /* --------------------------------- Page ----------------------------------- */
 
+/**
+ * Gộp lỗi ngưỡng chấm form thành 1 câu báo rõ ràng.
+ *
+ * Ví dụ: "Ngưỡng 1: Góc nhỏ nhất (độ) không được lớn hơn Góc lớn nhất (độ)."
+ *
+ * @param {Array} errors - kết quả của `validateFormRules`
+ * @returns {string}
+ */
+export function formatRuleErrorMessage(errors) {
+  const list = Array.isArray(errors) ? errors : [];
+  if (!list.length) return "";
+  const t = (key, params) => i18n.t(key, params);
+  const parts = list.map((error) => {
+    if (error.ruleIndex < 0) {
+      return t("contentManager.form.formRules.errTooMany", { max: MAX_FORM_RULES });
+    }
+    const label = t(`contentManager.form.formRules.errField.${error.field}`, {
+      rule: error.ruleIndex + 1,
+    });
+    return t(`contentManager.form.formRules.err.${error.key}`, { field: label });
+  });
+  return [...new Set(parts)].join(" ");
+}
+
+/**
+ * Chuyển message lỗi từ server thành danh sách field bị lỗi để tô đỏ đúng ô.
+ *
+ * Server trả message tiếng Anh. Bảng dưới map message -> field của form.
+ * Thứ tự kiểm tra từ cụ thể nhất tới rộng nhất để không map nhầm
+ * (vd "Movement group must be PUSH..." chứa "mov" -> không được map
+ * thành demoVideo).
+ *
+ * @param {string} message
+ * @returns {string[]} danh sách key field
+ */
 function fieldErrorsFromMessage(message) {
   const normalized = String(message || "").toLowerCase();
   const fields = [];
@@ -1582,16 +1654,63 @@ function fieldErrorsFromMessage(message) {
     fields.push("duplicateName");
     return fields;
   }
+
+  // --- Lỗi của phần ngưỡng chấm form (form_rules) ---
+  if (normalized.includes("form rule")) {
+    fields.push("formRules");
+    return [...new Set(fields)];
+  }
+  if (
+    normalized.includes("joint")
+    || normalized.includes("minangle")
+    || normalized.includes("maxangle")
+    || normalized.includes("tolerance")
+    || normalized.includes("weight")
+    || normalized.includes("angle")
+    || normalized.includes("rom depth")
+    || normalized.includes("romdepth")
+  ) {
+    fields.push("formRules");
+    return [...new Set(fields)];
+  }
+
+  // --- Lỗi của phần hướng dẫn ---
+  if (normalized.includes("execution step") || normalized.includes("guide")) {
+    fields.push("guide");
+    return [...new Set(fields)];
+  }
+
+  // --- Lỗi của các ô số / danh mục ---
+  if (normalized.includes("default sets")) {
+    fields.push("defaultSets");
+  }
+  if (
+    normalized.includes("hold duration")
+    || normalized.includes("number of reps")
+    || normalized.includes("repetition")
+  ) {
+    fields.push("value");
+  }
+  if (normalized.includes("exercise category") || normalized.includes("hold exercise category")) {
+    fields.push("category");
+  }
+  if (normalized.includes("movement group")) {
+    fields.push("movementGroup");
+  }
+
+  // --- Lỗi media: so khớp từ khoá cuối để tránh map nhầm ---
+  if (["video", "mp4", ".webm", "webm", "demo video"].some((token) => normalized.includes(token))) {
+    fields.push("demoVideo");
+  }
+  if (["image", "jpg", "jpeg", "png", "anatomy"].some((token) => normalized.includes(token))) {
+    fields.push("anatomyImage");
+  }
+
+  // --- Lỗi chung về bài tập ---
   if (normalized.includes("title") || normalized.includes("name")) fields.push("title");
   if (normalized.includes("type")) fields.push("type");
   if (normalized.includes("level")) fields.push("level");
   if (normalized.includes("muscle")) fields.push("muscles");
-  if (["video", "mp4", "mov", "webm"].some((token) => normalized.includes(token))) {
-    fields.push("demoVideo");
-  }
-  if (["image", "jpg", "png"].some((token) => normalized.includes(token))) {
-    fields.push("anatomyImage");
-  }
   if (normalized.includes("exercise data")) fields.push("title", "type", "level", "muscles");
   return [...new Set(fields)];
 }
@@ -1602,6 +1721,9 @@ export default function ExerciseFormPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const kind = searchParams.get("type") === "workout" ? "workout" : "exercise";
   const [confirmCancel, setConfirmCancel] = useState(false);
+
+  /** Khu vực chứa phần ngưỡng chấm form — dùng để cuộn tới khi có lỗi. */
+  const formRulesRef = useRef(null);
 
   const [exercise, setExercise] = useState(EMPTY_EXERCISE);
   const [selectedMuscles, setSelectedMuscles] = useState([]);
@@ -1623,6 +1745,14 @@ export default function ExerciseFormPage() {
   const [error, setError] = useState(null);
   const [invalidFields, setInvalidFields] = useState([]);
   const { levels: LEVELS, activeLevels } = useLevelNames();
+
+  // Khi bài HOLD có lỗi ngưỡng chấm form, cuộn tới khối đó — form dài,
+  // CM không thấy lỗi ở dưới màn hình sẽ tưởng form không báo gì.
+  useEffect(() => {
+    if (invalidFields.includes("formRules") && formRulesRef.current) {
+      formRulesRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [invalidFields]);
 
   // Default to the first configured level (lowest score range) until the user picks one. New exercises
   // can only use active levels.
@@ -1747,11 +1877,17 @@ export default function ExerciseFormPage() {
       if (!["HEALTH", "SKILL"].includes(exercise.type)) invalid.push("type");
       if (!activeLevels.includes(exercise.level)) invalid.push("level");
       if (selectedMuscles.length === 0) invalid.push("muscles");
+      // Hướng dẫn thực hiện (các bước) là bắt buộc — server cũng chặn.
+      if (!exercise.guide.trim()) invalid.push("guide");
       const exerciseValue = exercise.value === "" ? NaN : Number(exercise.value);
       if (!Number.isInteger(exerciseValue) || exerciseValue < 1 || exerciseValue > 3600) invalid.push("value");
       const defaultSets = Number(exercise.defaultSets);
       if (!Number.isInteger(defaultSets) || defaultSets < 1 || defaultSets > 20) invalid.push("defaultSets");
       if (physiologyEnabled && !validatePhysiology(physiology)) invalid.push("physiology");
+      // Ngưỡng chấm form: validate ngay để biết chính xác rule nào sai,
+      // field nào sai (thay vì đợi server trả lỗi chung).
+      const ruleErrors = validateFormRules(formRules, exercise.category);
+      if (ruleErrors.length > 0) invalid.push("formRules");
 
       if (demoVideoError || anatomyImageError) {
         setInvalidFields([
@@ -1767,7 +1903,9 @@ export default function ExerciseFormPage() {
         setError(
           invalid.includes("duplicateName")
             ? t("contentManager.form.errDuplicateName")
-            : t("contentManager.form.errCorrectFields"),
+            : invalid.includes("formRules")
+              ? formatRuleErrorMessage(ruleErrors)
+              : t("contentManager.form.errCorrectFields"),
         );
         return;
       }
@@ -1839,6 +1977,10 @@ export default function ExerciseFormPage() {
     defaultSets: invalidFields.includes("defaultSets"),
     demoVideo: invalidFields.includes("demoVideo"),
     anatomyImage: invalidFields.includes("anatomyImage"),
+    category: invalidFields.includes("category"),
+    guide: invalidFields.includes("guide"),
+    formRules: invalidFields.includes("formRules"),
+    movementGroup: invalidFields.includes("movementGroup"),
   };
 
   return (
@@ -1953,6 +2095,7 @@ export default function ExerciseFormPage() {
             onFormRulesChange={setFormRules}
             movementGroup={movementGroup}
             onMovementGroupChange={setMovementGroup}
+            formRulesRef={formRulesRef}
           />
         ) : (
           <WorkoutFields
