@@ -405,7 +405,7 @@ function FilterSidebar({ selectedMuscles, onToggleMuscle, isAllActive, getMuscle
 function SearchFilterBar({ searchInput, onSearchChange, selectedLevel, onLevelChange, levelOptions }) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-4 mb-4 w-full">
+    <div className="flex flex-wrap items-center gap-4 mb-4 w-full">
       <div className="flex-1 relative flex items-center">
         <div className="absolute left-3.5 pointer-events-none flex items-center justify-center">
           <SearchIcon className="w-4 h-4 text-[#655c88]" />

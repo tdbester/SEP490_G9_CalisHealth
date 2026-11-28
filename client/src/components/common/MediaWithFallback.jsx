@@ -31,7 +31,7 @@ export default function MediaWithFallback({ kind = "image", src, alt, sx }) {
           color: CM.textMuted,
         }}
       >
-        <Icon sx={{ fontSize: 36 }} />
+        <Icon sx={{ fontSize: { xs: 24, md: 36 } }} />
         <Typography variant="body2" sx={{ color: CM.textMuted }}>
           {kind === "video" ? "This video is no longer available." : "This image is no longer available."}
         </Typography>

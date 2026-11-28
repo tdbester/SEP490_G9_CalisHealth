@@ -56,17 +56,17 @@ export default function CreditGuardPanel() {
     >
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.75, flexWrap: "wrap", mb: 2 }}>
         <IconBox icon={data.active ? WarningAmberRoundedIcon : CheckCircleOutlineRoundedIcon} tone={data.active ? "pink" : "green"} size={42} />
-        <Box sx={{ flex: 1, minWidth: 260 }}>
+        <Box sx={{ flex: 1, minWidth: { xs: 0, sm: 260 } }}>
           <Typography sx={{ fontSize: 14, fontWeight: 700 }}>{t("guard.stateTitle")}</Typography>
           <Typography sx={{ mt: 0.25, fontSize: 12.5, color: CM.textMuted }}>{t("guard.hint")}</Typography>
         </Box>
-        <Box sx={{ textAlign: "right" }}>
+        <Box sx={{ textAlign: { xs: "left", sm: "right" } }}>
           <Typography sx={{ fontSize: 12, color: CM.textDim }}>{t("guard.usedPercent")}</Typography>
           <Typography sx={{ fontSize: 20, fontWeight: 700 }}>{data.usedPercent.toFixed(1)}%</Typography>
         </Box>
       </Box>
 
-      <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" } }}>
+      <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(3, minmax(0, 1fr))" } }}>
         <Box sx={{ p: 1.75, borderRadius: "10px", bgcolor: CM.surfaceSoft, border: `1px solid ${CM.border}` }}>
           <Typography sx={{ fontSize: 12, color: CM.textDim }}>{t("guard.statThreshold")}</Typography>
           <Typography sx={{ fontSize: 19, fontWeight: 700 }}>{data.threshold}%</Typography>

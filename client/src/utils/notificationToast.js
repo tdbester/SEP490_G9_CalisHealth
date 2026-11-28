@@ -2,7 +2,7 @@ import { toast } from "react-toastify";
 
 const options = {
   className: "notification-toast",
-  style: { fontFamily: "Arial, sans-serif" },
+  style: { fontFamily: "var(--font-app)" },
 };
 
 const notificationToast = {

@@ -19,7 +19,10 @@
     ),
     #0d0b1a;
   color: var(--text);
-  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+  font-family: var(--font-app);
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 /* ------------------------------------------------------------------ body */
@@ -245,7 +248,9 @@
   color: var(--issue);
   font-size: 13px;
   font-weight: 600;
-  white-space: nowrap;
+  /* Nhan tieng Viet dai khong duoc tran khoi khung. */
+  max-width: min(200px, 50vw);
+  overflow-wrap: anywhere;
 }
 
 /* Vị trí chip theo khớp (tọa độ tính trong card 560x544). */
@@ -455,5 +460,19 @@
   .fc-body {
     padding-left: 16px;
     padding-right: 16px;
+  }
+}
+
+/* Man hinh nho: hinh dang nguoi bi thu nho de khong tran ngang. */
+@media (max-width: 420px) {
+  .fc-figure {
+    width: 132px;
+    height: 348px;
+  }
+
+  .fc-metric {
+    max-width: min(160px, 62vw);
+    font-size: 12px;
+    padding: 4px 9px;
   }
 }

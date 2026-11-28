@@ -93,7 +93,7 @@ function RangeSlider({ label, value, onChange, min = 1, max = 5, helper }) {
           onChange={(_, next) => onChange(next)}
           sx={{ flex: 1, maxWidth: 220 }}
         />
-        <Typography variant="body2" sx={{ color: "#fff", fontWeight: 700, minWidth: 32 }}>
+        <Typography variant="body2" sx={{ color: "#fff", fontWeight: 700, minWidth: { xs: 0, sm: 32 } }}>
           {value ?? "—"}
         </Typography>
       </Stack>
@@ -254,7 +254,7 @@ export default function ExercisePhysiologyFields({ value, onChange }) {
         </Typography>
         <Stack spacing={1} sx={{ mt: 1 }}>
           {(contraindications.length === 0 ? [""] : contraindications).map((item, index) => (
-            <Stack key={index} direction="row" spacing={1} alignItems="center">
+            <Stack key={index} direction="row" spacing={1} alignItems="center" flexWrap="wrap">
               <Typography
                 variant="caption"
                 sx={{ width: 18, textAlign: "right", color: "primary.main", flexShrink: 0 }}

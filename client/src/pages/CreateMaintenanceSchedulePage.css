@@ -42,3 +42,12 @@
   font-family: inherit;
   font-size: 0.875rem;
 }
+
+@media (max-width: 640px) {
+  /* Ô nhập trên mobile: kích thước chữ >= 16px để iOS không tự zoom khi focus. */
+  .maintenance-create-form input,
+  .maintenance-create-form textarea,
+  .maintenance-create-form select {
+    font-size: 16px;
+  }
+}

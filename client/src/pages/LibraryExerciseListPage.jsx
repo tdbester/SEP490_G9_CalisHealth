@@ -264,7 +264,7 @@ function SearchFilterBar({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-4 mb-4 w-full">
+    <div className="flex flex-wrap items-center gap-4 mb-4 w-full">
       {/* Ô tìm kiếm bung rộng chiếm toàn bộ khoảng trống bên trái (flex-1) */}
       <div className="flex-1 relative flex items-center">
         <div className="absolute left-3.5 pointer-events-none flex items-center justify-center">

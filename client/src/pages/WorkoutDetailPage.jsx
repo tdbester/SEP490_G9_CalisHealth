@@ -245,7 +245,7 @@ export default function WorkoutDetailPage() {
         title={workout.name}
         description={t("contentManager.detail.workoutDetailsMeta", { code: workout.code })}
         action={
-          <Stack direction="row" spacing={1}>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
             {!isDailyPlan && !editing && (
               <Button variant="contained" startIcon={<EditRoundedIcon />} onClick={startEditing}>
                 {t("contentManager.detail.edit")}
@@ -296,8 +296,7 @@ export default function WorkoutDetailPage() {
                   py: 1.5,
                   bgcolor: "background.default",
                   zIndex: 5,
-                }}
-              >
+                }} flexWrap="wrap">
                 <Button startIcon={<CloseRoundedIcon />} onClick={() => setConfirmCancel(true)} disabled={saveMutation.isPending}>
                   {t("contentManager.form.cancel")}
                 </Button>
@@ -447,10 +446,19 @@ export default function WorkoutDetailPage() {
                           },
                         }}
                       >
-                        <Typography className="exercise-name" variant="body2" fontWeight={600} noWrap sx={{ color: "#fff" }}>
+                        <Typography
+                          className="exercise-name"
+                          variant="body2"
+                          fontWeight={600}
+                          sx={{ color: "#fff", overflowWrap: "anywhere" }}
+                        >
                           {exercise.name}
                         </Typography>
-                        <Typography variant="caption" noWrap display="block" sx={{ color: CM.textDim }}>
+                        <Typography
+                          variant="caption"
+                          display="block"
+                          sx={{ color: CM.textDim, overflowWrap: "anywhere" }}
+                        >
                           {exercise.muscleGroup || "—"}
                         </Typography>
                         <Typography variant="caption" display="block" sx={{ mt: 0.5, color: CM.textMuted }}>

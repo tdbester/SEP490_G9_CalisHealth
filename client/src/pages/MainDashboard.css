@@ -4,7 +4,10 @@
 .dashboard {
   width: 100%;
   color: #FFFFFF;
-  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+  font-family: var(--font-app);
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 /* ── Buttons ─────────────────────────────────────────────────── */
@@ -167,7 +170,7 @@
   margin: 3px 0 5px;
   font-size: 18px;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
   color: #FFFFFF;
 }
 
@@ -235,7 +238,7 @@
   margin: 0;
   font-size: 22px;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
   color: #FFFFFF;
 }
 
@@ -361,14 +364,19 @@
   height: 20px;
 }
 
+/* Ten co the dai (tieng Viet) -> xuong toi da 2 dong thay vi cat "...".
+   Giữ nguyên layout card de khong pha vo luoi carousel. */
 .dash-muscle-name {
   min-width: 0;
   overflow: hidden;
   font-size: 14px;
   font-weight: 600;
   color: #FFFFFF;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
 }
 
 .dash-muscle-count {
@@ -529,8 +537,11 @@
   font-size: 13px;
   font-weight: 700;
   color: #FFFFFF;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
 }
 
 .dash-skill-steps {

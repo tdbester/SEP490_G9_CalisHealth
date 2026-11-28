@@ -5,6 +5,10 @@
   color: #fff;
   display: flex;
   flex-direction: column;
+  font-family: var(--font-app);
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 /* ------------------------------------------------------------------ body */
@@ -89,6 +93,8 @@
 .rc-ring {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
   transform: rotate(-90deg);
 }
 
@@ -139,7 +145,7 @@
 }
 
 .rc-adjust-btn {
-  min-width: 90px;
+  min-width: 0;
   height: 44px;
   padding: 0 16px;
   border-radius: 10px;
@@ -390,5 +396,137 @@
 
   .rc-timer-value {
     font-size: 5rem;
+  }
+}
+
+/* Màn hình hẹp (≤ 600px). */
+@media (max-width: 600px) {
+  .rc-body {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .rc-stage-head {
+    padding: 16px 16px 0;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .rc-stage-main {
+    padding: 28px 16px 36px;
+  }
+
+  .rc-title {
+    font-size: 1.5rem;
+  }
+
+  .rc-subtitle {
+    font-size: 0.875rem;
+  }
+
+  .rc-timer-wrap {
+    width: 200px;
+    height: 200px;
+    margin: 24px 0 20px;
+  }
+
+  .rc-timer-value {
+    font-size: 4rem;
+  }
+
+  .rc-timer-label {
+    font-size: 0.875rem;
+  }
+
+  .rc-adjust {
+    gap: 10px;
+  }
+
+  .rc-adjust-btn {
+    flex: 1;
+    min-width: 0;
+    height: 40px;
+    padding: 0 10px;
+    font-size: 0.8125rem;
+  }
+
+  .rc-summary {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .rc-summary-item {
+    flex: 1 1 40%;
+  }
+
+  .rc-summary-divider {
+    display: none;
+  }
+
+  .rc-summary-value {
+    font-size: 1.75rem;
+  }
+
+  .rc-tip-card,
+  .rc-next {
+    padding: 14px 16px;
+  }
+
+  .rc-skip-btn {
+    height: 56px;
+    font-size: 0.875rem;
+  }
+
+  .rc-end-btn {
+    height: 52px;
+    font-size: 0.875rem;
+  }
+}
+
+/* Màn hình rất hẹp (≤ 380px). */
+@media (max-width: 380px) {
+  .rc-stage-main {
+    padding: 20px 12px 28px;
+  }
+
+  .rc-title {
+    font-size: 1.3rem;
+  }
+
+  .rc-timer-wrap {
+    width: 168px;
+    height: 168px;
+    margin: 18px 0 16px;
+  }
+
+  .rc-timer-value {
+    font-size: 3.25rem;
+  }
+
+  .rc-adjust {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .rc-adjust-btn {
+    width: 100%;
+  }
+
+  .rc-summary-item {
+    flex: 1 1 100%;
+  }
+
+  .rc-summary-value {
+    font-size: 1.5rem;
+  }
+
+  .rc-next {
+    flex-wrap: wrap;
+  }
+
+  .rc-next-title {
+    font-size: 0.9375rem;
   }
 }

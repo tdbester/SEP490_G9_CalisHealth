@@ -152,6 +152,7 @@ export default function PreviewTrainingPlanPage() {
       )}
 
       <section className="preview-week">
+        <div className="preview-week__scroll">
         <div className="preview-week__head">
           {week.map((day) => (
             <div
@@ -225,6 +226,7 @@ export default function PreviewTrainingPlanPage() {
               </div>
             );
           })}
+        </div>
         </div>
       </section>
 

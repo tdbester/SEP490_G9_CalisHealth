@@ -20,7 +20,7 @@ export default function AdminStoragePage() {
   return (
     <Box sx={{ p: { xs: 2, md: 3.5 } }}>
       <Typography sx={{ fontSize: 13, color: CM.textMuted }}>{t("breadcrumb")}</Typography>
-      <Typography component="h1" sx={{ mt: 1, fontSize: 34, fontWeight: 700, lineHeight: 1.2 }}>
+      <Typography component="h1" sx={{ mt: 1, fontSize: { xs: 24, md: 34 }, fontWeight: 700, lineHeight: 1.2 }}>
         {t("title")}
       </Typography>
       <Typography sx={{ mt: 0.75, fontSize: 14, color: CM.textMuted, maxWidth: 720 }}>
@@ -29,7 +29,7 @@ export default function AdminStoragePage() {
 
       <Tabs
         value={current}
-        aria-label="Media storage sections"
+        aria-label={t("a11y.sectionsAria")}
         variant="scrollable"
         scrollButtons={false}
         sx={{ mt: 2.5, mb: 3, borderBottom: `1px solid ${CM.border}` }}

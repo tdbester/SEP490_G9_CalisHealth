@@ -235,7 +235,7 @@ export default function AdminFeedbackPage() {
         }}
       >
         <Box sx={{ maxWidth: 680 }}>
-          <Typography component="h1" sx={{ fontSize: 34, fontWeight: 700, lineHeight: 1.2 }}>
+          <Typography component="h1" sx={{ fontSize: { xs: 24, md: 34 }, fontWeight: 700, lineHeight: 1.2 }}>
             {t("admin.feedback.pageTitle")}
           </Typography>
           <Typography sx={{ mt: 0.75, fontSize: 14, color: CM.textMuted }}>
@@ -249,7 +249,7 @@ export default function AdminFeedbackPage() {
               disabled={loading}
               variant="outlined"
               aria-label={t("common.ui.refreshAria")}
-              sx={{ minWidth: 40, width: 40, px: 0 }}
+              sx={{ minWidth: { xs: 0, sm: 40 }, width: 40, px: 0 }}
             >
               {loading ? <CircularProgress size={18} /> : <RefreshRoundedIcon />}
             </Button>
@@ -261,7 +261,7 @@ export default function AdminFeedbackPage() {
         <Box
           sx={{
             flex: 1,
-            minWidth: 180,
+            minWidth: { xs: 0, sm: 180 },
             p: 2.25,
             borderRadius: "16px",
             bgcolor: CM.surface,
@@ -271,14 +271,14 @@ export default function AdminFeedbackPage() {
           <Typography sx={{ fontSize: 13, color: CM.textMuted }}>
             {t("admin.feedback.escalated")}
           </Typography>
-          <Typography sx={{ mt: 0.5, fontSize: 28, fontWeight: 700, color: CM.pink }}>
+          <Typography sx={{ mt: 0.5, fontSize: { xs: 20, md: 28 }, fontWeight: 700, color: CM.pink }}>
             {(data?.escalated ?? 0).toLocaleString("en-US")}
           </Typography>
         </Box>
         <Box
           sx={{
             flex: 1,
-            minWidth: 180,
+            minWidth: { xs: 0, sm: 180 },
             p: 2.25,
             borderRadius: "16px",
             bgcolor: CM.surface,
@@ -288,7 +288,7 @@ export default function AdminFeedbackPage() {
           <Typography sx={{ fontSize: 13, color: CM.textMuted }}>
             {t("admin.feedback.resolved")}
           </Typography>
-          <Typography sx={{ mt: 0.5, fontSize: 28, fontWeight: 700, color: CM.green }}>
+          <Typography sx={{ mt: 0.5, fontSize: { xs: 20, md: 28 }, fontWeight: 700, color: CM.green }}>
             {(data?.resolved ?? 0).toLocaleString("en-US")}
           </Typography>
         </Box>
@@ -314,7 +314,7 @@ export default function AdminFeedbackPage() {
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
             SelectProps={{ SelectDisplayProps: { "aria-label": t("admin.feedback.filterByStatus") } }}
-            sx={{ minWidth: 180 }}
+            sx={{ minWidth: { xs: 0, sm: 180 } }}
           >
             {FILTERS.map((item) => (
               <MenuItem key={item.key} value={item.key}>
@@ -329,7 +329,7 @@ export default function AdminFeedbackPage() {
             value={category}
             onChange={(event) => setCategory(event.target.value)}
             SelectProps={{ SelectDisplayProps: { "aria-label": t("admin.feedback.filterByCategory") } }}
-            sx={{ minWidth: 180 }}
+            sx={{ minWidth: { xs: 0, sm: 180 } }}
           >
             {CATEGORIES.map((item) => (
               <MenuItem key={item.key} value={item.key}>
@@ -351,7 +351,7 @@ export default function AdminFeedbackPage() {
                 </InputAdornment>
               ),
             }}
-            sx={{ flex: 1, minWidth: 220 }}
+            sx={{ flex: 1, minWidth: { xs: 0, sm: 220 } }}
           />
 
           <TextField

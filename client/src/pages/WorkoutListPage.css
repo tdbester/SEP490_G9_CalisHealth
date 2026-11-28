@@ -2,6 +2,13 @@
   border-radius: 10px;
 }
 
+.workout-list-page {
+  font-family: var(--font-app);
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
+}
+
 .workout-row-mark {
   display: grid;
   place-items: center;
@@ -68,5 +75,18 @@
 @media (max-width: 900px) {
   .workout-list-page .workout-list-table-card {
     overflow: hidden;
+  }
+}
+
+/* Màn hình hẹp: giảm padding đầu cột để bảng cuộn ngang gọn hơn. */
+@media (max-width: 600px) {
+  .workout-list-page .MuiTableHead-root th:first-of-type,
+  .workout-list-page .MuiTableBody-root td:first-of-type {
+    padding-left: 12px;
+  }
+
+  .workout-list-page .MuiTablePagination-selectLabel,
+  .workout-list-page .MuiTablePagination-displayedRows {
+    font-size: 0.7rem;
   }
 }

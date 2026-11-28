@@ -1,3 +1,11 @@
+/*
+ * notification.css — ép font thống nhất cho toàn bộ khu vực thông báo.
+ *
+ * Trước đây file này ép `Arial, sans-serif !important`, khiến chữ tiếng Việt
+ * hiển thị lệch dấu so với phần còn lại của app. Nay dùng chung biến
+ * --font-app (Inter Variable, đã nạp trong main.jsx) nên dấu tiếng Việt
+ * được hiển thị đúng và đồng nhất với toàn hệ thống.
+ */
 .notification-module,
 .notification-module *,
 .admin-area-shell,
@@ -7,7 +15,10 @@
 .topbar-notification-badge,
 .notification-toast,
 .notification-toast * {
-  font-family: Arial, sans-serif !important;
+  font-family: var(--font-app) !important;
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .notification-module input::placeholder,
@@ -16,12 +27,19 @@
 .topbar-notification-popover input::placeholder,
 .topbar-notification-popover textarea::placeholder,
 .topbar-notification-popover select::placeholder {
-  font-family: Arial, sans-serif !important;
+  font-family: var(--font-app) !important;
   color: #81769d;
   font-style: normal;
   opacity: 1;
 }
 
 .notification-toast .Toastify__toast-body {
-  font-family: Arial, sans-serif !important;
+  font-family: var(--font-app) !important;
+}
+
+@media (max-width: 640px) {
+  /* Toast bám góc phải và phải nằm gọn trong màn hình hẹp. */
+  .notification-toast {
+    max-width: calc(100vw - 24px) !important;
+  }
 }

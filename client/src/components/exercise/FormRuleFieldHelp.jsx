@@ -110,7 +110,7 @@ export default function FormRuleFieldHelp({ field, scope = "cm" }) {
               {label}
             </Typography>
           </Box>
-          <IconButton size="small" onClick={() => setOpen(false)} aria-label="close">
+          <IconButton size="small" onClick={() => setOpen(false)} aria-label={t("common.ui.closeAria")}>
             <CloseRoundedIcon fontSize="small" />
           </IconButton>
         </DialogTitle>

@@ -7,6 +7,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
   Typography,
@@ -95,7 +96,8 @@ export default function CloudinaryFoldersPanel() {
         </Alert>
       )}
 
-      <Table size="small">
+      <TableContainer sx={{ maxWidth: "100%", overflowX: "auto" }}>
+        <Table size="small" sx={{ minWidth: 520 }}>
         <TableHead>
           <TableRow>
             <TableCell sx={headCellSx}>{t("folders.columnFolder")}</TableCell>
@@ -117,7 +119,7 @@ export default function CloudinaryFoldersPanel() {
               <TableCell>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <FolderOutlinedIcon sx={{ fontSize: 17, color: CM.violet }} />
-                  <Typography sx={{ fontSize: 13, fontFamily: "monospace" }}>{folder.path}</Typography>
+                  <Typography sx={{ fontSize: 13, fontFamily: "var(--font-app)" }}>{folder.path}</Typography>
                 </Box>
               </TableCell>
               <TableCell>
@@ -140,8 +142,9 @@ export default function CloudinaryFoldersPanel() {
           ))}
         </TableBody>
       </Table>
+      </TableContainer>
 
-      <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
+      <Box sx={{ mt: 2, display: "flex", flexWrap: "wrap", gap: 1, justifyContent: "flex-end" }}>
         <Button size="small" variant="text" onClick={refetch} startIcon={<RefreshRoundedIcon />}>
           {t("folders.refresh")}
         </Button>

@@ -1,0 +1,335 @@
+/**
+ * BF-01 - User Authentication, Login & Logout Flow
+ * Sheet: "User Authentication, Login & Lo"
+ */
+const { PRE, scenario, tc } = require('./_helpers');
+
+module.exports = {
+  sheet: 'User Authentication, Login & Lo',
+  code: 'AUTH',
+  title: 'User Authentication, Login & Logout',
+  scenarios: [
+    scenario('Scenario A - Access the Login screen and sign in', [
+      tc('AUTH01', 'Test successful login with valid credentials',
+        [
+          '1. Navigate to the Log in screen',
+          '2. Enter the "Email" field with "member.calishealth@gmail.com"',
+          '3. Enter the "Password" field with "P@ssword1"',
+          '4. Click the "Log in" button',
+        ],
+        [
+          '1. Display success message: "Logged in successfully"',
+          '2. Redirect to the Main Dashboard screen',
+          '3. Display the member name and the current streak on the dashboard',
+        ],
+        PRE.guest),
+      tc('AUTH02', 'Test sign in with a content manager account',
+        [
+          '1. Navigate to the Log in screen',
+          '2. Enter the "Email" field of a CONTENT_MANAGER account',
+          '3. Enter the "Password" field with "P@ssword1"',
+          '4. Click the "Log in" button',
+        ],
+        [
+          '1. Redirect to the Content Manager dashboard',
+          '2. Display the "Content Manager dashboard" page title',
+          '3. Display the management areas of the content manager',
+        ],
+        PRE.guest),
+      tc('AUTH03', 'Test sign in with an administrator account',
+        [
+          '1. Navigate to the Log in screen',
+          '2. Enter the "Email" field of an ADMIN account',
+          '3. Enter the "Password" field with "P@ssword1"',
+          '4. Click the "Log in" button',
+        ],
+        [
+          '1. Redirect to the Admin dashboard',
+          '2. Display the "Admin dashboard" page title',
+          '3. Display the administration menu of the platform',
+        ],
+        PRE.guest),
+      tc('AUTH04', 'Test login with empty email',
+        [
+          '1. Navigate to the Log in screen',
+          '2. Leave the "Email" field empty',
+          '3. Enter the "Password" field with "P@ssword1"',
+          '4. Click the "Log in" button',
+        ],
+        [
+          '1. Display error message: "Invalid data"',
+          '2. The email field is highlighted and the member stays on the Log in screen',
+        ],
+        PRE.guest),
+      tc('AUTH05', 'Test login with empty password',
+        [
+          '1. Navigate to the Log in screen',
+          '2. Enter the "Email" field with "member.calishealth@gmail.com"',
+          '3. Leave the "Password" field empty',
+          '4. Click the "Log in" button',
+        ],
+        [
+          '1. Display error message: "Invalid data"',
+          '2. The password field is highlighted and the member stays on the Log in screen',
+        ],
+        PRE.guest),
+      tc('AUTH06', 'Test login with an invalid email format',
+        [
+          '1. Navigate to the Log in screen',
+          '2. Enter the "Email" field with "not-an-email"',
+          '3. Enter the "Password" field with "P@ssword1"',
+          '4. Click the "Log in" button',
+        ],
+        [
+          '1. Display error message: "Invalid data"',
+          '2. The email field is highlighted and the member stays on the Log in screen',
+        ],
+        PRE.guest),
+      tc('AUTH07', 'Test login with a wrong password',
+        [
+          '1. Navigate to the Log in screen',
+          '2. Enter the "Email" field with "member.calishealth@gmail.com"',
+          '3. Enter the "Password" field with "WrongPass123"',
+          '4. Click the "Log in" button',
+        ],
+        [
+          '1. Display error message: "Email or password is incorrect."',
+          '2. No session token is issued, so the member stays on the Log in screen',
+        ],
+        PRE.guest),
+      tc('AUTH08', 'Test login with a non-existent account',
+        [
+          '1. Navigate to the Log in screen',
+          '2. Enter the "Email" field with "nobody.calishealth@gmail.com"',
+          '3. Enter the "Password" field with "P@ssword1"',
+          '4. Click the "Log in" button',
+        ],
+        [
+          '1. Display error message: "Email or password is incorrect."',
+          '2. The system does not reveal whether the email address exists',
+        ],
+        PRE.guest),
+      tc('AUTH09', 'Test login with an account whose email is not verified',
+        [
+          '1. Register a new account from the Create account screen and do not open the verification email',
+          '2. Navigate to the Log in screen',
+          '3. Enter the "Email" field with "unverified.calishealth@gmail.com"',
+          '4. Enter the "Password" field with "P@ssword1"',
+          '5. Click the "Log in" button',
+        ],
+        [
+          '1. Display error message: "This account has not been verified or is not allowed to sign in."',
+          '2. No session token is issued, so the member stays on the Log in screen',
+        ],
+        PRE.guest),
+      tc('AUTH10', 'Test the visibility of the password on the Log in screen',
+        [
+          '1. Navigate to the Log in screen',
+          '2. Enter the "Password" field with "P@ssword1"',
+          '3. Click the "Show password" icon',
+          '4. Click the "Hide password" icon',
+        ],
+        [
+          '1. Display the entered password in clear text when the "Show password" icon is pressed',
+          '2. Mask the password with dots when the "Hide password" icon is pressed again',
+        ],
+        PRE.guest),
+    ]),
+
+    scenario('Scenario B - Register a new account and verify the email', [
+      tc('AUTH11', 'Test register a new member account',
+        [
+          '1. Navigate to the Create account screen',
+          '2. Enter the "Full name" field with "Test Member"',
+          '3. Enter the "Email" field with "newmember.calishealth@gmail.com"',
+          '4. Enter the "Password" field with "P@ssword1"',
+          '5. Enter the "Confirm password" field with "P@ssword1"',
+          '6. Click the "Register" button',
+        ],
+        [
+          '1. Display success title: "Registered successfully!"',
+          '2. Display message: "Please verify your email before logging in."',
+          '3. A verification email containing a token is sent to the registered address',
+        ],
+        PRE.guest),
+      tc('AUTH12', 'Test register with an email address that is already taken',
+        [
+          '1. Navigate to the Create account screen',
+          '2. Enter the "Full name" field with "Test Member"',
+          '3. Enter the "Email" field with "member.calishealth@gmail.com"',
+          '4. Enter the "Password" field with "P@ssword1"',
+          '5. Enter the "Confirm password" field with "P@ssword1"',
+          '6. Click the "Register" button',
+        ],
+        [
+          '1. Display error message: "Email is already registered"',
+          '2. No new member account is created',
+        ],
+        PRE.guest),
+      tc('AUTH13', 'Test register when the confirmation password does not match',
+        [
+          '1. Navigate to the Create account screen',
+          '2. Enter the "Full name" field with "Test Member"',
+          '3. Enter the "Email" field with "newmember.calishealth@gmail.com"',
+          '4. Enter the "Password" field with "P@ssword1"',
+          '5. Enter the "Confirm password" field with "P@ssword2"',
+          '6. Click the "Register" button',
+        ],
+        [
+          '1. Display error message: "Passwords do not match"',
+          '2. No member account is created',
+        ],
+        PRE.guest),
+      tc('AUTH14', 'Test register with a password that breaks the password policy',
+        [
+          '1. Navigate to the Create account screen',
+          '2. Enter the "Full name" field with "Test Member"',
+          '3. Enter the "Email" field with "newmember.calishealth@gmail.com"',
+          '4. Enter the "Password" field with "weak"',
+          '5. Enter the "Confirm password" field with "weak"',
+          '6. Click the "Register" button',
+        ],
+        [
+          '1. Display error message: "Password must be at least 8 characters and include uppercase, lowercase, a digit and a special character"',
+          '2. No member account is created',
+        ],
+        PRE.guest),
+      tc('AUTH15', 'Test register with an empty full name',
+        [
+          '1. Navigate to the Create account screen',
+          '2. Leave the "Full name" field empty',
+          '3. Enter the "Email" field with "newmember.calishealth@gmail.com"',
+          '4. Enter the "Password" field with "P@ssword1"',
+          '5. Enter the "Confirm password" field with "P@ssword1"',
+          '6. Click the "Register" button',
+        ],
+        [
+          '1. Display error message: "Invalid data"',
+          '2. The full name field is highlighted and the member stays on the Create account screen',
+        ],
+        PRE.guest),
+      tc('AUTH16', 'Test the verification of the email address',
+        [
+          '1. Register a new account from the Create account screen',
+          '2. Open the verification email and click the verification link',
+        ],
+        [
+          '1. Display success title: "Email verified!"',
+          '2. Display a link to log in with the verified account',
+          '3. The account can sign in from the Log in screen right away',
+        ],
+        PRE.guest),
+      tc('AUTH17', 'Test the verification with an invalid verification link',
+        [
+          '1. Open the verification link with an invalid or already used code',
+        ],
+        [
+          '1. Display error title: "Verification failed"',
+          '2. Display message: "The verification link is invalid or missing a verification code."',
+          '3. The account stays unverified and cannot sign in',
+        ],
+        PRE.guest),
+    ]),
+
+    scenario('Scenario C - Recover the password', [
+      tc('AUTH18', 'Test request a password reset link with a valid email',
+        [
+          '1. Navigate to the Forgot password screen',
+          '2. Enter the "Email" field with "member.calishealth@gmail.com"',
+          '3. Click the "Send reset link" button',
+        ],
+        [
+          '1. Display success title: "Request sent"',
+          '2. Display message: "If the email exists, we have sent a reset link. Please check your inbox."',
+          '3. A password reset email containing a token is sent to the address',
+        ],
+        PRE.guest),
+      tc('AUTH19', 'Test request a password reset link with an invalid email format',
+        [
+          '1. Navigate to the Forgot password screen',
+          '2. Enter the "Email" field with "invalid-email"',
+          '3. Click the "Send reset link" button',
+        ],
+        [
+          '1. Display error message: "Invalid data"',
+          '2. The email field is highlighted and the member stays on the Forgot password screen',
+        ],
+        PRE.guest),
+      tc('AUTH20', 'Test the password reset with a valid reset link',
+        [
+          '1. Open the password reset link received in the reset email',
+          '2. Enter the "New password" field with "NewP@ss1"',
+          '3. Enter the "Confirm password" field with "NewP@ss1"',
+          '4. Click the "Reset password" button',
+        ],
+        [
+          '1. Display success title: "Password reset successfully!"',
+          '2. Display message: "You can log in again with the new password."',
+          '3. Redirect to the Log in screen',
+          '4. Sign in with the new password succeeds',
+        ],
+        PRE.guest),
+      tc('AUTH21', 'Test the password reset when the confirmation password does not match',
+        [
+          '1. Open the password reset link received in the reset email',
+          '2. Enter the "New password" field with "NewP@ss1"',
+          '3. Enter the "Confirm password" field with "NewP@ss2"',
+          '4. Click the "Reset password" button',
+        ],
+        [
+          '1. Display error message: "Passwords do not match"',
+          '2. The password of the account is unchanged',
+        ],
+        PRE.guest),
+      tc('AUTH22', 'Test the password reset with an expired reset link',
+        [
+          '1. Open a password reset link that has expired',
+        ],
+        [
+          '1. Display error title: "Invalid link"',
+          '2. Display message: "This reset link is invalid or has expired. Please request a new one."',
+          '3. Display a link to request a new reset link',
+        ],
+        PRE.guest),
+    ]),
+
+    scenario('Scenario D - Sign out of the platform', [
+      tc('AUTH23', 'Test sign out from the member account',
+        [
+          '1. Login with a MEMBER account',
+          '2. Click the "Settings" button on the navigation sidebar',
+          '3. Click the "Log out" entry',
+        ],
+        [
+          '1. The session token is invalidated and the local session is cleared',
+          '2. Redirect to the Log in screen',
+          '3. Opening the Dashboard screen again asks the member to sign in',
+        ],
+        PRE.member),
+      tc('AUTH24', 'Test sign out from the content manager account',
+        [
+          '1. Login with a CONTENT_MANAGER account',
+          '2. Click the "Settings" button on the navigation sidebar',
+          '3. Click the "Log out" entry',
+        ],
+        [
+          '1. The session token is invalidated and the local session is cleared',
+          '2. Redirect to the Log in screen',
+          '3. Opening the Content Manager dashboard again asks the content manager to sign in',
+        ],
+        PRE.cm),
+      tc('AUTH25', 'Test sign out from the admin account',
+        [
+          '1. Login with an ADMIN account',
+          '2. Click the "Settings" button on the navigation sidebar',
+          '3. Click the "Log out" entry',
+        ],
+        [
+          '1. The session token is invalidated and the local session is cleared',
+          '2. Redirect to the Log in screen',
+          '3. Opening the Admin dashboard again asks the administrator to sign in',
+        ],
+        PRE.admin),
+    ]),
+  ],
+};

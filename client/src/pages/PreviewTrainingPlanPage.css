@@ -19,7 +19,10 @@
   max-width: 1080px;
   padding-bottom: 1.5rem;
   color: #fff;
-  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+  font-family: var(--font-app);
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .preview-loading {
@@ -96,6 +99,13 @@
   border: 1px solid var(--panel-border);
   border-radius: 14px;
   overflow: hidden;
+}
+
+/* Vùng cuộn ngang: chứa cả hàng tiêu đề và hàng nội dung để 2 phần
+   luôn thẳng hàng nhau khi kéo ngang trên màn hình hẹp. */
+.preview-week__scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .preview-week__head {
@@ -314,10 +324,6 @@
 }
 
 @media (max-width: 900px) {
-  .preview-week {
-    overflow-x: auto;
-  }
-
   .preview-week__head,
   .preview-week__body {
     min-width: 720px;

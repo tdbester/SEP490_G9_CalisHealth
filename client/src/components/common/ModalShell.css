@@ -26,8 +26,11 @@
     0 0 120px rgba(139, 92, 246, 0.28),
     0 24px 60px rgba(0, 0, 0, 0.5);
   color: #FFFFFF;
-  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+  font-family: var(--font-app);
   outline: none;
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .modal-dialog h2,

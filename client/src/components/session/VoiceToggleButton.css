@@ -1,6 +1,5 @@
-/* Nút bật/tắt giọng điều khiển — dùng chung giữa màn tracking và màn nghỉ. */
-
-.vt-icon-btn {
+/* Nút bật/tắt giọng điều khiển — dùng chung giữa màn tracking và màn nghỉ. */.vt-icon-btn {
+  font-family: var(--font-app);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -11,6 +10,9 @@
   background: #2a2050;
   color: #c4b5fd;
   cursor: pointer;
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .vt-icon-btn svg {
@@ -27,4 +29,11 @@
 
 .vt-icon-btn.is-muted svg {
   opacity: 0.75;
+}
+
+@media (max-width: 480px) {
+  .vt-icon-btn {
+    width: 34px;
+    height: 34px;
+  }
 }

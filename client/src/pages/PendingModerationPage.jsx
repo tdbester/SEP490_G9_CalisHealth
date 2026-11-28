@@ -147,7 +147,7 @@ export default function PendingModerationPage() {
         }
       />
 
-      <Box component="section" aria-label={t("admin.moderation.summary")} sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" } }}>
+      <Box component="section" aria-label={t("admin.moderation.summary")} sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(3, minmax(0, 1fr))" } }}>
         <Box sx={enter(0)}><SummaryCard label={t("admin.moderation.pendingReview")} count={rows.length} detail={t("admin.moderation.exercises")} /></Box>
         <Box sx={enter(80)}><SummaryCard label={t("admin.moderation.waitingOverThreeDays")} tone="warning" count={waitingOverThreeDays} detail={t("admin.moderation.exercises")} /></Box>
         <Box sx={enter(160)}><SummaryCard label={t("admin.moderation.reviewedThisWeek")} tone="success" count={reviewedThisWeek} detail={t("admin.moderation.exercises")} /></Box>
@@ -164,16 +164,16 @@ export default function PendingModerationPage() {
 
       <Card sx={{ mt: 2.5, overflow: "hidden", ...enter(220) }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ xs: "stretch", md: "center" }} sx={{ p: 1.5, borderBottom: `1px solid ${CM.border}` }}>
-          <TextField size="small" fullWidth value={search} onChange={resetPage(setSearch)} placeholder={t("admin.moderation.searchPlaceholder")} inputProps={{ "aria-label": t("admin.moderation.searchPlaceholder") }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" color="disabled" /></InputAdornment> }} sx={{ flex: 1, minWidth: 200 }} />
-          <TextField select size="small" value={level} onChange={resetPage(setLevel)} SelectProps={{ SelectDisplayProps: { "aria-label": t("admin.moderation.filterByLevel") } }} sx={{ minWidth: 150 }}>
+          <TextField size="small" fullWidth value={search} onChange={resetPage(setSearch)} placeholder={t("admin.moderation.searchPlaceholder")} inputProps={{ "aria-label": t("admin.moderation.searchPlaceholder") }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" color="disabled" /></InputAdornment> }} sx={{ flex: 1, minWidth: { xs: 0, sm: 200 } }} />
+          <TextField select size="small" value={level} onChange={resetPage(setLevel)} SelectProps={{ SelectDisplayProps: { "aria-label": t("admin.moderation.filterByLevel") } }} sx={{ minWidth: { xs: 0, sm: 150 } }}>
             <MenuItem value="all">{t("admin.moderation.allLevels")}</MenuItem>{levelNames.map((name) => <MenuItem key={name} value={name.toLowerCase()}>{name}</MenuItem>)}
           </TextField>
-          <TextField select size="small" value={sort} onChange={resetPage(setSort)} SelectProps={{ SelectDisplayProps: { "aria-label": t("admin.moderation.sortSubmissions") } }} sx={{ minWidth: 145 }}>
+          <TextField select size="small" value={sort} onChange={resetPage(setSort)} SelectProps={{ SelectDisplayProps: { "aria-label": t("admin.moderation.sortSubmissions") } }} sx={{ minWidth: { xs: 0, sm: 145 } }}>
             <MenuItem value="oldest">{t("admin.moderation.oldestFirst")}</MenuItem><MenuItem value="newest">{t("admin.moderation.newestFirst")}</MenuItem>
           </TextField>
           <Tooltip title={t("admin.moderation.refresh")}>
             <span>
-              <Button onClick={() => query.refetch()} disabled={query.isFetching} variant="outlined" aria-label={t("admin.moderation.refreshAria")} sx={{ minWidth: 40, width: 40, px: 0, transition: "all .2s ease", "&:hover": { borderColor: CM.violetBright, bgcolor: "rgba(139,92,246,0.1)" } }}>
+              <Button onClick={() => query.refetch()} disabled={query.isFetching} variant="outlined" aria-label={t("admin.moderation.refreshAria")} sx={{ minWidth: { xs: 0, sm: 40 }, width: 40, px: 0, transition: "all .2s ease", "&:hover": { borderColor: CM.violetBright, bgcolor: "rgba(139,92,246,0.1)" } }}>
                 {query.isFetching ? <CircularProgress size={18} /> : <RefreshRoundedIcon />}
               </Button>
             </span>
@@ -203,7 +203,7 @@ export default function PendingModerationPage() {
                       <TableCell><Typography variant="caption" sx={{ color: CM.textMuted }}>{row.muscleGroup || "—"}</Typography></TableCell>
                       <TableCell><DarkPill tone={levelTone(row.level)}>{row.level || "—"}</DarkPill></TableCell>
                       <TableCell sx={{ whiteSpace: "nowrap" }}><Typography variant="caption" sx={{ color: CM.textDim }}>{relativeAge(row.submittedAt, t)}</Typography></TableCell>
-                      <TableCell align="center"><Stack direction="row" spacing={0.75} justifyContent="center" alignItems="center">
+                      <TableCell align="center"><Stack direction="row" spacing={0.75} justifyContent="center" alignItems="center" flexWrap="wrap">
                         <Button size="small" variant="outlined" component={RouterLink} to={`${CONTENT_PATHS.exercises}/moderation/${encodeURIComponent(row.code)}`} sx={{ py: 0.25, px: 1.25, fontSize: 11.5, minWidth: 0 }}>{t("admin.moderation.review")}</Button>
                         <Button size="small" variant="contained" disabled={busyCode === row.code} onClick={() => handleApprove(row)} sx={{ py: 0.25, px: 1.5, fontSize: 11.5, minWidth: 0 }}>{approve.isPending && busyCode === row.code ? t("admin.moderation.approving") : t("admin.moderation.approve")}</Button>
                         <Button size="small" variant="contained" color="error" disabled={busyCode === row.code} onClick={() => handleReject(row)} sx={{ py: 0.25, px: 1.25, fontSize: 11.5, minWidth: 0 }}>{reject.isPending && busyCode === row.code ? t("admin.moderation.rejecting") : t("admin.moderation.reject")}</Button>
@@ -224,7 +224,7 @@ export default function PendingModerationPage() {
         onClose={closeConfirm}
         maxWidth="xs"
         fullWidth
-        PaperProps={{ sx: { fontFamily: "Arial, sans-serif", "& *": { fontFamily: "Arial, sans-serif" } } }}
+        PaperProps={{ sx: { fontFamily: "var(--font-app)", "& *": { fontFamily: "var(--font-app)" } } }}
       >
         <DialogTitle>{confirmAction?.type === "approve" ? t("admin.moderation.approveTitle") : t("admin.moderation.rejectTitle")}</DialogTitle>
         <DialogContent>

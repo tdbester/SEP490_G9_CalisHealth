@@ -119,7 +119,7 @@ export default function ExerciseModerationDetailPage() {
         </Stack>}
       />
 
-      {isHistoryView && <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1.5 }}><DarkPill tone={historyRow.decision === "APPROVED" ? "success" : "danger"}>{historyRow.decision === "APPROVED" ? t("admin.moderationDetail.approved") : t("admin.moderationDetail.rejected")}</DarkPill>{historyRow.decision === "REJECTED" && <Button size="small" color="error" variant="text" onClick={() => setReasonOpen(true)} sx={{ py: 0.25, px: 1, fontSize: 11.5 }}>{t("admin.moderationDetail.viewReason")}</Button>}</Stack>}
+      {isHistoryView && <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1.5 }} flexWrap="wrap"><DarkPill tone={historyRow.decision === "APPROVED" ? "success" : "danger"}>{historyRow.decision === "APPROVED" ? t("admin.moderationDetail.approved") : t("admin.moderationDetail.rejected")}</DarkPill>{historyRow.decision === "REJECTED" && <Button size="small" color="error" variant="text" onClick={() => setReasonOpen(true)} sx={{ py: 0.25, px: 1, fontSize: 11.5 }}>{t("admin.moderationDetail.viewReason")}</Button>}</Stack>}
       {isHistoryOnly && <Alert severity="info" sx={{ mt: 2 }}>{t("admin.moderationDetail.deletedNotice")}</Alert>}
       {actionError && <Alert severity="error" sx={{ mt: 2 }}>{actionError}</Alert>}
       <Card sx={{ mt: 2.5, overflow: "hidden", ...enter(150) }}>
@@ -165,7 +165,7 @@ export default function ExerciseModerationDetailPage() {
         onClose={() => setReasonOpen(false)}
         maxWidth="sm"
         fullWidth
-        PaperProps={{ sx: { fontFamily: "Arial, sans-serif", "& *": { fontFamily: "Arial, sans-serif" } } }}
+        PaperProps={{ sx: { fontFamily: "var(--font-app)", "& *": { fontFamily: "var(--font-app)" } } }}
       >
         <DialogTitle sx={{ pb: 1 }}>{t("admin.moderationDetail.rejectionDetails")}</DialogTitle>
         <DialogContent dividers>
@@ -175,7 +175,7 @@ export default function ExerciseModerationDetailPage() {
               <Typography variant="body1" fontWeight={700} sx={{ mt: 0.5, color: "#fff" }}>{entry.name}</Typography>
               <Typography variant="caption" sx={{ color: CM.textMuted }}>{entry.code}</Typography>
             </Box>
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5 }}>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "minmax(0, 1fr) minmax(0, 1fr)" }, gap: 1.5 }}>
               <Box><Typography variant="caption" sx={{ color: CM.textDim }}>{t("admin.moderationDetail.decision")}</Typography><Typography variant="body2" sx={{ mt: 0.25, color: "#fff" }}>{t("admin.moderationDetail.rejected")}</Typography></Box>
               <Box><Typography variant="caption" sx={{ color: CM.textDim }}>{t("admin.moderationDetail.reviewed")}</Typography><Typography variant="body2" sx={{ mt: 0.25, color: "#fff" }}>{formatDateTime(historyRow?.reviewedAt)}</Typography></Box>
             </Box>
@@ -195,7 +195,7 @@ export default function ExerciseModerationDetailPage() {
         onClose={() => setConfirmAction(null)}
         maxWidth="xs"
         fullWidth
-        PaperProps={{ sx: { fontFamily: "Arial, sans-serif", "& *": { fontFamily: "Arial, sans-serif" } } }}
+        PaperProps={{ sx: { fontFamily: "var(--font-app)", "& *": { fontFamily: "var(--font-app)" } } }}
       >
         <DialogTitle>{confirmAction === "approve" ? t("admin.moderationDetail.approveTitle") : t("admin.moderationDetail.rejectTitle")}</DialogTitle>
         <DialogContent>

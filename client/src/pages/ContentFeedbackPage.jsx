@@ -189,7 +189,7 @@ export default function ContentFeedbackPage() {
                 disabled={query.isFetching}
                 variant="outlined"
                 aria-label={t("common.ui.refreshAria")}
-                sx={{ minWidth: 40, width: 40, px: 0 }}
+                sx={{ minWidth: { xs: 0, sm: 40 }, width: 40, px: 0 }}
               >
                 {query.isFetching ? <CircularProgress size={18} /> : <RefreshRoundedIcon />}
               </Button>
@@ -205,7 +205,7 @@ export default function ContentFeedbackPage() {
           mt: 2.5,
           display: "grid",
           gap: 1.5,
-          gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", lg: "repeat(4, minmax(0, 1fr))" },
+          gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))", lg: "repeat(4, minmax(0, 1fr))" },
         }}
       >
         <SummaryCard
@@ -248,7 +248,7 @@ export default function ContentFeedbackPage() {
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
             SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.feedback.filterByStatus") } }}
-            sx={{ minWidth: 180 }}
+            sx={{ minWidth: { xs: 0, sm: 180 } }}
           >
             {FILTERS.map((item) => (
               <MenuItem key={item.key} value={item.key}>
@@ -265,7 +265,7 @@ export default function ContentFeedbackPage() {
             SelectProps={{
               SelectDisplayProps: { "aria-label": t("contentManager.feedback.filterByCategory") },
             }}
-            sx={{ minWidth: 180 }}
+            sx={{ minWidth: { xs: 0, sm: 180 } }}
           >
             {CATEGORIES.map((item) => (
               <MenuItem key={item.key} value={item.key}>
@@ -287,7 +287,7 @@ export default function ContentFeedbackPage() {
                 </InputAdornment>
               ),
             }}
-            sx={{ flex: 1, minWidth: 220 }}
+            sx={{ flex: 1, minWidth: { xs: 0, sm: 220 } }}
           />
 
           <TextField
@@ -410,13 +410,12 @@ export default function ContentFeedbackPage() {
                             <ChatBubbleOutlineRoundedIcon sx={{ fontSize: 17 }} />
                           </Box>
                           <Box sx={{ minWidth: 0, textAlign: "left" }}>
-                            <Typography variant="body2" fontWeight={600} noWrap sx={{ color: "#fff" }}>
+                            <Typography variant="body2" fontWeight={600}  sx={{ overflowWrap: "anywhere", color: "#fff" }}>
                               {row.title}
                             </Typography>
                             <Typography
-                              variant="caption"
-                              noWrap
-                              sx={{ color: CM.textDim, display: "block", mt: 0.25 }}
+                              variant="caption" 
+                              sx={{ overflowWrap: "anywhere", color: CM.textDim, display: "block", mt: 0.25 }}
                             >
                               {row.content}
                             </Typography>

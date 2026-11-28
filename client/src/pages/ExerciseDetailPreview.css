@@ -1,10 +1,13 @@
-/* Exercise Detail & Preview - Member view */
-.exd-page {
+/* Exercise Detail & Preview - Member view */.exd-page {
+  font-family: var(--font-app);
   min-height: 100vh;
   background:
     radial-gradient(circle at 0% 50%, rgba(59, 29, 122, 0.55), rgba(13, 11, 26, 0) 62%),
     #0d0b1a;
   padding: 1rem 2rem 2rem;
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .exd-container {
@@ -198,7 +201,7 @@
 /* Stats */
 .exd-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
 }
 
@@ -295,6 +298,7 @@
 }
 
 .exd-browse-label {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -327,7 +331,7 @@
 
 @media (max-width: 960px) {
   .exd-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .exd-actions {
@@ -351,5 +355,10 @@
 
   .exd-header {
     flex-wrap: wrap;
+  }
+
+  /* 3 ô chỉ số xếp dọc để chữ số không bị tràn. */
+  .exd-stats {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

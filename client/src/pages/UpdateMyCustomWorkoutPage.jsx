@@ -833,7 +833,7 @@ export default function UpdateMyCustomWorkoutPage() {
                                 : t("member.personal.countBySetsReps")}
                             </p>
                           </div>
-                          <div className="mt-2 grid grid-cols-3 gap-2">
+                          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                             <div>
                               <label className="mb-1 block text-[10px] text-slate-400" htmlFor={`workout-sets-${index}`}>
                                 {t("member.personal.sets")}
@@ -965,7 +965,7 @@ export default function UpdateMyCustomWorkoutPage() {
             onConfirm={() => navigate(-1)}
           />
 
-          <footer className="fixed bottom-0 left-0 right-0 z-20 flex items-center justify-between border-t border-[#231b46] bg-[#0c0822] px-5 py-3 lg:pl-[calc(var(--sidebar-width)+32px)]">
+          <footer className="fixed bottom-0 left-0 right-0 z-20 flex flex-wrap items-center justify-between gap-2 border-t border-[#231b46] bg-[#0c0822] px-4 py-3 lg:pl-[calc(var(--sidebar-width)+32px)] lg:px-5">
             <span className={`flex items-center gap-2 text-xs ${isDirty ? "text-amber-300" : "text-slate-500"}`}>
               {isDirty && <span className="h-1.5 w-1.5 rounded-full bg-amber-300" />}
               {isDirty ? t("member.personal.unsavedChanges") : t("member.personal.allChangesSaved")}

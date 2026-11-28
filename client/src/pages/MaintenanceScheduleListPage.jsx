@@ -230,7 +230,7 @@ export default function MaintenanceScheduleListPage() {
       failureMessage: t("admin.maintenance.cancelFailed"),
       toastOptions: {
         className: "notification-toast",
-        style: { fontFamily: "Arial, sans-serif" },
+        style: { fontFamily: "var(--font-app)" },
       },
       onOptimisticDelete: () => {
         setSchedules((current) =>
@@ -256,10 +256,10 @@ export default function MaintenanceScheduleListPage() {
   };
 
   return (
-    <section className="mx-auto w-full max-w-[1080px] px-4 py-5 font-[Arial,sans-serif] text-slate-100 sm:px-7 sm:py-6">
+    <section className="mx-auto w-full max-w-[1080px] px-4 py-5 font-[var(--font-app)] text-slate-100 sm:px-7 sm:py-6">
       <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-white">{t("admin.maintenance.title")}</h1>
+          <h1 className="text-[18px] font-bold tracking-tight text-white sm:text-[22px]">{t("admin.maintenance.title")}</h1>
           <p className="mt-1 text-sm text-[#a89bd0]">
             {t("admin.maintenance.headerDescription")}
           </p>
@@ -412,7 +412,7 @@ export default function MaintenanceScheduleListPage() {
           </div>
         ) : schedules.length === 0 ? (
           <div className="px-5 py-12 text-center">
-            <BuildRoundedIcon sx={{ fontSize: 30, color: "#857ba3" }} />
+            <BuildRoundedIcon sx={{ fontSize: { xs: 21, md: 30 }, color: "#857ba3" }} />
             <p className="mt-2 text-sm font-semibold text-white">
               {activeFilterCount > 0 ? t("admin.maintenance.noMatchTitle") : t("admin.maintenance.emptyTitle")}
             </p>

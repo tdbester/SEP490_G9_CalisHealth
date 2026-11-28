@@ -182,7 +182,7 @@ export default function NotificationListPage() {
     requestDelete({
       toastOptions: {
         className: "notification-toast",
-        style: { fontFamily: "Arial, sans-serif" },
+        style: { fontFamily: "var(--font-app)" },
       },
       toastMessage: idsToDelete.length === 1
         ? t("admin.notifications.deletedOne")
@@ -220,7 +220,7 @@ export default function NotificationListPage() {
     <section className="notification-module mx-auto w-full max-w-[1440px] text-slate-100">
       <header className="mb-7">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-[22px] font-bold tracking-tight text-white">{t("admin.notifications.title")}</h1>
+          <h1 className="text-[18px] font-bold tracking-tight text-white sm:text-[22px]">{t("admin.notifications.title")}</h1>
           <button
             type="button"
             onClick={() => navigate("/admin/notifications/new")}

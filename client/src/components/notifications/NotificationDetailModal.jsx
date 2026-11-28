@@ -110,12 +110,12 @@ export default function NotificationDetailModal({ notification, onClose }) {
           bgcolor: "#21183c",
           color: "#f8fafc",
           backgroundImage: "none",
-          fontFamily: "Arial, sans-serif",
+          fontFamily: "var(--font-app)",
         },
       }}
       sx={{ "& .MuiBackdrop-root": { backgroundColor: "rgba(8, 5, 18, 0.72)" } }}
     >
-      <DialogTitle id="notification-detail-title" sx={{ pb: 1, fontFamily: "Arial, sans-serif" }}>
+      <DialogTitle id="notification-detail-title" sx={{ pb: 1, fontFamily: "var(--font-app)" }}>
         <Typography component="h2" sx={{ fontSize: 20, fontWeight: 700, fontFamily: "inherit" }}>
           {notification.title}
         </Typography>
@@ -129,7 +129,7 @@ export default function NotificationDetailModal({ notification, onClose }) {
               borderColor: typeStyle.borderColor,
               bgcolor: typeStyle.bgcolor,
               fontWeight: 600,
-              fontFamily: "Arial, sans-serif",
+              fontFamily: "var(--font-app)",
             }}
           />
           <Chip
@@ -140,19 +140,19 @@ export default function NotificationDetailModal({ notification, onClose }) {
               border: "1px solid rgba(196, 181, 253, 0.28)",
               bgcolor: "rgba(139,92,246,0.12)",
               fontWeight: 600,
-              fontFamily: "Arial, sans-serif",
+              fontFamily: "var(--font-app)",
             }}
           />
         </Stack>
       </DialogTitle>
       <DialogContent dividers sx={{ borderColor: "#3b2b5b" }}>
-        <Typography sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", lineHeight: 1.8, fontFamily: "Arial, sans-serif" }}>
+        <Typography sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", lineHeight: 1.8, fontFamily: "var(--font-app)" }}>
           {notification.message}
         </Typography>
       </DialogContent>
-      <DialogActions sx={{ justifyContent: "space-between", px: 3, py: 2, fontFamily: "Arial, sans-serif" }}>
+      <DialogActions sx={{ justifyContent: "space-between", px: 3, py: 2, fontFamily: "var(--font-app)" }}>
         <Stack spacing={0.5}>
-          <Typography variant="caption" sx={{ color: "#a89bd0", fontFamily: "Arial, sans-serif" }}>
+          <Typography variant="caption" sx={{ color: "#a89bd0", fontFamily: "var(--font-app)" }}>
             {formatCreatedAt(notification.createdAt)}
           </Typography>
           <Chip
@@ -165,7 +165,7 @@ export default function NotificationDetailModal({ notification, onClose }) {
               border: `1px solid ${statusColor}55`,
               bgcolor: `${statusColor}14`,
               fontSize: 11,
-              fontFamily: "Arial, sans-serif",
+              fontFamily: "var(--font-app)",
             }}
           />
         </Stack>
@@ -176,7 +176,7 @@ export default function NotificationDetailModal({ notification, onClose }) {
             borderRadius: 2,
             px: 2.5,
             bgcolor: "#6d4aff",
-            fontFamily: "Arial, sans-serif",
+            fontFamily: "var(--font-app)",
             "&:hover": { bgcolor: "#7c5dfa" },
           }}
         >

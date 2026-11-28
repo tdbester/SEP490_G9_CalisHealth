@@ -7,7 +7,10 @@
   gap: 24px;
   width: 100%;
   color: #FFFFFF;
-  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+  font-family: var(--font-app);
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .workout-history h1,
@@ -34,7 +37,7 @@
   margin-top: 6px !important;
   font-size: clamp(30px, 4vw, 46px);
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
   line-height: 1.2;
 }
 
@@ -354,7 +357,7 @@
 
 @media (max-width: 768px) {
   .wh-stats {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
   }
 

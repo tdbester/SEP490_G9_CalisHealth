@@ -1,7 +1,9 @@
-/* ExerciseListPage.css — Matching Figma design specifications */
-
-.exercise-list-page {
+/* ExerciseListPage.css — Matching Figma design specifications */.exercise-list-page {
+  font-family: var(--font-app);
   animation: fadeIn 0.2s ease-in-out;
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 @keyframes fadeIn {
@@ -21,4 +23,10 @@
 
 .exercise-row-card:hover {
   transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+  .exercise-row-card {
+    padding: 14px 16px;
+  }
 }

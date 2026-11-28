@@ -287,7 +287,7 @@ export default function CalisthenicsExerciseTreePage() {
         <style>{`
         .exercise-tree-page,
         .exercise-tree-page * {
-          font-family: Arial, sans-serif;
+          font-family: var(--font-app);
         }
         .exercise-tree-page button {
           outline: none;

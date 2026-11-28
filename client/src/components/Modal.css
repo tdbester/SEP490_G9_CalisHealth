@@ -8,9 +8,8 @@
   padding: 1rem;
   overflow-y: auto;
   background: rgba(4, 3, 11, 0.82);
-}
-
-.mdl-panel {
+}.mdl-panel {
+  font-family: var(--font-app);
   width: 100%;
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
@@ -20,6 +19,9 @@
   background: #150f33;
   color: #fff;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .mdl-header {
@@ -118,4 +120,26 @@
 .mdl-close:focus-visible {
   outline: 2px solid #c4b5fd;
   outline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+  .mdl-backdrop {
+    padding: 0.5rem;
+  }
+
+  .mdl-panel {
+    max-height: calc(100vh - 1rem);
+    padding: 1.25rem 1rem 1.5rem;
+    border-radius: 14px;
+  }
+
+  .mdl-header {
+    margin-bottom: 1rem;
+  }
+
+  .mdl-primary,
+  .mdl-secondary {
+    min-height: 48px;
+    font-size: 0.875rem;
+  }
 }

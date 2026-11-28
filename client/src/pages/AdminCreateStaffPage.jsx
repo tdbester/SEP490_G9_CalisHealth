@@ -280,7 +280,7 @@ export default function AdminCreateStaffPage() {
       <Typography sx={{ fontSize: 13, color: CM.textMuted }}>{t("admin.users.createBreadcrumb")}</Typography>
 
       <Box sx={{ mt: 1, mb: 3 }}>
-        <Typography component="h1" sx={{ fontSize: 28, fontWeight: 700, lineHeight: 1.2 }}>
+        <Typography component="h1" sx={{ fontSize: { xs: 20, md: 28 }, fontWeight: 700, lineHeight: 1.2 }}>
           {t("admin.users.createTitle")}
         </Typography>
         <Typography sx={{ mt: 0.75, fontSize: 13.5, color: CM.textMuted }}>
@@ -296,7 +296,7 @@ export default function AdminCreateStaffPage() {
 
       <Box sx={{ display: "grid", gap: 2 }}>
         <Section title={t("admin.users.accountDetails")}>
-          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
+          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "minmax(0, 1fr) minmax(0, 1fr)" } }}>
             <TextField
               label={t("admin.users.fullName")}
               value={form.fullName}

@@ -4,10 +4,10 @@ import { useTranslation } from "react-i18next";
 export default function MaintenanceModePage() {
   const { t } = useTranslation();
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#0b0917] px-5 py-10 font-[Arial,sans-serif] text-white">
+    <main className="flex min-h-screen items-center justify-center bg-[#0b0917] px-5 py-10 font-[var(--font-app)] text-white">
       <section className="w-full max-w-xl rounded-3xl border border-[#41316c] bg-[#15112a] px-7 py-10 text-center shadow-[0_0_70px_rgba(139,92,246,0.16)] sm:px-12">
         <div className="mx-auto mb-6 grid h-20 w-20 place-items-center rounded-full border border-amber-300/30 bg-violet-500/15 text-amber-300 shadow-[0_0_30px_rgba(139,92,246,0.35)]">
-          <BuildRoundedIcon sx={{ fontSize: 42, filter: "drop-shadow(0 0 8px rgba(251,191,36,0.55))" }} />
+          <BuildRoundedIcon sx={{ fontSize: { xs: 26, md: 42 }, filter: "drop-shadow(0 0 8px rgba(251,191,36,0.55))" }} />
         </div>
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("common.maintenance.title")}</h1>
         <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-[#c2bad5] sm:text-base">

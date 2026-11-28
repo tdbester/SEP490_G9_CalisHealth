@@ -87,7 +87,7 @@ function StatCard({ label, value, tone }) {
     <Box
       sx={{
         flex: 1,
-        minWidth: 180,
+        minWidth: { xs: 0, sm: 180 },
         p: 2.25,
         borderRadius: "16px",
         bgcolor: CM.surface,
@@ -95,7 +95,7 @@ function StatCard({ label, value, tone }) {
       }}
     >
       <Typography sx={{ fontSize: 13, color: CM.textMuted }}>{label}</Typography>
-      <Typography sx={{ mt: 0.5, fontSize: 28, fontWeight: 700, color: tone || CM.text }}>
+      <Typography sx={{ mt: 0.5, fontSize: { xs: 20, md: 28 }, fontWeight: 700, color: tone || CM.text }}>
         {value == null ? "-" : value.toLocaleString("en-US")}
       </Typography>
     </Box>
@@ -230,7 +230,7 @@ export default function AdminUsersPage() {
         }}
       >
         <Box sx={{ maxWidth: 640 }}>
-          <Typography component="h1" sx={{ fontSize: 34, fontWeight: 700, lineHeight: 1.2 }}>
+          <Typography component="h1" sx={{ fontSize: { xs: 24, md: 34 }, fontWeight: 700, lineHeight: 1.2 }}>
             {t("admin.users.pageTitle")}
           </Typography>
           <Typography sx={{ mt: 0.75, fontSize: 14, color: CM.textMuted }}>
@@ -277,7 +277,7 @@ export default function AdminUsersPage() {
             renderValue: (v) =>
               v ? t("admin.users.rolePrefix", { role: t(ROLE_KEY[v]) }) : t("admin.users.roleAll"),
           }}
-          sx={{ ...fieldSx, width: 220 }}
+          sx={{ ...fieldSx, width: { xs: "100%", sm: 220 } }}
         >
           <MenuItem value="">{t("admin.users.roleAll")}</MenuItem>
           {Object.keys(ROLE_KEY).map((r) => (
@@ -299,7 +299,7 @@ export default function AdminUsersPage() {
             renderValue: (v) =>
               v ? t("admin.users.statusPrefix", { status: t(STATUS_KEY[v]) }) : t("admin.users.statusAll"),
           }}
-          sx={{ ...fieldSx, width: 190 }}
+          sx={{ ...fieldSx, width: { xs: "100%", sm: 190 } }}
         >
           <MenuItem value="">{t("admin.users.statusAll")}</MenuItem>
           {Object.keys(STATUS_KEY).map((s) => (
@@ -320,7 +320,7 @@ export default function AdminUsersPage() {
           inputProps={{ "aria-label": t("admin.users.filterByJoinedDate") }}
           sx={{
             ...fieldSx,
-            width: 190,
+            width: { xs: "100%", sm: 190 },
             // The native calendar icon is dark by default; invert it so it shows white on the dark theme.
             "& input::-webkit-calendar-picker-indicator": { filter: "invert(1)", cursor: "pointer" },
           }}
@@ -346,7 +346,7 @@ export default function AdminUsersPage() {
             setPage(0);
           }}
           inputProps={{ "aria-label": t("admin.users.sortUsers") }}
-          sx={{ ...fieldSx, width: 230 }}
+          sx={{ ...fieldSx, width: { xs: "100%", sm: 230 } }}
         >
           {Object.keys(SORT_KEYS).map((s) => (
             <MenuItem key={s} value={s}>
@@ -476,7 +476,7 @@ export default function AdminUsersPage() {
                             {initials(u.fullName)}
                           </Box>
                           <Box sx={{ minWidth: 0, display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-                            <Typography sx={{ fontSize: 14, fontWeight: 600, textAlign: "left", maxWidth: "100%" }} noWrap>
+                            <Typography sx={{ overflowWrap: "anywhere", fontSize: 14, fontWeight: 600, textAlign: "left", maxWidth: "100%" }} >
                               {u.fullName}
                             </Typography>
                             <Box sx={{ mt: 0.25 }}>
@@ -507,7 +507,7 @@ export default function AdminUsersPage() {
                           variant="outlined"
                           onClick={() => navigate(`/admin/users/${u.id}`)}
                           aria-label={t("admin.users.viewDetailsAria", { name: u.fullName })}
-                          sx={{ borderRadius: "8px", minWidth: 84 }}
+                          sx={{ borderRadius: "8px", minWidth: { xs: 0, sm: 84 } }}
                         >
                           {t("admin.users.details")}
                         </Button>
