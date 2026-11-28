@@ -422,7 +422,7 @@ function SystemExerciseDetailContent() {
         title={entry.name}
         description={t("contentManager.detail.exerciseDetailsMeta", { code: entry.code })}
         action={
-          <Stack direction="row" spacing={1}>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
             {entry.source === "SYSTEM" && !editing && (
               <>
                 <Button
@@ -433,7 +433,7 @@ function SystemExerciseDetailContent() {
                     backgroundColor: "#7c5dfa",
                     "&:hover": { backgroundColor: "#6c47ff" },
                     color: "#fff",
-                    minWidth: 180,
+                    minWidth: { xs: 0, sm: 180 },
                     height: 42,
                     borderRadius: "16px",
                     fontSize: "0.875rem",
@@ -547,7 +547,7 @@ function SystemExerciseDetailContent() {
           />
           {saveError && <Alert severity="error" sx={{ mt: 2 }}>{saveError}</Alert>}
           <Divider sx={{ mt: 3 }} />
-          <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ pt: 1.5 }}>
+          <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ pt: 1.5 }} flexWrap="wrap">
             <Button startIcon={<CloseRoundedIcon />} onClick={() => setConfirmCancel(true)}>{t("contentManager.form.cancel")}</Button>
             <Button type="submit" form="edit-exercise-form" variant="contained" startIcon={<SaveRoundedIcon />} disabled={saveMutation.isPending}>
               {saveMutation.isPending ? t("contentManager.detail.saving") : t("contentManager.detail.saveChanges")}
@@ -687,7 +687,7 @@ function SystemExerciseDetailContent() {
                     key={rule.id ?? index}
                     sx={{ border: `1px solid ${CM.border}`, borderRadius: 2, p: 1.5, bgcolor: "rgba(19,10,39,0.45)" }}
                   >
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }} flexWrap="wrap">
                       <Chip
                         size="small"
                         label={t(`contentManager.form.formRules.jointOption.${rule.joint}`, {

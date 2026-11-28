@@ -442,7 +442,7 @@ export default function CreatePersonalExercisePage() {
       <style>{`
         .create-personal-exercise-page,
         .create-personal-exercise-page * {
-          font-family: Arial, sans-serif;
+          font-family: var(--font-app);
         }
       `}</style>
 
@@ -487,7 +487,7 @@ export default function CreatePersonalExercisePage() {
             <label className="text-xs font-semibold text-slate-300">
               {t("member.personal.title")}
             </label>
-            <span className="text-xs text-slate-500 font-mono">
+            <span className="text-xs text-slate-500" style={{ fontFamily: "var(--font-app)" }}>
               {title.length}/50
             </span>
           </div>
@@ -516,7 +516,7 @@ export default function CreatePersonalExercisePage() {
             <label className="text-xs font-semibold text-slate-300">
               {t("member.personal.descriptionField")}
             </label>
-            <span className="text-xs text-slate-500 font-mono">
+            <span className="text-xs text-slate-500" style={{ fontFamily: "var(--font-app)" }}>
               {description.length}/300
             </span>
           </div>
@@ -627,7 +627,7 @@ export default function CreatePersonalExercisePage() {
           <span className="block text-xs font-medium text-slate-300 mb-1.5">
             {t("member.personal.countType")}
           </span>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {[
               { value: "reps_sets", label: t("member.personal.setAndRep") },
               { value: "duration", label: t("member.personal.duration") },

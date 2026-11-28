@@ -7,7 +7,10 @@
   gap: 24px;
   width: 100%;
   color: #FFFFFF;
-  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+  font-family: var(--font-app);
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .performance-analytics h1,
@@ -47,7 +50,7 @@
   margin-top: 4px !important;
   font-size: clamp(30px, 4vw, 44px);
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
   line-height: 1.2;
 }
 
@@ -370,7 +373,7 @@
 
 .pa-duration-stats {
   display: grid;
-  grid-template-columns: repeat(3, 150px);
+  grid-template-columns: repeat(3, minmax(0, 150px));
 }
 
 .pa-duration-stats dt {
@@ -483,7 +486,7 @@
 
 @media (max-width: 1100px) {
   .pa-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .pa-duration-head {
@@ -497,6 +500,11 @@
 }
 
 @media (max-width: 600px) {
+  /* 3 tab khoảng thời gian xếp dọc trên màn hẹp để nhãn không bị cắt. */
+  .pa-tabs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .pa-grid .pa-card,
   .pa-volume,
   .pa-duration,
@@ -517,5 +525,22 @@
 
   .pa-duration-stats dd {
     font-size: 15px;
+  }
+
+  .pa-duration-stats {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .pa-progress-legend {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  /* Donut thu nho cho vua khung khi man hinh nho. */
+  .pa-donut {
+    flex: 0 0 116px;
+    width: 116px;
+    height: 116px;
   }
 }

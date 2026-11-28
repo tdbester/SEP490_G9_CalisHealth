@@ -230,7 +230,7 @@ function GuideEditor({ value, onChange, error = false }) {
   return (
     <Stack spacing={1} sx={{ mt: 1 }}>
       {steps.map((step, index) => (
-        <Stack key={index} direction="row" spacing={1} alignItems="center">
+        <Stack key={index} direction="row" spacing={1} alignItems="center" flexWrap="wrap">
           <Typography
             variant="caption"
             sx={{ width: 18, textAlign: "right", color: "primary.main", flexShrink: 0 }}
@@ -698,7 +698,7 @@ export function ExerciseFields({
       {showPhysiology && (
         <Card sx={{ overflow: "hidden" }}>
           <CardContent sx={{ p: { xs: 2.25, sm: 3 } }}>
-            <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1 }}>
+            <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1 }} flexWrap="wrap">
               <Box sx={{ width: 34, height: 34, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}` }}>
                 <MonitorHeartRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
               </Box>
@@ -831,7 +831,7 @@ function PlanLevelInputs({ label, sets, reps, onSetsChange, onRepsChange }) {
       <Typography variant="caption" fontWeight={600} sx={{ fontSize: 10.5 }}>
         {label}
       </Typography>
-      <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 0.5 }}>
         <TextField
           label={t("contentManager.form.fieldSets")}
           type="number"
@@ -892,11 +892,11 @@ function ListPager({ page, count, total, pageSize, noun, onChange, label }) {
       flexWrap="wrap"
       sx={{ mt: 2, pt: 1.5, borderTop: 1, borderColor: "divider", columnGap: 1.5, rowGap: 1 }}
     >
-      <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+      <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
         {t("contentManager.form.showingRange", { from, to, total, noun })}
       </Typography>
       {count > 1 && (
-        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ flexShrink: 0, flexWrap: "nowrap", ml: "auto" }}>
+        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ flexShrink: 0, flexWrap: "wrap", ml: "auto" }}>
           <Button
             type="button"
             size="small"
@@ -950,7 +950,7 @@ function WorkoutItemCard({ item, index, total, entry, showErrors, onChange, onMo
 
   return (
     <Box component="li" sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, p: 1.5 }}>
-      <Stack direction="row" spacing={1.25} alignItems="center">
+      <Stack direction="row" spacing={1.25} alignItems="center" flexWrap="wrap">
         <Box
           sx={{
             width: 24,
@@ -968,14 +968,14 @@ function WorkoutItemCard({ item, index, total, entry, showErrors, onChange, onMo
           {index + 1}
         </Box>
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography variant="body2" fontWeight={600} noWrap>
+          <Typography sx={{ overflowWrap: "anywhere" }} variant="body2" fontWeight={600} >
             {name}
           </Typography>
-          <Typography variant="caption" color="text.secondary" noWrap display="block">
+          <Typography sx={{ overflowWrap: "anywhere" }} variant="caption" color="text.secondary"  display="block">
             {entry?.muscleGroup || " "}
           </Typography>
         </Box>
-        <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
+        <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }} flexWrap="wrap">
           <IconButton size="small" aria-label={t("contentManager.form.moveUpAria", { name })} disabled={index === 0} onClick={() => onMove(-1)}>
             <KeyboardArrowUpRoundedIcon fontSize="small" />
           </IconButton>
@@ -1014,7 +1014,7 @@ function WorkoutItemCard({ item, index, total, entry, showErrors, onChange, onMo
         </Box>
       </Box>
 
-      <Box sx={{ mt: 1.5, display: "grid", gap: 1, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+      <Box sx={{ mt: 1.5, display: "grid", gap: 1, gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(3, minmax(0, 1fr))" } }}>
         <ItemNumberField
           label={t("contentManager.form.fieldSets")}
           value={item.sets}
@@ -1077,8 +1077,7 @@ function ExercisePickerRow({ entry, onAdd, toneOf, knownLevels }) {
       direction="row"
       spacing={1.25}
       alignItems="center"
-      sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, px: 1.25, py: 1, minHeight: 58 }}
-    >
+      sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, px: 1.25, py: 1, minHeight: 58 }} flexWrap="wrap">
       <Box
         aria-hidden="true"
         sx={{
@@ -1095,7 +1094,7 @@ function ExercisePickerRow({ entry, onAdd, toneOf, knownLevels }) {
       </Box>
       <Box sx={{ minWidth: 0, flex: 1 }}>
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-          <Typography variant="body2" fontWeight={600} noWrap>
+          <Typography sx={{ overflowWrap: "anywhere" }} variant="body2" fontWeight={600} >
             {entry.name}
           </Typography>
           <Chip
@@ -1114,7 +1113,7 @@ function ExercisePickerRow({ entry, onAdd, toneOf, knownLevels }) {
             <DarkPill tone="neutral" sx={{ height: 18, fontSize: 10 }}>—</DarkPill>
           )}
         </Stack>
-        <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ minHeight: 18 }}>
+        <Typography variant="caption" color="text.secondary"  display="block" sx={{ overflowWrap: "anywhere", minHeight: 18 }}>
           {entry.muscleGroup || " "}
         </Typography>
       </Box>
@@ -1346,7 +1345,7 @@ export function WorkoutFields({
                 mt: 2,
                 display: "grid",
                 gap: 1,
-                gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(4, 1fr)", lg: "repeat(7, 1fr)" },
+                gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", sm: "repeat(4, minmax(0, 1fr))", lg: "repeat(7, minmax(0, 1fr))" },
               }}
             >
               {WEEK_DAYS.map((day, index) => {
@@ -1406,15 +1405,15 @@ export function WorkoutFields({
                 <Stack spacing={1.25} sx={{ mt: 1 }}>
                   {dayItems.map((item, index) => (
                     <Box key={`${item.dayOfWeek}-${item.exerciseCode}`} sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, p: 1.25 }}>
-                      <Stack direction="row" spacing={1} alignItems="flex-start">
+                      <Stack direction="row" spacing={1} alignItems="flex-start" flexWrap="wrap">
                         <Typography variant="caption" fontWeight={700} color="primary.main" sx={{ mt: 0.25 }}>
                           {index + 1}
                         </Typography>
                         <Box sx={{ minWidth: 0, flex: 1 }}>
-                          <Typography variant="body2" fontWeight={600} noWrap>
+                          <Typography sx={{ overflowWrap: "anywhere" }} variant="body2" fontWeight={600} >
                             {entryByCode.get(item.exerciseCode)?.name || item.exerciseCode}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary" noWrap display="block">
+                          <Typography sx={{ overflowWrap: "anywhere" }} variant="caption" color="text.secondary"  display="block">
                             {entryByCode.get(item.exerciseCode)?.muscleGroup}
                           </Typography>
                         </Box>
@@ -1434,7 +1433,7 @@ export function WorkoutFields({
                           mt: 1,
                           display: "grid",
                           gap: 1,
-                          gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" },
+                          gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(3, minmax(0, 1fr))" },
                         }}
                       >
                         {planLevelColumns.map((column) => (
@@ -1457,7 +1456,7 @@ export function WorkoutFields({
         </Card>
       )}
 
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: isDailyPlan ? "1fr" : "minmax(0, 1fr) minmax(0, 1fr)" }, gap: 2, alignItems: "stretch" }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0, 1fr)", md: isDailyPlan ? "minmax(0, 1fr)" : "minmax(0, 1fr) minmax(0, 1fr)" }, gap: 2, alignItems: "stretch" }}>
       <Card variant="outlined" sx={{ display: "flex", flexDirection: "column" }}>
         <CardContent sx={{ p: { xs: 2, sm: 2.5 }, flex: 1, display: "flex", flexDirection: "column", "&:last-child": { pb: { xs: 2, sm: 2.5 } } }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
@@ -1489,7 +1488,7 @@ export function WorkoutFields({
               value={level}
               onChange={(event) => onLevelChange(event.target.value)}
               SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.form.filterByLevelAria") } }}
-              sx={{ minWidth: 140 }}
+              sx={{ minWidth: { xs: 0, sm: 140 } }}
             >
               <MenuItem value="all">{t("contentManager.form.allLevels")}</MenuItem>
               {LEVELS.map((item) => (
@@ -2130,7 +2129,7 @@ export default function ExerciseFormPage() {
 
       <Divider sx={{ mt: 3 }} />
       <Stack
-        direction="row"
+        direction={{ xs: "column", sm: "row" }}
         spacing={1.5}
         justifyContent="flex-end"
         sx={{
@@ -2157,7 +2156,7 @@ export default function ExerciseFormPage() {
           form="create-content-form"
           variant="contained"
           disabled={isSaving}
-          sx={{ minWidth: 140 }}
+          sx={{ minWidth: { xs: 0, sm: 140 } }}
         >
           {isSaving ? t("contentManager.form.creating") : t("contentManager.form.createAction", { kind: t(kind === "workout" ? "contentManager.form.toggleWorkout" : "contentManager.form.toggleExercise") })}
         </Button>

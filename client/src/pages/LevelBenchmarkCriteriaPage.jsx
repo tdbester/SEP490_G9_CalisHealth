@@ -186,7 +186,7 @@ function PointRules({ rules }) {
           {bands.map((text, bandIndex) => <TableCell key={POINT_COLUMNS[bandIndex].label}>
             <Stack direction="row" spacing={0.9} alignItems="center">
               <Box sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: POINT_COLUMNS[bandIndex].color, flexShrink: 0 }} />
-              <Typography variant="body2" sx={{ color: "#fff", whiteSpace: "nowrap" }}>{text}</Typography>
+              <Typography variant="body2" sx={{ color: "#fff", overflowWrap: "anywhere" }}>{text}</Typography>
             </Stack>
           </TableCell>)}
         </TableRow>;
@@ -219,7 +219,7 @@ function SummaryMetric({ label, count, caption, tone }) {
         <Box sx={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, bgcolor: color }} />
         <Typography variant="caption" sx={{ color: CM.textDim, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 10.5 }}>{label}</Typography>
       </Stack>
-      <Typography sx={{ color: "#fff", fontSize: 36, fontWeight: 800, lineHeight: 1.15, mt: 0.5 }}>{count}</Typography>
+      <Typography sx={{ color: "#fff", fontSize: { xs: 24, md: 36 }, fontWeight: 800, lineHeight: 1.15, mt: 0.5 }}>{count}</Typography>
       <Typography variant="caption" sx={{ color: CM.textMuted }}>{caption}</Typography>
     </Box>
   );
@@ -264,7 +264,7 @@ export default function LevelBenchmarkCriteriaPage() {
       description={t("contentManager.levelBenchmark.description")}
       action={<Button component={RouterLink} to={`${CONTENT_PATHS.levelCriteria}/edit`} variant="contained" startIcon={<RuleRoundedIcon />}>{t("contentManager.levelBenchmark.updateCriteria")}</Button>}
     />
-    <Box sx={{ mt: 2.5, display: "grid", gap: 1.25, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" } }}>
+    <Box sx={{ mt: 2.5, display: "grid", gap: 1.25, gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(3, minmax(0, 1fr))" } }}>
       <Box sx={enter(0)}><SummaryMetric label={t("contentManager.levelBenchmark.totalLevels")} count={levels.length} caption={t("contentManager.levelBenchmark.configuredLevels")} /></Box>
       <Box sx={enter(80)}><SummaryMetric label={t("contentManager.levelBenchmark.active")} count={levels.filter((x) => x.status === "ACTIVE").length} caption={t("contentManager.levelBenchmark.liveLevels")} tone="success" /></Box>
       <Box sx={enter(160)}><SummaryMetric label={t("contentManager.levelBenchmark.inactive")} count={levels.filter((x) => x.status === "INACTIVE").length} caption={t("contentManager.levelBenchmark.hiddenLevels")} tone="warning" /></Box>
@@ -285,15 +285,15 @@ export default function LevelBenchmarkCriteriaPage() {
           </Stack>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "center" }}>
             <TextField size="small" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} placeholder={t("contentManager.levelBenchmark.searchPlaceholder")} sx={{ width: { xs: "100%", sm: 360, lg: 460 } }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" /></InputAdornment> }} />
-            <TextField select size="small" value={status} onChange={(e) => { setStatus(e.target.value); setPage(0); }} sx={{ minWidth: 145 }}>
+            <TextField select size="small" value={status} onChange={(e) => { setStatus(e.target.value); setPage(0); }} sx={{ minWidth: { xs: 0, sm: 145 } }}>
               <MenuItem value="all">{t("contentManager.levelBenchmark.allStatus")}</MenuItem><MenuItem value="active">{t("contentManager.levelBenchmark.active")}</MenuItem><MenuItem value="inactive">{t("contentManager.levelBenchmark.inactive")}</MenuItem>
             </TextField>
             <Tooltip title={t("contentManager.levelBenchmark.refresh")}><span><IconButton onClick={query.refetch} disabled={query.isFetching} sx={{ border: `1px solid ${CM.border}`, borderRadius: 1.25, transition: "all .2s ease", "&:hover": { borderColor: CM.violetBright, bgcolor: "rgba(139,92,246,0.1)" } }}>{query.isFetching ? <CircularProgress size={17} /> : <RefreshRoundedIcon />}</IconButton></span></Tooltip>
           </Stack>
         </Stack>
       </Stack>
-      <TableContainer><Table size="small" sx={{ minWidth: 900 }}><TableHead><TableRow><TableCell>{t("contentManager.levelBenchmark.colLevel")}</TableCell><TableCell>{t("contentManager.levelBenchmark.colScoreRange")}</TableCell><TableCell>{t("contentManager.levelBenchmark.colFormula")}</TableCell><TableCell>{t("contentManager.levelBenchmark.colStatus")}</TableCell><TableCell>{t("contentManager.levelBenchmark.colUpdated")}</TableCell><TableCell align="center">{t("contentManager.levelBenchmark.colAction")}</TableCell></TableRow></TableHead><TableBody>{visible.map((row, index) => <TableRow hover key={row.id} sx={{ transition: "all .2s ease", "&:hover": { bgcolor: "rgba(139,92,246,0.06)" }, ...enter(260 + index * 40) }}><TableCell><Stack spacing={0.5} alignItems="center"><DarkPill tone={levelTone(row.name || row.level)}>{row.name || row.level}</DarkPill><Typography variant="caption" sx={{ color: CM.textDim, fontWeight: 700 }}>{t("contentManager.levelBenchmark.tier", { count: currentPage * PAGE_SIZE + index + 1 })}</Typography></Stack></TableCell><TableCell><Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 20, lineHeight: 1.2 }}>{scoreRange(row, t)}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>{t("contentManager.levelBenchmark.totalScore")}</Typography></TableCell><TableCell><Typography variant="body2" sx={{ color: "#fff" }}>{t("contentManager.levelBenchmark.formulaSum")}</Typography><Typography variant="caption" sx={{ color: CM.textMuted }}>{rules.length ? rules.map((rule) => rule.name).join(" + ") : t("contentManager.levelBenchmark.noExerciseConfigured")}</Typography></TableCell><TableCell><DarkPill tone={statusTone(row.status)}>{statusText(row.status, t)}</DarkPill></TableCell><TableCell><Typography variant="caption" display="block" sx={{ color: CM.textMuted }}>{formatDate(row.updatedAt)}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>{t("contentManager.levelBenchmark.by", { name: row.updatedBy || t("contentManager.levelBenchmark.system") })}</Typography></TableCell><TableCell align="center"><Stack direction="row" justifyContent="center" alignItems="center" spacing={0.5}><Button component={RouterLink} to={`${CONTENT_PATHS.levelCriteria}/${row.id}`} size="small" variant="outlined">{t("contentManager.levelBenchmark.view")}</Button><IconButton size="small" onClick={(e) => setMenu({ anchor: e.currentTarget, entry: row })}><MoreVertRoundedIcon fontSize="small" /></IconButton></Stack></TableCell></TableRow>)}{!visible.length && <TableRow><TableCell colSpan={6} align="center" sx={{ py: 6 }}><Stack alignItems="center" spacing={1}><RuleRoundedIcon sx={{ fontSize: 44, color: CM.textDim, opacity: 0.4 }} /><Typography sx={{ color: CM.textMuted }}>{t("contentManager.levelBenchmark.noMatch")}</Typography></Stack></TableCell></TableRow>}</TableBody></Table></TableContainer>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1.5, borderTop: `1px solid ${CM.border}` }}><Typography variant="caption" sx={{ color: CM.textMuted }}>{t("contentManager.levelBenchmark.showingRows", { from: filtered.length ? currentPage * PAGE_SIZE + 1 : 0, to: Math.min((currentPage + 1) * PAGE_SIZE, filtered.length), count: filtered.length })}</Typography><Stack direction="row" spacing={0.5}><IconButton disabled={currentPage === 0} onClick={() => setPage((x) => x - 1)}><ChevronLeftRoundedIcon /></IconButton><IconButton disabled={!pages || currentPage >= pages - 1} onClick={() => setPage((x) => x + 1)}><ChevronRightRoundedIcon /></IconButton></Stack></Stack>
+      <TableContainer><Table size="small" sx={{ minWidth: 900 }}><TableHead><TableRow><TableCell>{t("contentManager.levelBenchmark.colLevel")}</TableCell><TableCell>{t("contentManager.levelBenchmark.colScoreRange")}</TableCell><TableCell>{t("contentManager.levelBenchmark.colFormula")}</TableCell><TableCell>{t("contentManager.levelBenchmark.colStatus")}</TableCell><TableCell>{t("contentManager.levelBenchmark.colUpdated")}</TableCell><TableCell align="center">{t("contentManager.levelBenchmark.colAction")}</TableCell></TableRow></TableHead><TableBody>{visible.map((row, index) => <TableRow hover key={row.id} sx={{ transition: "all .2s ease", "&:hover": { bgcolor: "rgba(139,92,246,0.06)" }, ...enter(260 + index * 40) }}><TableCell><Stack spacing={0.5} alignItems="center"><DarkPill tone={levelTone(row.name || row.level)}>{row.name || row.level}</DarkPill><Typography variant="caption" sx={{ color: CM.textDim, fontWeight: 700 }}>{t("contentManager.levelBenchmark.tier", { count: currentPage * PAGE_SIZE + index + 1 })}</Typography></Stack></TableCell><TableCell><Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 20, lineHeight: 1.2 }}>{scoreRange(row, t)}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>{t("contentManager.levelBenchmark.totalScore")}</Typography></TableCell><TableCell><Typography variant="body2" sx={{ color: "#fff" }}>{t("contentManager.levelBenchmark.formulaSum")}</Typography><Typography variant="caption" sx={{ color: CM.textMuted }}>{rules.length ? rules.map((rule) => rule.name).join(" + ") : t("contentManager.levelBenchmark.noExerciseConfigured")}</Typography></TableCell><TableCell><DarkPill tone={statusTone(row.status)}>{statusText(row.status, t)}</DarkPill></TableCell><TableCell><Typography variant="caption" display="block" sx={{ color: CM.textMuted }}>{formatDate(row.updatedAt)}</Typography><Typography variant="caption" sx={{ color: CM.textDim }}>{t("contentManager.levelBenchmark.by", { name: row.updatedBy || t("contentManager.levelBenchmark.system") })}</Typography></TableCell><TableCell align="center"><Stack direction="row" justifyContent="center" alignItems="center" spacing={0.5} flexWrap="wrap"><Button component={RouterLink} to={`${CONTENT_PATHS.levelCriteria}/${row.id}`} size="small" variant="outlined">{t("contentManager.levelBenchmark.view")}</Button><IconButton size="small" onClick={(e) => setMenu({ anchor: e.currentTarget, entry: row })}><MoreVertRoundedIcon fontSize="small" /></IconButton></Stack></TableCell></TableRow>)}{!visible.length && <TableRow><TableCell colSpan={6} align="center" sx={{ py: 6 }}><Stack alignItems="center" spacing={1}><RuleRoundedIcon sx={{ fontSize: { xs: 24, md: 44 }, color: CM.textDim, opacity: 0.4 }} /><Typography sx={{ color: CM.textMuted }}>{t("contentManager.levelBenchmark.noMatch")}</Typography></Stack></TableCell></TableRow>}</TableBody></Table></TableContainer>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1.5, borderTop: `1px solid ${CM.border}` }} flexWrap="wrap"><Typography variant="caption" sx={{ color: CM.textMuted }}>{t("contentManager.levelBenchmark.showingRows", { from: filtered.length ? currentPage * PAGE_SIZE + 1 : 0, to: Math.min((currentPage + 1) * PAGE_SIZE, filtered.length), count: filtered.length })}</Typography><Stack direction="row" spacing={0.5} flexWrap="wrap"><IconButton disabled={currentPage === 0} onClick={() => setPage((x) => x - 1)}><ChevronLeftRoundedIcon /></IconButton><IconButton disabled={!pages || currentPage >= pages - 1} onClick={() => setPage((x) => x + 1)}><ChevronRightRoundedIcon /></IconButton></Stack></Stack>
     </Card>
     <Card sx={{ mt: 2.25, overflow: "hidden", ...enter(300) }}>
       <Box sx={{ p: 2, borderBottom: `1px solid ${CM.border}`, display: "flex", alignItems: "center", gap: 1.5 }}>
@@ -339,13 +339,13 @@ export function LevelBenchmarkDetailPage() {
   const memberCount = Number((memberLevels.data || []).find((x) => String(x.level).toLowerCase() === String(name).toLowerCase())?.memberCount ?? 0);
   const allMembers = (memberLevels.data || []).reduce((sum, x) => sum + Number(x.memberCount || 0), 0);
   const memberShare = allMembers ? Math.round((memberCount / allMembers) * 100) : 0;
-  const actions = <Stack direction="row" spacing={1}>
+  const actions = <Stack direction="row" spacing={1} flexWrap="wrap">
     <Button component={RouterLink} to={CONTENT_PATHS.levelCriteria} variant="outlined" startIcon={<ArrowBackRoundedIcon />}>{t("contentManager.levelBenchmark.back")}</Button>
     <Button component={RouterLink} to={`${CONTENT_PATHS.levelCriteria}/edit`} variant="contained">{t("contentManager.levelBenchmark.update")}</Button>
   </Stack>;
   return <Box sx={{ maxWidth: 1100, mx: "auto", px: 3, py: 2.5 }}>
     <Heading breadcrumb={[...BREADCRUMB.slice(0, -1), { labelKey: "nav.levelBenchmarkCriteria", to: CONTENT_PATHS.levelCriteria }, { label: name }]} title={name} description={t("contentManager.levelBenchmark.detailDescription")} action={actions} />
-    <Box sx={{ mt: 2.5, display: "grid", gap: 1.25, gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" } }}>
+    <Box sx={{ mt: 2.5, display: "grid", gap: 1.25, gridTemplateColumns: { xs: "minmax(0, 1fr) minmax(0, 1fr)", md: "repeat(4, minmax(0, 1fr))" } }}>
       <Box sx={enter(0)}><Detail icon={LayersRoundedIcon} label={t("contentManager.levelBenchmark.labelTier")} value={t("contentManager.levelBenchmark.tierOf", { tier, total: sorted.length })} /></Box>
       <Box sx={enter(70)}><Detail icon={StarRoundedIcon} label={t("contentManager.levelBenchmark.labelScoreRange")} value={scoreRange(row, t)} /></Box>
       <Box sx={enter(140)}><Detail icon={FitnessCenterRoundedIcon} label={t("contentManager.levelBenchmark.labelMembers")} value={memberLevels.isLoading ? "…" : memberCount.toLocaleString()} hint={memberLevels.error ? t("contentManager.levelBenchmark.unavailableShort") : t("contentManager.levelBenchmark.memberShare", { count: memberShare })} /></Box>
@@ -356,7 +356,7 @@ export function LevelBenchmarkDetailPage() {
         <Typography sx={{ color: "#fff", fontWeight: 700 }}>{t("contentManager.levelBenchmark.howToReach", { name })}</Typography>
         {rules.length ? <>
           <Stack direction="row" spacing={1.25} alignItems="baseline" flexWrap="wrap" useFlexGap sx={{ mt: 1.25 }}>
-            <Typography sx={{ color: CM.violetBright, fontSize: 32, fontWeight: 800, lineHeight: 1 }}>{row.scoreMin} – {row.scoreMax} {t("contentManager.levelBenchmark.unitPoints")}</Typography>
+            <Typography sx={{ color: CM.violetBright, fontSize: { xs: 22, md: 32 }, fontWeight: 800, lineHeight: 1 }}>{row.scoreMin} – {row.scoreMax} {t("contentManager.levelBenchmark.unitPoints")}</Typography>
             <Typography variant="body2" sx={{ color: CM.textMuted }}>{t("contentManager.levelBenchmark.totalScoreOutOf", { max: maxTotal })}</Typography>
           </Stack>
           <Typography variant="body2" sx={{ color: CM.textMuted, mt: 0.75 }}>
@@ -366,7 +366,7 @@ export function LevelBenchmarkDetailPage() {
             {totals.map((total) => {
               const inLevel = total >= row.scoreMin && total <= row.scoreMax;
               return <Box key={total} sx={{
-                minWidth: 36, px: 1, py: 0.6, textAlign: "center", borderRadius: "8px", fontSize: 13, fontWeight: 700,
+                minWidth: { xs: 0, sm: 36 }, px: 1, py: 0.6, textAlign: "center", borderRadius: "8px", fontSize: 13, fontWeight: 700,
                 color: inLevel ? "#fff" : CM.textDim,
                 bgcolor: inLevel ? CM.violet : "rgba(139,92,246,0.06)",
                 border: `1px solid ${inLevel ? CM.violetBright : CM.border}`,
@@ -393,13 +393,13 @@ function LevelEditor({ levels, floor, ceiling, canRemove, removeHint, onChange, 
       onDragOver={(e) => { if (dragIndex === null) return; e.preventDefault(); setOverIndex(index); }}
       onDrop={(e) => { e.preventDefault(); if (dragIndex !== null) onMove(dragIndex, index); endDrag(); }}
       sx={{
-        display: "grid", gap: 1, alignItems: "start", gridTemplateColumns: { xs: "1fr", md: "auto 1.4fr 1fr 1fr 1fr auto" },
+        display: "grid", gap: 1, alignItems: "start", gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "auto 1.4fr minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto" },
         p: 1.5, border: `1px solid ${overIndex === index && dragIndex !== null && dragIndex !== index ? CM.violetBright : CM.border}`,
         borderRadius: "12px", bgcolor: CM.surfaceSoft, opacity: dragIndex === index ? 0.5 : 1,
         transition: "all .2s ease", "&:hover": { borderColor: CM.borderStrong },
       }}
     >
-      <Stack direction="row" alignItems="center" spacing={0.25} sx={{ pt: 0.75 }}>
+      <Stack direction="row" alignItems="center" spacing={0.25} sx={{ pt: 0.75 }} flexWrap="wrap">
         <Tooltip title={t("contentManager.levelBenchmark.dragToReorder")}><Box
           component="span"
           draggable
@@ -443,20 +443,20 @@ function ExerciseEditor({ rules, exerciseOptions, canAdd, canRemove, minExercise
       const picked = exerciseOptions.find((x) => x.code === rule.code);
       const sameCategory = exerciseOptions.filter((x) => !rule.category || x.category === rule.category || x.code === rule.code);
       return <Box key={rule.rowKey} sx={{ p: 1.75, border: `1px solid ${CM.border}`, borderRadius: "14px", bgcolor: CM.surfaceSoft, transition: "all .2s ease", "&:hover": { borderColor: CM.borderStrong } }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }} flexWrap="wrap">
           <Typography variant="caption" sx={{ color: CM.violetBright, fontWeight: 700, letterSpacing: "0.06em" }}>{t("contentManager.levelBenchmark.exerciseIndex", { count: index + 1 })}{picked ? ` · ${picked.category === "HOLD" ? "HOLD" : "REPS"}` : ""}</Typography>
           <Tooltip title={canRemove ? t("contentManager.levelBenchmark.removeExerciseTitle") : t("contentManager.levelBenchmark.removeExerciseHint", { count: minExercises })}><span><IconButton size="small" color="error" aria-label={t("contentManager.levelBenchmark.removeExerciseAria", { count: index + 1 })} disabled={!canRemove} onClick={() => onRemove(rule.rowKey)}><DeleteOutlineRoundedIcon fontSize="small" /></IconButton></span></Tooltip>
         </Stack>
         <TextField size="small" select fullWidth label={t("contentManager.levelBenchmark.exerciseLabel")} value={rule.code || ""} onChange={(e) => onChooseExercise(rule.rowKey, e.target.value)} sx={{ mb: 1.5 }}>{sameCategory.map((x) => <MenuItem key={x.code} value={x.code}>{x.name}</MenuItem>)}</TextField>
-        <Box sx={{ display: "grid", gap: 1.25, gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" } }}>
+        <Box sx={{ display: "grid", gap: 1.25, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(3, minmax(0, 1fr))" } }}>
           {POINT_COLUMNS.map((column, bandIndex) => {
             const from = bandIndex === 0 ? 1 : bandIndex === 1 ? twoPointsFrom : threePointsFrom;
             return <Box key={column.label} sx={{ p: 1.25, border: `1px solid ${CM.border}`, borderLeft: `3px solid ${column.color}`, borderRadius: "10px", bgcolor: "rgba(12,8,27,0.3)" }}>
               <Typography variant="caption" sx={{ color: column.color, fontWeight: 800 }}>{t(column.label).toUpperCase()}</Typography>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.75 }}>
-                <Typography variant="body2" sx={{ color: "#fff", whiteSpace: "nowrap" }}>{bandIndex < 2 ? <>{t("contentManager.levelBenchmark.fromPrefix")} <b>{from === "" ? "…" : from}</b> {t("contentManager.levelBenchmark.toSuffix")}</> : <>{t("contentManager.levelBenchmark.fromPrefix")} <b>{from === "" ? "…" : from}</b> {unit} {t("contentManager.levelBenchmark.andAbove")}</>}</Typography>
-                {bandIndex === 0 && <TextField size="small" type="number" aria-label={t("contentManager.levelBenchmark.onePointAria", { unit })} value={rule.beginnerMax ?? ""} onChange={(e) => onChange(rule.rowKey, { beginnerMax: e.target.value })} inputProps={{ min: 1 }} sx={{ flex: 1, minWidth: 80 }} />}
-                {bandIndex === 1 && <TextField size="small" type="number" aria-label={t("contentManager.levelBenchmark.twoPointsAria", { unit })} value={rule.intermediateMax ?? ""} onChange={(e) => onChange(rule.rowKey, { intermediateMax: e.target.value })} inputProps={{ min: twoPointsFrom || 2 }} sx={{ flex: 1, minWidth: 80 }} />}
+                <Typography variant="body2" sx={{ color: "#fff", overflowWrap: "anywhere" }}>{bandIndex < 2 ? <>{t("contentManager.levelBenchmark.fromPrefix")} <b>{from === "" ? "…" : from}</b> {t("contentManager.levelBenchmark.toSuffix")}</> : <>{t("contentManager.levelBenchmark.fromPrefix")} <b>{from === "" ? "…" : from}</b> {unit} {t("contentManager.levelBenchmark.andAbove")}</>}</Typography>
+                {bandIndex === 0 && <TextField size="small" type="number" aria-label={t("contentManager.levelBenchmark.onePointAria", { unit })} value={rule.beginnerMax ?? ""} onChange={(e) => onChange(rule.rowKey, { beginnerMax: e.target.value })} inputProps={{ min: 1 }} sx={{ flex: 1, minWidth: { xs: 0, sm: 80 } }} />}
+                {bandIndex === 1 && <TextField size="small" type="number" aria-label={t("contentManager.levelBenchmark.twoPointsAria", { unit })} value={rule.intermediateMax ?? ""} onChange={(e) => onChange(rule.rowKey, { intermediateMax: e.target.value })} inputProps={{ min: twoPointsFrom || 2 }} sx={{ flex: 1, minWidth: { xs: 0, sm: 80 } }} />}
                 {bandIndex === 0 || bandIndex === 1 ? <Typography variant="body2" sx={{ color: CM.textMuted }}>{unit}</Typography> : <Typography variant="body2" sx={{ color: CM.textMuted }}>{t("contentManager.levelBenchmark.andAbove")}</Typography>}
               </Stack>
             </Box>;
@@ -585,7 +585,7 @@ export function LevelBenchmarkFormPage() {
         {scoreErrors.map((error) => <Alert key={error} severity="error" sx={{ mt: 1.5 }}>{error}</Alert>)}
         <LevelEditor levels={currentLevels} floor={floor} ceiling={ceiling} canRemove={canRemoveLevel} removeHint={t("contentManager.levelBenchmark.removeLevelHint")} onChange={setLevel} onMove={reorderLevel} onRemove={askRemoveLevel} />
         <ExerciseEditor rules={currentRules} exerciseOptions={exerciseOptions} canAdd={canAdd} canRemove={canRemove} minExercises={minExercises} floor={floor} ceiling={ceiling} errors={thresholdErrors} onAdd={addRule} onRemove={askRemoveRule} onChooseExercise={chooseExercise} onChange={setRule} />
-        <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 3 }}>
+        <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 3 }} flexWrap="wrap">
           <Button component={RouterLink} to={CONTENT_PATHS.levelCriteria} variant="outlined">{t("contentManager.levelBenchmark.cancelAction")}</Button>
           <Button type="submit" variant="contained" disabled={save.isPending || validationErrors.length > 0}>{save.isPending ? t("contentManager.levelBenchmark.saving") : t("contentManager.levelBenchmark.saveAll")}</Button>
         </Stack>

@@ -126,7 +126,7 @@ function currentRole() {
   }
 }
 
-export default function Sidebar() {
+export default function Sidebar({ open = false, onNavigate }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { t } = useTranslation();
@@ -144,7 +144,7 @@ export default function Sidebar() {
         && (role === "CONTENT_MANAGER" || GUEST_NAV_KEYS.has(item.labelKey)));
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${open ? " is-open" : ""}`}>
       <nav className="sidebar-nav">
         {items.map((item) => {
           // "/library" là tiền tố của "/library/favorites", nên phải so khớp chính xác
@@ -165,7 +165,10 @@ export default function Sidebar() {
             <div
               key={item.path}
               className={`sidebar-nav-item ${isActive ? "active" : ""}`}
-              onClick={() => navigate(item.path)}
+              onClick={() => {
+                navigate(item.path);
+                onNavigate?.();
+              }}
             >
               <Icon isActive={isActive} />
               <span>{t(item.labelKey)}</span>

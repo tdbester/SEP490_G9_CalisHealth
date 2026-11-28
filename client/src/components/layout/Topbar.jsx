@@ -6,6 +6,8 @@ import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import LanguageRoundedIcon from "@mui/icons-material/LanguageRounded";
+import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import api from "../../api/client";
 import NotificationBell from "../notifications/NotificationBell";
 import { avatarUrl, profileApi } from "../../api/profile";
@@ -18,7 +20,7 @@ function Logo() {
   return <BrandLogo width={12} height={18} />;
 }
 
-export default function Topbar() {
+export default function Topbar({ onOpenMenu = null, menuOpen = false }) {
   const navigate = useNavigate();
   const topbarRef = useRef(null);
   const { t } = useTranslation();
@@ -161,6 +163,17 @@ export default function Topbar() {
 
   return (
     <header className="topbar" ref={topbarRef}>
+      {onOpenMenu ? (
+        <button
+          type="button"
+          className="topbar-menu-btn"
+          aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
+          aria-expanded={menuOpen}
+          onClick={onOpenMenu}
+        >
+          {menuOpen ? <CloseRoundedIcon /> : <MenuRoundedIcon />}
+        </button>
+      ) : null}
       <button
         type="button"
         className="topbar-logo"

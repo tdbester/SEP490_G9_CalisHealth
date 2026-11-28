@@ -116,7 +116,7 @@ export default function MaintenanceScheduleDetailPage() {
 
   if (error) {
     return (
-      <section className="mx-auto w-full max-w-[980px] px-4 py-8 font-[Arial,sans-serif] sm:px-7">
+      <section className="mx-auto w-full max-w-[980px] px-4 py-8 font-[var(--font-app)] sm:px-7">
         <div className="rounded-2xl border border-rose-400/20 bg-[#15112f] p-6">
           <p role="alert" className="text-sm text-rose-300">{error}</p>
           <button
@@ -134,7 +134,7 @@ export default function MaintenanceScheduleDetailPage() {
 
   if (!schedule) {
     return (
-      <div className="mx-auto flex min-h-64 max-w-[980px] items-center justify-center px-6 font-[Arial,sans-serif] text-sm text-[#a89bd0]" role="status">
+      <div className="mx-auto flex min-h-64 max-w-[980px] items-center justify-center px-6 font-[var(--font-app)] text-sm text-[#a89bd0]" role="status">
         {t("admin.maintenance.detail.loading")}
       </div>
     );
@@ -150,7 +150,7 @@ export default function MaintenanceScheduleDetailPage() {
   const canAct = schedule.status !== "CANCELLED" && schedule.status !== "COMPLETED";
 
   return (
-    <section className="mx-auto w-full max-w-[980px] px-4 py-5 font-[Arial,sans-serif] text-slate-100 sm:px-7 sm:py-7">
+    <section className="mx-auto w-full max-w-[980px] px-4 py-5 font-[var(--font-app)] text-slate-100 sm:px-7 sm:py-7">
       <button
         type="button"
         onClick={() => navigate("/admin/maintenance")}

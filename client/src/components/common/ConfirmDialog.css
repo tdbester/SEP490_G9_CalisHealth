@@ -1,12 +1,15 @@
 /* ConfirmDialog.css — popup xác nhận (khung lấy từ ModalShell.css) */
-
 .confirm-dialog {
+  font-family: var(--font-app);
   width: min(420px, 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   padding: 28px 28px 24px;
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .confirm-dialog-icon {
@@ -92,4 +95,23 @@
 
 .confirm-dialog.danger .confirm-dialog-confirm:hover:not(:disabled) {
   background: #EF4444;
+}
+
+@media (max-width: 480px) {
+  .confirm-dialog {
+    padding: 22px 18px 20px;
+  }
+
+  .confirm-dialog h2 {
+    font-size: 17px;
+  }
+
+  .confirm-dialog-actions {
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+
+  .confirm-dialog-actions button {
+    width: 100%;
+  }
 }

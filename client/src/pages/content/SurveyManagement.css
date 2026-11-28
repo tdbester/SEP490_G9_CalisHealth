@@ -16,8 +16,11 @@
   padding: 24px;
   box-sizing: border-box;
   color: #FFFFFF;
-  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+  font-family: var(--font-app);
   animation: smRise .45s ease-out both;
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .survey-mgmt h1,
@@ -44,7 +47,7 @@
   margin-top: 2px !important;
   font-size: clamp(24px, 3vw, 28px);
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
 }
 
 .sm-subtitle {
@@ -353,7 +356,7 @@
   z-index: 20;
   display: flex;
   flex-direction: column;
-  min-width: 150px;
+  min-width: 120px;
   padding: 6px;
   border-radius: 10px;
   border: 1px solid #3B2A6B;

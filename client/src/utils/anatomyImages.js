@@ -57,7 +57,7 @@ function createAnatomyImage(highlights, caption) {
       <g fill="url(#highlight)" stroke="#ffd0e3" stroke-width="1" opacity=".96">
         ${highlights}
       </g>
-      <text x="180" y="263" text-anchor="middle" fill="#c4b5fd" font-family="Arial, sans-serif" font-size="12">${caption}</text>
+      <text x="180" y="263" text-anchor="middle" fill="#c4b5fd" font-family="'Inter Variable', Inter, Arial, sans-serif" font-size="12">${caption}</text>
     </svg>
   `;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;

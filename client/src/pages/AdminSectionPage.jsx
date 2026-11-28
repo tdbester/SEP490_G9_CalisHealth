@@ -7,7 +7,7 @@ export default function AdminSectionPage({ title }) {
   const { t } = useTranslation();
   return (
     <Box sx={{ p: { xs: 2, md: 3.5 } }}>
-      <Typography component="h1" sx={{ fontSize: 34, fontWeight: 700, color: "#fff" }}>
+      <Typography component="h1" sx={{ fontSize: { xs: 24, md: 34 }, fontWeight: 700, color: "#fff" }}>
         {title}
       </Typography>
       <Typography sx={{ mt: 0.5, fontSize: 14, color: AD.muted }}>

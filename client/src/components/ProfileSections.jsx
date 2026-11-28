@@ -61,7 +61,7 @@ export function SectionCard({ icon, title, description, aside, children, delay =
           <Box sx={{ minWidth: 0 }}>
             <Typography
               variant="h6"
-              sx={{ color: "#fff", fontWeight: 700, letterSpacing: "-0.01em", lineHeight: 1.3 }}
+              sx={{ color: "#fff", fontWeight: 700, letterSpacing: "-0.005em", lineHeight: 1.3 }}
             >
               {title}
             </Typography>
@@ -177,5 +177,5 @@ export function StatePill({ tone = "primary", icon, label }) {
 export const FIELD_GRID = {
   display: "grid",
   gap: 2,
-  gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" },
+  gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))" },
 };

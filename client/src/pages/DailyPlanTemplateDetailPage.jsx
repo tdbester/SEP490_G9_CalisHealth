@@ -75,7 +75,7 @@ export default function DailyPlanTemplateDetailPage() {
           || t("contentManager.templates.updatedMeta", { code: plan.code, date: formatDateTime(plan.updatedAt) })
           + (plan.createdByName ? t("contentManager.templates.updatedBy", { name: plan.createdByName }) : "")}
         action={(
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
             <Button component={RouterLink} to={`${CONTENT_PATHS.templates}/${encodeURIComponent(plan.code)}/edit`} variant="contained" startIcon={<EditRoundedIcon />}>
               {t("contentManager.templates.editPlan")}
             </Button>
@@ -100,14 +100,14 @@ export default function DailyPlanTemplateDetailPage() {
         </Stack>
         <Stack divider={<Box sx={{ borderTop: `1px solid ${CM.border}` }} />}>
           {days.map((day) => (
-            <Box key={day.dayNumber} sx={{ display: "grid", gridTemplateColumns: { xs: "72px 1fr", sm: "88px minmax(0, 1fr) minmax(150px, 1fr) 120px 110px 90px" }, alignItems: "center", columnGap: 2, rowGap: 1, px: 2.5, py: 1.5 }}>
+            <Box key={day.dayNumber} sx={{ display: "grid", gridTemplateColumns: { xs: "72px minmax(0, 1fr)", sm: "88px minmax(0, 1fr) minmax(150px, minmax(0, 1fr)) 120px 110px 90px" }, alignItems: "center", columnGap: 2, rowGap: 1, px: 2.5, py: 1.5 }}>
               <Typography sx={{ color: CM.violetBright, fontWeight: 800, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>{t("contentManager.templates.dayLabel", { count: day.dayNumber })}</Typography>
               <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
                 <Box className="workout-row-mark" aria-hidden="true" sx={{ width: 32, height: 32, borderRadius: "9px", display: "grid", placeItems: "center", flexShrink: 0, color: "#c4b5fd", bgcolor: "rgba(139,92,246,0.2)", border: "1px solid rgba(167,139,250,0.3)" }}>
                   <FitnessCenterRoundedIcon sx={{ fontSize: 16 }} />
                 </Box>
                 <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="body2" noWrap sx={{ color: "#fff", fontWeight: 600 }}>{day.workoutName}</Typography>
+                  <Typography variant="body2"  sx={{ overflowWrap: "anywhere", color: "#fff", fontWeight: 600 }}>{day.workoutName}</Typography>
                   <Typography variant="caption" sx={{ color: CM.textDim }}>{day.workoutCode}</Typography>
                 </Box>
               </Stack>

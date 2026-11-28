@@ -237,7 +237,7 @@ function FileList({ files }) {
       {files.map((m) => (
         <Box key={m.id} sx={{ px: 1.75, py: 1, display: "flex", alignItems: "center", gap: 1.25, "& + &": { borderTop: `1px solid ${CM.border}` } }}>
           <Thumbnail m={m} />
-          <Typography sx={{ flex: 1, minWidth: 0, fontSize: 13 }} noWrap>
+          <Typography sx={{ overflowWrap: "anywhere", flex: 1, minWidth: 0, fontSize: 13 }} >
             {m.fileName}
           </Typography>
           <Typography sx={{ fontSize: 13, fontWeight: 600, color: CM.textMuted }}>{formatBytes(m.sizeBytes)}</Typography>
@@ -346,7 +346,7 @@ function FileCell({ m, t }) {
     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
       <Thumbnail m={m} />
       <Box sx={{ minWidth: 0 }}>
-        <Typography sx={{ fontSize: 14, fontWeight: 600 }} noWrap>
+        <Typography sx={{ overflowWrap: "anywhere", fontSize: 14, fontWeight: 600 }} >
           {m.fileName}
         </Typography>
         <Typography sx={{ fontSize: 12, color: CM.textDim }}>
@@ -507,7 +507,7 @@ export default function MediaCleanupTab() {
         }}
       >
         <AutoDeleteOutlinedIcon sx={{ fontSize: 18, color: CM.green }} />
-        <Typography sx={{ flex: 1, minWidth: 240, fontSize: 13 }}>
+        <Typography sx={{ flex: 1, minWidth: { xs: 0, sm: 240 }, fontSize: 13 }}>
           {t("cleanup.autoCleanupBanner", { count: trashDays })}
         </Typography>
         <Link component={RouterLink} to={STORAGE_PATHS.settings} underline="hover" sx={{ fontSize: 13, fontWeight: 600, color: CM.violetBright }}>
@@ -563,14 +563,21 @@ export default function MediaCleanupTab() {
         />
       </Box>
 
-      <Tabs value={view} onChange={changeView} aria-label="Cleanup views" sx={{ borderBottom: `1px solid ${CM.border}`, minHeight: 40 }}>
-        <Tab value="inactive" label={`${t("cleanup.tabInactive")}${summary ? ` (${summary.total})` : ""}`} sx={{ minHeight: 40 }} />
+      <Tabs
+        value={view}
+        onChange={changeView}
+        aria-label={t("a11y.cleanupViewsAria")}
+        variant="scrollable"
+        scrollButtons="auto"
+        sx={{ borderBottom: `1px solid ${CM.border}`, minHeight: 40, maxWidth: "100%" }}
+      >
+        <Tab value="inactive" label={`${t("cleanup.tabInactive")}${summary ? ` (${summary.total})` : ""}`} sx={{ minHeight: 40, minWidth: 0, px: 1.5 }} />
         <Tab
           value="trash"
           icon={<RestoreFromTrashOutlinedIcon sx={{ fontSize: 18 }} />}
           iconPosition="start"
           label={`${t("cleanup.tabTrash")}${summary ? ` (${summary.trashFiles})` : ""}`}
-          sx={{ minHeight: 40 }}
+          sx={{ minHeight: 40, minWidth: 0, px: 1.5 }}
         />
       </Tabs>
 
@@ -611,7 +618,7 @@ export default function MediaCleanupTab() {
             {t("cleanup.emptyTrash")}
           </Button>
         )}
-        <TextField select value={sort} onChange={(e) => changeFilter(setSort)(e.target.value)} inputProps={{ "aria-label": t("cleanup.sortAria") }} sx={{ width: 210 }}>
+        <TextField select value={sort} onChange={(e) => changeFilter(setSort)(e.target.value)} inputProps={{ "aria-label": t("cleanup.sortAria") }} sx={{ width: { xs: "100%", sm: 210 } }}>
           {sortOptions.map((s) => (
             <MenuItem key={s.value} value={s.value}>
               {t(`cleanup.${s.key}`)}
@@ -623,7 +630,7 @@ export default function MediaCleanupTab() {
       {selected.size > 0 && (
         <Box
           role="region"
-          aria-label="Bulk actions"
+          aria-label={t("a11y.bulkActionsAria")}
           sx={{
             px: 2,
             py: 1.25,

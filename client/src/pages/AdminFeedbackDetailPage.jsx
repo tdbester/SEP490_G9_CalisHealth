@@ -189,7 +189,7 @@ export default function AdminFeedbackDetailPage() {
         <Typography sx={{ fontSize: 13, color: CM.textMuted }}>
           {t("admin.feedback.breadcrumb")}
         </Typography>
-        <Typography component="h1" sx={{ mt: 1, fontSize: 34, fontWeight: 700 }}>
+        <Typography component="h1" sx={{ mt: 1, fontSize: { xs: 24, md: 34 }, fontWeight: 700 }}>
           {t("admin.feedback.detailLoading")}
         </Typography>
         <Box sx={{ py: 8, display: "grid", placeItems: "center" }}>
@@ -205,7 +205,7 @@ export default function AdminFeedbackDetailPage() {
         <Typography sx={{ fontSize: 13, color: CM.textMuted }}>
           {t("admin.feedback.breadcrumb")}
         </Typography>
-        <Typography component="h1" sx={{ mt: 1, fontSize: 34, fontWeight: 700 }}>
+        <Typography component="h1" sx={{ mt: 1, fontSize: { xs: 24, md: 34 }, fontWeight: 700 }}>
           {t("admin.feedback.detailNotFound")}
         </Typography>
         <Alert
@@ -249,7 +249,7 @@ export default function AdminFeedbackDetailPage() {
         }}
       >
         <Box sx={{ maxWidth: 680 }}>
-          <Typography component="h1" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.2 }}>
+          <Typography component="h1" sx={{ fontSize: { xs: 21, md: 30 }, fontWeight: 700, lineHeight: 1.2 }}>
             {feedback.title}
           </Typography>
           <Typography sx={{ mt: 0.75, fontSize: 14, color: CM.textMuted }}>

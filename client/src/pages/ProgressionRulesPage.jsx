@@ -106,7 +106,7 @@ function SectionTitle({ icon, title, caption, accent }) {
   return <Stack direction="row" spacing={1.5} alignItems="center">
     <IconBadge icon={icon} accent={accent} />
     <Box sx={{ minWidth: 0 }}>
-      <Typography sx={{ color: "#fff", fontWeight: 700, lineHeight: 1.3, letterSpacing: "-0.01em" }}>{title}</Typography>
+      <Typography sx={{ color: "#fff", fontWeight: 700, lineHeight: 1.3, letterSpacing: "-0.005em" }}>{title}</Typography>
       {caption && <Typography variant="caption" sx={{ color: CM.textMuted, lineHeight: 1.4 }}>{caption}</Typography>}
     </Box>
   </Stack>;
@@ -152,7 +152,7 @@ function AccuracyMeter({ value }) {
   const { t } = useTranslation();
   const pct = Math.max(0, Math.min(100, Number(value ?? 0)));
   const color = pct >= 90 ? CM.pink : pct >= 75 ? CM.amber : CM.green;
-  return <Box sx={{ minWidth: 92, mx: "auto" }}>
+  return <Box sx={{ minWidth: { xs: 0, sm: 92 }, mx: "auto" }}>
     <Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 22, lineHeight: 1.15 }}>{percent(pct)}</Typography>
     <Box sx={{ position: "relative", mt: 0.5, height: 6, borderRadius: 3, bgcolor: "rgba(139,92,246,0.12)", overflow: "hidden" }}>
       <Box sx={{
@@ -265,12 +265,12 @@ export default function ProgressionRulesPage() {
     <Heading
       title={t("contentManager.progressionRules.title")}
       description={t("contentManager.progressionRules.description")}
-      action={<Stack direction="row" spacing={1}>
+      action={<Stack direction="row" spacing={1} flexWrap="wrap">
         <Button component={RouterLink} to={`${CONTENT_PATHS.progressionRules}/tree`} variant="outlined" startIcon={<AccountTreeRoundedIcon />}>{t("contentManager.progressionRules.exerciseTree")}</Button>
         <Button component={RouterLink} to={`${CONTENT_PATHS.progressionRules}/new`} variant="contained" startIcon={<AddRoundedIcon />}>{t("contentManager.progressionRules.createRule")}</Button>
       </Stack>}
     />
-    <Box sx={{ mt: 2.5, display: "grid", gap: 1.25, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" } }}>
+    <Box sx={{ mt: 2.5, display: "grid", gap: 1.25, gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(3, minmax(0, 1fr))" } }}>
       <Box sx={enter(0)}><SummaryCard label={t("contentManager.progressionRules.totalRules")} count={rules.length} detail={t("contentManager.progressionRules.configuredRules")} /></Box>
       <Box sx={enter(80)}><SummaryCard label={t("contentManager.progressionRules.active")} count={query.data.activeCount} detail={t("contentManager.progressionRules.usedToUnlock")} tone="success" /></Box>
       <Box sx={enter(160)}><SummaryCard label={t("contentManager.progressionRules.inactive")} count={query.data.inactiveCount} detail={t("contentManager.progressionRules.ignoredForNow")} tone="warning" /></Box>
@@ -283,7 +283,7 @@ export default function ProgressionRulesPage() {
         <SectionTitle icon={AccountTreeRoundedIcon} accent title={t("contentManager.progressionRules.listTitle")} caption={t("contentManager.progressionRules.listCaption")} />
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "center" }}>
           <TextField size="small" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} placeholder={t("contentManager.progressionRules.searchPlaceholder")} sx={{ width: { xs: "100%", sm: 360, lg: 420 } }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" /></InputAdornment> }} />
-          <TextField select size="small" value={status} onChange={(e) => { setStatus(e.target.value); setPage(0); }} sx={{ minWidth: 145 }}>
+          <TextField select size="small" value={status} onChange={(e) => { setStatus(e.target.value); setPage(0); }} sx={{ minWidth: { xs: 0, sm: 145 } }}>
             <MenuItem value="all">{t("contentManager.progressionRules.allStatus")}</MenuItem><MenuItem value="active">{t("contentManager.progressionRules.active")}</MenuItem><MenuItem value="inactive">{t("contentManager.progressionRules.inactive")}</MenuItem>
           </TextField>
           <Tooltip title={t("contentManager.progressionRules.refresh")}><span><IconButton onClick={query.refetch} disabled={query.isFetching} aria-label={t("contentManager.progressionRules.refresh")} sx={{ border: `1px solid ${CM.border}`, borderRadius: 1.25, transition: "all .2s ease", "&:hover": { borderColor: CM.violetBright, bgcolor: "rgba(139,92,246,0.1)" } }}>{query.isFetching ? <CircularProgress size={17} /> : <RefreshRoundedIcon />}</IconButton></span></Tooltip>
@@ -311,7 +311,7 @@ export default function ProgressionRulesPage() {
       <TableContainer>
         <Table size="small" sx={{ minWidth: 980 }}>
           <TableHead><TableRow>
-            <TableCell><Box sx={{ width: 220, mx: "auto", textAlign: "left" }}>{t("contentManager.progressionRules.colPrerequisite")}</Box></TableCell><TableCell><Box sx={{ width: 220, mx: "auto", textAlign: "left" }}>{t("contentManager.progressionRules.colUnlocks")}</Box></TableCell>
+            <TableCell><Box sx={{ width: { xs: 120, sm: 220 }, mx: "auto", textAlign: "left" }}>{t("contentManager.progressionRules.colPrerequisite")}</Box></TableCell><TableCell><Box sx={{ width: { xs: 120, sm: 220 }, mx: "auto", textAlign: "left" }}>{t("contentManager.progressionRules.colUnlocks")}</Box></TableCell>
             <TableCell>{t("contentManager.progressionRules.colMinClean")}</TableCell><TableCell>{t("contentManager.progressionRules.colStatus")}</TableCell><TableCell>{t("contentManager.progressionRules.colUpdated")}</TableCell><TableCell align="center">{t("contentManager.progressionRules.colAction")}</TableCell>
           </TableRow></TableHead>
           <TableBody>
@@ -321,28 +321,28 @@ export default function ProgressionRulesPage() {
               "&:hover": { opacity: 1, bgcolor: "rgba(139,92,246,0.06)" },
               ...enter(260 + idx * 40),
             }}>
-              <TableCell><Box sx={{ width: 220, mx: "auto" }}><ExerciseChip exercise={rule.prerequisite} align="start" /></Box></TableCell>
-              <TableCell><Box sx={{ width: 220, mx: "auto" }}><ExerciseChip exercise={rule.exercise} accent align="start" /></Box></TableCell>
+              <TableCell><Box sx={{ width: { xs: 120, sm: 220 }, mx: "auto" }}><ExerciseChip exercise={rule.prerequisite} align="start" /></Box></TableCell>
+              <TableCell><Box sx={{ width: { xs: 120, sm: 220 }, mx: "auto" }}><ExerciseChip exercise={rule.exercise} accent align="start" /></Box></TableCell>
               <TableCell><AccuracyMeter value={rule.minAccuracy} /></TableCell>
               <TableCell><StatusPill rule={rule} /></TableCell>
               <TableCell><Typography variant="caption" sx={{ color: CM.textMuted }}>{formatDate(rule.updatedAt)}</Typography></TableCell>
-              <TableCell align="center"><Stack direction="row" justifyContent="center" alignItems="center" spacing={0.5}>
+              <TableCell align="center"><Stack direction="row" justifyContent="center" alignItems="center" spacing={0.5} flexWrap="wrap">
                 <Button component={RouterLink} to={`${CONTENT_PATHS.progressionRules}/${rule.id}`} size="small" variant="outlined">{t("contentManager.progressionRules.view")}</Button>
                 <IconButton size="small" aria-label={t("contentManager.progressionRules.actionsFor", { name: rule.exercise.name })} onClick={(e) => setMenu({ anchor: e.currentTarget, entry: rule })}><MoreVertRoundedIcon fontSize="small" /></IconButton>
               </Stack></TableCell>
             </TableRow>)}
             {!visible.length && <TableRow><TableCell colSpan={6} align="center" sx={{ py: 6 }}>
               <Stack alignItems="center" spacing={1}>
-                <AccountTreeRoundedIcon sx={{ fontSize: 48, color: CM.textDim, opacity: 0.4 }} />
+                <AccountTreeRoundedIcon sx={{ fontSize: { xs: 26, md: 48 }, color: CM.textDim, opacity: 0.4 }} />
                 <Typography sx={{ color: CM.textMuted }}>{rules.length ? t("contentManager.progressionRules.noMatch") : t("contentManager.progressionRules.empty")}</Typography>
               </Stack>
             </TableCell></TableRow>}
           </TableBody>
         </Table>
       </TableContainer>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1.5, borderTop: `1px solid ${CM.border}` }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1.5, borderTop: `1px solid ${CM.border}` }} flexWrap="wrap">
         <Typography variant="caption" sx={{ color: CM.textMuted }}>{t("contentManager.progressionRules.showingRows", { from: filtered.length ? currentPage * PAGE_SIZE + 1 : 0, to: Math.min((currentPage + 1) * PAGE_SIZE, filtered.length), count: filtered.length })}</Typography>
-        <Stack direction="row" spacing={0.5}>
+        <Stack direction="row" spacing={0.5} flexWrap="wrap">
           <IconButton aria-label={t("contentManager.progressionRules.previousPage")} disabled={currentPage === 0} onClick={() => setPage((x) => x - 1)} sx={{ transition: "all .15s ease" }}><ChevronLeftRoundedIcon /></IconButton>
           <IconButton aria-label={t("contentManager.progressionRules.nextPage")} disabled={!pages || currentPage >= pages - 1} onClick={() => setPage((x) => x + 1)} sx={{ transition: "all .15s ease" }}><ChevronRightRoundedIcon /></IconButton>
         </Stack>
@@ -412,13 +412,13 @@ export function ProgressionRuleDetailPage() {
     </Box>;
   }
   const { rule, unlockedMembers, sameTargetRules, nextRules } = query.data;
-  const actions = <Stack direction="row" spacing={1}>
+  const actions = <Stack direction="row" spacing={1} flexWrap="wrap">
     <Button component={RouterLink} to={backTo} variant="outlined" startIcon={<ArrowBackRoundedIcon />}>{t("contentManager.progressionRules.back")}</Button>
     <Button component={RouterLink} to={`${CONTENT_PATHS.progressionRules}/${rule.id}/edit`} variant="contained">{t("contentManager.progressionRules.update")}</Button>
   </Stack>;
   return <Box sx={{ maxWidth: 1100, mx: "auto", px: 3, py: 2.5 }}>
     <Heading breadcrumb={[...LIST_BREADCRUMB, { label: rule.exercise.name }]} title={`${rule.prerequisite.name} → ${rule.exercise.name}`} description={t("contentManager.progressionRules.detailDescription")} action={actions} />
-    <Box sx={{ mt: 2.5, display: "grid", gap: 1.25, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" } }}>
+    <Box sx={{ mt: 2.5, display: "grid", gap: 1.25, gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(3, minmax(0, 1fr))" } }}>
       <Box sx={{ height: "100%", ...enter(0) }}><Detail icon={FiberManualRecordRoundedIcon} label={t("contentManager.progressionRules.labelStatus")} value={statusText(rule, t)} hint={isActive(rule) ? t("contentManager.progressionRules.currentlyEnforced") : t("contentManager.progressionRules.paused")} /></Box>
       <Box sx={{ height: "100%", ...enter(70) }}><Detail icon={isHold(rule) ? TimerRoundedIcon : RepeatRoundedIcon} label={t("contentManager.progressionRules.labelMeasuredIn")} value={isHold(rule) ? t("contentManager.progressionRules.holdSeconds") : t("contentManager.progressionRules.reps")} /></Box>
       <Box sx={{ height: "100%", ...enter(140) }}><Detail icon={LockOpenRoundedIcon} label={t("contentManager.progressionRules.labelMembersUnlocked")} value={unlockedMembers.toLocaleString()} hint={`${rule.exercise.name}`} /></Box>
@@ -437,7 +437,7 @@ export function ProgressionRuleDetailPage() {
           })}
         </Typography>
       </Box>
-      <Box sx={{ p: 2.5, display: "grid", gap: 2, alignItems: "center", gridTemplateColumns: { xs: "1fr", md: "1fr auto 1fr" } }}>
+      <Box sx={{ p: 2.5, display: "grid", gap: 2, alignItems: "center", gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 1fr) auto minmax(0, 1fr)" } }}>
         <Box sx={{
           p: 2.5, border: `1px solid ${CM.border}`, borderRadius: "16px", bgcolor: CM.surfaceSoft, textAlign: "center",
         }}>
@@ -458,7 +458,7 @@ export function ProgressionRuleDetailPage() {
           <Box sx={{ mt: 1 }}><ExerciseChip exercise={rule.exercise} accent /></Box>
         </Box>
       </Box>
-      <Box sx={{ px: 2.5, pb: 2.5, display: "grid", gap: 1.25, gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(3, 1fr)" } }}>
+      <Box sx={{ px: 2.5, pb: 2.5, display: "grid", gap: 1.25, gridTemplateColumns: { xs: "minmax(0, 1fr) minmax(0, 1fr)", md: "repeat(3, minmax(0, 1fr))" } }}>
         <Detail icon={FitnessCenterRoundedIcon} label={t("contentManager.progressionRules.labelSetsRequired")} value={String(rule.requiredSets)} hint={rule.requiredSets === 1 ? t("contentManager.progressionRules.singleSet") : t("contentManager.progressionRules.consecutiveSets")} />
         <Detail icon={isHold(rule) ? TimerRoundedIcon : RepeatRoundedIcon} label={isHold(rule) ? t("contentManager.progressionRules.labelSecondsPerSet") : t("contentManager.progressionRules.labelRepsPerSet")} value={isHold(rule) ? `${rule.requiredSeconds} ${t("contentManager.progressionRules.unitSeconds")}` : String(rule.requiredReps)} />
         <Detail icon={VerifiedRoundedIcon} label={t("contentManager.progressionRules.labelMinCleanForm")} value={percent(rule.minAccuracy)} hint={Number(rule.minAccuracy) >= 90 ? t("contentManager.progressionRules.veryStrict") : Number(rule.minAccuracy) >= 75 ? t("contentManager.progressionRules.moderatelyStrict") : t("contentManager.progressionRules.lenient")} />
@@ -561,7 +561,7 @@ export function ProgressionRuleFormPage() {
         {/* ─── Exercise Selection Section ─── */}
         <Box sx={{ mb: 3 }}>
           <SectionTitle icon={LinkRoundedIcon} accent title={t("contentManager.progressionRules.exercisesTitle")} caption={t("contentManager.progressionRules.exercisesCaption")} />
-          <Box sx={{ mt: 2, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "1fr auto 1fr" }, alignItems: "start" }}>
+          <Box sx={{ mt: 2, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 1fr) auto minmax(0, 1fr)" }, alignItems: "start" }}>
             <Box sx={{
               p: 2, border: `1px solid ${CM.border}`, borderRadius: "14px", bgcolor: CM.surfaceSoft,
               transition: "border-color .2s ease", "&:focus-within": { borderColor: CM.violetBright },
@@ -617,7 +617,7 @@ export function ProgressionRuleFormPage() {
           <SectionTitle icon={TuneRoundedIcon} title={t("contentManager.progressionRules.requirementTitle")} caption={prerequisite
             ? t(hold ? "contentManager.progressionRules.requirementCaptionSeconds" : "contentManager.progressionRules.requirementCaptionReps", { name: prerequisite.name })
             : t("contentManager.progressionRules.requirementCaptionNone")} />
-          <Box sx={{ mt: 2, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" } }}>
+          <Box sx={{ mt: 2, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(3, minmax(0, 1fr))" } }}>
             <Box sx={{ p: 2, border: `1px solid ${CM.border}`, borderRadius: "14px", bgcolor: CM.surfaceSoft, transition: "border-color .2s ease", "&:focus-within": { borderColor: CM.violetBright } }}>
               <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1 }}>
                 <FitnessCenterRoundedIcon sx={{ fontSize: 14, color: CM.green }} />
@@ -685,9 +685,9 @@ export function ProgressionRuleFormPage() {
         </Box>
 
         {/* ─── Actions ─── */}
-        <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 3 }}>
+        <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 3 }} flexWrap="wrap">
           <Button component={RouterLink} to={backTo} variant="outlined">{t("contentManager.progressionRules.cancel")}</Button>
-          <Button type="submit" variant="contained" disabled={save.isPending} sx={{ minWidth: 140 }}>
+          <Button type="submit" variant="contained" disabled={save.isPending} sx={{ minWidth: { xs: 0, sm: 140 } }}>
             {save.isPending ? t("contentManager.progressionRules.saving") : editing ? t("contentManager.progressionRules.saveChanges") : t("contentManager.progressionRules.createRuleButton")}
           </Button>
         </Stack>

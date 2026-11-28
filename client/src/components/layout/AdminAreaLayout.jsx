@@ -26,7 +26,7 @@ import contentTheme, { CM } from "../../theme-content";
 import "../../styles/notification.css";
 
 const adminTheme = createTheme(contentTheme, {
-  typography: { fontFamily: "Arial, sans-serif" },
+  typography: { fontFamily: "var(--font-app)" },
 });
 
 export const ADMIN_PATHS = {

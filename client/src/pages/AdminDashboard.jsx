@@ -37,13 +37,13 @@ function StatCard({ label, value, icon: Icon }) {
           color: AD.navText,
         }}
       >
-        <Icon sx={{ fontSize: 26 }} />
+        <Icon sx={{ fontSize: { xs: 19, md: 26 } }} />
       </Box>
       <Box sx={{ minWidth: 0 }}>
-        <Typography sx={{ fontSize: 13.5, color: "#fff", fontWeight: 500 }} noWrap>
+        <Typography sx={{ overflowWrap: "anywhere", fontSize: 13.5, color: "#fff", fontWeight: 500 }} >
           {label}
         </Typography>
-        <Typography sx={{ fontSize: 28, lineHeight: 1.25, color: "#fff", fontWeight: 700 }}>
+        <Typography sx={{ fontSize: { xs: 20, md: 28 }, lineHeight: 1.25, color: "#fff", fontWeight: 700 }}>
           {fmt(value)}
         </Typography>
       </Box>
@@ -138,7 +138,7 @@ export default function AdminDashboard() {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3.5 } }}>
-      <Typography component="h1" sx={{ fontSize: 34, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>
+      <Typography component="h1" sx={{ fontSize: { xs: 24, md: 34 }, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>
         {t("admin.dashboard.title")}
       </Typography>
       <Typography sx={{ mt: 0.5, mb: 3.5, fontSize: 14, color: AD.muted }}>
@@ -149,7 +149,7 @@ export default function AdminDashboard() {
         sx={{
           display: "grid",
           gap: 2.25,
-          gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" },
+          gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))", lg: "repeat(3, minmax(0, 1fr))" },
         }}
       >
         <StatCard label={t("admin.dashboard.totalUsers")} value={stats.totalUsers} icon={PeopleAltOutlinedIcon} />
@@ -157,7 +157,7 @@ export default function AdminDashboard() {
         <StatCard label={t("admin.dashboard.totalHealthExercises")} value={stats.totalHealthExercises} icon={MonitorHeartOutlinedIcon} />
 
         {loading ? (
-          <Box sx={{ gridColumn: "1 / -1", display: "flex", justifyContent: "center", py: 1 }}>
+          <Box sx={{ gridColumn: "1 / -1", display: "flex", flexWrap: "wrap", gap: 1, justifyContent: "center", py: 1 }}>
             <CircularProgress size={20} aria-label={t("common.ui.loadingAria")} />
           </Box>
         ) : null}

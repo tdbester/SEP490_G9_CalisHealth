@@ -334,15 +334,15 @@ export default function CustomWorkoutListPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-5 pb-12">
       <BackButton to="/library">{t("member.catalog.backToLibrary")}</BackButton>
-      <div className="flex items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-white tracking-tight">{t("member.catalog.communityWorkoutTitle")}</h1>
           <p className="text-xs text-slate-400 mt-1">
             {t("member.catalog.communityWorkoutSubtitle")}
           </p>
         </div>
         {errorMessage && <p role="alert" className="text-xs text-rose-400">{errorMessage}</p>}
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
           <button
             type="button"
             onClick={() => navigate("/library/workouts")}

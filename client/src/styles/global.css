@@ -1,4 +1,8 @@
-:root {
+﻿:root {
+  /* Font dung chung toan app. Inter (nap trong main.jsx) co du dau tieng Viet. */
+  --font-app: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  /* Font monospace dung cho so lieu/ma - chi dung o noi dung khong co dau tieng Viet. */
+  --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", "Consolas", "Courier New", monospace;
   --color-bg: #f9fafb;
   --color-surface: #ffffff;
   --color-border: #e5e7eb;
@@ -27,12 +31,53 @@ body,
   padding: 0;
 }
 
+/*
+ * Dat font app o cap <html> (khong chi o <body>) de moi the - ke ca nhung the
+ * khong nam trong <body> hoac do MUI CssBaseline reset - deu ke thua dung
+ * font co dau tieng Viet thay vi font mac dinh cua trinh duyet.
+ */
+html {
+  font-family: var(--font-app);
+}
+
 body {
-  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+  font-family: var(--font-app);
   background-color: var(--color-bg);
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /*
+   * "liga" + "calt": bat contextual alternate cho phep ghep dau tieng Viet
+   * (a + dau sac = a co dau) khi font co kha nang nay.
+   * "tnum": chu so dong deu nhau - phu hop cho bam dong ho / chi so.
+   * Khong dung "ss01"/"ss02" (stylistic set) vi chung khong duoc Inter
+   * ho tro cho bo chu dau tieng Viet.
+   */
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  text-rendering: optimizeLegibility;
+  /*
+   * Khong tu "faux italic"/"faux bold" (gia lap dung font he thong).
+   * Font Inter Variable da nap ca ban normal va italic that, nen chu nghieng
+   * tieng Viet se dung dung font co dau chu chinh xac.
+   */
+  font-synthesis: none;
+}
+
+/*
+ * Tieu de dung letter-spacing am (giam khoang cach) se lam cac dau tieng Viet
+ * nhu "Ă", "Â", "Đ", "Ơ", "Ư" cham vao chu lien ke. Inter Variable ho tro
+ * bo chu deu, nen chi ap dung letter-spacing am o co nho lon nhat.
+ */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  letter-spacing: -0.015em;
+  /* Dam bao dau ton khong bi cat khi xuong dong. */
+  overflow-wrap: break-word;
 }
 
 a {
@@ -41,16 +86,16 @@ a {
 }
 
 /*
- * Reset cho thẻ <button> — thay thế phần "preflight" của Tailwind.
+ * Reset cho the <button> - thay the phan "preflight" cua Tailwind.
  *
- * Lý do: file này chỉ khai báo `@tailwind components` + `@tailwind utilities`
- * mà thiếu `@tailwind base`, nên preflight của Tailwind KHÔNG được nạp.
- * Hệ quả: mọi thẻ <button> không được set nền sẽ giữ nền mặc định của
- * trình duyệt (buttonface = rgb(239,239,239) — trắng), làm các dòng bài tập /
- * workout trong màn list và màn chi tiết hiện thành khối trắng trên nền tối.
+ * Ly do: file nay chi khai bao `@tailwind components` + `@tailwind utilities`
+ * ma thieu `@tailwind base`, nen preflight cua Tailwind KHONG duoc nap.
+ * Hieu qua: moi the <button> khong duoc set nen se giu nen mac dinh cua
+ * trinh duyet (buttonface = rgb(239,239,239) - trang), lam cac dong bai tap /
+ * workout trong man list va man chi tiet hien thanh khoi trang tren nen toi.
  *
- * Các class đã có nền riêng (utility Tailwind hoặc class trong *.css) vẫn
- * thắng vì có specificity cao hơn selector phần tử.
+ * Cac class da co nen rieng (utility Tailwind hoac class trong *.css) van
+ * thang vi co specificity cao hon selector phan tu.
  */
 button {
   background-color: transparent;
@@ -64,3 +109,113 @@ button {
 button:disabled {
   cursor: not-allowed;
 }
+
+/*
+ * Option trong <select> khong ke thua font cua control o Chrome/Firefox,
+ * nen khi mo dropdown cac lua chon se hien thi bang font mac dinh va
+ * lech voi phan con lai (dac biet la dau tieng Viet).
+ */
+select option,
+optgroup {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* O nhap/textarea: ke thua font chung de placeholder khong bi lech. */
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
+}
+
+/* ── Bao ve responsive toan cuc ─────────────────────────────────────── */
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Tranh trang bi tran ngang do noi dung rong co dinh. */
+html,
+body {
+  overflow-x: hidden;
+}
+
+@media (max-width: 640px) {
+  /* iOS tu zoom khi focus o nhap co font < 16px. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Hop thoai MUI sat mep man hinh thay vi bi cat. */
+  .MuiDialog-paper {
+    margin: 12px !important;
+    max-width: calc(100% - 24px) !important;
+    width: calc(100% - 24px);
+  }
+
+  /* Cac hang nut hanh dong xep doc de khong bi tran. */
+  .MuiButton-root {
+    white-space: normal;
+  }
+}
+
+/* ── Man hinh rat hep (≤ 420px) ──────────────────────────────────────── */
+@media (max-width: 420px) {
+  /* Tieu de dai (tieu Viet co dau) phai xuong dong thay vi lam trang tran ngang. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* Bieu do MUI: chu thong bao khong duoc lat ngoai khung. */
+  .MuiTablePagination-toolbar {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .MuiTablePagination-selectLabel,
+  .MuiTablePagination-displayedRows {
+    font-size: 0.7rem;
+  }
+
+  /* Hop thoai MUI sat mep man hinh khi man hinh rat nho. */
+  .MuiDialog-paper {
+    margin: 8px !important;
+    max-width: calc(100% - 16px) !important;
+    width: calc(100% - 16px);
+  }
+
+  .MuiDialogTitle-root {
+    font-size: 1.1rem;
+    padding: 16px;
+  }
+
+  .MuiDialogContent-root {
+    padding: 16px;
+  }
+
+  .MuiDialogActions-root {
+    padding: 8px 16px 16px;
+    flex-wrap: wrap;
+  }
+
+  /* Chip / badge khong duoc ep chu de khong can thiet. */
+  .MuiChip-root {
+    max-width: 100%;
+  }
+
+  .MuiChip-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+

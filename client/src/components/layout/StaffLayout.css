@@ -3,11 +3,13 @@
  * Member dùng: topbar cố định full-width (logo bên trái) + sidebar cố định bên
  * trái nằm dưới topbar. Admin/Content Manager trước đây dùng Drawer của MUI
  * nên lệch hẳn — file này đồng bộ lại về cùng bộ khoảng cách/màu sắc.
- */
-
-.staff-layout {
+ */.staff-layout {
+  font-family: var(--font-app);
   min-height: 100vh;
   background-color: #0c0822;
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 /* ── Topbar ─────────────────────────────────────────────────────── */
@@ -55,7 +57,7 @@
   font-size: 16.8px;
   font-weight: 800;
   color: #ffffff;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
   line-height: 21px;
   white-space: nowrap;
 }
@@ -368,5 +370,71 @@
 
   .staff-role-chip.is-muted {
     display: none;
+  }
+}
+
+/* ── Màn hình nhỏ: gọn topbar, giữ nguyên toàn bộ nút bấm ─────── */
+@media (max-width: 640px) {
+  .staff-topbar {
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .staff-topbar-right {
+    gap: 8px;
+  }
+
+  .staff-topbar-logo {
+    gap: 6px;
+  }
+
+  .staff-topbar-logo-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .staff-topbar-logo-text {
+    font-size: 14px;
+  }
+
+  .staff-role-chip {
+    height: 24px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .staff-logout-btn {
+    padding: 4px 8px;
+  }
+
+  .staff-popover {
+    right: -4px;
+  }
+}
+
+@media (max-width: 460px) {
+  /* Ẩn CHỮ (không xóa nút) để mọi nút vẫn nằm gọn trong 1 hàng. */
+  .staff-topbar-logo-text {
+    display: none;
+  }
+
+  .staff-logout-btn span {
+    display: none;
+  }
+
+  .staff-role-chip {
+    max-width: 92px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .staff-avatar {
+    width: 30px;
+    height: 30px;
+  }
+
+  .staff-menu-btn {
+    width: 32px;
+    height: 32px;
   }
 }

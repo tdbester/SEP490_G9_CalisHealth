@@ -231,7 +231,7 @@ export default function DailyPlanTemplateBuilderPage() {
           {touched && errors.map((message) => <Alert key={message} severity="error" sx={{ mb: 1.5 }}>{message}</Alert>)}
 
           <SectionTitle icon={TuneRoundedIcon} title={t("contentManager.detail.planInformation")} caption={t("contentManager.detail.planInformationCaption")} />
-          <Box sx={{ mt: 2, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "2fr 1fr 1fr" } }}>
+          <Box sx={{ mt: 2, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "2fr minmax(0, 1fr) minmax(0, 1fr)" } }}>
             <TextField size="small" label={t("contentManager.detail.planName")} value={form.name} onChange={(e) => set({ name: e.target.value })} inputProps={{ maxLength: 60 }} />
             <TextField select size="small" label={t("contentManager.detail.level")} value={form.level} onChange={(e) => changeLevel(e.target.value)}>
               {(editing && form.level && !activeLevels.includes(form.level) ? [form.level, ...activeLevels] : activeLevels).map((name) => <MenuItem key={name} value={name}>{name}</MenuItem>)}
@@ -244,7 +244,7 @@ export default function DailyPlanTemplateBuilderPage() {
 
           <Divider sx={{ borderColor: CM.border, my: 3 }} />
 
-          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "minmax(0, 1fr) minmax(0, 1fr)" }, alignItems: "stretch" }}>
+          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 1fr) minmax(0, 1fr)" }, alignItems: "stretch" }}>
             <Box sx={{ ...panelSx, display: "flex", flexDirection: "column" }}>
               <SectionTitle icon={EventNoteRoundedIcon} title={t("contentManager.detail.trainingDays")} caption={t("contentManager.detail.trainingDaysCaption")} />
               <Stack spacing={1} sx={{ mt: 2 }}>
@@ -262,11 +262,11 @@ export default function DailyPlanTemplateBuilderPage() {
                         transition: "border-color .16s ease",
                       }}
                     >
-                      <Typography sx={{ color: selected ? CM.violetBright : CM.textDim, fontWeight: 800, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", minWidth: 48 }}>{t("contentManager.detail.dayNumber", { day })}</Typography>
+                      <Typography sx={{ color: selected ? CM.violetBright : CM.textDim, fontWeight: 800, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", minWidth: { xs: 0, sm: 48 } }}>{t("contentManager.detail.dayNumber", { day })}</Typography>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         {workout ? (
                           <>
-                            <Typography variant="body2" noWrap sx={{ color: "#fff", fontWeight: 600 }}>{workout.name}</Typography>
+                            <Typography variant="body2"  sx={{ overflowWrap: "anywhere", color: "#fff", fontWeight: 600 }}>{workout.name}</Typography>
                             <Typography variant="caption" sx={{ color: CM.textDim }}>{workout.code} · {t("contentManager.detail.exercisesCount", { count: workout.exercises?.length || 0 })}</Typography>
                           </>
                         ) : (
@@ -307,7 +307,7 @@ export default function DailyPlanTemplateBuilderPage() {
                       }}
                     >
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" noWrap sx={{ color: "#fff", fontWeight: 600 }}>{workout.name}</Typography>
+                        <Typography variant="body2"  sx={{ overflowWrap: "anywhere", color: "#fff", fontWeight: 600 }}>{workout.name}</Typography>
                         <Typography variant="caption" sx={{ color: CM.textDim }}>{workout.code} · {t("contentManager.detail.exercisesCount", { count: workout.exercises?.length || 0 })}</Typography>
                       </Box>
                       {chosenOn.length > 0 && <DarkPill tone="primary">{chosenOn.map((day) => t("contentManager.detail.dayNumber", { day })).join(", ")}</DarkPill>}
@@ -372,10 +372,9 @@ export default function DailyPlanTemplateBuilderPage() {
               py: 1.5,
               bgcolor: "background.default",
               zIndex: 5,
-            }}
-          >
+            }} flexWrap="wrap">
             <Button component={RouterLink} to={editing ? detailPath : CONTENT_PATHS.templates} variant="outlined">{t("contentManager.detail.cancel")}</Button>
-            <Button type="submit" variant="contained" disabled={save.isPending} sx={{ minWidth: 140 }}>
+            <Button type="submit" variant="contained" disabled={save.isPending} sx={{ minWidth: { xs: 0, sm: 140 } }}>
               {save.isPending ? t("contentManager.detail.saving") : editing ? t("contentManager.detail.saveChangesPlan") : t("contentManager.detail.createPlan")}
             </Button>
           </Stack>

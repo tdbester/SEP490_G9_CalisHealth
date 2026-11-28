@@ -81,7 +81,7 @@
   font-size: 16.8px;
   font-weight: 800;
   color: var(--text-white);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
   line-height: 21px;
   white-space: nowrap;
   margin-left: 10px;
@@ -573,5 +573,33 @@
 
   .topbar-login-btn {
     width: 48px;
+  }
+}
+
+/* ── Màn hình rất hẹp: thu gọn nhãn nhưng GIỮ đủ mọi nút bấm ────── */
+@media (max-width: 640px) {
+  .topbar-streak {
+    padding: 0 7px;
+  }
+
+  .topbar-streak-days {
+    display: none;
+  }
+
+  /* Nút đăng xuất chỉ còn icon để không đẩy tràn thanh trên. */
+  .topbar-logout-btn span {
+    display: none;
+  }
+
+  .topbar-logout-btn {
+    padding: 4px 8px;
+  }
+
+  .topbar-lang {
+    padding: 0 2px 0 4px;
+  }
+
+  .topbar-lang-icon {
+    display: none;
   }
 }

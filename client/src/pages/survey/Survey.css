@@ -9,7 +9,10 @@
   padding: 24px 16px 32px;
   background: linear-gradient(180deg, #0d071b 0%, #0a0618 100%);
   color: #ffffff;
-  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+  font-family: var(--font-app);
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .survey-page--center {
@@ -76,7 +79,7 @@
   font-size: 30px;
   font-weight: 700;
   line-height: 1.2;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
 }
 
 .survey-header-subtitle {
@@ -919,5 +922,60 @@
   .result-scores,
   .result-rhythm {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── Màn hình rất hẹp (≤ 380px) ─────────────────────────────────────── */
+@media (max-width: 380px) {
+  .survey-page {
+    padding: 12px 10px 24px;
+  }
+
+  .survey-header {
+    margin-top: 20px;
+  }
+
+  .survey-header-title {
+    font-size: 22px;
+  }
+
+  .survey-header-subtitle {
+    font-size: 13.5px;
+  }
+
+  .survey-question-title {
+    font-size: 15px;
+  }
+
+  .survey-question-hint,
+  .survey-field-error {
+    font-size: 12.5px;
+  }
+
+  .survey-progress-bar {
+    gap: 5px;
+  }
+
+  /* Thang điểm 5 mức: nút nhỏ lại để vẫn nằm gọn trong một hàng. */
+  .survey-scale button {
+    width: 34px;
+    height: 34px;
+    font-size: 13px;
+  }
+
+  .result-section-title {
+    font-size: 17px;
+  }
+
+  .result-score {
+    padding: 12px 13px;
+  }
+
+  .result-score-value strong {
+    font-size: 22px;
+  }
+
+  .result-rhythm li p {
+    font-size: 13px;
   }
 }

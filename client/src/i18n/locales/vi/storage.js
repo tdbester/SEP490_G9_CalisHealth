@@ -15,6 +15,12 @@ export default {
     cleanup: "Dọn dẹp",
     settings: "Giới hạn tải lên",
   },
+  a11y: {
+    sectionsAria: "Các mục lưu trữ media",
+    cleanupViewsAria: "Các chế độ xem dọn dẹp",
+    bulkActionsAria: "Thao tác hàng loạt",
+    storageUsedAria: "Dung lượng đã sử dụng",
+  },
 
   // ---- Shared helpers ----
   duration: {
@@ -134,10 +140,10 @@ export default {
     statusReady: "Đã có",
     statusMissing: "Chưa có",
     purpose: {
-      systemDemo: "Video demo của bài tập do Content Manager quản lý",
-      systemAnatomy: "Ảnh giải phẫu của bài tập do Content Manager quản lý",
+      systemDemo: "Video hướng dẫn của bài tập do quản lý nội dung phụ trách",
+      systemAnatomy: "Ảnh giải phẫu của bài tập do quản lý nội dung phụ trách",
       avatars: "Ảnh đại diện của mọi tài khoản",
-      memberDemo: "Video demo của bài tập cá nhân do thành viên tải lên",
+      memberDemo: "Video hướng dẫn của bài tập cá nhân do thành viên tải lên",
       memberAnatomy: "Ảnh giải phẫu của bài tập cá nhân do thành viên tải lên",
       trash: "Tệp đã xóa mềm, chờ bị xóa vĩnh viễn",
     },
@@ -192,7 +198,7 @@ export default {
   },
   category: {
     demoVideo: {
-      label: "Video demo bài tập",
+      label: "Video hướng dẫn bài tập",
       sub: "Bài tập hệ thống & cá nhân · được giữ vĩnh viễn",
     },
     anatomyImage: {
@@ -207,7 +213,7 @@ export default {
   source: {
     system: {
       label: "Thư viện hệ thống",
-      sub: "Thư viện bài tập & workout do Quản lý nội dung quản lý",
+      sub: "Thư viện bài tập & buổi tập do quản lý nội dung phụ trách",
     },
     member: {
       label: "Tải lên của thành viên",
@@ -411,7 +417,7 @@ export default {
     fields: {
       maxVideoMb: {
         label: "Video",
-        desc: "Video demo bài tập và video kiểm tra dáng được tải lên cho bài đánh giá bằng AI.",
+        desc: "Video hướng dẫn bài tập và video kiểm tra dáng được tải lên cho bài đánh giá bằng AI.",
       },
       maxImageMb: {
         label: "Ảnh",
@@ -419,7 +425,7 @@ export default {
       },
       demoMaxSeconds: {
         label: "Thời lượng video",
-        desc: "Video demo của bài tập hệ thống và bài tập cá nhân. Máy chủ từ chối video dài hơn, kể cả khi trình duyệt đã cho phép.",
+        desc: "Video hướng dẫn của bài tập hệ thống và bài tập cá nhân. Máy chủ từ chối video dài hơn, kể cả khi trình duyệt đã cho phép.",
       },
       memberQuotaMb: {
         label: "Hạn mức lưu trữ mỗi thành viên",

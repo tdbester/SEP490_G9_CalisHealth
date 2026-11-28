@@ -5,6 +5,10 @@
   margin: 0 auto;
   color: #ffffff;
   padding-bottom: 32px;
+  font-family: var(--font-app);
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 /* Page Header */
@@ -48,7 +52,7 @@
   font-weight: 700;
   color: #ffffff;
   margin: 0 0 6px 0;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
 }
 
 .library-description {
@@ -104,7 +108,7 @@
 /* 1. CĂN HÀNG HEADER NHÓM (CSS Grid 3 cột) */
 .section-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   align-items: stretch;
 }
@@ -259,7 +263,7 @@
 /* Responsive Support */
 @media (max-width: 960px) {
   .section-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
   .group-label-system {
@@ -279,6 +283,57 @@
   }
   .card-member {
     order: 5;
+  }
+}
+
+/* Màn hình hẹp (≤ 600px): header xuống dòng, card bớt cao. */
+@media (max-width: 600px) {
+  .library-container {
+    padding-bottom: 20px;
+  }
+
+  .library-header {
+    margin-bottom: 16px;
+    gap: 12px;
+  }
+
+  .library-title {
+    font-size: 19px;
+  }
+
+  .library-description {
+    font-size: 12px;
+  }
+
+  .library-favorites-link {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .library-error-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    font-size: 13px;
+  }
+
+  .library-retry-btn {
+    width: 100%;
+  }
+
+  .section-title {
+    font-size: 15px;
+  }
+
+  .library-card {
+    padding: 14px;
+    min-height: 0;
+  }
+
+  .card-title-row {
+    flex-wrap: wrap;
+    gap: 6px;
   }
 }
 

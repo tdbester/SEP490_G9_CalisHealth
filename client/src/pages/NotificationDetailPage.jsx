@@ -88,7 +88,7 @@ export default function NotificationDetailPage() {
     <section className="notification-module mx-auto w-full max-w-[1080px] text-slate-100">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-white">{t("admin.notifications.detail.title")}</h1>
+          <h1 className="text-[18px] font-bold tracking-tight text-white sm:text-[22px]">{t("admin.notifications.detail.title")}</h1>
           <p className="mt-1.5 text-sm text-[#a89bd0]">{t("admin.notifications.detail.description")}</p>
         </div>
         <button
@@ -125,7 +125,7 @@ export default function NotificationDetailPage() {
         </section>
         <section className="rounded-2xl border border-[#35275e] bg-[#21183c] p-5 sm:p-6">
           <h2 className="text-sm font-semibold text-white">{t("admin.notifications.detail.deliveryDetails")}</h2>
-          <dl className="mt-4 grid w-full grid-cols-2 gap-4">
+          <dl className="mt-4 grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex min-h-16 w-full min-w-0 flex-col rounded-xl border border-[#35275e] bg-[#17112d] p-4">
               <dt className="text-[11px] font-medium uppercase tracking-wide text-[#81769d]">{t("admin.notifications.detail.audience")}</dt>
               <dd className="mt-auto pt-1.5 text-sm font-semibold leading-5 text-[#e2ddef]">

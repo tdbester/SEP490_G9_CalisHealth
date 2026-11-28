@@ -39,7 +39,10 @@
   max-width: 1080px;
   padding-bottom: 1.5rem;
   color: var(--text);
-  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+  font-family: var(--font-app);
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 /* --------------------------------------------------------------- header */
@@ -84,7 +87,7 @@
   font-size: 26px;
   line-height: 1.2;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
 }
 
 .schedule-save {

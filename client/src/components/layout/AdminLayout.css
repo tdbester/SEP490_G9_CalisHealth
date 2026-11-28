@@ -2,11 +2,13 @@
 
 * {
   box-sizing: border-box;
-}
-
-.admin-layout {
+}.admin-layout {
+  font-family: var(--font-app);
   min-height: 100vh;
   background-color: #0c0822;
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .admin-content {
@@ -17,4 +19,71 @@
   padding-bottom: 40px;
   min-height: 100vh;
   background-color: #0c0822;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Nút mở/đóng menu — chỉ hiện trên màn hình nhỏ. */
+.topbar-menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid #3b2a6b;
+  background-color: #1a1230;
+  color: #d8ceec;
+  cursor: pointer;
+}
+
+.topbar-menu-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.admin-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1190;
+  border: 0;
+  padding: 0;
+  background: rgba(4, 2, 14, 0.6);
+}
+
+/* ── Responsive: sidebar thành drawer trượt từ trái ─────────────── */
+@media (max-width: 1024px) {
+  .admin-content {
+    margin-left: 0;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .topbar-menu-btn {
+    display: inline-flex;
+  }
+
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 12px 0 32px rgba(0, 0, 0, 0.45);
+    background-color: var(--sidebar-bg);
+    overflow-y: auto;
+  }
+
+  .sidebar.is-open {
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-content {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: calc(var(--topbar-height) + 16px);
+    padding-bottom: 28px;
+  }
 }

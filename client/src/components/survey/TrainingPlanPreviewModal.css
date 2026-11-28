@@ -7,6 +7,10 @@
   border-color: #251f3d;
   background: #0f0c1b;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  font-family: var(--font-app);
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .plan-preview-head {
@@ -201,5 +205,67 @@
 
   .plan-preview-detail {
     width: 100%;
+  }
+}
+
+/* Màn hình hẹp: lịch 7 cột hẹp lại, chi tiết xuống dưới. */
+@media (max-width: 560px) {
+  .modal-dialog.plan-preview {
+    padding: 20px 16px 22px;
+  }
+
+  .plan-preview-head {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .plan-preview-title {
+    font-size: 22px;
+  }
+
+  .plan-preview-sub {
+    font-size: 13.5px;
+  }
+
+  .plan-preview-body {
+    gap: 20px;
+    padding: 16px 12px;
+  }
+
+  .plan-preview-grid {
+    gap: 4px;
+  }
+
+  .plan-preview-weekdays {
+    margin: 14px 0 6px;
+  }
+
+  .plan-preview-weekdays span {
+    font-size: 11px;
+  }
+
+  .plan-preview-day {
+    height: 34px;
+    font-size: 14px;
+  }
+
+  .plan-preview-heading {
+    font-size: 17px;
+  }
+
+  .plan-preview-exercises li {
+    flex-wrap: wrap;
+    gap: 10px;
+    min-height: 0;
+    padding: 10px 12px;
+  }
+
+  .plan-preview-exercise-icon {
+    width: 48px;
+    height: 36px;
+  }
+
+  .plan-preview-exercise-name {
+    font-size: 15px;
   }
 }

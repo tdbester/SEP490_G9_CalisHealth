@@ -61,8 +61,8 @@ export default function ActivityTrendChart({ points }) {
   const tipY = below ? active.y + TOOLTIP.gap : active.y - TOOLTIP.gap - TOOLTIP.h;
 
   return (
-    <Box sx={{ overflowX: "auto" }}>
-      <Box sx={{ minWidth: 560 }}>
+    <Box sx={{ overflowX: "auto", maxWidth: "100%" }}>
+      <Box sx={{ minWidth: { xs: 0, sm: 560 }, maxWidth: "100%" }}>
         <svg
           viewBox={`0 0 ${VB_W} ${VB_H}`}
           width="100%"

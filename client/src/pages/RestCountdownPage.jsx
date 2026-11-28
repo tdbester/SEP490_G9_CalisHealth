@@ -213,9 +213,10 @@ export default function RestCountdownPage() {
             <div className="rc-timer-wrap">
               <svg
                 className="rc-ring"
-                width={RING_SIZE}
-                height={RING_SIZE}
+                width="100%"
+                height="100%"
                 viewBox="0 0 280 280"
+                preserveAspectRatio="xMidYMid meet"
                 aria-hidden="true"
               >
                 <defs>

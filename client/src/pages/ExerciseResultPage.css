@@ -19,7 +19,10 @@
     ),
     #0d0b1a;
   color: var(--text);
-  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+  font-family: var(--font-app);
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 /* ------------------------------------------------------------------ body */
