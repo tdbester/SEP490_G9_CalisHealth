@@ -2,7 +2,10 @@
   position: relative;
   display: inline-flex;
   flex: 0 0 auto;
-  font-family: Arial, sans-serif;
+  font-family: var(--font-app);
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .notification-bell-trigger {
@@ -71,7 +74,7 @@
   background: #171126;
   box-shadow: 0 16px 42px rgba(0, 0, 0, 0.45);
   color: #fff;
-  font-family: Arial, sans-serif;
+  font-family: var(--font-app);
 }
 
 .notification-bell-heading {

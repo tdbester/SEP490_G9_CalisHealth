@@ -2,6 +2,10 @@
   max-width: 1180px;
   margin: 0 auto;
   color: #f8f7ff;
+  font-family: var(--font-app);
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .leaderboard-page--centered {
@@ -79,7 +83,7 @@
 
 .leaderboard-select { display: flex; align-items: center; gap: 12px; color: #9c93b1; font-size: 12px; font-weight: 600; }
 .leaderboard-select select {
-  min-width: 160px;
+  min-width: 0;
   padding: 11px 34px 11px 13px;
   border: 1px solid #3b2b68;
   border-radius: 9px;
@@ -165,7 +169,20 @@
 .podium-avatar { width: 76px; height: 76px; margin-top: 4px; border: 3px solid #a477ee; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 5px rgba(120, 74, 221, .18), 0 7px 16px rgba(0, 0, 0, .25); }
 .podium-card--1 .podium-avatar { width: 92px; height: 92px; border-color: #e2b4ff; box-shadow: 0 0 0 6px rgba(178, 120, 255, .2), 0 0 26px rgba(164, 96, 255, .4); }
 .podium-avatar--fallback { display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #9b64ff, #ef62aa); font-size: 23px; font-weight: 800; }
-.podium-card strong { max-width: 170px; margin-top: 14px; overflow: hidden; color: #f9f7ff; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+/* Ten nguoi dung tieng Viet co the rat dai -> cho xuong dong thay vi cat "...".
+   Van giu toi da 2 dong de bo cuc khong bi vo tren man hinh nhe. */
+.podium-card strong {
+  max-width: 170px;
+  margin-top: 14px;
+  overflow: hidden;
+  color: #f9f7ff;
+  font-size: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+}
 .podium-level { margin-top: 4px; color: #9386ae; font-size: 10px; }
 .podium-card b { margin-top: 11px; color: #e0c4ff; font-size: 24px; text-shadow: 0 0 18px rgba(193, 139, 255, .35); }
 .podium-card small { color: #74698b; font-size: 10px; }
@@ -250,7 +267,7 @@
   .leaderboard-list-actions { justify-content: space-between; }
   .leaderboard-select { justify-content: space-between; }
   .leaderboard-select select { flex: 1; }
-  .leaderboard-self-row { grid-template-columns: 1fr auto; gap: 10px; }
+  .leaderboard-self-row { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
   .leaderboard-self-label { grid-column: 1 / -1; }
   .leaderboard-self-row .leaderboard-member { grid-column: 1 / -1; }
   .leaderboard-self-row .leaderboard-self-score { text-align: left; }
@@ -266,4 +283,66 @@
   .podium-card--1 .podium-medal { width: 50px; height: 50px; top: -25px; }
   .podium-card strong { max-width: 100px; font-size: 11px; }
   .podium-card b { font-size: 16px; }
+}
+
+/* Màn hình rất hẹp (≤ 360px): podium 1 cột dọc, bảng cuộn ngang gọn hơn. */
+@media (max-width: 360px) {
+  .leaderboard-hero {
+    padding: 14px 16px 16px;
+    gap: 16px;
+  }
+
+  .leaderboard-hero-art { width: 84px; height: 66px; flex: 0 0 84px; }
+  .leaderboard-hero-trophy { font-size: 44px; padding-top: 10px; }
+  .leaderboard-hero h1 { font-size: 24px; }
+  .leaderboard-subtitle { font-size: 13px; }
+
+  .leaderboard-week-badge {
+    padding: 8px 12px;
+    font-size: 11px;
+  }
+
+  /* Podium xếp dọc để mỗi hạng có đủ bề rộng cho tên tiếng Việt dài. */
+  .leaderboard-podium {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 24px 12px 0;
+  }
+
+  .podium-card,
+  .podium-card--slot-1 {
+    grid-column: 1 !important;
+    min-height: 0;
+    padding: 22px 12px 26px;
+  }
+
+  .podium-card--slot-1 { order: 1; }
+  .podium-card--slot-0 { order: 2; }
+  .podium-card--slot-2 { order: 3; }
+
+  .podium-card strong { max-width: 100%; font-size: 13px; }
+  .podium-card b { font-size: 20px; }
+
+  .leaderboard-podium-placeholder {
+    grid-column: 1 !important;
+    min-height: 0;
+    display: none;
+  }
+
+  .leaderboard-list-heading { gap: 12px; }
+  .leaderboard-list-actions { flex-direction: column; align-items: stretch; gap: 10px; }
+  .leaderboard-select { flex-direction: column; align-items: stretch; gap: 6px; }
+  .leaderboard-select select { min-width: 0; width: 100%; }
+
+  .leaderboard-table { min-width: 560px; }
+  .leaderboard-table th,
+  .leaderboard-table td { padding: 12px 14px; }
+
+  .leaderboard-self-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding: 14px 16px;
+  }
+
+  .leaderboard-error-actions { flex-direction: column; }
 }

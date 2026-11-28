@@ -1,8 +1,10 @@
-/* Nút đổi ngôn ngữ — dùng chung cho sidebar và các trang đăng nhập. */
-
-.lang-switcher {
+/* Nút đổi ngôn ngữ — dùng chung cho sidebar và các trang đăng nhập. */.lang-switcher {
+  font-family: var(--font-app);
   position: relative;
   display: inline-flex;
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .lang-switcher__button {
@@ -42,7 +44,7 @@
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  min-width: 132px;
+  min-width: 0;
   padding: 4px;
   border: 1px solid rgba(168, 155, 208, 0.28);
   border-radius: 10px;
@@ -125,4 +127,15 @@
   background: #241b3a;
   color: #f3eeff;
   font-size: 12px;
+}
+
+@media (max-width: 480px) {
+  .lang-switcher__button {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  .lang-switcher__menu {
+    min-width: 120px;
+  }
 }

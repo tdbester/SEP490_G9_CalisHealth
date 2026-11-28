@@ -257,7 +257,7 @@ export default function SecurityCard({ security, onChanged, delay = 0 }) {
             />
           </Stack>
 
-          <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 2 }}>
+          <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 2 }} flexWrap="wrap">
             <Button size="small" onClick={handleCancel} disabled={saving} sx={{ color: CM.textMuted }}>
               {t("common.security.cancel")}
             </Button>

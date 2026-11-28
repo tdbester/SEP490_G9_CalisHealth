@@ -185,7 +185,7 @@ export default function WorkoutListPage() {
           mt: 2.5,
           display: "grid",
           gap: 1.5,
-          gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" },
+          gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(3, minmax(0, 1fr))" },
         }}
       >
         <Box sx={enter(0)}><SummaryCard label={t("contentManager.exercises.allWorkouts")} count={workouts.length} detail={t("contentManager.exercises.workoutsUnit")} /></Box>
@@ -228,7 +228,7 @@ export default function WorkoutListPage() {
                 </InputAdornment>
               ),
             }}
-            sx={{ flex: 1, minWidth: 200 }}
+            sx={{ flex: 1, minWidth: { xs: 0, sm: 200 } }}
           />
           <TextField
             select
@@ -239,7 +239,7 @@ export default function WorkoutListPage() {
               setPage(0);
             }}
             SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.exercises.filterByStatus") } }}
-            sx={{ minWidth: 125 }}
+            sx={{ minWidth: { xs: 0, sm: 125 } }}
           >
             <MenuItem value="all">{t("contentManager.exercises.allStatus")}</MenuItem>
             <MenuItem value="active">{t("contentManager.exercises.active")}</MenuItem>
@@ -254,7 +254,7 @@ export default function WorkoutListPage() {
               setPage(0);
             }}
             SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.exercises.filterByLevel") } }}
-            sx={{ minWidth: 125 }}
+            sx={{ minWidth: { xs: 0, sm: 125 } }}
           >
             <MenuItem value="all">{t("contentManager.exercises.allLevels")}</MenuItem>
             {levelNames.map((name) => (
@@ -270,7 +270,7 @@ export default function WorkoutListPage() {
               setPage(0);
             }}
             SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.exercises.filterByType") } }}
-            sx={{ minWidth: 125 }}
+            sx={{ minWidth: { xs: 0, sm: 125 } }}
           >
             <MenuItem value="all">{t("contentManager.exercises.allTypes")}</MenuItem>
             <MenuItem value="system">{t("contentManager.exercises.typeSystem")}</MenuItem>
@@ -349,7 +349,7 @@ export default function WorkoutListPage() {
                             <FitnessCenterRoundedIcon />
                           </Box>
                           <Box sx={{ minWidth: 0, textAlign: "left" }}>
-                            <Typography variant="body2" fontWeight={600} noWrap sx={{ color: "#fff" }}>
+                            <Typography variant="body2" fontWeight={600}  sx={{ overflowWrap: "anywhere", color: "#fff" }}>
                               {workout.name}
                             </Typography>
                             <Typography variant="caption" sx={{ color: CM.textDim }}>
@@ -386,7 +386,7 @@ export default function WorkoutListPage() {
                         </Typography>
                       </TableCell>
                       <TableCell align="center">
-                        <Stack direction="row" spacing={0.5} justifyContent="center">
+                        <Stack direction="row" spacing={0.5} justifyContent="center" flexWrap="wrap">
                           <Button
                             component={RouterLink}
                             to={`${CONTENT_PATHS.workouts}/${encodeURIComponent(workout.code)}`}
@@ -412,7 +412,7 @@ export default function WorkoutListPage() {
                     <TableRow>
                       <TableCell colSpan={7} sx={{ py: 6, textAlign: "center" }}>
                         <Stack alignItems="center" spacing={1}>
-                          <FitnessCenterRoundedIcon sx={{ fontSize: 44, color: CM.textDim, opacity: 0.4 }} />
+                          <FitnessCenterRoundedIcon sx={{ fontSize: { xs: 24, md: 44 }, color: CM.textDim, opacity: 0.4 }} />
                           <Typography variant="body2" color="text.secondary">
                             {workouts.length
                               ? t("contentManager.exercises.workoutNoMatch")

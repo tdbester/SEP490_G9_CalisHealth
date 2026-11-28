@@ -191,7 +191,7 @@ export default function ExerciseListPage() {
         mx: "auto",
         px: { xs: 2, sm: 3 },
         py: { xs: 2.5, sm: 3 },
-        "&, & *": { fontFamily: "Arial, sans-serif !important" },
+        "&, & *": { fontFamily: "var(--font-app) !important" },
       }}
     >
       <ContentPageHeader
@@ -230,7 +230,7 @@ export default function ExerciseListPage() {
           mt: 2.5,
           display: "grid",
           gap: 1.5,
-          gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" },
+          gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(3, minmax(0, 1fr))" },
         }}
       >
         <Box sx={enter(0)}><SummaryCard label={t("contentManager.exercises.allExercises")} count={entries.length} detail={t("contentManager.exercises.exercisesUnit")} /></Box>
@@ -270,7 +270,7 @@ export default function ExerciseListPage() {
                 </InputAdornment>
               ),
             }}
-            sx={{ flex: 1, minWidth: 200 }}
+            sx={{ flex: 1, minWidth: { xs: 0, sm: 200 } }}
           />
           <TextField
             select
@@ -278,7 +278,7 @@ export default function ExerciseListPage() {
             value={status}
             onChange={resetPage(setStatus)}
             SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.exercises.filterByStatus") } }}
-            sx={{ minWidth: 130 }}
+            sx={{ minWidth: { xs: 0, sm: 130 } }}
           >
             <MenuItem value="all">{t("contentManager.exercises.allStatus")}</MenuItem>
             <MenuItem value="active">{t("contentManager.exercises.active")}</MenuItem>
@@ -290,7 +290,7 @@ export default function ExerciseListPage() {
             value={level}
             onChange={resetPage(setLevel)}
             SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.exercises.filterByLevel") } }}
-            sx={{ minWidth: 130 }}
+            sx={{ minWidth: { xs: 0, sm: 130 } }}
           >
             <MenuItem value="all">{t("contentManager.exercises.allLevels")}</MenuItem>
             {levelNames.map((name) => (
@@ -303,7 +303,7 @@ export default function ExerciseListPage() {
             value={type}
             onChange={resetPage(setType)}
             SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.exercises.filterByType") } }}
-            sx={{ minWidth: 120 }}
+            sx={{ minWidth: { xs: 0, sm: 120 } }}
           >
             <MenuItem value="all">{t("contentManager.exercises.allTypes")}</MenuItem>
             <MenuItem value="health">{t("contentManager.exercises.typeHealth")}</MenuItem>
@@ -406,7 +406,7 @@ export default function ExerciseListPage() {
                               )}
                             </Box>
                             <Box sx={{ minWidth: 0, textAlign: "left" }}>
-                              <Typography variant="body2" fontWeight={600} noWrap sx={{ color: "#fff" }}>
+                              <Typography variant="body2" fontWeight={600}  sx={{ overflowWrap: "anywhere", color: "#fff" }}>
                                 {entry.name}
                               </Typography>
                               <Typography variant="caption" sx={{ color: CM.textDim }}>
@@ -438,7 +438,7 @@ export default function ExerciseListPage() {
                           </Typography>
                         </TableCell>
                         <TableCell align="center">
-                          <Stack direction="row" spacing={0.5} justifyContent="center">
+                          <Stack direction="row" spacing={0.5} justifyContent="center" flexWrap="wrap">
                             <Button
                               component={RouterLink}
                               to={`${CONTENT_PATHS.exercises}/${encodeURIComponent(entry.code)}`}
@@ -465,7 +465,7 @@ export default function ExerciseListPage() {
                     <TableRow>
                       <TableCell colSpan={8} sx={{ py: 6, textAlign: "center" }}>
                         <Stack alignItems="center" spacing={1}>
-                          <FitnessCenterRoundedIcon sx={{ fontSize: 44, color: CM.textDim, opacity: 0.4 }} />
+                          <FitnessCenterRoundedIcon sx={{ fontSize: { xs: 24, md: 44 }, color: CM.textDim, opacity: 0.4 }} />
                           <Typography variant="body2" color="text.secondary">
                             {entries.length
                               ? t("contentManager.exercises.noMatch")

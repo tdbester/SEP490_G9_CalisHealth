@@ -74,7 +74,7 @@ function ManagementCard({ title, description, to, action, icon: Icon, preview, t
           >
             <Icon sx={{ fontSize: 22 }} />
           </Box>
-          <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff", fontSize: 15, lineHeight: 1.35, letterSpacing: "-0.01em" }}>
+          <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff", fontSize: 15, lineHeight: 1.35, letterSpacing: "-0.005em" }}>
             {title}
           </Typography>
         </Stack>
@@ -147,11 +147,11 @@ function PreviewList({ items, tone }) {
         >
           <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
             <Box sx={{ width: 6, height: 6, flexShrink: 0, borderRadius: "50%", bgcolor: tone.accent }} />
-            <Typography variant="caption" noWrap sx={{ color: "#EDE8F8", fontWeight: 600, fontSize: 11.5 }}>
+            <Typography variant="caption" sx={{ color: "#EDE8F8", fontWeight: 600, fontSize: 11.5, overflowWrap: "anywhere" }}>
               {label}
             </Typography>
           </Stack>
-          <Typography variant="caption" noWrap sx={{ color: CM.textDim, fontSize: 10.5, flexShrink: 0 }}>
+          <Typography variant="caption" sx={{ color: CM.textDim, fontSize: 10.5, flexShrink: 0 }}>
             {detail}
           </Typography>
         </Stack>
@@ -189,7 +189,7 @@ export default function ContentManagerDashboard() {
           mt: 2,
           display: "grid",
           gap: 1.5,
-          gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" },
+          gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))" },
         }}
       >
         <Box sx={enter(0)}>
@@ -239,12 +239,12 @@ export default function ContentManagerDashboard() {
       </Box>
 
       <Card component="section" aria-labelledby="members-by-level-title" sx={{ mt: 2.5, p: { xs: 2, sm: 2.5 }, ...enter(300), position: "relative", overflow: "hidden" }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-          <Stack direction="row" spacing={1.25} alignItems="center">
-            <Box sx={{ width: 34, height: 34, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}` }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }} flexWrap="wrap" useFlexGap>
+          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+            <Box sx={{ width: 34, height: 34, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "rgba(139,92,246,0.15)", border: `1px solid ${CM.border}`, flexShrink: 0 }}>
               <GroupRoundedIcon sx={{ color: CM.violetBright, fontSize: 18 }} />
             </Box>
-            <Typography id="members-by-level-title" variant="subtitle1" fontWeight={700} sx={{ color: "#fff", fontSize: 15.5 }}>
+            <Typography id="members-by-level-title" variant="subtitle1" fontWeight={700} sx={{ color: "#fff", fontSize: 15.5, minWidth: 0, overflowWrap: "anywhere" }}>
               {t("contentManager.dashboard.membersByLevel")}
             </Typography>
           </Stack>
@@ -336,7 +336,7 @@ export default function ContentManagerDashboard() {
                     }}
                   >
                     <Box sx={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, bgcolor: color }} />
-                    <Typography variant="caption" noWrap sx={{ color: CM.textMuted, flex: 1, minWidth: 0, fontWeight: 600 }}>{item.level}</Typography>
+                    <Typography variant="caption" sx={{ color: CM.textMuted, flex: 1, minWidth: 0, fontWeight: 600, overflowWrap: "anywhere" }}>{item.level}</Typography>
                     <Typography variant="caption" fontWeight={700} sx={{ color: "#fff", whiteSpace: "nowrap" }}>{percent}%</Typography>
                     <Typography variant="caption" sx={{ color: CM.textDim, whiteSpace: "nowrap" }}>· {count.toLocaleString()}</Typography>
                   </Stack>

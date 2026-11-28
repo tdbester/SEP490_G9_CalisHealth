@@ -399,7 +399,7 @@ export default function UpdatePersonalExercisePage() {
         navigate('/library/personal?status=pending');
       } else if (updatedExercise.status === 'ACCEPTED') {
         toast.success(isAcceptedEdit ? t("member.personal.updateSuccessful") : t("member.personal.exerciseApproved"), {
-          style: { fontFamily: "Arial, sans-serif" },
+          style: { fontFamily: "var(--font-app)" },
         });
         navigate('/library/personal?status=accepted');
       } else {
@@ -433,7 +433,7 @@ export default function UpdatePersonalExercisePage() {
   if (!exercise && !errorMessage) return null;
 
   return (
-    <div className="create-personal-exercise-page w-full max-w-5xl mx-auto space-y-6 pb-12 text-white" style={{ fontFamily: 'Arial, sans-serif' }}>
+    <div className="create-personal-exercise-page w-full max-w-5xl mx-auto space-y-6 pb-12 text-white" style={{ fontFamily: 'var(--font-app)' }}>
       <header className="mb-2">
         <h1 className="text-2xl font-bold text-white tracking-tight">{t("member.personal.updateExerciseTitle")}</h1>
         <p className="text-xs text-slate-400 mt-1">
@@ -459,7 +459,7 @@ export default function UpdatePersonalExercisePage() {
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-xs font-semibold text-slate-300">{t("member.personal.title")}</label>
-            <span className="text-xs text-slate-500 font-mono">{charCount(title, 50)}</span>
+            <span className="text-xs text-slate-500" style={{ fontFamily: "var(--font-app)" }}>{charCount(title, 50)}</span>
           </div>
           <input
             type="text"
@@ -481,7 +481,7 @@ export default function UpdatePersonalExercisePage() {
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-xs font-semibold text-slate-300">{t("member.personal.descriptionField")}</label>
-            <span className="text-xs text-slate-500 font-mono">{charCount(description, 300)}</span>
+            <span className="text-xs text-slate-500" style={{ fontFamily: "var(--font-app)" }}>{charCount(description, 300)}</span>
           </div>
           <textarea
             id="exercise-description"

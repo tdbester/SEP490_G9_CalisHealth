@@ -137,7 +137,7 @@ export default function CreateNotificationPage() {
     <section className="notification-module mx-auto w-full max-w-[1080px] text-slate-100">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-5">
         <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-white">{t("admin.notifications.create")}</h1>
+          <h1 className="text-[18px] font-bold tracking-tight text-white sm:text-[22px]">{t("admin.notifications.create")}</h1>
           <p className="mt-1.5 text-sm text-[#a89bd0]">
             {t("admin.notifications.createHeaderDescription")}
           </p>

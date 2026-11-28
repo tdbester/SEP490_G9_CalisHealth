@@ -152,7 +152,7 @@ function SettingRow({ icon, tone, label, desc, tag, control, children, last }) {
       }}
     >
       <IconBox icon={icon} tone={tone} size={40} />
-      <Box sx={{ flex: 1, minWidth: 220 }}>
+      <Box sx={{ flex: 1, minWidth: { xs: 0, sm: 220 } }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Typography sx={{ fontSize: 15, fontWeight: 600 }}>{label}</Typography>
           {tag && <Pill tone={tone}>{tag}</Pill>}
@@ -298,7 +298,7 @@ export default function UploadLimitsTab() {
                     inputProps={{ min: f.min, max: f.max, step: 1, "aria-label": `${label} (${f.unit})`, style: { textAlign: "right" } }}
                     InputProps={{ endAdornment: <InputAdornment position="end">{t(`limits.units.${f.unit}`)}</InputAdornment> }}
                     FormHelperTextProps={{ sx: { textAlign: "right", mr: 0 } }}
-                    sx={{ width: 190 }}
+                    sx={{ width: { xs: "100%", sm: 190 } }}
                   />
                 }
               >
@@ -396,7 +396,7 @@ export default function UploadLimitsTab() {
         }}
       >
         <HistoryRoundedIcon sx={{ fontSize: 17, color: CM.textDim }} />
-        <Typography sx={{ flex: 1, minWidth: 240, fontSize: 13, color: CM.textDim }}>
+        <Typography sx={{ flex: 1, minWidth: { xs: 0, sm: 240 }, fontSize: 13, color: CM.textDim }}>
           {t("limits.lastUpdated", { user: data.updatedBy || "-", date: fmtDateTime(data.updatedAt) })}
         </Typography>
         {changed.length > 0 && (

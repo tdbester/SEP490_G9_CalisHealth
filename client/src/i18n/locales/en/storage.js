@@ -15,6 +15,12 @@ export default {
     cleanup: "Cleanup",
     settings: "Upload limits",
   },
+  a11y: {
+    sectionsAria: "Media storage sections",
+    cleanupViewsAria: "Cleanup views",
+    bulkActionsAria: "Bulk actions",
+    storageUsedAria: "Storage used",
+  },
 
   // ---- Shared helpers ----
   duration: {
@@ -480,10 +486,10 @@ export default {
     units: {
       MB: "MB",
       GB: "GB",
-      sec: "giây",
-      files: "tệp",
-      days: "ngày",
-      hours: "giờ",
+      sec: "sec",
+      files: "files",
+      days: "days",
+      hours: "hours",
       percent: "%",
     },
     errorInteger: "Enter a whole number",

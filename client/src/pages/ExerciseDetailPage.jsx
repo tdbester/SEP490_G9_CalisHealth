@@ -683,7 +683,7 @@ export default function ExerciseDetailPage() {
   return (
     <div
       className="exercise-detail-page w-full max-w-6xl mx-auto text-white pb-10"
-      style={{ fontFamily: "Arial, sans-serif" }}
+      style={{ fontFamily: "var(--font-app)" }}
     >
       {/* Explicit style reset to prevent any browser default button styles (buttonface/white box) */}
       <style>{`
@@ -758,7 +758,7 @@ export default function ExerciseDetailPage() {
         </div>
 
         {/* Hàng tiêu đề bài tập & Badge level đầm rõ */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-3.5 flex-wrap">
               <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
@@ -789,7 +789,7 @@ export default function ExerciseDetailPage() {
               </p>
             )}
           </div>
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 items-center gap-3 max-sm:w-full max-sm:justify-end">
             <FavoriteButton
               itemType={currentFavoriteType}
               itemId={exercise.id || exercise.code}
@@ -984,7 +984,7 @@ export default function ExerciseDetailPage() {
                 </div>
 
                 {/* Thời gian hiển thị dạng "0:25 / 1:24" */}
-                <div className="text-xs text-slate-400 font-mono flex-shrink-0 select-none">
+                <div className="text-xs text-slate-400 flex-shrink-0 select-none" style={{ fontFamily: "var(--font-app)" }}>
                   {formatTime(currentTime)} / {formatTime(totalDuration)}
                 </div>
 

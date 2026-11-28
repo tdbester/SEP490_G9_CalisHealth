@@ -1,10 +1,12 @@
-/* MemberExerciseListPage.css — Dedicated Member Provided Exercises Screen */
-
-.member-exercise-page {
+/* MemberExerciseListPage.css — Dedicated Member Provided Exercises Screen */.member-exercise-page {
+  font-family: var(--font-app);
   max-width: 1180px;
   margin: 0 auto;
   color: #ffffff;
   padding-bottom: 56px;
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 /* Back Link */
@@ -45,7 +47,7 @@
 
 .header-meta {
   flex: 1;
-  min-width: 260px;
+  min-width: 0;
 }
 
 .member-page-title {
@@ -53,7 +55,7 @@
   font-weight: 700;
   color: #ffffff;
   margin: 0 0 6px 0;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
 }
 
 .member-page-description {
@@ -117,7 +119,7 @@
 
 .search-box-wrap {
   flex: 1;
-  min-width: 260px;
+  min-width: 0;
   position: relative;
   display: flex;
   align-items: center;
@@ -296,10 +298,13 @@
   font-weight: 700;
   color: #ffffff;
   margin: 0;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  letter-spacing: -0.005em;
+  /* Ten bai tap tieng Viet co the dai -> xuong toi da 2 dong thay vi cat. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
 }
 
 .member-badge-pill {
@@ -332,7 +337,7 @@
 
 .level-badge {
   width: 110px;
-  min-width: 110px;
+  min-width: 0;
   max-width: 110px;
   height: 28px;
   display: inline-flex;
@@ -345,6 +350,9 @@
   letter-spacing: 0.02em;
   box-sizing: border-box;
   padding: 0 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .row-arrow-icon {
@@ -650,5 +658,63 @@
 
   .form-row {
     flex-direction: column;
+  }
+
+  /* Hàng nút hành động xếp dọc để nút không bị tràn trên màn hẹp. */
+  .form-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+}
+
+/* Man hinh rat hep: hang bai tap xuong cho de doc va khong tran ngang. */
+@media (max-width: 480px) {
+  .exercise-row-card {
+    padding: 14px 14px;
+    gap: 10px;
+  }
+
+  .row-left {
+    gap: 10px;
+  }
+
+  .exercise-icon-badge {
+    width: 38px;
+    height: 38px;
+  }
+
+  .exercise-row-name {
+    font-size: 15px;
+  }
+
+  .row-right {
+    gap: 8px;
+    margin-left: 0;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  /* Badge cap do rong co the co lai, chu bi cat. */
+  .level-badge {
+    width: auto;
+    max-width: 88px;
+    font-size: 11px;
+    padding: 0 6px;
+  }
+
+  .exercise-row-details {
+    font-size: 12.5px;
+  }
+
+  .modal-overlay {
+    padding: 12px;
+  }
+
+  .modal-content {
+    padding: 22px 18px;
   }
 }

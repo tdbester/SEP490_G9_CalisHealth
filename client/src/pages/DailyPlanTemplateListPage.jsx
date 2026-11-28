@@ -120,7 +120,7 @@ export default function DailyPlanTemplateListPage() {
         )}
       />
 
-      <Box component="section" aria-label={t("contentManager.templates.summary")} sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" } }}>
+      <Box component="section" aria-label={t("contentManager.templates.summary")} sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(3, minmax(0, 1fr))" } }}>
         <Box sx={enter(0)}><SummaryCard label={t("contentManager.templates.allPlans")} count={templates.length} detail={t("contentManager.templates.templates")} /></Box>
         <Box sx={enter(80)}><SummaryCard label={t("contentManager.templates.active")} tone="success" count={activeCount} detail={t("contentManager.templates.templates")} /></Box>
         <Box sx={enter(160)}><SummaryCard label={t("contentManager.templates.inactive")} tone="error" count={templates.length - activeCount} detail={t("contentManager.templates.templates")} /></Box>
@@ -132,14 +132,14 @@ export default function DailyPlanTemplateListPage() {
             size="small" fullWidth value={search} onChange={resetPage(setSearch)}
             placeholder={t("contentManager.templates.searchPlaceholder")} inputProps={{ "aria-label": t("contentManager.templates.searchAria") }}
             InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" color="disabled" /></InputAdornment> }}
-            sx={{ flex: 1, minWidth: 200 }}
+            sx={{ flex: 1, minWidth: { xs: 0, sm: 200 } }}
           />
-          <TextField select size="small" value={status} onChange={resetPage(setStatus)} SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.templates.filterByStatus") } }} sx={{ minWidth: 125 }}>
+          <TextField select size="small" value={status} onChange={resetPage(setStatus)} SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.templates.filterByStatus") } }} sx={{ minWidth: { xs: 0, sm: 125 } }}>
             <MenuItem value="all">{t("contentManager.templates.allStatus")}</MenuItem>
             <MenuItem value="active">{t("contentManager.templates.active")}</MenuItem>
             <MenuItem value="inactive">{t("contentManager.templates.inactive")}</MenuItem>
           </TextField>
-          <TextField select size="small" value={level} onChange={resetPage(setLevel)} SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.templates.filterByLevel") } }} sx={{ minWidth: 125 }}>
+          <TextField select size="small" value={level} onChange={resetPage(setLevel)} SelectProps={{ SelectDisplayProps: { "aria-label": t("contentManager.templates.filterByLevel") } }} sx={{ minWidth: { xs: 0, sm: 125 } }}>
             <MenuItem value="all">{t("contentManager.templates.allLevels")}</MenuItem>
             {levelNames.map((name) => <MenuItem key={name} value={name.toLowerCase()}>{name}</MenuItem>)}
           </TextField>
@@ -198,7 +198,7 @@ export default function DailyPlanTemplateListPage() {
                         <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
                           <Box className="workout-row-mark" aria-hidden="true"><EventNoteRoundedIcon /></Box>
                           <Box sx={{ minWidth: 0, textAlign: "left" }}>
-                            <Typography variant="body2" fontWeight={600} noWrap sx={{ color: "#fff" }}>{item.name}</Typography>
+                            <Typography variant="body2" fontWeight={600}  sx={{ overflowWrap: "anywhere", color: "#fff" }}>{item.name}</Typography>
                             <Typography variant="caption" sx={{ color: CM.textDim }}>{item.code}</Typography>
                           </Box>
                         </Stack>
@@ -208,7 +208,7 @@ export default function DailyPlanTemplateListPage() {
                       <TableCell><Typography sx={{ color: "#fff", fontSize: 18, fontWeight: 700, lineHeight: 1.2 }}>{item.daysPerWeek}</Typography></TableCell>
                       <TableCell><Box sx={{ display: "flex", justifyContent: "center" }}><StatusDot active={item.active} /></Box></TableCell>
                       <TableCell>
-                        <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
+                        <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center" flexWrap="wrap">
                           <Button component={RouterLink} to={`${CONTENT_PATHS.templates}/${encodeURIComponent(item.code)}`} size="small" variant="outlined" sx={{ py: 0.25, px: 1.25, fontSize: 11.5, minWidth: 0, borderRadius: "8px" }}>
                             {t("contentManager.templates.view")}
                           </Button>
@@ -223,7 +223,7 @@ export default function DailyPlanTemplateListPage() {
                     <TableRow>
                       <TableCell colSpan={6} sx={{ py: 6 }}>
                         <Stack alignItems="center" spacing={1}>
-                          <EventNoteRoundedIcon sx={{ fontSize: 44, color: CM.textDim, opacity: 0.4 }} />
+                          <EventNoteRoundedIcon sx={{ fontSize: { xs: 24, md: 44 }, color: CM.textDim, opacity: 0.4 }} />
                           <Typography variant="body2" color="text.secondary">
                             {templates.length ? t("contentManager.templates.noMatch") : t("contentManager.templates.empty")}
                           </Typography>

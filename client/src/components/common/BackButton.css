@@ -25,3 +25,11 @@
   width: 16px;
   height: 16px;
 }
+
+@media (max-width: 480px) {
+  .back-btn {
+    height: 32px;
+    padding: 0 14px 0 10px;
+    font-size: 12px;
+  }
+}

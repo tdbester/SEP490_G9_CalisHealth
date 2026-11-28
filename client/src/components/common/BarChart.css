@@ -4,6 +4,10 @@
   display: flex;
   gap: 4px;
   border-bottom: 1px solid #2D2550;
+  font-family: var(--font-app);
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .bar-chart-col {
@@ -63,5 +67,28 @@
 
   .bar-chart-label {
     font-size: 10.5px;
+  }
+}
+
+/* Màn hình hẹp: nhãn ngày rút gọn + tránh tràn ngang khỏi khung biểu đồ. */
+@media (max-width: 480px) {
+  .bar-chart {
+    gap: 2px;
+  }
+
+  .bar-chart-value {
+    font-size: 9.5px;
+  }
+
+  .bar-chart-label {
+    font-size: 9px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bar-chart-sublabel {
+    font-size: 9px;
   }
 }

@@ -61,7 +61,7 @@ export function ContentPageHeader({ breadcrumb, title, description, action }) {
             mt: 1,
             fontSize: { xs: "1.45rem", sm: "1.6rem" },
             fontWeight: 700,
-            letterSpacing: "-0.02em",
+            letterSpacing: "-0.015em",
             color: "#fff",
           }}
         >
@@ -120,7 +120,7 @@ export function SummaryCard({ label, count, detail, tone = "primary" }) {
             {label}
           </Typography>
         </Stack>
-        <Typography sx={{ color: "#fff", fontSize: 36, fontWeight: 800, lineHeight: 1.15 }}>
+        <Typography sx={{ color: "#fff", fontSize: { xs: 24, md: 36 }, fontWeight: 800, lineHeight: 1.15 }}>
           {count}
         </Typography>
         <Typography variant="caption" sx={{ color: CM.textMuted }}>

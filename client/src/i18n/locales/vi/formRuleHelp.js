@@ -12,7 +12,7 @@
  */
 export default {
   title: "Ngưỡng chấm form (AI)",
-  caption: "Góc và dung sai để AI chấm form khi member tập bài này.",
+  caption: "Góc và dung sai để AI chấm form khi thành viên tập bài này.",
   exampleLabel: "Ví dụ",
   usedForReps: "Dùng cho: bài đếm lần (REPS).",
   usedForHold: "Dùng cho: bài giữ tư thế (HOLD).",
@@ -23,13 +23,13 @@ export default {
   fields: {
     joint: {
       label: "Khớp",
-      help: "Khớp cơ thể mà camera theo dõi khi member tập. Chọn khớp quan trọng nhất với đặc điểm của bài này, để AI chấm đúng thứ cần chấm.",
+      help: "Khớp cơ thể mà camera theo dõi khi thành viên tập. Chọn khớp quan trọng nhất với đặc điểm của bài này, để AI chấm đúng thứ cần chấm.",
       example:
         "Với bài Squat, chọn KNEE. Lúc đó AI đo độ sâu gối xuống bao nhiêu và có bị lệch vào trong không.",
     },
     topAngle: {
       label: "Góc trên (độ)",
-      help: "Góc của khớp khi member ở vị trí trên cùng, đã duỗi thẳng hết. AI coi đây là vị trí bắt đầu của mỗi lần rep.",
+      help: "Góc của khớp khi thành viên ở vị trí trên cùng, đã duỗi thẳng hết. AI coi đây là vị trí bắt đầu của mỗi lần.",
       example:
         "Góc 165 nghĩa là gối phải duỗi thẳng tới khoảng 165 độ trước khi AI bắt đầu đếm một lần mới.",
     },
@@ -53,7 +53,7 @@ export default {
     },
     weight: {
       label: "Trọng số (0-1)",
-      help: "Khớp này đóng góp bao nhiêu vào điểm cuối cùng của một lần rep so với các khớp khác bạn đã khai. Nhập từ 0 đến 1.",
+      help: "Khớp này đóng góp bao nhiêu vào điểm cuối cùng của một lần so với các khớp khác bạn đã khai. Nhập từ 0 đến 1.",
       example:
         "Hai rule với trọng số 0.60 và 0.25 nghĩa là khớp đầu chiếm 60 phần trăm điểm, khớp sau chiếm 25 phần trăm.",
     },

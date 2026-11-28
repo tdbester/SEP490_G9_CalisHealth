@@ -45,12 +45,17 @@ const contentTheme = createTheme({
     error: { main: CM.pink, dark: CM.pink, contrastText: "#2A0716" },
   },
   typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-    h1: { fontWeight: 700, fontSize: "2.1rem", letterSpacing: "-0.02em" },
-    h2: { fontWeight: 700, fontSize: "1.8rem", letterSpacing: "-0.02em" },
-    h3: { fontWeight: 700, fontSize: "1.5rem", letterSpacing: "-0.015em" },
-    h4: { fontWeight: 700, fontSize: "1.35rem", letterSpacing: "-0.015em" },
-    h5: { fontWeight: 700, fontSize: "1.15rem" },
+    fontFamily: 'var(--font-app)',
+    /*
+     * Letter-spacing am(chan khoang cach) se lam dau tieng Viet nhu
+     * "Ă", "Â", "Đ", "Ơ", "Ư" cham vao chu lien ke. Inter Variable ho tro
+     * bo chu deu nen chi giu muc am nhe cho tieu de.
+     */
+    h1: { fontWeight: 700, fontSize: "2.1rem", letterSpacing: "-0.015em" },
+    h2: { fontWeight: 700, fontSize: "1.8rem", letterSpacing: "-0.015em" },
+    h3: { fontWeight: 700, fontSize: "1.5rem", letterSpacing: "-0.005em" },
+    h4: { fontWeight: 700, fontSize: "1.35rem", letterSpacing: "-0.005em" },
+    h5: { fontWeight: 700, fontSize: "1.15rem", letterSpacing: "-0.005em" },
     h6: { fontWeight: 700, fontSize: "1rem" },
     body1: { fontSize: "0.9rem", lineHeight: 1.6 },
     body2: { fontSize: "0.85rem", lineHeight: 1.6 },

@@ -7,6 +7,10 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 18px;
+  font-family: var(--font-app);
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .usm-eyebrow {
@@ -259,10 +263,50 @@
   }
 
   .usm-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .usm-bmi {
     align-items: flex-start;
+  }
+}
+
+/* Màn hình rất hẹp (≤ 380px). */
+@media (max-width: 380px) {
+  .usm-head {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .usm-title {
+    font-size: 21px;
+  }
+
+  .usm-stepper {
+    padding: 12px 10px 10px;
+  }
+
+  .usm-stepper-value input {
+    font-size: 36px;
+  }
+
+  .usm-bmi {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .usm-bmi-value {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+    padding-right: 0;
+    padding-bottom: 10px;
+    border-right: none;
+    border-bottom: 1px solid #2D2550;
+  }
+
+  .usm-bmi-value strong {
+    font-size: 26px;
   }
 }

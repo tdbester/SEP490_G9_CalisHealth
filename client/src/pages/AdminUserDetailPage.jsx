@@ -162,8 +162,8 @@ function Card({ title, children, sx }) {
 
 function Field({ label, children }) {
   return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 2, minHeight: 34 }}>
-      <Typography sx={{ width: 120, flexShrink: 0, fontSize: 12.5, color: CM.textMuted }}>{label}</Typography>
+    <Box sx={{ display: "flex", alignItems: "center", gap: 2, minHeight: 34, flexWrap: "wrap" }}>
+      <Typography sx={{ width: { xs: "100%", sm: 120 }, flexShrink: 0, fontSize: 12.5, color: CM.textMuted }}>{label}</Typography>
       <Box sx={{ fontSize: 13, minWidth: 0, overflowWrap: "anywhere" }}>{children ?? "-"}</Box>
     </Box>
   );
@@ -173,14 +173,14 @@ function Stat({ label, value, hint }) {
   return (
     <Box sx={{ p: 1.5, borderRadius: "12px", bgcolor: CM.surfaceSoft, border: `1px solid ${CM.border}` }}>
       <Typography sx={{ fontSize: 12, color: CM.textMuted }}>{label}</Typography>
-      <Typography sx={{ mt: 0.5, fontSize: 26, fontWeight: 700, lineHeight: 1.2 }}>{value ?? "-"}</Typography>
+      <Typography sx={{ mt: 0.5, fontSize: { xs: 19, md: 26 }, fontWeight: 700, lineHeight: 1.2 }}>{value ?? "-"}</Typography>
       {hint && <Typography sx={{ mt: 0.25, fontSize: 11, color: CM.textDim }}>{hint}</Typography>}
     </Box>
   );
 }
 
 function StatGrid({ children }) {
-  return <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 1.5 }}>{children}</Box>;
+  return <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))" }, gap: 1.5 }}>{children}</Box>;
 }
 
 function SelectFilter({ label, value, onChange, options, width = 170, allLabel }) {
@@ -545,7 +545,7 @@ function ProfileCard({ d }) {
 
   return (
     <Card title={t("admin.userDetail.profileTitle")}>
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, columnGap: 3 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 1fr) minmax(0, 1fr)" }, columnGap: 3 }}>
         <Box>
           <Field label={t("admin.userDetail.fullName")}>{d.fullName}</Field>
           <Field label={t("admin.userDetail.userId")}>{d.userCode}</Field>
@@ -644,7 +644,7 @@ function DeactivateDialog({ user, busy, onCancel, onConfirm }) {
                 {initials(user.fullName)}
               </Box>
               <Box sx={{ minWidth: 0 }}>
-                <Typography sx={{ fontSize: 14, fontWeight: 600 }} noWrap>{user.fullName}</Typography>
+                <Typography sx={{ overflowWrap: "anywhere", fontSize: 14, fontWeight: 600 }} >{user.fullName}</Typography>
                 <Typography sx={{ fontSize: 12, color: CM.textMuted }}>
                   {user.userCode} {"\u00b7"} {ROLE_LABEL[user.role] ? t(ROLE_LABEL[user.role]) : user.role}
                 </Typography>
@@ -730,7 +730,7 @@ export default function AdminUserDetailPage() {
 
       <Box sx={{ mt: 1, mb: 3, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
         <Box sx={{ maxWidth: 640 }}>
-          <Typography component="h1" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.2 }}>
+          <Typography component="h1" sx={{ fontSize: { xs: 21, md: 30 }, fontWeight: 700, lineHeight: 1.2 }}>
             {t("admin.userDetail.pageTitle")}
           </Typography>
           <Typography sx={{ mt: 0.75, fontSize: 14, color: CM.textMuted }}>
@@ -785,8 +785,8 @@ export default function AdminUserDetailPage() {
       )}
 
       {detail && (
-        <Box sx={{ display: "grid", gap: 3 }}>
-          <Box sx={{ display: "grid", gap: 3, gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1.6fr) minmax(0, 1fr)" }, alignItems: "start" }}>
+        <Box sx={{ display: "grid", gap: 3, gridTemplateColumns: "minmax(0, 1fr)" }}>
+          <Box sx={{ display: "grid", gap: 3, gridTemplateColumns: { xs: "minmax(0, 1fr)", lg: "minmax(0, 1.6fr) minmax(0, 1fr)" }, alignItems: "start" }}>
             <ProfileCard d={detail} />
             <StatsCard d={detail} />
           </Box>

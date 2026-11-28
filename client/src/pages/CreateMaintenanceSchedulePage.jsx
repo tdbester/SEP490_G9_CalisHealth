@@ -193,9 +193,9 @@ export default function CreateMaintenanceSchedulePage() {
   };
 
   return (
-    <section className="maintenance-create-form mx-auto w-full max-w-[1080px] px-4 py-5 font-[Arial,sans-serif] text-slate-100 sm:px-7 sm:py-6">
+    <section className="maintenance-create-form mx-auto w-full max-w-[1080px] px-4 py-5 font-[var(--font-app)] text-slate-100 sm:px-7 sm:py-6">
       <header className="mb-5">
-        <h1 className="text-[22px] font-bold tracking-tight text-white">
+        <h1 className="text-[18px] font-bold tracking-tight text-white sm:text-[22px]">
           {t("admin.maintenance.createForm.title")}
         </h1>
         <p className="mt-1 text-xs leading-5 text-[#a89bd0] sm:text-sm">

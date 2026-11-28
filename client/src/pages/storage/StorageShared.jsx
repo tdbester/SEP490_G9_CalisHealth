@@ -76,6 +76,9 @@ export function Pill({ tone = "muted", children }) {
         fontSize: 12,
         fontWeight: 600,
         whiteSpace: "nowrap",
+        maxWidth: "100%",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
         color: fg,
         bgcolor: bg,
       }}
@@ -112,7 +115,7 @@ export function Panel({ title, action, children, sx }) {
 export function StatTile({ label, value, caption, tone }) {
   return (
     <Box
-      sx={{ flex: 1, minWidth: 180, p: 2, borderRadius: "12px", bgcolor: CM.surfaceSoft, border: `1px solid ${CM.border}` }}
+      sx={{ flex: 1, minWidth: { xs: 0, sm: 180 }, p: 2, borderRadius: "12px", bgcolor: CM.surfaceSoft, border: `1px solid ${CM.border}` }}
     >
       <Typography sx={{ fontSize: 12.5, color: CM.textMuted }}>{label}</Typography>
       <Typography sx={{ mt: 0.25, fontSize: 24, fontWeight: 700, color: tone || CM.text }}>{value}</Typography>

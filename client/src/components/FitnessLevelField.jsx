@@ -101,7 +101,7 @@ export default function FitnessLevelField({ value, options = [], currentLevel, d
         </Box>
 
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography variant="body2" sx={{ color: "#fff", fontWeight: 700 }} noWrap>
+          <Typography variant="body2" sx={{ color: "#fff", fontWeight: 700, overflowWrap: "anywhere" }}>
             {currentLevel || t("fitnessLevel.notAssessed")}
           </Typography>
           <Typography variant="caption" sx={{ display: "block", color: CM.textMuted }}>
@@ -119,7 +119,7 @@ export default function FitnessLevelField({ value, options = [], currentLevel, d
           endIcon={<ExpandMoreRoundedIcon sx={{ fontSize: 18 }} />}
           aria-haspopup="listbox"
           aria-label={t("fitnessLevel.changeAria")}
-          sx={{ flexShrink: 0 }}
+          sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}
         >
           {currentChanges ? t("fitnessLevel.changeTo", { level: value }) : t("fitnessLevel.changeLevel")}
         </Button>
@@ -134,7 +134,7 @@ export default function FitnessLevelField({ value, options = [], currentLevel, d
         open={Boolean(anchor)}
         onClose={() => setAnchor(null)}
         MenuListProps={{ "aria-label": t("fitnessLevel.systemLevelsAria"), dense: true }}
-        slotProps={{ paper: { sx: { minWidth: 300, mt: 0.75 } } }}
+        slotProps={{ paper: { sx: { minWidth: { xs: 0, sm: 300 }, maxWidth: "calc(100vw - 32px)", mt: 0.75 } } }}
       >
         <Box sx={{ px: 1.75, pt: 0.75, pb: 1 }}>
           <Typography variant="caption" sx={{ color: CM.textDim, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", fontSize: 10 }}>

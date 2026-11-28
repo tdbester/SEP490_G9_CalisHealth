@@ -280,7 +280,7 @@ export default function ProfilePage() {
               fontSize: { xs: "1.7rem", sm: "2.2rem" },
               fontWeight: 800,
               color: "#fff",
-              letterSpacing: "-0.032em",
+              letterSpacing: "-0.015em",
               lineHeight: 1.15,
             }}
           >

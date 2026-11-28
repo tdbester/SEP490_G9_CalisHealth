@@ -572,7 +572,7 @@ export default function CreatePersonalWorkoutPage() {
                     <XIcon />
                   </button>
                 </div>
-                <div className="grid grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                   <div className="col-span-full">
                     <label className="block text-[10px] text-slate-400 mb-1">{t("member.personal.countBy")}</label>
                     <p className="rounded-lg border border-[#231b46] bg-[#080518] p-2 text-center text-xs text-white">

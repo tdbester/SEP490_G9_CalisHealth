@@ -306,7 +306,7 @@ export default function ExerciseTreePage() {
         </Box>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ flexShrink: 0 }}>
           {incoming.length === 0 && <Typography variant="body2" sx={{ color: CM.textMuted, alignSelf: "center" }}>{t("contentManager.exerciseTree.startOfChain")}</Typography>}
-          {incoming.map((edge) => <Button key={edge.ruleId} variant="contained" onClick={() => openRule(edge.ruleId)} sx={{ minWidth: 180 }}>
+          {incoming.map((edge) => <Button key={edge.ruleId} variant="contained" onClick={() => openRule(edge.ruleId)} sx={{ minWidth: { xs: 0, sm: 180 }, width: { xs: "100%", sm: "auto" } }}>
             {incoming.length > 1
               ? t("contentManager.exerciseTree.viewRuleFrom", { name: nodeOf(edge.prerequisiteCode).name })
               : t("contentManager.exerciseTree.viewRule")}

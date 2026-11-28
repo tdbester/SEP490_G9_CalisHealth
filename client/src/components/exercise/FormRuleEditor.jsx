@@ -124,7 +124,7 @@ export default function FormRuleEditor({
 
   return (
     <Box sx={{ mt: 1.5 }}>
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap">
         <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
           {t("contentManager.form.formRules.editorTitle")}
         </Typography>
@@ -162,7 +162,7 @@ export default function FormRuleEditor({
 
       {list.map((rule, index) => (
         <Stack key={index} spacing={1} sx={{ mb: 1.5, p: 1.5, border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
             <TextField
               select
               size="small"
@@ -172,7 +172,7 @@ export default function FormRuleEditor({
               )}
               value={rule.joint}
               onChange={(event) => update(index, { joint: event.target.value })}
-              sx={{ minWidth: 140 }}
+              sx={{ minWidth: { xs: 0, sm: 140 }, width: { xs: "100%", sm: "auto" } }}
               error={Boolean(errorFor(index, "joint"))}
               helperText={errorFor(index, "joint") || " "}
             >

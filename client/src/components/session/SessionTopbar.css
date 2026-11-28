@@ -1,5 +1,5 @@
-/* Topbar dùng chung cho màn tracking và màn nghỉ giữa các set. */
-.sb-topbar {
+/* Topbar dùng chung cho màn tracking và màn nghỉ giữa các set. */.sb-topbar {
+  font-family: var(--font-app);
   height: 56px;
   display: flex;
   align-items: center;
@@ -7,6 +7,9 @@
   padding: 0 16px;
   background: #1a1230;
   border-bottom: 1px solid #2d2550;
+  font-feature-settings: "liga" 1, "calt" 1, "tnum" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis: none;
 }
 
 .sb-back {
@@ -72,7 +75,7 @@
   font-size: 16.8px;
   font-weight: 800;
   color: #fff;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
   white-space: nowrap;
 }
 
@@ -98,5 +101,21 @@
   .sb-brand-icon {
     width: 30px;
     height: 30px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sb-topbar {
+    height: 52px;
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .sb-brand-text {
+    display: none;
+  }
+
+  .sb-topbar-right {
+    gap: 8px;
   }
 }

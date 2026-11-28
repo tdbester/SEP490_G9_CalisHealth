@@ -32,7 +32,7 @@ function RuleRow({ icon, tone, label, rule, hint }) {
       <Typography
         sx={{
           fontSize: 12.5,
-          fontFamily: "monospace",
+          fontFamily: "var(--font-app)",
           color: CM.textMuted,
           px: 1.25,
           py: 0.5,
@@ -98,7 +98,7 @@ export default function CloudinaryOptimizationPanel() {
         </Box>
       )}
 
-      <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
+      <Box sx={{ mt: 2, display: "flex", flexWrap: "wrap", gap: 1, justifyContent: "flex-end" }}>
         <Link
           href="https://cloudinary.com/console/settings/upload"
           target="_blank"

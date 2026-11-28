@@ -114,7 +114,7 @@ export default function ExerciseApprovalHistoryPage() {
         action={<Button component={RouterLink} to={CONTENT_PATHS.pendingExerciseModeration} variant="outlined" startIcon={<ArrowBackRoundedIcon />}>{t("admin.approvalHistory.backToPending")}</Button>}
       />
 
-      <Box component="section" aria-label={t("admin.approvalHistory.summary")} sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" } }}>
+      <Box component="section" aria-label={t("admin.approvalHistory.summary")} sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(3, minmax(0, 1fr))" } }}>
         <Box sx={enter(0)}><SummaryCard label={t("admin.approvalHistory.totalDecisions")} count={totalDecisions} detail={t("admin.approvalHistory.exercises")} /></Box>
         <Box sx={enter(80)}><SummaryCard label={t("admin.approvalHistory.approved")} tone="success" count={approvedCount} detail={t("admin.approvalHistory.exercises")} /></Box>
         <Box sx={enter(160)}><SummaryCard label={t("admin.approvalHistory.rejected")} tone="warning" count={rejectedCount} detail={t("admin.approvalHistory.exercises")} /></Box>
@@ -125,10 +125,10 @@ export default function ExerciseApprovalHistoryPage() {
           {DECISION_TABS.map((tab) => <Tab key={tab.value} value={tab.value} label={t(tab.labelKey)} />)}
         </Tabs>
         <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ xs: "stretch", md: "center" }} sx={{ p: 1.5, borderBottom: `1px solid ${CM.border}` }}>
-          <TextField size="small" fullWidth value={search} onChange={updateFilter(setSearch)} placeholder={t("admin.approvalHistory.searchPlaceholder")} inputProps={{ "aria-label": t("admin.approvalHistory.searchAria") }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" color="disabled" /></InputAdornment> }} sx={{ flex: 1, minWidth: 220 }} />
+          <TextField size="small" fullWidth value={search} onChange={updateFilter(setSearch)} placeholder={t("admin.approvalHistory.searchPlaceholder")} inputProps={{ "aria-label": t("admin.approvalHistory.searchAria") }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" color="disabled" /></InputAdornment> }} sx={{ flex: 1, minWidth: { xs: 0, sm: 220 } }} />
           <TextField size="small" type="date" label={t("admin.approvalHistory.fromDate")} value={fromDate} onChange={(event) => { const nextFromDate = event.target.value; setFromDate(nextFromDate); if (toDate && nextFromDate && toDate < nextFromDate) setToDate(nextFromDate); setPage(0); }} InputLabelProps={{ shrink: true }} inputProps={{ max: toDate || undefined, "aria-label": t("admin.approvalHistory.reviewedFromAria") }} sx={{ ...dateFilterSx, minWidth: { xs: "100%", md: 155 } }} />
           <TextField size="small" type="date" label={t("admin.approvalHistory.toDate")} value={toDate} onChange={(event) => { setToDate(event.target.value); setPage(0); }} InputLabelProps={{ shrink: true }} inputProps={{ min: fromDate || undefined, "aria-label": t("admin.approvalHistory.reviewedToAria") }} sx={{ ...dateFilterSx, minWidth: { xs: "100%", md: 155 } }} />
-          <TextField select size="small" value={sort} onChange={updateFilter(setSort)} SelectProps={{ SelectDisplayProps: { "aria-label": t("admin.approvalHistory.sortAria") } }} sx={{ minWidth: 150 }}>
+          <TextField select size="small" value={sort} onChange={updateFilter(setSort)} SelectProps={{ SelectDisplayProps: { "aria-label": t("admin.approvalHistory.sortAria") } }} sx={{ minWidth: { xs: 0, sm: 150 } }}>
             <MenuItem value="newest">{t("admin.approvalHistory.newestFirst")}</MenuItem><MenuItem value="oldest">{t("admin.approvalHistory.oldestFirst")}</MenuItem>
           </TextField>
         </Stack>

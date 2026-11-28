@@ -76,7 +76,7 @@ function UsageBar({ percent, warning, critical, t }) {
       ))}
       <Box
         role="progressbar"
-        aria-label="Storage used"
+        aria-label={t("a11y.storageUsedAria")}
         aria-valuenow={Math.round(percent)}
         aria-valuemin={0}
         aria-valuemax={100}
@@ -323,7 +323,7 @@ function ProviderPanel({ data }) {
     >
       <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center" }}>
         <IconBox icon={cloud ? CloudDoneOutlinedIcon : CloudOffOutlinedIcon} tone={cloud ? "cyan" : "muted"} size={44} />
-        <Box sx={{ flex: 1, minWidth: 260 }}>
+        <Box sx={{ flex: 1, minWidth: { xs: 0, sm: 260 } }}>
           <Typography sx={{ fontSize: 15, fontWeight: 700 }}>
             {cloud
               ? `${t("provider.cloudinary")}${data.plan ? ` ${t("provider.planSuffix", { plan: data.plan })}` : ""}`
@@ -358,7 +358,7 @@ function ProviderPanel({ data }) {
           }}
         >
           <IconBox icon={OpenInNewRoundedIcon} tone="cyan" size={40} />
-          <Box sx={{ flex: 1, minWidth: 240 }}>
+          <Box sx={{ flex: 1, minWidth: { xs: 0, sm: 240 } }}>
             <Typography sx={{ fontSize: 14, fontWeight: 700 }}>{t("provider.consoleTitle")}</Typography>
             <Typography sx={{ mt: 0.25, fontSize: 12.5, color: CM.textMuted }}>
               {t("provider.consoleHint", { cloud: cloudLabel })}
@@ -378,7 +378,7 @@ function ProviderPanel({ data }) {
           {t("provider.otherFilesAlert", { used: formatBytes(data.usedBytes), registry: formatBytes(data.registryBytes) })}
         </Alert>
       )}
-      <Box sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" } }}>
+      <Box sx={{ mt: 2.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(3, minmax(0, 1fr))" } }}>
         <Box sx={{ p: 1.75, borderRadius: "10px", bgcolor: CM.surfaceSoft, border: `1px solid ${CM.border}` }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.75 }}>
             <StorageRoundedIcon sx={{ fontSize: 17, color: CM.violet }} />
@@ -512,7 +512,7 @@ export default function StorageCapacityTab() {
 
       <Panel title={t("capacity.title")} action={<Pill tone={status.tone}>● {status.label}</Pill>}>
         <Box sx={{ display: "flex", alignItems: "baseline", gap: 1, mb: 1.5 }}>
-          <Typography sx={{ fontSize: 28, fontWeight: 700 }}>{formatBytes(data.usedBytes)}</Typography>
+          <Typography sx={{ fontSize: { xs: 20, md: 28 }, fontWeight: 700 }}>{formatBytes(data.usedBytes)}</Typography>
           <Typography sx={{ fontSize: 14, color: CM.textMuted }}>
             {data.quotaLimited
               ? t("capacity.quotaUsed", {
@@ -617,7 +617,7 @@ export default function StorageCapacityTab() {
           }}
         >
           <AutoDeleteOutlinedIcon sx={{ fontSize: 18, color: cleanup.enabled ? CM.green : CM.amber }} />
-          <Typography sx={{ flex: 1, minWidth: 240, fontSize: 13 }}>
+          <Typography sx={{ flex: 1, minWidth: { xs: 0, sm: 240 }, fontSize: 13 }}>
             {cleanup.enabled
               ? t("capacity.autoCleanupOn", {
                   time: cleanup.runAt,

@@ -15,7 +15,7 @@ function UndoDeleteToast({ onUndo, message }) {
   }, []);
 
   return (
-    <div className="fixed top-24 right-6 z-[9999] flex items-center gap-3 rounded-xl border border-[#3c3063] bg-[#1a1438] px-4 py-3 shadow-2xl backdrop-blur-md animate-bounce-short">
+    <div className="fixed top-24 left-4 right-4 z-[9999] sm:left-auto sm:right-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#3c3063] bg-[#1a1438] px-4 py-3 shadow-2xl backdrop-blur-md animate-bounce-short">
       <span className="text-sm font-medium text-slate-200">{message}</span>
       <button
         type="button"
