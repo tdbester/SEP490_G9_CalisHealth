@@ -122,14 +122,21 @@ const L = {
  * @param {number} elbowAngleDeg - goc khu yu tai (0 = thang, 180 = gap nguoc)
  * @param {object} options
  * @param {number} options.wristY - toa do Y cua co tay (px trong anh, 0..1)
+ * @param {number} options.shoulderY - toa do Y cua vai (mac dinh = wristY - 0.25).
+ *   Dung co dinh de mo phong "tay run" (khoang cach vai-co tay bien dong).
+ * @param {number} options.hipOffsetX - lech X cua khung hong (px). Dung de mo
+ *   phong vong lung (than khong thang hang).
  * @param {number} options.visibility
  */
-function makePushUpPose(elbowAngleDeg, { wristY = 0.5, visibility = 0.95 } = {}) {
+function makePushUpPose(
+  elbowAngleDeg,
+  { wristY = 0.5, shoulderY = null, hipOffsetX = 0, visibility = 0.95 } = {},
+) {
   const lm = new Array(33).fill(null).map(() => ({ x: 0, y: 0, z: 0, visibility: 0 }));
 
-  // Co tay nam ngang phia duoi, vai nam ngang phia tren.
+  // Vai -> co tay. `shoulderY` co dinh de do duoc do run cua chuyen dong.
   const wrist = { x: 0.35, y: wristY };
-  const shoulder = { x: 0.35, y: wristY - 0.25 };
+  const shoulder = { x: 0.35, y: shoulderY ?? wristY - 0.25 };
 
   // Khu yu: goc tai khu yu = elbowAngle.
   // Vai va co tay cung X, cach nhau D. Dat khu yu ngoai tam giac vuong:
@@ -150,9 +157,10 @@ function makePushUpPose(elbowAngleDeg, { wristY = 0.5, visibility = 0.95 } = {})
   lm[L.RW] = { ...wrist, visibility };
 
   // Than thang: vai - hong - cot chan deu tren mot duong thang.
-  const hip = { x: 0.35, y: wristY - 0.5 };
-  const knee = { x: 0.35, y: wristY - 0.75 };
-  const ankle = { x: 0.35, y: wristY - 1.0 };
+  // `hipOffsetX` lech khung hong sang ngang -> than cong (vong lung).
+  const hip = { x: 0.35 + hipOffsetX, y: shoulder.y - 0.25 };
+  const knee = { x: 0.35, y: shoulder.y - 0.5 };
+  const ankle = { x: 0.35, y: shoulder.y - 0.75 };
   lm[L.LH] = { ...hip, visibility };
   lm[L.RH] = { ...hip, visibility };
   lm[L.LK] = { ...knee, visibility };
@@ -267,6 +275,190 @@ feed(t, 170, 0.75, 5);
 const repScores = t.getRepScores();
 check("co 1 diem rep", repScores.length, 1);
 check("diem rep >= 85 (rep sach)", repScores[0] >= 85, true);
+
+// --- 11. formScore = trung binh diem rep (KHONG phai goodFrames/totalFrames) --
+// Bug cu: bien `goodFrames` khong bao gio duoc tang -> formScore luon = 0 moi
+// set co it nhat 1 frame. Nay formScore phai bang trung binh diem cac rep.
+t = tracker({ targetReps: 12 });
+feed(t, 170, 0.75, 5);
+feed(t, 130, 0.65, 3);
+feed(t, 90, 0.55, 8);
+feed(t, 170, 0.75, 5);
+const oneRepScore = t.getRepScores()[0];
+check("formScore = diem rep vua hoan thanh", t.state.formScore, oneRepScore);
+check("formScore > 0 (khong con luon = 0)", t.state.formScore > 0, true);
+
+// 2 rep -> formScore = trung binh cua 2 diem rep.
+t = tracker({ targetReps: 12 });
+for (let rep = 0; rep < 2; rep += 1) {
+  feed(t, 170, 0.75, 5);
+  feed(t, 130, 0.65, 3);
+  feed(t, 90, 0.55, 8);
+  feed(t, 170, 0.75, 5);
+}
+const twoRepScores = t.getRepScores();
+const expectedAvg = Math.round(
+  (twoRepScores[0] + twoRepScores[1]) / twoRepScores.length,
+);
+check("formScore = trung binh 2 diem rep", t.state.formScore, expectedAvg);
+
+// Chua rep nao -> formScore = 100 (khong phai 0).
+t = tracker({ targetReps: 12 });
+check("chua rep nao => formScore = 100", t.state.formScore, 100);
+
+// cleanSeconds trong getSetResults phai theo diem rep (khong con = 0 do
+// goodFrames luon = 0).
+t = tracker({ targetReps: 12 });
+feed(t, 170, 0.75, 5);
+feed(t, 130, 0.65, 3);
+feed(t, 90, 0.55, 8);
+feed(t, 170, 0.75, 5);
+const pushUpSets = t.getSetResults();
+check("cleanSeconds > 0 (khong con luon = 0)", pushUpSets[0].cleanSeconds > 0, true);
+
+// --- 12. issueStats cho man "Form correction" ----------------------------
+// Bug cu: tracker khai bao `issueStats` nhung KHONG BAO GIOW ghi vao ->
+// man "Form correction" khong co so do, khong to do khap, chi hien thi fallback.
+
+/**
+ * Feed mot chuoi frame voi khu yu co dinh va vai di chuyen (mo phong tay run).
+ *
+ * @param {object} trackerInstance
+ * @param {number} elbowDeg
+ * @param {number} n - so frame
+ * @param {number[]} shoulderYs - tung do Y cua vai theo frame
+ * @param {number} wristY - do Y cua co tay (giai ma chay duoc)
+ */
+function feedShaky(t2, elbowDeg, n, shoulderYs, wristY) {
+  for (let i = 0; i < n; i += 1) {
+    t2.onFrame(makePushUpPose(elbowDeg, { wristY, shoulderY: shoulderYs[i] }));
+  }
+}
+
+// 12a. Rep SACH -> khong ghi loi nao -> issueStats rong.
+t = tracker({ targetReps: 12 });
+feed(t, 170, 0.75, 5);
+feed(t, 130, 0.65, 3);
+feed(t, 90, 0.55, 8);
+feed(t, 170, 0.75, 5);
+check("rep sach => issueStats rong", t.getIssueStats().length, 0);
+
+// 12b. Rep XUONG NONG -> ghi loi do sau (depth) kem so do.
+t = tracker({ targetReps: 12 });
+feed(t, 170, 0.75, 5);
+feed(t, 140, 0.72, 3);
+feed(t, 130, 0.70, 4);
+feed(t, 170, 0.75, 5);
+const depthStats = t.getIssueStats();
+const depthStat = depthStats.find((s) => s.key === "depth");
+check("rep xuong nong => co loi depth", depthStat != null, true);
+check("depth do o khop khuyu", depthStat?.joint, "ELBOW");
+check("depth co so do (measured khac null)", depthStat?.measured != null, true);
+check("depth co so rep bi loi", depthStat?.occurrences, 1);
+check("depth co totalReps", depthStat?.totalReps, 1);
+
+// 12c. 2 rep xuong nong -> occurrences = 2, measured giu gia tri "xau nhat".
+t = tracker({ targetReps: 12 });
+for (let rep = 0; rep < 2; rep += 1) {
+  feed(t, 170, 0.75, 5);
+  feed(t, 140, 0.72, 3);
+  feed(t, 130, 0.70, 4);
+  feed(t, 170, 0.75, 5);
+}
+const depthStats2 = t.getIssueStats();
+const depthStat2 = depthStats2.find((s) => s.key === "depth");
+check("2 rep xuong nong => depth occurrences = 2", depthStat2?.occurrences, 2);
+check("depth measured giu goc nho nhat (xau nhat)", depthStat2?.measured, 130);
+check("depth totalReps = 2", depthStat2?.totalReps, 2);
+
+// 12d. Than CONG (vong lung) -> ghi loi alignment o khong HIP.
+t = tracker({ targetReps: 12 });
+for (let i = 0; i < 5; i += 1) {
+  t.onFrame(makePushUpPose(170, { wristY: 0.75, hipOffsetX: 0.12 }));
+}
+for (let i = 0; i < 3; i += 1) {
+  t.onFrame(makePushUpPose(130, { wristY: 0.65, hipOffsetX: 0.12 }));
+}
+for (let i = 0; i < 8; i += 1) {
+  t.onFrame(makePushUpPose(90, { wristY: 0.55, hipOffsetX: 0.12 }));
+}
+for (let i = 0; i < 5; i += 1) {
+  t.onFrame(makePushUpPose(170, { wristY: 0.75, hipOffsetX: 0.12 }));
+}
+const alignStats = t.getIssueStats();
+const alignStat = alignStats.find((s) => s.key === "alignment");
+check("than cong => co loi alignment", alignStat != null, true);
+check("alignment do o khong hông", alignStat?.joint, "HIP");
+check("alignment direction = min (gon nho hon la loi)", alignStat?.direction, "min");
+
+// 12e. Tay RUN -> ghi loi control kem don vi diem (0..100).
+t = tracker({ targetReps: 12 });
+feedShaky(t, 170, 5, [0.75, 0.78, 0.72, 0.80, 0.70], 0.72);
+feedShaky(t, 130, 3, [0.65, 0.70, 0.62, 0.72, 0.60], 0.66);
+feedShaky(t, 90, 8, [0.55, 0.62, 0.50, 0.64, 0.48], 0.58);
+feedShaky(t, 170, 5, [0.75, 0.78, 0.72, 0.80, 0.70], 0.72);
+const controlStats = t.getIssueStats();
+const controlStat = controlStats.find((s) => s.key === "control");
+check("tay run => co loi control", controlStat != null, true);
+check("control dung don vi diem", controlStat?.unit, "score");
+check("control measured la diem 0..100", controlStat?.measured < 60, true);
+check("control target = 60 (nguong dat)", controlStat?.target, 60);
+
+// 12f. Rep sach -> khong ghi loi control (diem >= 60).
+t = tracker({ targetReps: 12 });
+feed(t, 170, 0.75, 5);
+feed(t, 130, 0.65, 3);
+feed(t, 90, 0.55, 8);
+feed(t, 170, 0.75, 5);
+check(
+  "rep sach => khong ghi loi control",
+  t.getIssueStats().find((s) => s.key === "control") == null,
+  true,
+);
+
+// 12g. KHONG DUOI HET tay tren -> ghi loi extension.
+//
+// LUU Y: voi nguong mac dinh (top 165 do, tolerance 20 do) thi component
+// Extension KHONG BAO GIOW duoi 60 diem, vi:
+//   - rep chi ket thuc khi elbow >= topAngle - PHASE_HYSTERESIS = 153 do,
+//   - nhung repMaxAngle luon >= 153 do,
+//   - lech lon nhat voi muc tieu 165 do la 12 do <= tolerance/2 = 10 do?,
+//     lech 12 > 10 -> diem = (1 - (12-10)/10) * 100 = 80 diem.
+//   => 80 >= 60 -> khong ghi loi.
+//
+// De kich hoat duoc can nguong tren CAO HON (do la nguong thuc te cua bai) va
+// dung sai nho hon. Test nay dung rule "trong" de kiem tra nhanh.
+// Nhuoc diem nay duoc ghi lai trong tai lieu FORMULAS_AND_SCORING_SPECIFICATION.
+t = tracker({
+  targetReps: 12,
+  formRules: [
+    { joint: "ELBOW", angleThreshold: 180, romDepth: 97, tolerance: 10 },
+    { joint: "HIP", minAngle: 165, maxAngle: 180, tolerance: 15 },
+  ],
+});
+feed(t, 170, 0.75, 5);
+feed(t, 120, 0.65, 3);
+feed(t, 95, 0.55, 8);
+feed(t, 170, 0.75, 5);
+const extStats = t.getIssueStats();
+const extStat = extStats.find((s) => s.key === "extension");
+check("khong duoi het tay tren => co loi extension", extStat != null, true);
+check("extension do o khớp khuyu", extStat?.joint, "ELBOW");
+check("extension direction = min", extStat?.direction, "min");
+check("extension measured = goc lon nhat cua rep", extStat?.measured, 170);
+
+// 12h. Voi nguong MAC DINH (165 do) -> extension khong bao giong bi ghi.
+// Ghi nhanhhanh vi du roi biet component Extension thuong khong kich hoat.
+t = tracker({ targetReps: 12 });
+feed(t, 140, 0.75, 5);
+feed(t, 120, 0.65, 3);
+feed(t, 95, 0.55, 8);
+feed(t, 170, 0.75, 5);
+check(
+  "nguong mac dinh => extension khong ghi (diem >= 60)",
+  t.getIssueStats().find((s) => s.key === "extension") == null,
+  true,
+);
 
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} test passed`);

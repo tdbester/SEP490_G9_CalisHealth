@@ -40,7 +40,10 @@ const DEFAULT_HOLD_SECONDS = 30;
 function metricLabel(stat, t) {
   switch (stat.key) {
     case "depth":
-      return t("member.correction.jointHip");
+      // Bài squat dùng chung key "depth" với push-up -> nhãn theo khớp đo.
+      return stat.joint === "ELBOW"
+        ? t("member.correction.jointElbow")
+        : t("member.correction.jointHip");
     case "torso":
       return t("member.correction.jointTorso");
     case "knee":
@@ -63,6 +66,10 @@ function formatMetric(stat, t) {
   if (stat.key === "knee") {
     return t("member.correction.metricInward", { label, value: stat.measured });
   }
+  // Điểm thành phần (0..100) — không phải góc đo.
+  if (stat.unit === "score") {
+    return t("member.correction.metricScore", { label, value: stat.measured });
+  }
   const sign = stat.direction === "min" ? "≥" : "≤";
   return t("member.correction.metricTarget", {
     label,
@@ -81,7 +88,8 @@ function formatMetric(stat, t) {
 function measuredAngleName(stat) {
   switch (stat.key) {
     case "depth":
-      return "knee";
+      // Squat đo góc gối, push-up đo góc khuỷu -> tên theo khớp thực đo.
+      return stat.joint === "ELBOW" ? "elbow" : "knee";
     case "torso":
       return "torso";
     default:
@@ -106,6 +114,16 @@ function formatDetail(stat, t) {
         })
       : t("member.correction.detailSeenThisSet", { value: deviation });
   }
+  // Điểm thành phần (0..100) — báo số lần bị lỗi.
+  if (stat.unit === "score") {
+    return stat.occurrences > 0
+      ? t("member.correction.detailScore", {
+          value: stat.measured,
+          count: stat.occurrences,
+          total: stat.totalReps,
+        })
+      : t("member.correction.detailSeenThisSet", { value: stat.measured });
+  }
   const sign = stat.direction === "min" ? "≥" : "≤";
   return t("member.correction.detailAvg", {
     angle: measuredAngleName(stat),
@@ -124,16 +142,22 @@ function formatDetail(stat, t) {
 function metricPositionClass(item) {
   switch (item.key) {
     case "depth":
-      return "fc-metric--hip";
+      // Squat đo gối, push-up đo khuỷu -> neo chip theo khớp thực đo.
+      return item.joint === "ELBOW" ? "fc-metric--elbow" : "fc-metric--hip";
     case "torso":
       return "fc-metric--torso";
     case "knee":
       return "fc-metric--knee";
-    // Cac loi cua bai HOLD deu nam o khớp hông.
+    // Loi cua bai HOLD deu nam o khớp hông.
     case "alignment":
     case "hipSag":
     case "hipPike":
       return "fc-metric--hip";
+    // Push-up: 3 loi khac nhau deu gan khu yu -> tach vi tri de khong chong chip.
+    case "control":
+      return "fc-metric--elbow-control";
+    case "extension":
+      return "fc-metric--shoulder";
     default: {
       const joint = (item.joint || "").toUpperCase();
       if (joint === "SHOULDER") return "fc-metric--shoulder";
@@ -281,6 +305,7 @@ export default function FormCorrectionPage() {
         measured: stat.measured,
         target: stat.target,
         direction: stat.direction,
+        unit: stat.unit,
       }));
     }
     return formIssues.map((label, index) => ({
@@ -421,6 +446,7 @@ export default function FormCorrectionPage() {
                         measured: item.measured,
                         target: item.target,
                         direction: item.direction,
+                        unit: item.unit,
                       }, t)
                     : item.title}
                 </span>

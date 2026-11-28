@@ -488,10 +488,15 @@ export default function useHoldTracker({
     const hasRule = rule?.minAngle != null || rule?.maxAngle != null;
     const minAngle = hasRule ? (rule?.minAngle ?? null) : STRAIGHT_BODY_ANGLE;
     const maxAngle = hasRule ? (rule?.maxAngle ?? null) : STRAIGHT_MAX_ANGLE;
-    // Chi dung sai cho (diem mem) khi rule co khai bao tolerance. Khong co rule
-    // thi dung nguong nhip han (diem 100 neu trong dai, 0 neu ngoai dai) —
-    // giu nguyen hanh vi cua client truoc khi co bang cham diem mem.
-    const tolerance = hasRule ? (rule?.tolerance ?? DEFAULT_TOLERANCE) : 0;
+    // Dung sai (do) cho diem mem. Luon dung `DEFAULT_TOLERANCE` khi rule
+    // khong khai bao tolerance HOAC khi bai khong co rule nao.
+    //
+    // Truoc day: khong co rule -> tolerance = 0 -> cham nhip han (100 diem neu
+    // trong dai, 0 diem neu ngoai dai), trong khi co rule ma thieu tolerance
+    // -> dung 15 (diem mem). Cung mot logic nhung hai do mem khac nhau -> khong
+    // nhat quan. Bay gio ca hai nhanh deu cham mem voi dung sai 15 do, dung
+    // chung voi mac dinh cua server (`FormRuleAdminService.DEFAULT_TOLERANCE`).
+    const tolerance = rule?.tolerance ?? DEFAULT_TOLERANCE;
     // Bien duoi cua dai dung lam muc tieu hien thi tren man ket qua.
     const straightTarget = minAngle ?? STRAIGHT_BODY_ANGLE;
 

@@ -303,6 +303,7 @@ export default {
       stepIntoFrame: "Step into the frame so I can track you.",
       shallowRep: "Rep counted, but go deeper and keep your chest up.",
       goodRep: "Nice rep. Keep that depth.",
+      chestUp: "Keep your chest up — don't fold over.",
       braceCore: "Brace your core — keep your body in one straight line.",
       hipSag: "Hips sagging - squeeze your glutes and lift the hips so your body stays straight.",
       hipPike: "Hips too high - lower the hips so your body stays in one straight line.",
@@ -311,6 +312,7 @@ export default {
     },
     formIssues: {
       depth: "Hips not low enough",
+      pushUpDepth: "Not deep enough",
       torso: "Back rounded over",
       knee: "Left knee caving inward",
       alignment: "Body not in a straight line",
@@ -540,11 +542,14 @@ export default {
     jointHip: "Hip",
     jointTorso: "Torso",
     jointKnee: "Knee",
+    jointElbow: "Elbow",
     metricInward: "{{label}} {{value}}° inward",
     metricTarget: "{{label}} {{value}}° · target {{sign}} {{target}}°",
+    metricScore: "{{label}} {{value}}/100 pts",
     detailDeviation: "{{value}}° deviation · seen in {{count}}/{{total}} reps",
     detailSeenThisSet: "{{value}}° deviation · seen in this set",
     detailAvg: "Avg {{angle}} angle {{value}}° (target {{sign}} {{target}}°)",
+    detailScore: "Component score {{value}}/100 · seen in {{count}}/{{total}} reps",
   },
 
   library: {

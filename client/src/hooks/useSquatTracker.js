@@ -99,6 +99,8 @@ export const FORM_ISSUES = {
 const DEFAULT_DEPTH_TARGET = 95;
 /** Góc thân tối thiểu để lưng không gật (độ). */
 const TORSO_MIN_ANGLE = 115;
+/** Goc than duoi nguong nay thi canh bao "ngang nguc" (de, hon nguong ghi loi). */
+const TORSO_WARN_ANGLE = 105;
 /** Độ lệch gối hướng vào trong (độ) được coi là lỗi. */
 const KNEE_INWARD_MAX = 12;
 
@@ -144,6 +146,9 @@ function measureKneeInward(ankle, knee) {
  * Mỗi lỗi lưu: giá trị đo được, giá trị mục tiêu và số rep bị lỗi.
  * Chỉ tính 1 lần cho mỗi rep (dùng `lastRepCount` để tránh đếm trùm khi
  * tracker ở đáy nhiều frame liên tiếp).
+ *
+ * Được gọi NGAY khi một rep hoàn thành (trong vòng lặp trạng thái), trước khi
+ * xoá số liệu của rep đó — vì các số đo lấy từ chính rep vừa xong.
  *
  * @param {object} current - ref hiện tại của tracker
  * @param {object} sample - số liệu của frame này
@@ -191,33 +196,80 @@ function recordIssueStats(current, sample) {
     if (isNewRep) existing.occurrences += 1;
   };
 
-  // 1. Hông không xuống đủ sâu: góc gối lớn hơn ngưỡng ROM.
-  if (sample.kneeAngle != null && sample.kneeAngle > sample.deepTarget) {
+  // 1. Hông không xuống đủ sâu: góc gối NHỎ NHẤT của rep vẫn lớn hơn ngưỡng đáy.
+  //
+  // Dùng giá trị nhỏ nhất trong rep (không phải góc của frame hiện tại):
+  // lúc member đang đứng góc gối luôn ~180° -> nếu đo theo frame thì sẽ
+  // ghi nhận "chưa xuống đủ sâu" với giá trị đo vô lý.
+  const repMinKnee = current.repMinKneeAngle;
+  if (repMinKnee != null && repMinKnee > sample.deepTarget) {
     update(
       "depth",
       FORM_ISSUES.depth,
       "HIP",
-      sample.kneeAngle,
+      repMinKnee,
       sample.deepTarget ?? DEFAULT_DEPTH_TARGET,
     );
   }
 
-  // 2. Lưng gật: góc thân nhỏ hơn ngưỡng.
-  if (sample.torsoAngle != null && sample.torsoAngle < TORSO_MIN_ANGLE) {
+  // 2. Lưng gật: góc thân nhỏ nhất trong rep nhỏ hơn ngưỡng.
+  const repMinTorso = current.repMinTorsoAngle;
+  if (repMinTorso != null && repMinTorso < TORSO_MIN_ANGLE) {
     update(
       "torso",
       FORM_ISSUES.torso,
       "SHOULDER",
-      sample.torsoAngle,
+      repMinTorso,
       TORSO_MIN_ANGLE,
       "min",
     );
   }
 
-  // 3. Gối lệch vào trong.
-  if (sample.kneeInward != null && sample.kneeInward > KNEE_INWARD_MAX) {
-    update("knee", FORM_ISSUES.knee, "KNEE", sample.kneeInward, KNEE_INWARD_MAX);
+  // 3. Gối lệch vào trong: độ lệch lớn nhất trong rep.
+  const repInward = current.repKneeInwardMax;
+  if (repInward != null && repInward > KNEE_INWARD_MAX) {
+    update("knee", FORM_ISSUES.knee, "KNEE", repInward, KNEE_INWARD_MAX);
   }
+}
+
+/**
+ * Ghi nhận lỗi form của rep vừa hoàn thành.
+ *
+ * Đánh giá theo TỪNG REP dựa trên số đo thu thập trong lúc rep đó chạy
+ * (`repMinKneeAngle`, `repMinTorsoAngle`, `repKneeInwardMax`).
+ *
+ * Không đánh giá theo frame: khi member đứng thì góc gối luôn lớn hơn ngưỡng
+ * đáy, nên nếu so từng frame thì sẽ báo lỗi độ sâu ngay cả khi rep chuẩn.
+ *
+ * @param {object} current - ref hiện tại của tracker
+ * @param {number} deepTarget - ngưỡng đáy (độ) đang áp dụng
+ */
+function recordRepIssues(current, deepTarget) {
+  const minKnee = current.repMinKneeAngle;
+  // Không xuống đủ sâu: góc gối nhỏ nhất của rep vẫn lớn hơn ngưỡng đáy.
+  if (minKnee != null && minKnee > deepTarget) {
+    current.formIssues.add(FORM_ISSUES.depth);
+  }
+  // Lưng gật trong rep đó.
+  if (current.repMinTorsoAngle != null && current.repMinTorsoAngle < TORSO_MIN_ANGLE) {
+    current.formIssues.add(FORM_ISSUES.torso);
+  }
+  // Gối lệch vào trong.
+  const inward = current.repKneeInwardMax;
+  if (inward != null && inward > KNEE_INWARD_MAX) {
+    current.formIssues.add(FORM_ISSUES.knee);
+  }
+}
+
+/**
+ * Xoá số liệu của rep trước khi bắt đầu rep mới.
+ *
+ * @param {object} current - ref hiện tại của tracker
+ */
+function resetRepTracking(current) {
+  current.repMinKneeAngle = null;
+  current.repMinTorsoAngle = null;
+  current.repKneeInwardMax = null;
 }
 
 export default function useSquatTracker({
@@ -281,6 +333,12 @@ export default function useSquatTracker({
      * key -> { key, label, joint, measured, target, occurrences }
      */
     issueStats: new Map(),
+    /** Góc gối nhỏ nhất của rep đang chạy — đánh giá độ sâu của riêng rep đó. */
+    repMinKneeAngle: null,
+    /** Góc thân nhỏ nhất của rep đang chạy — đánh giá lưng gật của riêng rep đó. */
+    repMinTorsoAngle: null,
+    /** Độ lệch gối vào trong lớn nhất của rep đang chạy (độ). */
+    repKneeInwardMax: null,
   });
 
   // Rule có thể đến sau (server trả về bất đồng bộ) -> cập nhật vào ref.
@@ -318,6 +376,9 @@ export default function useSquatTracker({
       setStartedAt: Date.now(),
       formIssues: new Set(),
       issueStats: new Map(),
+      repMinKneeAngle: null,
+      repMinTorsoAngle: null,
+      repKneeInwardMax: null,
     };
     setState({
       phase: PHASE.STANDING,
@@ -371,6 +432,9 @@ export default function useSquatTracker({
       feedbackTone: "good",
       completedSets: [...current.completedSets, finishedSet],
       setStartedAt: Date.now(),
+      repMinKneeAngle: null,
+      repMinTorsoAngle: null,
+      repKneeInwardMax: null,
     };
     setState({
       phase: PHASE.STANDING,
@@ -422,6 +486,9 @@ export default function useSquatTracker({
       lastFeedback: "",
       feedbackTone: "good",
       setStartedAt: Date.now(),
+      repMinKneeAngle: null,
+      repMinTorsoAngle: null,
+      repKneeInwardMax: null,
     };
     setState({
       phase: PHASE.STANDING,
@@ -543,6 +610,26 @@ export default function useSquatTracker({
     const isStanding = kneeAngle >= standingAngle;
     if (isDeep) current.goodFrames += 1;
 
+    // Do lech goi vao trong (do) — dung cho loi "goi lech vao trong".
+    const kneeInward = measureKneeInward(ankle, knee);
+
+    // Theo doi du lieu cua REP DANG CHAY de danh gia loi theo tung rep
+    // (khong the do theo tung frame: luc member dang dung goc goi luon lon
+    // hon nguong day nen se bao loi sai).
+    if (current.phase !== PHASE.STANDING) {
+      if (current.repMinKneeAngle == null || kneeAngle < current.repMinKneeAngle) {
+        current.repMinKneeAngle = kneeAngle;
+      }
+      if (torsoAngle != null
+        && (current.repMinTorsoAngle == null || torsoAngle < current.repMinTorsoAngle)) {
+        current.repMinTorsoAngle = torsoAngle;
+      }
+      if (kneeInward != null
+        && (current.repKneeInwardMax == null || kneeInward > current.repKneeInwardMax)) {
+        current.repKneeInwardMax = kneeInward;
+      }
+    }
+
     // Số frame cần giữ đủ sâu để tính rep sạch (phụ thuộc tần số lấy mẫu).
     const deepRequired = current.deepFramesRequired || DEEP_FRAMES_REQUIRED;
 
@@ -578,10 +665,23 @@ export default function useSquatTracker({
             current.reps += 1;
             current.setReps += 1;
           }
+          recordRepIssues(current, deepAngle);
+          // Ghi so lieu do cua rep vua hoan thanh TRUOC khi xoa so do cua rep
+          // (neu goi o cuoi vong lap thi da bi xoa -> mat so lieu).
+          recordIssueStats(current, {
+            kneeAngle,
+            torsoAngle,
+            kneeInward,
+            deepTarget: deepAngle,
+            totalReps: current.reps,
+            issueFeedback: feedback,
+            tone,
+          });
           feedback = t("member:tracking.feedback.shallowRep");
           tone = "warn";
           current.phase = PHASE.STANDING;
           current.deepFrames = 0;
+          resetRepTracking(current);
         }
         break;
 
@@ -605,6 +705,18 @@ export default function useSquatTracker({
           }
           current.phase = PHASE.ASCENDING;
           current.deepFrames = 0;
+          recordRepIssues(current, deepAngle);
+          // Ghi so lieu do cua rep vua hoan thanh TRUOC khi xoa so do cua rep.
+          recordIssueStats(current, {
+            kneeAngle,
+            torsoAngle,
+            kneeInward,
+            deepTarget: deepAngle,
+            totalReps: current.reps,
+            issueFeedback: feedback,
+            tone,
+          });
+          resetRepTracking(current);
         }
         break;
 
@@ -616,37 +728,33 @@ export default function useSquatTracker({
         break;
     }
 
-    // Cảnh báo lưng gật khi đang ở dưới cùng.
+    // Canh bao lung gat khi dang o day nua nhat.
+    //
+    // Luu y: nguong canh bao (105 do) KHAC nguong ghi nhan loi (TORSO_MIN_ANGLE
+    // = 115 do) — co y chu dong: canh bao muon hon de tranh nhieu, con loi
+    // form thi ghi ngay tu luc that su sai.
     if (
-      current.phase === PHASE.BOTTOM &&
-      torsoAngle != null &&
-      torsoAngle < 105 &&
-      feedback !== "Keep your chest up — don't fold over."
+      current.phase === PHASE.BOTTOM
+      && torsoAngle != null
+      && torsoAngle < TORSO_WARN_ANGLE
+      && feedback !== t("member:tracking.feedback.chestUp")
     ) {
-      feedback = "Keep your chest up — don't fold over.";
+      feedback = t("member:tracking.feedback.chestUp");
       tone = "warn";
     }
 
-    // Ghi nhận lỗi form để hiển thị ở màn kết quả.
-    if (tone === "warn") {
-      if (feedback.includes("deeper")) {
-        current.formIssues.add(FORM_ISSUES.depth);
-      } else if (feedback.includes("chest up")) {
-        current.formIssues.add(FORM_ISSUES.torso);
-      }
-    }
-
-    // Số liệu đo chi tiết cho màn Form correction.
-    // Ghi lại giá trị đo và số rep bị lỗi để member thấy "18° deviation · seen in 5/12 reps".
-    recordIssueStats(current, {
-      kneeAngle,
-      torsoAngle,
-      kneeInward: measureKneeInward(ankle, knee),
-      deepTarget: deepAngle,
-      totalReps: current.reps,
-      issueFeedback: feedback,
-      tone,
-    });
+    // Ghi nhan loi form de hien thi o man ket qua.
+    //
+    // Loi duoc danh gia theo TUNG REP (xem `recordRepIssues`), suy ra truc tiep
+    // tu so do duoc do — KHONG phu thuoc chuoi da dich.
+    //
+    // Truoc day code do bang cach tim chuoi trong `feedback` ("deeper" /
+    // "chest up") -> viet tieng Viet khong chua tu khoa nao nen `formIssues`
+    // luon rong, va tieng Anh thi "deeper" an truoc nen loi "lung gat" khong
+    // bao gio duoc phat hien.
+    //
+    // So lieu do chi tiết cho man Form correction cung duoc ghi trong switch
+    // phia tren (dung ngay luc rep hoan thanh, truoc khi xoa so do cua rep).
 
     current.lastFeedback = feedback;
     current.feedbackTone = tone;

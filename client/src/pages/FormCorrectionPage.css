@@ -274,6 +274,12 @@
   left: 330px;
 }
 
+/* Chip "tay run" của push-up — đặt lệch xuống dưới chip khuỷu để không chồng. */
+.fc-metric--elbow-control {
+  top: 232px;
+  left: 330px;
+}
+
 /* --------------------------------------------- danh sách lỗi (cột phải) */
 .fc-side {
   display: flex;

@@ -51,6 +51,14 @@ const WEIGHTS = {
   extension: 0.15,
 };
 
+/**
+ * Diem toi thieu de thanh phan duoc coi la "dat" (khong bi ghi nhan loi).
+ *
+ * Dung chung cho viec ghi nhan loi (`recordPushUpIssues`) va cho nguong hien
+ * thi tren man "Form correction" -> hai noi luon cung mot ranh gioi.
+ */
+const PASS_SCORE = 60;
+
 /** Nguong visibility toi thieu de tin landmark. */
 const MIN_VISIBILITY = 0.5;
 
@@ -78,7 +86,9 @@ const PHASE = {
 /** Loi form dung o man ket qua. */
 export const PUSHUP_FORM_ISSUES = {
   get depth() {
-    return t("member:tracking.formIssues.depth");
+    // Khoa rieng cho push-up: "Hong chua xuong du thap" (dung cho squat) mo ta
+    // sai khi loi la do sau cua khu yu.
+    return t("member:tracking.formIssues.pushUpDepth");
   },
   get alignment() {
     return t("member:tracking.formIssues.alignment");
@@ -198,7 +208,6 @@ function verticalDistance(shoulder, wrist) {
  * dung chung mot cong thuc (truoc day 2 ban co the lech nhau).
  */
 
-
 /**
  * Diem thanh phan Depth: goc khu yu tai day cua rep so voi nguong day.
  *
@@ -223,7 +232,8 @@ export function scoreDepthRatio(minAngle, bottomAngle, tolerance = DEFAULT_TOLER
 }
 
 /**
- * Tinh diem 4 thanh phan cho 1 rep da hoan thanh.
+ * Diem form cua 1 rep = trung binh cac thanh phan (Depth, Alignment, Control,
+ * Extension) theo trong so.
  *
  * @param {object} current - ref hien tai cua tracker
  * @param {object} thresholds - nguong doc tu rule
@@ -265,18 +275,145 @@ function scoreRep(current, thresholds) {
  * Ghi nhan loi form cua rep vua hoan thanh (dung cho man ket qua).
  */
 function recordPushUpIssues(current, scores) {
-  if (scores.depth < 60) {
+  if (scores.depth < PASS_SCORE) {
     current.formIssues.add(PUSHUP_FORM_ISSUES.depth);
   }
-  if (scores.alignment < 60) {
+  if (scores.alignment < PASS_SCORE) {
     current.formIssues.add(PUSHUP_FORM_ISSUES.alignment);
   }
-  if (scores.control < 60) {
+  if (scores.control < PASS_SCORE) {
     current.formIssues.add(PUSHUP_FORM_ISSUES.control);
   }
-  if (scores.extension < 60) {
+  if (scores.extension < PASS_SCORE) {
     current.formIssues.add(PUSHUP_FORM_ISSUES.extension);
   }
+}
+
+/**
+ * Ghi so lieu do chi tiet cua loi form (dung cho man "Form correction").
+ *
+ * Push-up truoc day CHI ghi ten loi vao `formIssues` -> man "Form correction"
+ * khong co so do, khong to do khap, chi hien thi fallback. Bai nay bo sung
+ * so do theo tung rep, giong bang `useSquatTracker.js` va `useHoldTracker.js`.
+ *
+ * Nguyen tac: chi ghi khi REP DO bi loi (khong phai moi frame), va giu gia tri
+ * "xau nhat" cua set (do lech lon nhat / nho nhat) + so rep bi loi.
+ *
+ * @param {object} current - ref hien tai cua tracker
+ * @param {object} scores - diem 4 thanh phan cua rep vua hoan thanh
+ * @param {object} thresholds - nguong doc tu rule
+ */
+function recordPushUpIssueStats(current, scores, thresholds) {
+  const stats = current.issueStats;
+  const { topAngle, bottomAngle, alignMin } = thresholds;
+
+  /**
+   * Cap nhat 1 loi: giu gia tri do "xau nhat" va dem so rep bi loi.
+   *
+   * @param {string} key
+   * @param {string} label
+   * @param {string} joint
+   * @param {number|null} measured - gia tri do duoc (null = khong do duoc)
+   * @param {number} target - nguong muc tieu
+   * @param {"max"|"min"} direction - huong "xau"
+   * @param {string} unit - don vi do de hien thi
+   */
+  const update = (key, label, joint, measured, target, direction = "max", unit = "deg") => {
+    if (measured == null || !Number.isFinite(measured)) return;
+    const rounded = Math.round(measured);
+    const existing = stats.get(key);
+    if (!existing) {
+      stats.set(key, {
+        key,
+        label,
+        joint,
+        measured: rounded,
+        target: Math.round(target),
+        direction,
+        occurrences: 1,
+        unit,
+      });
+      return;
+    }
+    existing.measured = direction === "min"
+      ? Math.min(existing.measured, rounded)
+      : Math.max(existing.measured, rounded);
+    existing.target = Math.round(target);
+    existing.occurrences += 1;
+  };
+
+  // 1. Do sau: goc khu yu nho nhat cua rep > nguong day -> xuong nong.
+  // Do bang GOC (do), khong phai khoang cach pixel -> de so sanh duoc.
+  if (scores.depth < PASS_SCORE && current.repMinAngle != null) {
+    update(
+      "depth",
+      PUSHUP_FORM_ISSUES.depth,
+      "ELBOW",
+      current.repMinAngle,
+      bottomAngle,
+      "max",
+    );
+  }
+
+  // 2. Than thang: goc than nho nhat cua rep < nguong -> vong lung.
+  if (scores.alignment < PASS_SCORE && current.repMinBodyAngle != null) {
+    update(
+      "alignment",
+      PUSHUP_FORM_ISSUES.alignment,
+      "HIP",
+      current.repMinBodyAngle,
+      alignMin,
+      "min",
+    );
+  }
+
+  // 3. Doi tay het: goc khu yu lon nhat cua rep < nguong tren -> chua duoi het.
+  if (scores.extension < PASS_SCORE && current.repMaxAngle != null) {
+    update(
+      "extension",
+      PUSHUP_FORM_ISSUES.extension,
+      "ELBOW",
+      current.repMaxAngle,
+      topAngle,
+      "min",
+    );
+  }
+
+  // 4. Kiem soat nhip dong: diem 0..100 cua thanh phan Control.
+  //    Diem nay do `scoreControl` tinh tu do "run" cua chuyen dong trong rep.
+  //    Luu diem (khong phai do lech) de nhat quan voi dieu kien ghi loi
+  //    (`scores.control < PASS_SCORE`) va de Mục 4 sua cong thuc jitter thi
+  //    con so nay tu dong tot hon.
+  if (scores.control < PASS_SCORE) {
+    update(
+      "control",
+      PUSHUP_FORM_ISSUES.control,
+      "ELBOW",
+      scores.control,
+      PASS_SCORE,
+      "min",
+      "score",
+    );
+  }
+}
+
+/**
+ * Diem form cua set = trung binh diem cua cac rep da dem trong set.
+ *
+ * Push-up cham form theo TUNG REP (moi rep co diem 0..100 tu 4 thanh phan),
+ * nen diem cua set la trung binh cac rep — KHONG phai ti le frame.
+ *
+ * Ly do KHONG dung `goodFrames / totalFrames`: bien `goodFrames` o tracker
+ * push-up khong bao gio duoc tang (khong co dong `goodFrames += 1` nao),
+ * nen cach do luon cho ra 0 diem cho moi set co it nhat 1 frame.
+ *
+ * @param {number[]} repScores - diem tung rep trong set (0..100)
+ * @returns {number} 0..100
+ */
+function averageRepScore(repScores) {
+  if (!Array.isArray(repScores) || repScores.length === 0) return 100;
+  const sum = repScores.reduce((total, score) => total + score, 0);
+  return Math.round(sum / repScores.length);
 }
 
 /**
@@ -325,7 +462,6 @@ export default function usePushUpTracker({
     elbowAngle: null,
     bodyAngle: null,
     totalFrames: 0,
-    goodFrames: 0,
     setNumber: 1,
     targetReps,
     maxSets,
@@ -410,7 +546,6 @@ export default function usePushUpTracker({
       elbowAngle: null,
       bodyAngle: null,
       totalFrames: 0,
-      goodFrames: 0,
       setNumber: 1,
       targetReps: newTargetReps ?? previous.targetReps,
       lastFeedback: "",
@@ -454,7 +589,8 @@ export default function usePushUpTracker({
   const nextSet = useCallback((newTargetReps) => {
     const current = ref.current;
     const seconds = Math.round((Date.now() - current.setStartedAt) / 1000);
-    const formRatio = current.totalFrames ? current.goodFrames / current.totalFrames : 1;
+    // Diem form cua set = trung binh diem cac rep (xem `averageRepScore`).
+    const formRatio = averageRepScore(current.repScores) / 100;
     const totalSeconds = current.totalFrames > 0 ? Math.max(1, seconds) : seconds;
     const finishedSet = {
       totalReps: current.setReps,
@@ -468,7 +604,6 @@ export default function usePushUpTracker({
       ...current,
       phase: PHASE.TOP,
       totalFrames: 0,
-      goodFrames: 0,
       setNumber: nextSetNumber,
       targetReps: newTargetReps ?? current.targetReps,
       lastFeedback: "",
@@ -514,7 +649,6 @@ export default function usePushUpTracker({
       ...current,
       phase: PHASE.TOP,
       totalFrames: 0,
-      goodFrames: 0,
       reps: totalReps,
       cleanReps,
       setReps: 0,
@@ -560,7 +694,8 @@ export default function usePushUpTracker({
       ? Math.round(elapsedOverride)
       : Math.round((Date.now() - current.setStartedAt) / 1000);
     const seconds = current.totalFrames > 0 ? Math.max(1, elapsed) : elapsed;
-    const formRatio = current.totalFrames ? current.goodFrames / current.totalFrames : 1;
+    // Diem form cua set = trung binh diem cac rep (xem `averageRepScore`).
+    const formRatio = averageRepScore(current.repScores) / 100;
     results.push({
       totalReps: current.setReps,
       cleanReps: current.setCleanReps,
@@ -737,6 +872,10 @@ export default function usePushUpTracker({
           current.phase = PHASE.ASCENT;
           current.bottomFrames = 0;
           recordPushUpIssues(current, scores);
+          // Ghi so lieu do cua rep vua hoan thanh (cho man "Form correction").
+          recordPushUpIssueStats(current, scores, {
+            topAngle, bottomAngle, alignMin, tolerance,
+          });
         }
         break;
 
@@ -768,9 +907,8 @@ export default function usePushUpTracker({
     current.lastFeedback = feedback;
     current.feedbackTone = tone;
 
-    const formScore = current.totalFrames
-      ? Math.round((current.goodFrames / current.totalFrames) * 100)
-      : 100;
+    // Diem form cua set = trung binh diem cac rep da dem (xem `averageRepScore`).
+    const formScore = averageRepScore(current.repScores);
 
     setState({
       phase: current.phase,

@@ -95,16 +95,36 @@ const L = {
   LS: 11, RS: 12, LH: 23, RH: 24, LK: 25, RK: 26, LA: 27, RA: 28,
 };
 
-/** Tạo 33 landmark sao cho góc hip-knee-ankle đúng bằng góc yêu cầu. */
-function makePose(kneeAngleDeg, { visibility = 0.95 } = {}) {
-  const hip = { x: 0.5, y: 0.5 };
+/**
+ * Tạo 33 landmark sao cho góc hip-knee-ankle đúng bằng góc yêu cầu.
+ *
+ * Hình học:
+ *  - Cẳng chân LUÔN thẳng xuống (cổ chân ngay dưới gối) nên độ lệch gối
+ *    vào trong luôn = 0 — nếu không, mọi rep sâu đều bị báo nhầm lỗi
+ *    "gối lệch vào trong".
+ *  - Đùi xoay quanh gối để tạo góc hip-knee-ankle mong muốn.
+ *  - Vai nằm trên đường thẳng ankle -> hông nên khi `torsoBend = 0` thì góc
+ *    thân ~180° (lưng thẳng) ở MỌI vị trí của rep.
+ *
+ * @param {number} kneeAngleDeg - góc hip-knee-ankle (độ)
+ * @param {object} options
+ * @param {number} options.visibility
+ * @param {number} options.torsoBend - độ gật lưng (0 = thẳng, > 0 = gật về trước)
+ */
+function makePose(kneeAngleDeg, { visibility = 0.95, torsoBend = 0 } = {}) {
   const knee = { x: 0.5, y: 0.72 };
-  // Xoay vector knee->hip quanh knee theo góc yêu cầu để tạo cẳng chân.
-  const len = Math.hypot(hip.x - knee.x, hip.y - knee.y);
-  const rad = (kneeAngleDeg * Math.PI) / 180;
-  const ankle = {
-    x: knee.x + Math.sin(rad) * len,
-    y: knee.y - Math.cos(rad) * len,
+  const legLen = 0.22;
+  const ankle = { x: knee.x, y: knee.y + legLen };
+  // Xoay đùi quanh gối để tạo góc hip-knee-ankle mong muốn.
+  const phi = (180 - kneeAngleDeg) * (Math.PI / 180);
+  const hip = {
+    x: knee.x + Math.sin(phi) * legLen,
+    y: knee.y - Math.cos(phi) * legLen,
+  };
+  // Vai trên đường thẳng ankle -> hông (giữ lưng thẳng).
+  const shoulder = {
+    x: hip.x + (hip.x - ankle.x) * 0.8,
+    y: hip.y + (hip.y - ankle.y) * 0.8,
   };
   const lm = new Array(33).fill(null).map(() => ({ x: 0, y: 0, z: 0, visibility: 0 }));
   lm[L.LH] = { ...hip, visibility };
@@ -113,9 +133,9 @@ function makePose(kneeAngleDeg, { visibility = 0.95 } = {}) {
   lm[L.RK] = { ...knee, visibility };
   lm[L.LA] = { ...ankle, visibility };
   lm[L.RA] = { ...ankle, visibility };
-  // Vai thẳng trên hông -> góc thân ~180 (lưng thẳng).
-  lm[L.LS] = { x: 0.45, y: 0.2, visibility };
-  lm[L.RS] = { x: 0.55, y: 0.2, visibility };
+  // `torsoBend` dịch vai về phía trước để tạo lưng gật (góc thân < 115).
+  lm[L.LS] = { x: shoulder.x - 0.05 - torsoBend * 0.3, y: shoulder.y, visibility };
+  lm[L.RS] = { x: shoulder.x + 0.05 - torsoBend * 0.3, y: shoulder.y, visibility };
   return lm;
 }
 
@@ -128,6 +148,11 @@ function check(name, actual, expected) {
 
 const feed = (t, deg, n) => {
   for (let i = 0; i < n; i += 1) t.onFrame(makePose(deg));
+};
+
+/** Feed 1 chuoi frame voi tham so tuy chon (dung cho test loi form). */
+const feedWith = (t, deg, n, options) => {
+  for (let i = 0; i < n; i += 1) t.onFrame(makePose(deg, options));
 };
 
 // --- 1. Không có người -> không đếm rep -------------------------------
@@ -241,6 +266,62 @@ t.nextSet(3);
 check("sau nextSet (cap): setReps reset 0", t.state.setReps, 0);
 check("sau nextSet (cap): setComplete reset false", t.state.setComplete, false);
 check("sau nextSet (cap): repsLeft = 3", t.state.repsLeft, 3);
+
+// --- 11. Ghi nhan loi form (khong phu thuoc chuoi da dich) -----------------
+//
+// Loi duoc suy ra tu SO DO duoc do, khong phai tu viec tim chuoi trong
+// `feedback`. Truoc day viet tieng Viet khong chua tu khoa "deeper"/"chest up"
+// nen `formIssues` luon rong -> nguoi dung tieng Viet khong thay loi nao.
+
+// 11a. Rep chuan (xuong sau dung, lung thang) -> khong co loi form.
+t = tracker({ targetReps: 12 });
+feed(t, 175, 5);
+feed(t, 140, 3);
+feed(t, 85, 10);
+feed(t, 175, 5);
+check("rep chuan => khong ghi loi form", t.getFormIssues().length, 0);
+
+// 11b. Rep nong (khong xuong du sau) -> ghi loi "do sau".
+t = tracker({ targetReps: 12 });
+feed(t, 175, 5);
+feed(t, 140, 3);
+feed(t, 120, 3);
+feed(t, 175, 5);
+const depthIssues = t.getFormIssues();
+check("rep nong => ghi 1 loi form", depthIssues.length, 1);
+check(
+  "rep nong => loi la 'do sau'",
+  depthIssues.includes("member:tracking.formIssues.depth"),
+  true,
+);
+
+// 11c. Rep xuong sau nhung lung gat -> ghi loi "lung gat".
+t = tracker({ targetReps: 12 });
+feedWith(t, 175, 5, { torsoBend: 0.6 });
+feedWith(t, 140, 3, { torsoBend: 0.6 });
+feedWith(t, 85, 10, { torsoBend: 0.6 });
+feedWith(t, 175, 5, { torsoBend: 0.6 });
+const torsoIssues = t.getFormIssues();
+check("lung gat => ghi loi form", torsoIssues.length > 0, true);
+check(
+  "lung gat => co loi 'lung cong'",
+  torsoIssues.includes("member:tracking.formIssues.torso"),
+  true,
+);
+
+// 11d. So lieu do cho man Form correction dung gia tri do cua rep.
+t = tracker({ targetReps: 12 });
+feed(t, 175, 5);
+feed(t, 140, 3);
+feed(t, 120, 3);
+feed(t, 175, 5);
+const stats = t.getIssueStats();
+check("co so lieu do loi do sau", stats.length > 0, true);
+check(
+  "gia tri do cua loi do sau = goc goi nho nhat cua rep (khong phai 180 do luc dang dung)",
+  stats.find((s) => s.key === "depth")?.measured,
+  120,
+);
 
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} test passed`);

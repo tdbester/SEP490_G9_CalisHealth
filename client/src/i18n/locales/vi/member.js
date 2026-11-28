@@ -303,6 +303,7 @@ export default {
       stepIntoFrame: "Hãy bước vào khung hình để tôi theo dõi bạn.",
       shallowRep: "Đã đếm được lần, nhưng hãy xuống sâu hơn và giữ ngực thẳng.",
       goodRep: "Lần tập tốt. Giữ đúng độ sâu này.",
+      chestUp: "Ngẩng ngực lên — đừng cúi gập người.",
       braceCore: "Siết cơ lõi — giữ cơ thể thẳng hàng.",
       hipSag: "Hông tụt xuống — siết mông và nâng hông lên cho thân thẳng.",
       hipPike: "Hông nâng cao — hạ hông xuống cho thân thẳng hàng.",
@@ -311,6 +312,7 @@ export default {
     },
     formIssues: {
       depth: "Hông chưa xuống đủ thấp",
+      pushUpDepth: "Chưa xuống đủ sâu",
       torso: "Lưng cong về phía trước",
       knee: "Đầu gối trái lệch vào trong",
       alignment: "Cơ thể không thẳng hàng",
@@ -543,11 +545,14 @@ export default {
     jointHip: "Hông",
     jointTorso: "Thân",
     jointKnee: "Gối",
+    jointElbow: "Khuỷu",
     metricInward: "{{label}} lệch vào trong {{value}}°",
     metricTarget: "{{label}} {{value}}° · mục tiêu {{sign}} {{target}}°",
+    metricScore: "{{label}} {{value}}/100 điểm",
     detailDeviation: "Lệch {{value}}° · thấy ở {{count}}/{{total}} lần tập",
     detailSeenThisSet: "Lệch {{value}}° · thấy ở set này",
     detailAvg: "Góc {{angle}} trung bình {{value}}° (mục tiêu {{sign}} {{target}}°)",
+    detailScore: "Điểm thành phần {{value}}/100 · thấy ở {{count}}/{{total}} lần tập",
   },
 
   library: {

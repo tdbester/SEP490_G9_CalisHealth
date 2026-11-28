@@ -277,14 +277,25 @@ feed(t, 160, 20); // 160 do -> trong vung dung rong -> diem 100
 check("lech 5 do => cleanSeconds = 2", Math.round(t.state.cleanSeconds), 2);
 
 // --- 9. Fallback khi bai khong co rule -------------------------------------
-// Khong co bodyRule -> dung moc 150 do, dung sai 15.
+// Khong co bodyRule -> dung moc 150 do, dung sai 15 (diem mem, KHONG nhip han).
 t = tracker({ targetSeconds: 5 });
 feed(t, 172, 20);
 check("khong co rule => goc 172 duoc tinh la dung", Math.round(t.state.cleanSeconds), 2);
 
+// Goc 140 lech 10 do so voi moc 150 -> diem mem = 67 >= 60 (PASS_SCORE)
+// -> van duoc tinh la giu dung tu the.
 t = tracker({ targetSeconds: 5 });
 feed(t, 140, 20);
-check("khong co rule => goc 140 khong duoc tinh la dung", Math.round(t.state.cleanSeconds), 0);
+check(
+  "khong co rule => goc 140 lech 10 do van duoc dung (diem mem)",
+  Math.round(t.state.cleanSeconds),
+  2,
+);
+
+// Goc 120 lech 30 do >= tolerance 15 -> diem 0 -> khong tinh vao cleanSeconds.
+t = tracker({ targetSeconds: 5 });
+feed(t, 120, 20);
+check("khong co rule => goc 120 lech >= tolerance khong duoc dung", Math.round(t.state.cleanSeconds), 0);
 
 // --- 10. Ghi nhan loi form khi giu sai -------------------------------------
 // Vong lung: hong thap hon duong than (hipDrop > 0).
